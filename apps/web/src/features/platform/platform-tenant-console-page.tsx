@@ -1,12 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Timer } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { apiGet, apiPost } from "@/lib/http";
+import { localeForLanguage } from "@/lib/locale-display";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SetPlanConfirmDialog } from "@/features/platform/set-plan-confirm-dialog";
 
 type TenantLifecycleDto = {
   id: string;
@@ -19,10 +22,12 @@ type TenantLifecycleDto = {
   counts: { users: number; clinics: number; patients: number };
   subscription: {
     status: string;
+    interval?: string;
     planKey: string;
     planNameEn: string;
     trialEndsAt: string | null;
     clinicianSeats: number;
+    currentPeriodStart?: string | null;
     currentPeriodEnd: string | null;
     priceLockUntil: string | null;
   } | null;
@@ -35,8 +40,42 @@ type TenantLifecycleDto = {
   events: Array<{ id: string; action: string; createdAt: string; resource: string }>;
 };
 
+function formatPeriodEnd(iso: string | null | undefined, language: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString(localeForLanguage(language), {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatPeriodRelative(
+  iso: string | null | undefined,
+  t: (key: string, fallback: string, opts?: Record<string, unknown>) => string,
+): string | null {
+  if (!iso) return null;
+  const end = new Date(iso);
+  if (Number.isNaN(end.getTime())) return null;
+  const ms = end.getTime() - Date.now();
+  if (ms <= 0) return t("platform.periodEnded", "Period has ended");
+  const days = Math.round(ms / 86_400_000);
+  if (days >= 330) {
+    const years = Math.max(1, Math.round(days / 365));
+    return t("platform.periodInYears", "in about {{count}} year(s)", { count: years });
+  }
+  if (days >= 25) {
+    const months = Math.max(1, Math.round(days / 30));
+    return t("platform.periodInMonths", "in about {{count}} month(s)", { count: months });
+  }
+  return t("platform.periodInDays", "in about {{count}} day(s)", { count: days });
+}
+
 export function PlatformTenantConsolePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { tenantId = "" } = useParams();
   const qc = useQueryClient();
   const [trialDays, setTrialDays] = useState("14");
@@ -44,12 +83,30 @@ export function PlatformTenantConsolePage() {
   const [creditAmount, setCreditAmount] = useState("100");
   const [creditReason, setCreditReason] = useState("Ops grant");
   const [accessReason, setAccessReason] = useState("Help with support ticket");
+  const [planKey, setPlanKey] = useState("CLINIC");
+  const [planSeats, setPlanSeats] = useState("5");
+  const [planInterval, setPlanInterval] = useState<"MONTHLY" | "ANNUAL">("MONTHLY");
+  const [planReason, setPlanReason] = useState("Ops plan assignment");
+  const [setPlanConfirmOpen, setSetPlanConfirmOpen] = useState(false);
 
   const q = useQuery({
     queryKey: ["platform", "tenant", tenantId],
     enabled: Boolean(tenantId),
     queryFn: () => apiGet<TenantLifecycleDto>(`/api/v1/admin/platform/tenants/${tenantId}`),
   });
+
+  useEffect(() => {
+    if (!q.data?.subscription) return;
+    setPlanKey(q.data.subscription.planKey);
+    setPlanSeats(String(q.data.subscription.clinicianSeats));
+    if (q.data.subscription.interval === "ANNUAL" || q.data.subscription.interval === "MONTHLY") {
+      setPlanInterval(q.data.subscription.interval);
+    }
+  }, [
+    q.data?.subscription?.planKey,
+    q.data?.subscription?.clinicianSeats,
+    q.data?.subscription?.interval,
+  ]);
 
   const extendTrial = useMutation({
     mutationFn: () =>
@@ -58,6 +115,21 @@ export function PlatformTenantConsolePage() {
         reason: trialReason.trim(),
       }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["platform", "tenant", tenantId] }),
+  });
+
+  const setPlan = useMutation({
+    mutationFn: () =>
+      apiPost(`/api/v1/admin/platform/tenants/${tenantId}/set-plan`, {
+        planKey,
+        interval: planInterval,
+        clinicianSeats: Math.max(1, Number.parseInt(planSeats, 10) || 1),
+        reason: planReason.trim(),
+        status: "ACTIVE",
+      }),
+    onSuccess: () => {
+      setSetPlanConfirmOpen(false);
+      void qc.invalidateQueries({ queryKey: ["platform", "tenant", tenantId] });
+    },
   });
 
   const grantCredit = useMutation({
@@ -122,21 +194,154 @@ export function PlatformTenantConsolePage() {
             <CardHeader>
               <CardTitle className="text-base">{t("platform.tenantTab.subscription", "Subscription")}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-1 text-sm">
+            <CardContent className="space-y-4 text-sm">
               {d.subscription ? (
-                <>
-                  <p>
-                    {d.subscription.planNameEn} ({d.subscription.planKey}) — {d.subscription.status}
+                <div className="space-y-3">
+                  <p className="text-base font-medium text-foreground">
+                    {d.subscription.planNameEn}{" "}
+                    <span className="font-mono text-sm text-muted-foreground">({d.subscription.planKey})</span>
+                    <span className="text-muted-foreground"> — {d.subscription.status}</span>
+                    {d.subscription.interval ? (
+                      <span className="ms-2 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {d.subscription.interval === "ANNUAL"
+                          ? t("platform.billingAnnual", "Annual")
+                          : t("platform.billingMonthly", "Monthly")}
+                      </span>
+                    ) : null}
                   </p>
-                  <p className="ltr-nums">
-                    Seats {d.subscription.clinicianSeats} · period ends {d.subscription.currentPeriodEnd ?? "—"}
+                  <div
+                    className="flex items-start gap-3 rounded-xl border border-emerald-500/35 bg-gradient-to-br from-emerald-500/15 to-emerald-600/5 px-4 py-3.5 text-emerald-900 shadow-sm dark:from-emerald-500/20 dark:to-emerald-900/10 dark:text-emerald-200"
+                    data-testid="subscription-period-end"
+                  >
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      <Timer className="size-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-emerald-700 dark:text-emerald-400">
+                        {t("platform.periodEndsLabel", "Current period ends")}
+                      </p>
+                      <p className="text-xl font-semibold leading-tight tracking-tight ltr-nums tabular-nums text-emerald-950 dark:text-emerald-50">
+                        {formatPeriodEnd(d.subscription.currentPeriodEnd, i18n.language)}
+                      </p>
+                      {(() => {
+                        const relative = formatPeriodRelative(d.subscription.currentPeriodEnd, t);
+                        return relative ? (
+                          <p className="text-sm font-medium text-emerald-800/90 dark:text-emerald-300/90">
+                            {relative}
+                          </p>
+                        ) : null;
+                      })()}
+                      <p className="text-xs leading-relaxed text-emerald-800/65 dark:text-emerald-300/65">
+                        {d.subscription.interval === "ANNUAL"
+                          ? t(
+                              "platform.periodEndsAnnualHint",
+                              "Billing window is about one year from the last plan assignment.",
+                            )
+                          : t(
+                              "platform.periodEndsMonthlyHint",
+                              "Billing window is about one month from the last plan assignment.",
+                            )}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground ltr-nums">
+                    {t("platform.seatsLabel", "Seats")}: {d.subscription.clinicianSeats}
+                    {d.subscription.priceLockUntil
+                      ? ` · ${t("platform.priceLockUntil", "Price lock until")} ${formatPeriodEnd(d.subscription.priceLockUntil, i18n.language)}`
+                      : ""}
                   </p>
-                  <p className="ltr-nums">Price lock until {d.subscription.priceLockUntil ?? "—"}</p>
-                  <p>Rep: {d.salesRepCode ?? "—"}</p>
-                </>
+                  <p className="text-sm text-muted-foreground">
+                    {t("platform.repLabel", "Rep")}: {d.salesRepCode ?? "—"}
+                  </p>
+                </div>
               ) : (
                 <p>{t("platform.lifecycleEmpty", "None")}</p>
               )}
+
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "platform.setPlanHint",
+                    "Assign a catalog plan for this organization (ops override). Prefer Monthly unless you know Annual pricing exists for that plan in the market. Clinic+ unlocks Operations; Pro+ unlocks AI assistant.",
+                  )}
+                </p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground">{t("platform.setPlanKey", "Plan")}</label>
+                    <select
+                      className="flex h-9 w-36 rounded-md border border-input bg-background px-2 text-sm"
+                      value={planKey}
+                      onChange={(e) => setPlanKey(e.target.value)}
+                      data-testid="platform-set-plan-key"
+                    >
+                      <option value="LITE">Lite</option>
+                      <option value="PRO">Pro</option>
+                      <option value="CLINIC">Clinic</option>
+                      <option value="ENTERPRISE">Enterprise</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">{t("platform.setPlanInterval", "Interval")}</label>
+                    <select
+                      className="flex h-9 w-32 rounded-md border border-input bg-background px-2 text-sm"
+                      value={planInterval}
+                      onChange={(e) => setPlanInterval(e.target.value as "MONTHLY" | "ANNUAL")}
+                    >
+                      <option value="MONTHLY">Monthly</option>
+                      <option value="ANNUAL">Annual</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">{t("platform.setPlanSeats", "Seats")}</label>
+                    <Input
+                      className="w-20 ltr-nums"
+                      value={planSeats}
+                      onChange={(e) => setPlanSeats(e.target.value)}
+                    />
+                  </div>
+                  <div className="min-w-[12rem] flex-1">
+                    <label className="text-xs text-muted-foreground">{t("platform.setPlanReason", "Reason")}</label>
+                    <Input value={planReason} onChange={(e) => setPlanReason(e.target.value)} />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={setPlan.isPending || planReason.trim().length < 3}
+                    onClick={() => setSetPlanConfirmOpen(true)}
+                    data-testid="platform-set-plan-submit"
+                  >
+                    {t("platform.setPlan", "Set plan")}
+                  </Button>
+                </div>
+                {setPlan.isError ? (
+                  <p className="text-xs text-destructive">
+                    {(() => {
+                      const e = setPlan.error;
+                      if (e && typeof e === "object" && "message" in e) return String((e as { message: unknown }).message);
+                      return String(e);
+                    })()}
+                  </p>
+                ) : null}
+                {setPlan.isSuccess ? (
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                    {t("platform.setPlanDone", "Plan updated.")}
+                  </p>
+                ) : null}
+              </div>
+
+              <SetPlanConfirmDialog
+                open={setPlanConfirmOpen}
+                onOpenChange={setSetPlanConfirmOpen}
+                pending={setPlan.isPending}
+                values={{
+                  planKey,
+                  interval: planInterval,
+                  seats: Math.max(1, Number.parseInt(planSeats, 10) || 1),
+                  reason: planReason.trim(),
+                  tenantName: d.name,
+                }}
+                onConfirm={() => setPlan.mutate()}
+              />
             </CardContent>
           </Card>
         </TabsContent>

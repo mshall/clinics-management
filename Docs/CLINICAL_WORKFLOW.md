@@ -4,7 +4,7 @@ Configurable specialty forms, physician shortcuts, safety checks, vitals trends,
 
 ## First-visit booking without a full patient chart
 
-Staff can book an appointment for a **new patient** with name + phone only (`provisionalPatient` on `POST /appointments`). That creates a provisional `Patient` (`profileComplete=false`) and stamps `isNewPatientAtBooking` as usual. **Check-in, encounter create, and marking the appointment completed** are blocked until staff finish registration (patient edit with `completeProfile`). Existing patients are unchanged (`profileComplete=true`).
+Staff can book an appointment for a **new patient** with name + phone only (`provisionalPatient` on `POST /appointments`). That creates a provisional `Patient` (`profileComplete=false`) and stamps `isNewPatientAtBooking` as usual. **Phone numbers are unique per organization** (digit-normalized): if the phone already belongs to a patient, booking and patient create return `PHONE_IN_USE` with the existing chart details; the UI shows a conflict dialog and offers to book against that patient instead of creating a duplicate. **Check-in, encounter create, and marking the appointment completed** are blocked until staff finish registration (patient edit with `completeProfile`). Existing patients are unchanged (`profileComplete=true`). Staff can **undo check-in** by moving status back to `SCHEDULED` or `CONFIRMED` (clears queue ticket and draft encounter so the visit flow can restart).
 
 ## Template builder
 

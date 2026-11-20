@@ -153,6 +153,7 @@ export class OperationsController {
     @Query("clinicId") clinicId?: string,
     @Query("status") status?: string,
     @Query("patientId") patientId?: string,
+    @Query("isContract") isContract?: string,
   ) {
     await this.assertViewAccess(user);
     return this.operations.list(
@@ -167,6 +168,7 @@ export class OperationsController {
       clinicId,
       status,
       patientId,
+      isContract,
     );
   }
 
@@ -178,9 +180,10 @@ export class OperationsController {
     @Query("from") from?: string,
     @Query("to") to?: string,
     @Query("clinicId") clinicId?: string,
+    @Query("isContract") isContract?: string,
   ) {
     await this.assertViewAccess(user);
-    return this.operations.summary(requireTenantId(user), user, from, to, clinicId);
+    return this.operations.summary(requireTenantId(user), user, from, to, clinicId, isContract);
   }
 
   @Get("payable")

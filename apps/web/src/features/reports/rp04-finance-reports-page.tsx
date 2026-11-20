@@ -29,8 +29,13 @@ type PayoutsDto = {
   doctorPayouts: { periodKey: string; amount: number; currency: string; paidAt: string | null }[];
 };
 
+type Rp04Props = {
+  /** When true, omit page chrome (for embedding under Reports tabs). */
+  embedded?: boolean;
+};
+
 /** RP-04 — AR aging, payouts, branch P&L. */
-export function Rp04FinanceReportsPage() {
+export function Rp04FinanceReportsPage({ embedded = false }: Rp04Props) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
   const entitled = useEntitlement("mod_reports");
@@ -59,15 +64,24 @@ export function Rp04FinanceReportsPage() {
   });
 
   if (!entitled) {
-    return <p className="p-6 text-sm text-muted-foreground">{t("rp04.denied")}</p>;
+    return <p className="text-sm text-muted-foreground">{t("rp04.denied")}</p>;
   }
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 md:p-6" data-testid="rp04-finance-reports">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("rp04.title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("rp04.subtitle")}</p>
-      </div>
+    <div
+      className={
+        embedded
+          ? "flex flex-col gap-6"
+          : "mx-auto flex max-w-6xl flex-col gap-6 p-4 md:p-6"
+      }
+      data-testid="rp04-finance-reports"
+    >
+      {embedded ? null : (
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("rp04.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("rp04.subtitle")}</p>
+        </div>
+      )}
 
       <Card>
         <CardHeader>

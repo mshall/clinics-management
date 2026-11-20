@@ -255,12 +255,13 @@ export class AdminController {
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
     @Query("sortBy") sortBy?: string,
-    @Query("sortOrder") sortOrder?: string
+    @Query("sortOrder") sortOrder?: string,
+    @Query("q") q?: string,
   ) {
     if (!isPlatformSuperAdmin(user)) {
       throw new ForbiddenException("Only platform super administrators can list all organizations");
     }
-    return this.admin.listTenants(page, pageSize, sortBy, sortOrder);
+    return this.admin.listTenants(page, pageSize, sortBy, sortOrder, q);
   }
 
   @Patch("tenant-settings")

@@ -70,7 +70,11 @@ import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { defaultMonthRange } from "@/stores/date-range-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
-import { collectOperationCreateValidationIssues } from "@/features/operations/operation-form-validation";
+import {
+  collectOperationCreateValidationIssues,
+  isZeroCostWithoutContract,
+} from "@/features/operations/operation-form-validation";
+import { OperationContractZeroDialog } from "@/features/operations/operation-contract-zero-dialog";
 import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dialog";
 import { LinkedInvoicesSection } from "@/features/invoices/linked-invoices-section";
 import { DatetimeLocalField } from "@/components/datetime-local-field";
@@ -141,6 +145,8 @@ export function OperationsPage() {
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
   const [filterClinicId, setFilterClinicId] = useState("");
+  /** "" | "contract" | "standard" */
+  const [filterContract, setFilterContract] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState("operationDate");
@@ -150,6 +156,7 @@ export function OperationsPage() {
     from,
     to,
     clinicId: filterClinicId || undefined,
+    isContract: filterContract || undefined,
   });
 
   const { data: opData, isPending, isError, error } = useOperationsQuery({
@@ -160,6 +167,7 @@ export function OperationsPage() {
     sortBy,
     sortOrder,
     clinicId: filterClinicId || undefined,
+    isContract: filterContract || undefined,
   });
 
   const onSort = (column: string) => {
@@ -198,10 +206,13 @@ export function OperationsPage() {
   const [operationDate, setOperationDate] = useState("");
   const [totalCost, setTotalCost] = useState("");
   const [downPayment, setDownPayment] = useState("");
+  const [isContract, setIsContract] = useState(false);
   const [feeCurrency, setFeeCurrency] = useState<string>(orgBaseCurrency);
   const [comments, setComments] = useState("");
   const [formErr, setFormErr] = useState<string | null>(null);
   const [createOk, setCreateOk] = useState<string | null>(null);
+  const [contractZeroDialogOpen, setContractZeroDialogOpen] = useState(false);
+  const [contractZeroDialogIntent, setContractZeroDialogIntent] = useState<"create" | "edit">("create");
   const createValidation = useValidationIssuesDialog({ intent: "create" });
   const [docInvalidRowIds, setDocInvalidRowIds] = useState<Set<string>>(() => new Set());
   const [docRows, setDocRows] = useState<PendingDocumentRow[]>([]);
@@ -308,6 +319,7 @@ export function OperationsPage() {
     setOperationDate("");
     setTotalCost("");
     setDownPayment("");
+    setIsContract(false);
     setFeeCurrency(createCurrency);
     setComments("");
     setDocRows([]);
@@ -342,6 +354,7 @@ export function OperationsPage() {
   const [editOperationDate, setEditOperationDate] = useState("");
   const [editTotalCost, setEditTotalCost] = useState("");
   const [editDownPayment, setEditDownPayment] = useState("");
+  const [editIsContract, setEditIsContract] = useState(false);
   const [editFeeCurrency, setEditFeeCurrency] = useState<string>(orgBaseCurrency);
   const [editComments, setEditComments] = useState("");
   const [editClinicId, setEditClinicId] = useState("");
@@ -406,6 +419,7 @@ export function OperationsPage() {
     setEditOperationDate(local);
     setEditTotalCost(String(o.totalCost));
     setEditDownPayment(String(o.downPayment));
+    setEditIsContract(Boolean(o.isContract));
     setEditFeeCurrency(o.feeCurrency ?? resolveClinicCurrency(o.clinicId));
     setEditComments(o.comments ?? "");
     setEditFormErr(null);
@@ -553,6 +567,7 @@ export function OperationsPage() {
           totalCost: editTotalCost,
           downPayment: editDownPayment,
           feesOptional: !canEditFees,
+          isContract: editIsContract,
           docRows: editDocRows,
           medTab: editMedTab,
           prescriptionFile: editPrescriptionFile,
@@ -568,17 +583,37 @@ export function OperationsPage() {
     if (!editPatientId.trim()) issues.push(t("operations.validationPatient", "Select a patient."));
     if (!editClinicianId.trim()) issues.push(t("operations.validationDoctor", "Select a performing doctor."));
     if (!editOperationDate.trim()) issues.push(t("operations.validationDate", "Enter the operation date."));
-    if (
-      canEditFees &&
-      (!editTotalCost.trim() || Number.isNaN(Number.parseFloat(editTotalCost)))
-    ) {
+    if (canEditFees && !editTotalCost.trim()) {
+      issues.push(
+        t(
+          "operations.errorTotalRequired",
+          "Enter the total cost or check if the operation is contract.",
+        ),
+      );
+    } else if (canEditFees && Number.isNaN(Number.parseFloat(editTotalCost))) {
       issues.push(t("operations.validationTotalCost", "Enter a valid total cost."));
+    } else if (
+
+      canEditFees &&
+      isZeroCostWithoutContract({
+        totalCost: editTotalCost,
+        isContract: editIsContract,
+        feesOptional: !canEditFees,
+      })
+    ) {
+      issues.push(
+        t(
+          "operations.errorContractRequiredForZero",
+          "Enter the total cost or check if the operation is contract.",
+        ),
+      );
     }
     return { issues, invalidDocRowIds: new Set<string>() };
   };
 
-  const saveEditOperation = async (): Promise<OperationDto> => {
+  const saveEditOperation = async (opts?: { forceContract?: boolean }): Promise<OperationDto> => {
     if (!editOp) throw new Error("No operation selected");
+    const contractFlag = Boolean(opts?.forceContract || editIsContract);
     const op = await apiPatch<OperationDto>(`/api/v1/operations/${editOp.id}`, {
       patientId: editPatientId,
       clinicianId: editClinicianId,
@@ -588,6 +623,7 @@ export function OperationsPage() {
             totalCost: Number.parseFloat(editTotalCost),
             downPayment: editDownPayment.trim() ? Number.parseFloat(editDownPayment) : 0,
             feeCurrency: editFeeCurrency,
+            isContract: contractFlag,
           }
         : {}),
       comments: editComments.trim() || undefined,
@@ -689,7 +725,7 @@ export function OperationsPage() {
   });
 
   const editMut = useMutation({
-    mutationFn: saveEditOperation,
+    mutationFn: (opts?: { forceContract?: boolean }) => saveEditOperation(opts),
     onSuccess: (saved) => {
       setEditFormErr(null);
       void qc.invalidateQueries({ queryKey: ["operations"] });
@@ -721,14 +757,31 @@ export function OperationsPage() {
   const handleEditClick = () => {
     if (!editOp) return;
     const validation = collectEditValidation();
-    if (validation.issues.length > 0) {
-      showEditValidationIssues(validation.issues, validation.invalidDocRowIds);
+    const zeroWithoutContract = isZeroCostWithoutContract({
+      totalCost: editTotalCost,
+      isContract: editIsContract,
+      feesOptional: !canEditFees,
+    });
+    const zeroContractGateMsg = t(
+      "operations.errorContractRequiredForZero",
+      "Enter the total cost or check if the operation is contract.",
+    );
+    const otherIssues = zeroWithoutContract
+      ? validation.issues.filter((issue) => issue !== zeroContractGateMsg)
+      : validation.issues;
+    if (otherIssues.length > 0) {
+      showEditValidationIssues(otherIssues, validation.invalidDocRowIds);
+      return;
+    }
+    if (zeroWithoutContract) {
+      setContractZeroDialogIntent("edit");
+      setContractZeroDialogOpen(true);
       return;
     }
     setEditDocInvalidRowIds(new Set());
     editValidation.clear();
     setEditFormErr(null);
-    editMut.mutate();
+    editMut.mutate({});
   };
 
   const handleEditCompleteClick = () => {
@@ -747,7 +800,7 @@ export function OperationsPage() {
   const handleConfirmEditComplete = () => {
     setEditCompleteConfirmOpen(false);
     setPendingCompleteAfterSave(true);
-    editMut.mutate();
+    editMut.mutate({});
   };
 
   const operationSummaryDetails = (o: OperationDto, currency: string) => (
@@ -790,13 +843,15 @@ export function OperationsPage() {
   };
 
   const createMut = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (opts?: { forceContract?: boolean }) => {
+      const contractFlag = Boolean(opts?.forceContract || isContract);
       const op = await apiPost<OperationDto>("/api/v1/operations", {
         patientId,
         clinicianId,
         operationDate: toOperationIso(operationDate),
         totalCost: canEditFees && totalCost.trim() ? Number.parseFloat(totalCost) : 0,
         downPayment: canEditFees && downPayment.trim() ? Number.parseFloat(downPayment) : 0,
+        isContract: canEditFees ? contractFlag : false,
         comments: comments.trim() || undefined,
         clinicId: schedulingClinicId || undefined,
         noMedications: medTab === "none",
@@ -864,17 +919,36 @@ export function OperationsPage() {
         prescriptionFile,
         generatedPrescriptionFile,
         feesOptional: !canEditFees,
+        isContract,
         acquisition,
+        requireAcquisition: Boolean(authUser?.operationAcquisitionRequired),
       },
       t,
     );
-    if (validation.issues.length > 0) {
-      showCreateValidationIssues(validation.issues, validation.invalidDocRowIds);
+    const zeroWithoutContract = isZeroCostWithoutContract({
+      totalCost,
+      isContract,
+      feesOptional: !canEditFees,
+    });
+    const zeroContractGateMsg = t(
+      "operations.errorContractRequiredForZero",
+      "Enter the total cost or check if the operation is contract.",
+    );
+    const otherIssues = zeroWithoutContract
+      ? validation.issues.filter((issue) => issue !== zeroContractGateMsg)
+      : validation.issues;
+    if (otherIssues.length > 0) {
+      showCreateValidationIssues(otherIssues, validation.invalidDocRowIds);
+      return;
+    }
+    if (zeroWithoutContract) {
+      setContractZeroDialogIntent("create");
+      setContractZeroDialogOpen(true);
       return;
     }
     setFormErr(null);
     setDocInvalidRowIds(new Set());
-    createMut.mutate();
+    createMut.mutate({});
   };
 
   const loc = localeForLanguage(i18n.language);
@@ -905,6 +979,19 @@ export function OperationsPage() {
   return (
     <div className="space-y-6">
       <ValidationIssuesDialog {...createValidation.dialogProps} />
+      <OperationContractZeroDialog
+        open={contractZeroDialogOpen}
+        onOpenChange={setContractZeroDialogOpen}
+        onConfirmContract={() => {
+          if (contractZeroDialogIntent === "edit") {
+            setEditIsContract(true);
+            editMut.mutate({ forceContract: true });
+            return;
+          }
+          setIsContract(true);
+          createMut.mutate({ forceContract: true });
+        }}
+      />
       <Dialog
         open={completeConfirmOp != null}
         onOpenChange={(open) => {
@@ -1399,6 +1486,29 @@ export function OperationsPage() {
                     </p>
                   )}
                   {canEditFees ? (
+                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+                      <input
+                        type="checkbox"
+                        className="mt-1 size-4 accent-emerald-600"
+                        checked={editIsContract}
+                        onChange={(e) => setEditIsContract(e.target.checked)}
+                        data-testid="edit-operation-is-contract"
+                      />
+                      <span className="space-y-0.5">
+                        <span className="block text-sm font-medium">
+                          {t("operations.contractLabel", "Contract")}{" "}
+                          <span className="text-muted-foreground">({t("operations.contractLabelAr", "تعاقد")})</span>
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {t(
+                            "operations.contractCheckboxHint",
+                            "Required when total cost is zero. Contract operations can be filtered in the list and reports.",
+                          )}
+                        </span>
+                      </span>
+                    </label>
+                  ) : null}
+                  {canEditFees ? (
                     <>
                       <div className="space-y-1">
                         <Label htmlFor="edit-op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
@@ -1617,6 +1727,23 @@ export function OperationsPage() {
                 </select>
               </div>
             ) : null}
+            <div className={filterFieldClassName}>
+              <Label htmlFor="op-contract-filter">{t("operations.contractFilter", "Contract type")}</Label>
+              <select
+                id="op-contract-filter"
+                className={nativeSelectClassName}
+                value={filterContract}
+                onChange={(e) => {
+                  setFilterContract(e.target.value);
+                  setPage(1);
+                }}
+                data-testid="operations-contract-filter"
+              >
+                <option value="">{t("operations.contractFilterAll", "All operations")}</option>
+                <option value="contract">{t("operations.contractFilterContract", "Contract (تعاقد)")}</option>
+                <option value="standard">{t("operations.contractFilterStandard", "Standard (paid)")}</option>
+              </select>
+            </div>
           </div>
           {showSummaryMoney ? (
             <>
@@ -1778,6 +1905,29 @@ export function OperationsPage() {
                   </p>
                 )}
                 {canEditFees ? (
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-4 accent-emerald-600"
+                      checked={isContract}
+                      onChange={(e) => setIsContract(e.target.checked)}
+                      data-testid="operation-is-contract"
+                    />
+                    <span className="space-y-0.5">
+                      <span className="block text-sm font-medium">
+                        {t("operations.contractLabel", "Contract")}{" "}
+                        <span className="text-muted-foreground">({t("operations.contractLabelAr", "تعاقد")})</span>
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {t(
+                          "operations.contractCheckboxHint",
+                          "Required when total cost is zero. Contract operations can be filtered in the list and reports.",
+                        )}
+                      </span>
+                    </span>
+                  </label>
+                ) : null}
+                {canEditFees ? (
                 <div className="space-y-1">
                   <Label htmlFor="op-fee-currency">{t("operations.paymentCurrency", "Payment currency")}</Label>
                   <BaseCurrencySelect id="op-fee-currency" value={feeCurrency} onChange={setFeeCurrency} />
@@ -1832,13 +1982,29 @@ export function OperationsPage() {
               </fieldset>
 
               <fieldset className="space-y-3 rounded-lg border border-border p-4">
-                <legend className="px-1 text-sm font-medium">{t("patients.howDidTheyFindUs", "How did they find us?")}</legend>
-                <PatientAcquisitionFields required values={acquisition} onChange={setAcquisition} />
+                <legend className="px-1 text-sm font-medium">
+                  {t("patients.howDidTheyFindUs", "How did they find us?")}
+                  {authUser?.operationAcquisitionRequired ? (
+                    <span className="ms-1 text-destructive" aria-hidden>
+                      *
+                    </span>
+                  ) : null}
+                </legend>
+                <PatientAcquisitionFields
+                  required={Boolean(authUser?.operationAcquisitionRequired)}
+                  values={acquisition}
+                  onChange={setAcquisition}
+                />
                 <p className="text-xs text-muted-foreground">
-                  {t(
-                    "operations.acquisitionHint",
-                    "Updates how this patient is recorded as having found the clinic on their profile.",
-                  )}
+                  {authUser?.operationAcquisitionRequired
+                    ? t(
+                        "operations.acquisitionRequiredHint",
+                        "Required by your organization settings. Updates how this patient is recorded as having found the clinic.",
+                      )
+                    : t(
+                        "operations.acquisitionHint",
+                        "Optional. Updates how this patient is recorded as having found the clinic on their profile.",
+                      )}
                 </p>
               </fieldset>
 
@@ -1914,7 +2080,14 @@ export function OperationsPage() {
                             <p className="font-medium ltr-nums">{new Date(o.operationDate).toLocaleString(loc)}</p>
                             {clinicLabel ? <p className="text-xs text-muted-foreground">{clinicLabel}</p> : null}
                           </div>
-                          <OperationStatusBadge status={o.status ?? "SCHEDULED"} />
+                          <div className="flex flex-col items-end gap-1">
+                            <OperationStatusBadge status={o.status ?? "SCHEDULED"} />
+                            {o.isContract ? (
+                              <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+                                {t("operations.contractBadge", "Contract · تعاقد")}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                         <p className="mt-2 truncate text-sm">{patientResolved.text}</p>
                         <p className="truncate text-xs text-muted-foreground">{formatClinicianDisplayName(o, i18n.language)}</p>
@@ -2080,7 +2253,14 @@ export function OperationsPage() {
                             </>
                           ) : null}
                           <td className="px-3 py-2 align-top">
-                            <OperationStatusBadge status={o.status ?? "SCHEDULED"} />
+                            <div className="flex flex-col gap-1">
+                              <OperationStatusBadge status={o.status ?? "SCHEDULED"} />
+                              {o.isContract ? (
+                                <span className="w-fit rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+                                  {t("operations.contractBadge", "Contract · تعاقد")}
+                                </span>
+                              ) : null}
+                            </div>
                           </td>
                           <td className="max-w-[200px] px-3 py-2 align-top text-muted-foreground">
                             {o.comments?.trim() || "—"}

@@ -1,5 +1,19 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import {
+  BarChart3,
+  Building2,
+  CircleDollarSign,
+  CircleHelp,
+  HeartPulse,
+  Landmark,
+  Percent,
+  Scissors,
+  Share2,
+  Table2,
+  UserPlus,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   Area,
@@ -14,7 +28,7 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as ChartTooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -24,23 +38,35 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { featureTabTriggerClassName, featureTabsListClassName } from "@/lib/feature-tabs";
+import { Rp04FinanceReportsPage } from "@/features/reports/rp04-finance-reports-page";
+import { cn } from "@/lib/utils";
 import {
   useClinicsQuery,
   useReportsClinicBreakdownQuery,
   useReportsKiorexImpactQuery,
   useReportsMonthlySeriesQuery,
   useReportsOperationsQuery,
+  useReportsEncounterAcquisitionQuery,
+  useReportsOperationAcquisitionQuery,
   useReportsPatientAcquisitionQuery,
   useReportsPerformanceQuery,
 } from "@/lib/api-hooks";
 import { apiDownload } from "@/lib/http";
-import type { ReportsClinicBreakdownItemDto, ReportsCurrencyTotalsDto, ReportsMonthlySeriesItemDto } from "@/lib/api-types";
+import type {
+  ReportsClinicBreakdownItemDto,
+  ReportsCurrencyTotalsDto,
+  ReportsMonthlySeriesItemDto,
+} from "@/lib/api-types";
 import { formatClinicName, formatRevenueCategory, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
 import {
   patientAcquisitionLabel,
   type PatientAcquisitionChannel,
 } from "@/lib/patient-acquisition";
+import { AcquisitionChannelCell, ReportColumnHead } from "@/lib/patient-acquisition-icons";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
@@ -58,6 +84,22 @@ const ACQUISITION_CHART_COLORS = [
 
 const REVENUE_CHART_COLOR = "var(--kx-chart-2)";
 const EXPENSE_CHART_COLOR = "var(--kx-chart-3)";
+
+/** Distinct stroke/fill per currency so multi-currency legends stay readable. */
+const CURRENCY_CHART_COLORS = [
+  "hsl(221 83% 53%)",
+  "hsl(142 70% 38%)",
+  "hsl(32 95% 44%)",
+  "hsl(280 65% 52%)",
+  "hsl(0 72% 48%)",
+  "hsl(174 62% 36%)",
+  "hsl(24 90% 48%)",
+  "hsl(200 70% 42%)",
+];
+
+function currencyChartColor(index: number): string {
+  return CURRENCY_CHART_COLORS[index % CURRENCY_CHART_COLORS.length]!;
+}
 
 const REVENUE_TEXT_CLASS = "font-semibold text-kx-ocean-800 dark:text-kx-ocean-400";
 const EXPENSE_TEXT_CLASS = "font-semibold text-muted-foreground";
@@ -119,6 +161,64 @@ function ChartFrame({ className, children }: { className?: string; children: Rea
   return <div className={className ?? "h-56 w-full sm:h-72 lg:h-96"}>{children}</div>;
 }
 
+function OpsKpiHelp({ tip }: { tip: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-700 shadow-sm transition-colors hover:border-sky-500/70 hover:bg-sky-500/15 hover:text-sky-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-sky-400/40 dark:bg-sky-400/10 dark:text-sky-300 dark:hover:text-sky-200"
+          aria-label={tip}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }}
+        >
+          <CircleHelp className="size-3.5" aria-hidden />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align="end"
+        sideOffset={8}
+        className="max-w-[17rem] text-start text-xs leading-snug"
+        onPointerDownOutside={() => setOpen(false)}
+      >
+        {tip}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function OpsKpiTile({
+  label,
+  tip,
+  labelClassName,
+  valueClassName,
+  children,
+  meta,
+}: {
+  label: string;
+  tip: string;
+  labelClassName: string;
+  valueClassName?: string;
+  children: ReactNode;
+  meta?: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border bg-muted/30 px-4 py-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className={cn("text-xs font-semibold uppercase tracking-wide", labelClassName)}>{label}</p>
+        <OpsKpiHelp tip={tip} />
+      </div>
+      <div className={cn("mt-1 text-2xl font-semibold ltr-nums", valueClassName)}>{children}</div>
+      {meta}
+    </div>
+  );
+}
+
 export function ReportsPage() {
   const { t, i18n } = useTranslation();
   const loc = localeForLanguage(i18n.language);
@@ -128,6 +228,9 @@ export function ReportsPage() {
   const { from, to } = useDateRangeStore();
   const [scopeClinicId, setScopeClinicId] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<{ channel: string; label: string } | null>(null);
+  const [mainTab, setMainTab] = useState("tables");
+  /** "" | "contract" | "standard" */
+  const [opAcquisitionContractFilter, setOpAcquisitionContractFilter] = useState("");
 
   const { data: clinics = [] } = useClinicsQuery();
   const clinicScopeId = scopeClinicId.trim() || undefined;
@@ -139,8 +242,50 @@ export function ReportsPage() {
   const kiorexImpact = useReportsKiorexImpactQuery(kiorexPeriod);
   const clinicBreakdown = useReportsClinicBreakdownQuery(from, to, !isPhysician && !clinicScopeId);
   const acquisition = useReportsPatientAcquisitionQuery(from, to);
+  const operationAcquisition = useReportsOperationAcquisitionQuery({
+    from,
+    to,
+    clinicId: clinicScopeId,
+    isContract: opAcquisitionContractFilter || undefined,
+  });
+  const encounterAcquisition = useReportsEncounterAcquisitionQuery({
+    from,
+    to,
+    clinicId: clinicScopeId,
+  });
 
-  const currencies = series.data?.currencies ?? performance.data?.byCurrency.map((r) => r.currency) ?? [];
+  /** Currencies that actually have posted revenue in the series (not a fixed AED/EGP/USD list). */
+  const revenueCurrencies = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of series.data?.items ?? []) {
+      for (const row of item.revenueByCurrency) {
+        if (Math.abs(row.amount) > 0.0001) set.add(row.currency);
+      }
+    }
+    for (const row of performance.data?.byCurrency ?? []) {
+      if (Math.abs(row.revenue) > 0.0001) set.add(row.currency);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [series.data?.items, performance.data?.byCurrency]);
+
+  const expenseCurrencies = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of series.data?.items ?? []) {
+      for (const row of item.expensesByCurrency) {
+        if (Math.abs(row.amount) > 0.0001) set.add(row.currency);
+      }
+    }
+    for (const row of performance.data?.byCurrency ?? []) {
+      if (Math.abs(row.expenses) > 0.0001) set.add(row.currency);
+    }
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [series.data?.items, performance.data?.byCurrency]);
+
+  const currencies = useMemo(
+    () => [...new Set([...revenueCurrencies, ...expenseCurrencies])].sort((a, b) => a.localeCompare(b)),
+    [revenueCurrencies, expenseCurrencies],
+  );
+
   const chartData = useMemo(
     () => buildCurrencyChartRows(series.data?.items ?? [], currencies),
     [series.data?.items, currencies],
@@ -159,6 +304,67 @@ export function ReportsPage() {
   }, [acquisition.data?.items, t]);
 
   const acquisitionTotal = acquisition.data?.total ?? 0;
+
+  const operationAcquisitionRows = useMemo(() => {
+    return (operationAcquisition.data?.items ?? []).map((item) => ({
+      ...item,
+      label:
+        item.channel === "UNKNOWN"
+          ? t("reports.acquisitionUnknown", "Not specified")
+          : patientAcquisitionLabel(item.channel as PatientAcquisitionChannel, t),
+      paidTotal: item.byCurrency.reduce((sum, m) => sum + m.paidAmount, 0),
+      costTotal: item.byCurrency.reduce((sum, m) => sum + m.totalCost, 0),
+    }));
+  }, [operationAcquisition.data?.items, t]);
+
+  const encounterAcquisitionRows = useMemo(() => {
+    return (encounterAcquisition.data?.items ?? []).map((item) => ({
+      ...item,
+      label:
+        item.channel === "UNKNOWN"
+          ? t("reports.acquisitionUnknown", "Not specified")
+          : patientAcquisitionLabel(item.channel as PatientAcquisitionChannel, t),
+    }));
+  }, [encounterAcquisition.data?.items, t]);
+  
+  const combinedAcquisitionRows = useMemo(() => {
+    const encBy = new Map(encounterAcquisitionRows.map((r) => [r.channel, r]));
+    const opBy = new Map(operationAcquisitionRows.map((r) => [r.channel, r]));
+    const encTotal = encounterAcquisitionRows.reduce((s, r) => s + r.encounterCount, 0);
+    const opTotal = operationAcquisitionRows.reduce((s, r) => s + r.operationCount, 0);
+    const channels = new Set<string>([
+      ...acquisitionChartData.map((r) => r.channel),
+      ...encBy.keys(),
+      ...opBy.keys(),
+    ]);
+    return [...channels]
+      .map((channel) => {
+        const patients = acquisitionChartData.find((r) => r.channel === channel);
+        const enc = encBy.get(channel);
+        const op = opBy.get(channel);
+        const label =
+          patients?.label ??
+          enc?.label ??
+          op?.label ??
+          (channel === "UNKNOWN"
+            ? t("reports.acquisitionUnknown", "Not specified")
+            : patientAcquisitionLabel(channel as PatientAcquisitionChannel, t));
+        const encounterCount = enc?.encounterCount ?? 0;
+        const operationCount = op?.operationCount ?? 0;
+        return {
+          channel,
+          label,
+          patientCount: patients?.count ?? 0,
+          patientShare: patients?.sharePercent ?? 0,
+          encounterCount,
+          encounterShare: encTotal > 0 ? Math.round((encounterCount / encTotal) * 1000) / 10 : 0,
+          operationCount,
+          operationShare: opTotal > 0 ? Math.round((operationCount / opTotal) * 1000) / 10 : 0,
+        };
+      })
+      .sort((a, b) => b.patientCount - a.patientCount || b.encounterCount - a.encounterCount || a.label.localeCompare(b.label));
+  }, [acquisitionChartData, encounterAcquisitionRows, operationAcquisitionRows, t]);
+
   const scopeLabel =
     clinicScopeId != null && clinicScopeId !== ""
       ? formatClinicName(
@@ -192,16 +398,11 @@ export function ReportsPage() {
         <p className="mt-1 text-xs text-muted-foreground ltr-nums">
           {t("reports.usingRange")}: {from} → {to}
         </p>
-        <p className="mt-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to="/reports/ar-aging" data-testid="rp04-link">
-              {t("rp04.linkFromReports")}
-            </Link>
-          </Button>
-        </p>
       </div>
 
-      <Card data-testid="reports-exports">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+        <div className="min-w-0 h-full">
+          <Card data-testid="reports-exports" className="h-full">
         <CardHeader>
           <CardTitle className="text-base">{t("reports.exportPayments", "Payments export")}</CardTitle>
           <CardDescription>
@@ -226,8 +427,9 @@ export function ReportsPage() {
           </Button>
         </CardContent>
       </Card>
-
-      <Card>
+        </div>
+        <div className="min-w-0 h-full">
+          <Card className="h-full">
         <CardHeader>
           <CardTitle className="text-base">{t("reports.scopeTitle", "Report scope")}</CardTitle>
           <CardDescription>
@@ -266,8 +468,27 @@ export function ReportsPage() {
           </div>
         </CardContent>
       </Card>
+        </div>
+      </div>
 
-      <Card data-testid="reports-kiorex-impact">
+      <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-4">
+        <TabsList className={cn(featureTabsListClassName, "grid-cols-1 sm:grid-cols-3")}>
+          <TabsTrigger value="tables" className={featureTabTriggerClassName("sky")} data-testid="reports-tab-tables">
+            <Table2 className="size-4 shrink-0" aria-hidden />
+            {t("reports.tabTables", "Tables")}
+          </TabsTrigger>
+          <TabsTrigger value="charts" className={featureTabTriggerClassName("violet")} data-testid="reports-tab-charts">
+            <BarChart3 className="size-4 shrink-0" aria-hidden />
+            {t("reports.tabCharts", "Charts")}
+          </TabsTrigger>
+          <TabsTrigger value="finance" className={featureTabTriggerClassName("emerald")} data-testid="reports-tab-finance">
+            <Landmark className="size-4 shrink-0" aria-hidden />
+            {t("reports.tabArAgingPl", "AR aging & branch P&L")}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tables" className="space-y-4 sm:space-y-6 focus-visible:outline-none">
+<Card data-testid="reports-kiorex-impact">
         <CardHeader>
           <CardTitle className="text-base">{t("reports.kiorexImpactTitle", "Kiorex impact")}</CardTitle>
           <CardDescription>
@@ -286,37 +507,75 @@ export function ReportsPage() {
               {kiorexImpact.error instanceof Error ? kiorexImpact.error.message : t("common.error")}
             </p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexBookings", "Bookings")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.bookings ?? 0}</p>
+            <TooltipProvider delayDuration={0}>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <OpsKpiTile
+                  label={t("reports.kiorexBookings", "Bookings")}
+                  tip={t(
+                    "reports.kiorexBookingsHelp",
+                    "Marketplace bookings attributed to Kiorex in the selected month.",
+                  )}
+                  labelClassName="text-violet-700 dark:text-violet-400"
+                  valueClassName="text-violet-700 dark:text-violet-400"
+                >
+                  {kiorexImpact.data?.bookings ?? 0}
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.kiorexNewPatients", "New patients")}
+                  tip={t(
+                    "reports.kiorexNewPatientsHelp",
+                    "New patients acquired through Kiorex in the selected month.",
+                  )}
+                  labelClassName="text-emerald-700 dark:text-emerald-400"
+                  valueClassName="text-emerald-700 dark:text-emerald-400"
+                >
+                  {kiorexImpact.data?.newPatients ?? 0}
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.kiorexCommission", "Commission")}
+                  tip={t(
+                    "reports.kiorexCommissionHelp",
+                    "Commission owed for Kiorex bookings in the selected month.",
+                  )}
+                  labelClassName="text-amber-700 dark:text-amber-400"
+                  valueClassName="text-amber-700 dark:text-amber-400"
+                >
+                  {kiorexImpact.data?.commission ?? 0}
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.kiorexOffset", "Offset")}
+                  tip={t(
+                    "reports.kiorexOffsetHelp",
+                    "Credits or offsets applied against Kiorex commission.",
+                  )}
+                  labelClassName="text-sky-700 dark:text-sky-400"
+                  valueClassName="text-sky-700 dark:text-sky-400"
+                >
+                  {kiorexImpact.data?.offset ?? 0}
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.kiorexNetCostPerPatient", "Net cost / new patient")}
+                  tip={t(
+                    "reports.kiorexNetCostHelp",
+                    "Net Kiorex cost divided by new patients acquired in the month.",
+                  )}
+                  labelClassName="text-rose-700 dark:text-rose-400"
+                  valueClassName="text-rose-700 dark:text-rose-400"
+                  meta={
+                    <p className="text-xs text-muted-foreground">
+                      {kiorexImpact.data?.matchesStatement
+                        ? t("reports.kiorexMatchesStatement", "Matches monthly statement (CR-11)")
+                        : t(
+                            "reports.kiorexStatementPending",
+                            "Statement reconcile pending (no confirmed commission yet)",
+                          )}
+                    </p>
+                  }
+                >
+                  {kiorexImpact.data?.netCostPerNewPatient ?? "—"}
+                </OpsKpiTile>
               </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexNewPatients", "New patients")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.newPatients ?? 0}</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexCommission", "Commission")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.commission ?? 0}</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.kiorexOffset", "Offset")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.offset ?? 0}</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {t("reports.kiorexNetCostPerPatient", "Net cost / new patient")}
-                </p>
-                <p className="text-2xl font-semibold ltr-nums">{kiorexImpact.data?.netCostPerNewPatient ?? "—"}</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3 sm:col-span-2">
-                <p className="text-xs text-muted-foreground">
-                  {kiorexImpact.data?.matchesStatement
-                    ? t("reports.kiorexMatchesStatement", "Matches monthly statement (CR-11)")
-                    : t("reports.kiorexStatementPending", "Statement reconcile pending (no confirmed commission yet)")}
-                </p>
-              </div>
-            </div>
+            </TooltipProvider>
           )}
         </CardContent>
       </Card>
@@ -339,41 +598,78 @@ export function ReportsPage() {
               {operations.error instanceof Error ? operations.error.message : t("common.error")}
             </p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.noShowRate", "No-show rate")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{operations.data?.noShow.rate ?? 0}%</p>
-                <p className="text-xs text-muted-foreground ltr-nums">
-                  {operations.data?.noShow.noShows ?? 0}/{operations.data?.noShow.total ?? 0}
-                </p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.utilisation", "Utilisation")}</p>
-                <p className="text-2xl font-semibold ltr-nums">{operations.data?.utilisation.percent ?? 0}%</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {t("reports.revenuePerDoctorHour", "Revenue / doctor-hour")}
-                </p>
-                <p className="text-2xl font-semibold ltr-nums">{operations.data?.revenuePerDoctorHour ?? 0}</p>
-              </div>
-              <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.newVsReturning", "New / returning")}</p>
-                <p className="text-2xl font-semibold ltr-nums">
+            <TooltipProvider delayDuration={0}>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <OpsKpiTile
+                  label={t("reports.noShowRate", "No-show rate")}
+                  tip={t(
+                    "reports.noShowRateHelp",
+                    "Share of appointments that were marked no-show: NO_SHOW ÷ (COMPLETED + NO_SHOW).",
+                  )}
+                  labelClassName="text-red-700 dark:text-red-400"
+                  valueClassName="text-red-700 dark:text-red-400"
+                  meta={
+                    <p className="text-xs text-red-700/70 dark:text-red-400/70 ltr-nums">
+                      {operations.data?.noShow.noShows ?? 0}/{operations.data?.noShow.total ?? 0}
+                    </p>
+                  }
+                >
+                  {operations.data?.noShow.rate ?? 0}%
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.utilisation", "Utilisation")}
+                  tip={t(
+                    "reports.utilisationHelp",
+                    "Booked clinic minutes ÷ available doctor minutes (defaults to 8h × clinicians × days when schedules are sparse).",
+                  )}
+                  labelClassName="text-amber-700 dark:text-amber-400"
+                  valueClassName="text-amber-700 dark:text-amber-400"
+                >
+                  {operations.data?.utilisation.percent ?? 0}%
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.revenuePerDoctorHour", "Revenue / doctor-hour")}
+                  tip={t(
+                    "reports.revenuePerDoctorHourHelp",
+                    "Posted revenue in the period divided by booked doctor hours (booked minutes ÷ 60).",
+                  )}
+                  labelClassName="text-sky-700 dark:text-sky-400"
+                  valueClassName="text-sky-700 dark:text-sky-400"
+                >
+                  {operations.data?.revenuePerDoctorHour ?? 0}
+                </OpsKpiTile>
+                <OpsKpiTile
+                  label={t("reports.newVsReturning", "New / returning")}
+                  tip={t(
+                    "reports.newVsReturningHelp",
+                    "Appointments booked as a first-time patient (new) versus patients who already had history (returning).",
+                  )}
+                  labelClassName="text-emerald-700 dark:text-emerald-400"
+                  valueClassName="text-emerald-700 dark:text-emerald-400"
+                >
                   {operations.data?.newVsReturning.newPatients ?? 0}
-                  <span className="text-muted-foreground"> / </span>
+                  <span className="text-emerald-700/50 dark:text-emerald-400/50"> / </span>
                   {operations.data?.newVsReturning.returning ?? 0}
-                </p>
+                </OpsKpiTile>
+                {(operations.data?.bookingSources ?? []).slice(0, 4).map((s) => (
+                  <OpsKpiTile
+                    key={s.source}
+                    label={s.source}
+                    tip={t(
+                      "reports.bookingSourceHelp",
+                      "Share of appointments from this booking source in the selected period (front desk, clinic link, Kiorex, and others).",
+                    )}
+                    labelClassName="text-violet-700 dark:text-violet-400"
+                    valueClassName="text-violet-700 dark:text-violet-400"
+                  >
+                    {s.count}{" "}
+                    <span className="text-sm font-normal text-violet-700/70 dark:text-violet-400/70">
+                      ({s.sharePercent}%)
+                    </span>
+                  </OpsKpiTile>
+                ))}
               </div>
-              {(operations.data?.bookingSources ?? []).slice(0, 4).map((s) => (
-                <div key={s.source} className="rounded-lg border bg-muted/30 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{s.source}</p>
-                  <p className="text-2xl font-semibold ltr-nums">
-                    {s.count} <span className="text-sm font-normal text-muted-foreground">({s.sharePercent}%)</span>
-                  </p>
-                </div>
-              ))}
-            </div>
+            </TooltipProvider>
           )}
         </CardContent>
       </Card>
@@ -394,43 +690,76 @@ export function ReportsPage() {
             </p>
           ) : (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("reports.visits", "Visits")}</p>
-                  <p className="text-2xl font-semibold ltr-nums">{performance.data?.visits ?? 0}</p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {t("reports.newPatients", "New patients")}
-                  </p>
-                  <p className="text-2xl font-semibold ltr-nums">{performance.data?.newPatients ?? 0}</p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {t("reports.appointmentsCompleted", "Appointments completed")}
-                  </p>
-                  <p className="text-2xl font-semibold ltr-nums">{performance.data?.appointmentsCompleted ?? 0}</p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {t("reports.currenciesActive", "Currencies in period")}
-                  </p>
-                  <p className="text-2xl font-semibold ltr-nums">{performanceByCurrency.length}</p>
-                </div>
-                {performance.data?.kiorexRating?.averageRating != null ? (
-                  <div className="rounded-lg border bg-muted/30 px-4 py-3" data-testid="reports-kiorex-rating">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {t("reports.kiorexRating", "Kiorex rating")}
-                    </p>
-                    <p className="text-2xl font-semibold ltr-nums">
-                      {performance.data.kiorexRating.averageRating.toFixed(2)}
-                      <span className="ms-2 text-sm font-normal text-muted-foreground">
-                        ({t("kiorexTab.ratings.count", "{{count}} reviews", { count: performance.data.kiorexRating.reviewCount })})
+              <TooltipProvider delayDuration={0}>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <OpsKpiTile
+                    label={t("reports.visits", "Visits")}
+                    tip={t(
+                      "reports.visitsHelp",
+                      "Encounters created in the selected period for this clinic scope (draft and finalized).",
+                    )}
+                    labelClassName="text-sky-700 dark:text-sky-400"
+                    valueClassName="text-sky-700 dark:text-sky-400"
+                  >
+                    {performance.data?.visits ?? 0}
+                  </OpsKpiTile>
+                  <OpsKpiTile
+                    label={t("reports.newPatients", "New patients")}
+                    tip={t(
+                      "reports.newPatientsHelp",
+                      "Patients whose first registration (createdAt) falls in this period for the selected scope.",
+                    )}
+                    labelClassName="text-emerald-700 dark:text-emerald-400"
+                    valueClassName="text-emerald-700 dark:text-emerald-400"
+                  >
+                    {performance.data?.newPatients ?? 0}
+                  </OpsKpiTile>
+                  <OpsKpiTile
+                    label={t("reports.appointmentsCompleted", "Appointments completed")}
+                    tip={t(
+                      "reports.appointmentsCompletedHelp",
+                      "Appointments marked completed in the selected period for this clinic scope.",
+                    )}
+                    labelClassName="text-violet-700 dark:text-violet-400"
+                    valueClassName="text-violet-700 dark:text-violet-400"
+                  >
+                    {performance.data?.appointmentsCompleted ?? 0}
+                  </OpsKpiTile>
+                  <OpsKpiTile
+                    label={t("reports.currenciesActive", "Currencies in period")}
+                    tip={t(
+                      "reports.currenciesActiveHelp",
+                      "Distinct currencies that appear on posted revenue or expenses in this period.",
+                    )}
+                    labelClassName="text-amber-700 dark:text-amber-400"
+                    valueClassName="text-amber-700 dark:text-amber-400"
+                  >
+                    {performanceByCurrency.length}
+                  </OpsKpiTile>
+                  {performance.data?.kiorexRating?.averageRating != null ? (
+                    <OpsKpiTile
+                      label={t("reports.kiorexRating", "Kiorex rating")}
+                      tip={t(
+                        "reports.kiorexRatingHelp",
+                        "Average patient rating from Kiorex marketplace reviews linked to this organization.",
+                      )}
+                      labelClassName="text-rose-700 dark:text-rose-400"
+                      valueClassName="text-rose-700 dark:text-rose-400"
+                      meta={
+                        <p className="text-xs text-muted-foreground">
+                          {t("kiorexTab.ratings.count", "{{count}} reviews", {
+                            count: performance.data.kiorexRating.reviewCount,
+                          })}
+                        </p>
+                      }
+                    >
+                      <span data-testid="reports-kiorex-rating">
+                        {performance.data.kiorexRating.averageRating.toFixed(2)}
                       </span>
-                    </p>
-                  </div>
-                ) : null}
-              </div>
+                    </OpsKpiTile>
+                  ) : null}
+                </div>
+              </TooltipProvider>
 
               {performanceByCurrency.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("reports.noFinancialActivity", "No revenue or expenses in this period.")}</p>
@@ -505,12 +834,27 @@ export function ReportsPage() {
                         <div>
                           <p className="text-xs text-muted-foreground">{t("reports.operations", "Operations")}</p>
                           <p className="font-medium ltr-nums tabular-nums">{row.operationCount}</p>
+                          {(row.contractOperationCount ?? 0) > 0 ? (
+                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                              {t("reports.contractOpsShort", "{{count}} contract", {
+                                count: row.contractOperationCount,
+                              })}
+                            </p>
+                          ) : null}
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">{t("reports.newPatients", "New patients")}</p>
                           <p className="font-medium ltr-nums tabular-nums">{row.newPatients}</p>
                         </div>
                       </div>
+                      {(row.operationPaidTotal ?? 0) > 0 || (row.operationTotalCost ?? 0) > 0 ? (
+                        <p className="mt-2 text-xs text-muted-foreground ltr-nums">
+                          {t("reports.operationMoneyLine", "Ops paid {{paid}} · total {{total}}", {
+                            paid: money(row.operationPaidTotal ?? 0, row.defaultCurrency),
+                            total: money(row.operationTotalCost ?? 0, row.defaultCurrency),
+                          })}
+                        </p>
+                      ) : null}
                       {row.byCurrency.length === 0 ? (
                         <p className="mt-2 text-sm text-muted-foreground">—</p>
                       ) : (
@@ -559,20 +903,42 @@ export function ReportsPage() {
                   <ResponsiveTableElement minWidth="xl">
                     <thead className="bg-muted/60">
                       <tr className="text-start">
-                        <th className="px-3 py-2 text-start font-medium">{t("reports.clinicColumn", "Clinic")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.encounters", "Encounters")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.operations", "Operations")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.newPatients", "New patients")}</th>
-                        <th className="px-3 py-2 text-start font-medium">{t("reports.currencyColumn", "Currency")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.revenueTotal", "Total revenue")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">
-                          {t("reports.encounterRevenue", "Encounter / visit fees")}
+                        <th className="px-3 py-2 text-start font-medium">
+                          <ReportColumnHead icon={<Building2 className="size-3.5" />} label={t("reports.clinicColumn", "Clinic")} tone="slate" />
                         </th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.operationRevenue", "Operations revenue")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.otherRevenue", "Other revenue")}</th>
-                        <th className="px-3 py-2 text-start font-medium">{t("reports.otherRevenueBreakdown", "Other breakdown")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.expenses", "Expenses")}</th>
-                        <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.netProfit", "Net profit")}</th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<HeartPulse className="size-3.5" />} label={t("reports.encounters", "Encounters")} tone="sky" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<Scissors className="size-3.5" />} label={t("reports.operations", "Operations")} tone="violet" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<UserPlus className="size-3.5" />} label={t("reports.newPatients", "New patients")} tone="emerald" />
+                        </th>
+                        <th className="px-3 py-2 text-start font-medium">
+                          <ReportColumnHead icon={<CircleDollarSign className="size-3.5" />} label={t("reports.currencyColumn", "Currency")} tone="amber" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<Wallet className="size-3.5" />} label={t("reports.revenueTotal", "Total revenue")} tone="emerald" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<HeartPulse className="size-3.5" />} label={t("reports.encounterRevenue", "Encounter / visit fees")} tone="sky" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<Scissors className="size-3.5" />} label={t("reports.operationRevenue", "Operations revenue")} tone="violet" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<CircleDollarSign className="size-3.5" />} label={t("reports.otherRevenue", "Other revenue")} tone="amber" />
+                        </th>
+                        <th className="px-3 py-2 text-start font-medium">
+                          <ReportColumnHead icon={<Share2 className="size-3.5" />} label={t("reports.otherRevenueBreakdown", "Other breakdown")} tone="slate" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<Wallet className="size-3.5" />} label={t("reports.expenses", "Expenses")} tone="rose" />
+                        </th>
+                        <th className="px-3 py-2 text-end font-medium ltr-nums">
+                          <ReportColumnHead className="justify-end" icon={<CircleDollarSign className="size-3.5" />} label={t("reports.netProfit", "Net profit")} tone="emerald" />
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -595,7 +961,14 @@ export function ReportsPage() {
                                 {row.clinic.visits}
                               </td>
                               <td rowSpan={row.clinicRowSpan} className="px-3 py-3 text-end ltr-nums tabular-nums">
-                                {row.clinic.operationCount}
+                                <p>{row.clinic.operationCount}</p>
+                                {(row.clinic.contractOperationCount ?? 0) > 0 ? (
+                                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                                    {t("reports.contractOpsShort", "{{count}} contract", {
+                                      count: row.clinic.contractOperationCount,
+                                    })}
+                                  </p>
+                                ) : null}
                               </td>
                               <td rowSpan={row.clinicRowSpan} className="px-3 py-3 text-end ltr-nums tabular-nums">
                                 {row.clinic.newPatients}
@@ -655,8 +1028,283 @@ export function ReportsPage() {
           </CardContent>
         </Card>
       ) : null}
-
+<Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {t("reports.encounterAcquisitionTitle", "Encounters by how they found us")}
+          </CardTitle>
+          <CardDescription>
+            {t(
+              "reports.encounterAcquisitionHint",
+              "Finalized visits and visit-fee money by acquisition channel for {{from}} → {{to}}.",
+              { from, to },
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {encounterAcquisition.isError ? (
+            <p className="text-sm text-destructive">
+              {encounterAcquisition.error instanceof Error
+                ? encounterAcquisition.error.message
+                : t("common.error")}
+            </p>
+          ) : encounterAcquisition.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : (encounterAcquisition.data?.totalEncounters ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("reports.encounterAcquisitionEmpty", "No finalized encounters in this period.")}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground ltr-nums">
+                {t("reports.encounterAcquisitionTotal", "{{count}} encounters in range", {
+                  count: encounterAcquisition.data?.totalEncounters ?? 0,
+                })}
+              </p>
+              <ResponsiveTable>
+                <ResponsiveTableElement minWidth="md">
+                  <thead className="bg-muted/60">
+                    <tr className="text-start">
+                      <th className="px-3 py-2 font-medium">
+                        <ReportColumnHead icon={<Share2 className="size-3.5" />} label={t("reports.acquisitionChannel", "Channel")} tone="violet" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<HeartPulse className="size-3.5" />} label={t("reports.encounters", "Encounters")} tone="sky" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Wallet className="size-3.5" />} label={t("reports.operationChannelMoney", "Paid / total")} tone="emerald" />
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {encounterAcquisitionRows.map((row) => (
+                      <tr key={row.channel} className="border-t">
+                        <td className="px-3 py-2">
+                          <AcquisitionChannelCell channel={row.channel} label={row.label} t={t} />
+                        </td>
+                        <td className="px-3 py-2 text-end font-semibold text-sky-700 ltr-nums tabular-nums dark:text-sky-400">{row.encounterCount}</td>
+                        <td className="px-3 py-2 text-end text-xs ltr-nums tabular-nums">
+                          {row.byCurrency.length === 0 ? (
+                            "—"
+                          ) : (
+                            <ul className="space-y-0.5">
+                              {row.byCurrency.map((m) => (
+                                <li key={m.currency}>
+                                  {money(m.paidAmount, m.currency)} / {money(m.totalCost, m.currency)}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </ResponsiveTableElement>
+              </ResponsiveTable>
+            </>
+          )}
+        </CardContent>
+      </Card>
+<Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            <CardTitle className="text-base">
+              {t("reports.operationAcquisitionTitle", "Operations by how they found us")}
+            </CardTitle>
+            <CardDescription>
+              {t(
+                "reports.operationAcquisitionHint",
+                "Procedure volume and money by acquisition channel for {{from}} → {{to}}. Filter to contract (تعاقد) or standard paid operations.",
+                { from, to },
+              )}
+            </CardDescription>
+          </div>
+          <div className="w-full sm:w-52">
+            <Label htmlFor="op-acq-contract-filter" className="text-xs text-muted-foreground">
+              {t("operations.contractFilter", "Contract type")}
+            </Label>
+            <select
+              id="op-acq-contract-filter"
+              className={nativeSelectClassName}
+              value={opAcquisitionContractFilter}
+              onChange={(e) => setOpAcquisitionContractFilter(e.target.value)}
+              data-testid="reports-operation-acquisition-contract-filter"
+            >
+              <option value="">{t("operations.contractFilterAll", "All operations")}</option>
+              <option value="contract">{t("operations.contractFilterContract", "Contract (تعاقد)")}</option>
+              <option value="standard">{t("operations.contractFilterStandard", "Standard (paid)")}</option>
+            </select>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {operationAcquisition.isError ? (
+            <p className="text-sm text-destructive">
+              {operationAcquisition.error instanceof Error
+                ? operationAcquisition.error.message
+                : t("common.error")}
+            </p>
+          ) : operationAcquisition.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : (operationAcquisition.data?.totalOperations ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("reports.operationAcquisitionEmpty", "No operations in this period for the selected filters.")}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground ltr-nums">
+                {t("reports.operationAcquisitionTotal", "{{ops}} operations · {{contracts}} contract", {
+                  ops: operationAcquisition.data?.totalOperations ?? 0,
+                  contracts: operationAcquisition.data?.totalContract ?? 0,
+                })}
+              </p>
+              <ResponsiveTable>
+                <ResponsiveTableElement minWidth="md">
+                  <thead className="bg-muted/60">
+                    <tr className="text-start">
+                      <th className="px-3 py-2 font-medium">
+                        <ReportColumnHead icon={<Share2 className="size-3.5" />} label={t("reports.acquisitionChannel", "Channel")} tone="violet" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Scissors className="size-3.5" />} label={t("reports.operations", "Operations")} tone="sky" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Percent className="size-3.5" />} label={t("reports.contractOps", "Contract")} tone="emerald" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Wallet className="size-3.5" />} label={t("reports.operationChannelMoney", "Paid / total")} tone="amber" />
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {operationAcquisitionRows.map((row) => (
+                      <tr key={row.channel} className="border-t">
+                        <td className="px-3 py-2">
+                          <AcquisitionChannelCell channel={row.channel} label={row.label} t={t} />
+                        </td>
+                        <td className="px-3 py-2 text-end font-semibold text-sky-700 ltr-nums tabular-nums dark:text-sky-400">{row.operationCount}</td>
+                        <td className="px-3 py-2 text-end font-semibold ltr-nums tabular-nums text-emerald-800 dark:text-emerald-300">
+                          {row.contractCount}
+                        </td>
+                        <td className="px-3 py-2 text-end text-xs ltr-nums tabular-nums">
+                          {row.byCurrency.length === 0 ? (
+                            "—"
+                          ) : (
+                            <ul className="space-y-0.5">
+                              {row.byCurrency.map((m) => (
+                                <li key={m.currency}>
+                                  {money(m.paidAmount, m.currency)} / {money(m.totalCost, m.currency)}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </ResponsiveTableElement>
+              </ResponsiveTable>
+            </>
+          )}
+        </CardContent>
+      </Card>
       <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("reports.acquisitionTitle", "How patients found us")}</CardTitle>
+          <CardDescription>
+            {t(
+              "reports.acquisitionCombinedHint",
+              "Patient registrations plus encounters and operations by acquisition channel for {{from}} → {{to}}.",
+              { from, to },
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {acquisition.isError || encounterAcquisition.isError || operationAcquisition.isError ? (
+            <p className="text-sm text-destructive">
+              {(acquisition.error instanceof Error && acquisition.error.message) ||
+                (encounterAcquisition.error instanceof Error && encounterAcquisition.error.message) ||
+                (operationAcquisition.error instanceof Error && operationAcquisition.error.message) ||
+                t("common.error")}
+            </p>
+          ) : acquisition.isPending || encounterAcquisition.isPending || operationAcquisition.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading", "Loading…")}</p>
+          ) : combinedAcquisitionRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("reports.acquisitionEmpty", "No patient registrations in this period.")}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground ltr-nums">
+                {t("reports.acquisitionTotal", "{{count}} registrations in range", {
+                  count: acquisitionTotal,
+                })}
+              </p>
+              <p className="text-xs text-muted-foreground">{t("reports.acquisitionRowHint", "Click a channel row to view patients.")}</p>
+              <ResponsiveTable>
+                <ResponsiveTableElement minWidth="lg">
+                  <thead className="bg-muted/60">
+                    <tr className="text-start">
+                      <th className="px-3 py-2 font-medium">
+                        <ReportColumnHead icon={<Share2 className="size-3.5" />} label={t("reports.acquisitionChannel", "Channel")} tone="violet" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Users className="size-3.5" />} label={t("reports.acquisitionCount", "Patients")} tone="sky" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Percent className="size-3.5" />} label={t("reports.acquisitionShare", "Share")} tone="sky" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<HeartPulse className="size-3.5" />} label={t("reports.encounters", "Encounters")} tone="emerald" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Percent className="size-3.5" />} label={t("reports.encounterShare", "Encounter share")} tone="emerald" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Scissors className="size-3.5" />} label={t("reports.operations", "Operations")} tone="amber" />
+                      </th>
+                      <th className="px-3 py-2 text-end font-medium ltr-nums">
+                        <ReportColumnHead className="justify-end" icon={<Percent className="size-3.5" />} label={t("reports.operationShare", "Operation share")} tone="amber" />
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {combinedAcquisitionRows.map((row) => (
+                      <tr
+                        key={row.channel}
+                        role="button"
+                        tabIndex={0}
+                        className="cursor-pointer border-t transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
+                        onClick={() => setSelectedChannel({ channel: row.channel, label: row.label })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedChannel({ channel: row.channel, label: row.label });
+                          }
+                        }}
+                      >
+                        <td className="px-3 py-2">
+                          <AcquisitionChannelCell channel={row.channel} label={row.label} t={t} />
+                        </td>
+                        <td className="px-3 py-2 text-end font-semibold text-sky-700 ltr-nums tabular-nums dark:text-sky-400">{row.patientCount}</td>
+                        <td className="px-3 py-2 text-end text-sky-700/80 ltr-nums tabular-nums dark:text-sky-400/80">{row.patientShare}%</td>
+                        <td className="px-3 py-2 text-end font-semibold text-emerald-700 ltr-nums tabular-nums dark:text-emerald-400">{row.encounterCount}</td>
+                        <td className="px-3 py-2 text-end text-emerald-700/80 ltr-nums tabular-nums dark:text-emerald-400/80">{row.encounterShare}%</td>
+                        <td className="px-3 py-2 text-end font-semibold text-amber-700 ltr-nums tabular-nums dark:text-amber-400">{row.operationCount}</td>
+                        <td className="px-3 py-2 text-end text-amber-700/80 ltr-nums tabular-nums dark:text-amber-400/80">{row.operationShare}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </ResponsiveTableElement>
+              </ResponsiveTable>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+        </TabsContent>
+
+        <TabsContent value="charts" className="space-y-4 sm:space-y-6 focus-visible:outline-none">
+<Card>
         <CardHeader>
           <CardTitle className="text-base">
             {t("nav.revenue")} vs {t("nav.expenses")}
@@ -686,7 +1334,7 @@ export function ReportsPage() {
                   <CartesianGrid vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
-                  <Tooltip
+                  <ChartTooltip
                     formatter={(value: number, name: string) => {
                       const currency = name.split("_").pop() ?? series.data?.baseCurrency ?? orgBaseCurrency;
                       const kind = name.startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses");
@@ -694,33 +1342,39 @@ export function ReportsPage() {
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  {currencies.map((currency) => (
-                    <Area
-                      key={`rev-${currency}`}
-                      type="monotone"
-                      dataKey={`revenue_${currency}`}
-                      name={`${t("nav.revenue")} (${currency})`}
-                      stroke={REVENUE_CHART_COLOR}
-                      fill={REVENUE_CHART_COLOR}
-                      fillOpacity={0.22}
-                      strokeWidth={2}
-                      stackId={`rev-${currency}`}
-                    />
-                  ))}
-                  {currencies.map((currency) => (
-                    <Area
-                      key={`exp-${currency}`}
-                      type="monotone"
-                      dataKey={`expenses_${currency}`}
-                      name={`${t("nav.expenses")} (${currency})`}
-                      stroke={EXPENSE_CHART_COLOR}
-                      fill={EXPENSE_CHART_COLOR}
-                      fillOpacity={0.18}
-                      strokeWidth={2}
-                      strokeDasharray="4 4"
-                      stackId={`exp-${currency}`}
-                    />
-                  ))}
+                  {revenueCurrencies.map((currency, index) => {
+                    const color = currencyChartColor(index);
+                    return (
+                      <Area
+                        key={`rev-${currency}`}
+                        type="monotone"
+                        dataKey={`revenue_${currency}`}
+                        name={`${t("nav.revenue")} (${currency})`}
+                        stroke={color}
+                        fill={color}
+                        fillOpacity={0.22}
+                        strokeWidth={2}
+                        stackId={`rev-${currency}`}
+                      />
+                    );
+                  })}
+                  {expenseCurrencies.map((currency, index) => {
+                    const color = currencyChartColor(index + revenueCurrencies.length);
+                    return (
+                      <Area
+                        key={`exp-${currency}`}
+                        type="monotone"
+                        dataKey={`expenses_${currency}`}
+                        name={`${t("nav.expenses")} (${currency})`}
+                        stroke={color}
+                        fill={color}
+                        fillOpacity={0.12}
+                        strokeWidth={2}
+                        strokeDasharray="4 4"
+                        stackId={`exp-${currency}`}
+                      />
+                    );
+                  })}
                 </AreaChart>
               </ResponsiveContainer>
             </ChartFrame>
@@ -744,7 +1398,7 @@ export function ReportsPage() {
                         <CartesianGrid vertical={false} />
                         <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                         <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => money(Number(v), currency)} />
-                        <Tooltip
+                        <ChartTooltip
                           formatter={(value: number, name: string) => [
                             money(Number(value), currency),
                             name.startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses"),
@@ -791,7 +1445,7 @@ export function ReportsPage() {
                   <CartesianGrid vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={40} />
-                  <Tooltip formatter={(value: number) => [value, t("reports.visits", "Visits")]} labelFormatter={(l) => String(l)} />
+                  <ChartTooltip formatter={(value: number) => [value, t("reports.visits", "Visits")]} labelFormatter={(l) => String(l)} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Area
                     type="monotone"
@@ -809,39 +1463,47 @@ export function ReportsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {currencies.length === 1
-                ? t("reports.chartRevenueCurrency", "Posted revenue ({{currency}})", { currency: currencies[0] })
+              {revenueCurrencies.length === 1
+                ? t("reports.chartRevenueCurrency", "Posted revenue ({{currency}})", {
+                    currency: revenueCurrencies[0],
+                  })
                 : t("reports.chartRevenueMulti", "Posted revenue by currency")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartFrame className="h-56 w-full sm:h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
-                  <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
-                  <Tooltip
-                    formatter={(value: number, name: string) => {
-                      const currency = String(name).replace(/^revenue_/, "");
-                      return [money(Number(value), currency), currency];
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  {currencies.map((currency) => (
-                    <Line
-                      key={currency}
-                      type="monotone"
-                      dataKey={`revenue_${currency}`}
-                      name={`${t("nav.revenue")} (${currency})`}
-                      stroke={REVENUE_CHART_COLOR}
-                      strokeWidth={2}
-                      dot={false}
+            {revenueCurrencies.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t("reports.noFinancialActivity", "No revenue or expenses in this period.")}
+              </p>
+            ) : (
+              <ChartFrame className="h-56 w-full sm:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+                    <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
+                    <ChartTooltip
+                      formatter={(value: number, name: string) => {
+                        const currency = String(name).replace(/^revenue_/, "");
+                        return [money(Number(value), currency), `${t("nav.revenue")} (${currency})`];
+                      }}
                     />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartFrame>
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    {revenueCurrencies.map((currency, index) => (
+                      <Line
+                        key={currency}
+                        type="monotone"
+                        dataKey={`revenue_${currency}`}
+                        name={`${t("nav.revenue")} (${currency})`}
+                        stroke={currencyChartColor(index)}
+                        strokeWidth={2.5}
+                        dot={false}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartFrame>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -857,7 +1519,7 @@ export function ReportsPage() {
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={40} />
-                <Tooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />
+                <ChartTooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="newPatients" name={t("reports.newPatients", "New patients")} fill={REVENUE_CHART_COLOR} radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -865,7 +1527,6 @@ export function ReportsPage() {
           </ChartFrame>
         </CardContent>
       </Card>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("reports.acquisitionTitle", "How patients found us")}</CardTitle>
@@ -877,7 +1538,7 @@ export function ReportsPage() {
             )}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           {acquisition.isError ? (
             <p className="text-sm text-destructive">
               {acquisition.error instanceof Error ? acquisition.error.message : t("common.error")}
@@ -915,7 +1576,7 @@ export function ReportsPage() {
                           <Cell key={index} fill={ACQUISITION_CHART_COLORS[index % ACQUISITION_CHART_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip
+                      <ChartTooltip
                         formatter={(value: number, _name, item) => [
                           value,
                           (item as { payload?: { label?: string } })?.payload?.label ?? "",
@@ -931,7 +1592,7 @@ export function ReportsPage() {
                       <CartesianGrid horizontal={false} />
                       <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                       <YAxis type="category" dataKey="label" width={96} tick={{ fontSize: 10 }} />
-                      <Tooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />
+                      <ChartTooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />
                       <Bar dataKey="count" name={t("reports.newPatients", "New patients")} radius={[0, 4, 4, 0]}>
                         {acquisitionChartData.map((_, index) => (
                           <Cell key={index} fill={ACQUISITION_CHART_COLORS[index % ACQUISITION_CHART_COLORS.length]} />
@@ -941,43 +1602,17 @@ export function ReportsPage() {
                   </ResponsiveContainer>
                 </ChartFrame>
               </div>
-              <p className="text-xs text-muted-foreground">{t("reports.acquisitionRowHint", "Click a channel row to view patients.")}</p>
-              <ResponsiveTable>
-                <ResponsiveTableElement minWidth="sm">
-                  <thead className="bg-muted/60">
-                    <tr className="text-start">
-                      <th className="px-3 py-2 font-medium">{t("reports.acquisitionChannel", "Channel")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.acquisitionCount", "Patients")}</th>
-                      <th className="px-3 py-2 text-end font-medium ltr-nums">{t("reports.acquisitionShare", "Share")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {acquisitionChartData.map((row) => (
-                      <tr
-                        key={row.channel}
-                        role="button"
-                        tabIndex={0}
-                        className="cursor-pointer border-t transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
-                        onClick={() => setSelectedChannel({ channel: row.channel, label: row.label })}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setSelectedChannel({ channel: row.channel, label: row.label });
-                          }
-                        }}
-                      >
-                        <td className="px-3 py-2">{row.label}</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.count}</td>
-                        <td className="px-3 py-2 text-end ltr-nums tabular-nums">{row.sharePercent}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </ResponsiveTableElement>
-              </ResponsiveTable>
             </>
           )}
         </CardContent>
       </Card>
+
+        </TabsContent>
+
+        <TabsContent value="finance" className="focus-visible:outline-none">
+          <Rp04FinanceReportsPage embedded />
+        </TabsContent>
+      </Tabs>
 
       <AcquisitionChannelPatientsDialog
         open={selectedChannel != null}
@@ -990,5 +1625,6 @@ export function ReportsPage() {
         to={to}
       />
     </div>
+
   );
 }

@@ -80,6 +80,12 @@ export class AuthUserDto {
   tenantBaseCurrency?: string | null;
 
   @ApiPropertyOptional({
+    description:
+      "When true, creating an operation requires How did they find us? Default false (optional).",
+  })
+  operationAcquisitionRequired?: boolean;
+
+  @ApiPropertyOptional({
     description: "True for PLATFORM_SUPER_ADMIN role or when email is listed in PLATFORM_SUPER_ADMIN_EMAILS",
   })
   platformSuperAdmin?: boolean;

@@ -34,17 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: package-lock.json
+      - name: Setup Node.js dependencies
+        uses: ./.github/actions/setup-node-deps
 
       - name: Block tracked OpenAI API keys in repo
         run: bash scripts/check-no-openai-secrets-in-git.sh
-
-      - name: Install dependencies
-        run: bash scripts/npm-ci-workflow.sh
 
       - name: Prisma generate
         run: npm run prisma:generate -w api
@@ -73,8 +67,28 @@ jobs:
       - name: Build API and web for E2E
         run: npm run build -w api && npm run build -w web
 
+      - name: Resolve Playwright cache key
+        id: pw
+        run: |
+          set -euo pipefail
+          # Workspaces hoist @playwright/test to the repo root node_modules.
+          ver="$(node -p "require('@playwright/test/package.json').version")"
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: cache-playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
       - name: Install Playwright (Chromium)
-        run: npx playwright install chromium --with-deps
+        run: |
+          if [ "${{ steps.cache-playwright.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install chromium --with-deps
+          fi
         working-directory: apps/web
 
       - name: E2E golden flow (Playwright)

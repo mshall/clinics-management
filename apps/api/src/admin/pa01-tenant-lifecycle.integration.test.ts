@@ -32,6 +32,7 @@ function platformSvc(): PlatformAdminService {
     trialEngine,
     creditWallet,
     null as never,
+    billingSeats,
   );
 }
 

@@ -39,6 +39,34 @@ export function formatRevenueCategory(category: string, t: TFunction): string {
   return translated === key ? category : translated;
 }
 
+/**
+ * Ledger display labels: Encounter | Operation | Operation down payment.
+ * Down payments are posted as OPERATION_PAYMENT with a down-payment description.
+ */
+export function formatRevenueLedgerCategory(
+  category: string,
+  t: TFunction,
+  description?: string | null,
+): string {
+  const cat = category.trim().toUpperCase();
+  if (cat === "VISIT" || cat === "VISIT_FEE" || cat === "APPOINTMENT_FEE") {
+    return t("revenue.categories.ENCOUNTER", "Encounter");
+  }
+  if (cat === "OPERATION" || cat === "OPERATION_PAYMENT") {
+    const d = (description ?? "").toLowerCase();
+    if (
+      d.includes("down payment") ||
+      d.includes("دفعة مقدمة") ||
+      d.includes("مقدم العملية") ||
+      d.includes("عربون")
+    ) {
+      return t("revenue.categories.OPERATION_DOWN_PAYMENT", "Operation down payment");
+    }
+    return t("revenue.categories.OPERATION", "Operation");
+  }
+  return formatRevenueCategory(category, t);
+}
+
 export function formatRevenueStatus(status: string, t: TFunction): string {
   const key = `revenue.statuses.${status}`;
   const translated = t(key);

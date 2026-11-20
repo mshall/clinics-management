@@ -147,6 +147,7 @@ export class AdminService {
             integrationFailureRetentionDays: tenant.integrationFailureRetentionDays,
             whatsAppRemindersEnabled: tenant.whatsAppRemindersEnabled,
             appointmentReminderHoursBefore: tenant.appointmentReminderHoursBefore,
+            operationAcquisitionRequired: tenant.operationAcquisitionRequired,
             ...mapTenantTaxSettingsApi(tenant),
           }
         : null,
@@ -162,13 +163,29 @@ export class AdminService {
     };
   }
 
-  async listTenants(pageStr?: string, pageSizeStr?: string, sortByStr?: string, sortOrderStr?: string) {
+  async listTenants(
+    pageStr?: string,
+    pageSizeStr?: string,
+    sortByStr?: string,
+    sortOrderStr?: string,
+    qRaw?: string,
+  ) {
     const { page, pageSize, skip } = parsePageParams(pageStr, pageSizeStr);
     const sortField = pickSortField(sortByStr, ["name", "createdAt", "baseCurrency"] as const, "name");
     const sortDir = parseSortOrder(sortOrderStr);
+    const q = qRaw?.trim() ?? "";
+    const where = q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { nameAr: { contains: q, mode: "insensitive" as const } },
+          ],
+        }
+      : {};
     const [total, rows] = await Promise.all([
-      this.prisma.tenant.count(),
+      this.prisma.tenant.count({ where }),
       this.prisma.tenant.findMany({
+        where,
         orderBy: { [sortField]: sortDir },
         skip,
         take: pageSize,
@@ -747,6 +764,7 @@ export class AdminService {
       defaultInvoiceVatPercent?: number | null;
       whatsAppRemindersEnabled?: boolean;
       appointmentReminderHoursBefore?: number;
+      operationAcquisitionRequired?: boolean;
     } = {};
     if (dto.defaultVisitFeeUseMarketDefault) data.defaultVisitFee = null;
     else if (dto.defaultVisitFee !== undefined) data.defaultVisitFee = dto.defaultVisitFee;
@@ -783,6 +801,9 @@ export class AdminService {
     if (dto.appointmentReminderHoursBefore !== undefined) {
       data.appointmentReminderHoursBefore = dto.appointmentReminderHoursBefore;
     }
+    if (dto.operationAcquisitionRequired !== undefined) {
+      data.operationAcquisitionRequired = dto.operationAcquisitionRequired;
+    }
     if (!Object.keys(data).length) throw new BadRequestException("No supported fields to update");
 
     if (dto.whatsAppRemindersEnabled !== undefined) {
@@ -815,6 +836,19 @@ export class AdminService {
       include: { market: true },
     });
     if (!withMarket) throw new NotFoundException("Tenant not found");
+    if (dto.operationAcquisitionRequired !== undefined) {
+      await this.prisma.auditLog.create({
+        data: {
+          tenantId,
+          actorId: user.userId,
+          action: "TENANT_OPERATION_ACQUISITION_REQUIRED_UPDATED",
+          resource: "tenant",
+          resourceId: tenantId,
+          metadata: { operationAcquisitionRequired: dto.operationAcquisitionRequired },
+        },
+      });
+    }
+
     return {
       id: withMarket.id,
       name: withMarket.name,
@@ -822,6 +856,7 @@ export class AdminService {
       integrationFailureRetentionDays: withMarket.integrationFailureRetentionDays,
       whatsAppRemindersEnabled: withMarket.whatsAppRemindersEnabled,
       appointmentReminderHoursBefore: withMarket.appointmentReminderHoursBefore,
+      operationAcquisitionRequired: withMarket.operationAcquisitionRequired,
       ...mapTenantTaxSettingsApi(withMarket),
     };
   }

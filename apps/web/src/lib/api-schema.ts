@@ -54,6 +54,7 @@ export type AuthUserDto = components["schemas"]["AuthUserDto"] & {
   hasAvatar?: boolean;
   mfaEnabled?: boolean;
   tenantBaseCurrency?: string | null;
+  operationAcquisitionRequired?: boolean;
   employeePrivilegeGrants?: import("@/lib/employee-manage-policy").EmployeePrivilegeGrantSummary[];
   moneyVisibilityOverrides?: import("@/lib/money-visibility-policy").MoneyVisibilityOverrides | null;
   plan?: { key: string; status: string };

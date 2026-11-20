@@ -130,6 +130,51 @@ export class ReportsController {
     return this.reports.patientAcquisitionBreakdown(requireTenantId(user), from, to);
   }
 
+  @Get("operation-acquisition")
+  @ApiOperation({
+    summary:
+      "Operations grouped by acquisition channel with money totals; optional isContract=true|false|contract|standard",
+  })
+  @ApiOkResponse()
+  async operationAcquisition(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("clinicId") clinicId?: string,
+    @Query("isContract") isContract?: string,
+  ) {
+    await this.assertView(user);
+    return this.reports.operationAcquisitionRevenue(
+      requireTenantId(user),
+      from,
+      to,
+      clinicId,
+      isContract,
+      user,
+    );
+  }
+
+  @Get("encounter-acquisition")
+  @ApiOperation({
+    summary: "Finalized encounters grouped by patient acquisition channel with visit fee paid/total",
+  })
+  @ApiOkResponse()
+  async encounterAcquisition(
+    @CurrentUser() user: JwtUser,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("clinicId") clinicId?: string,
+  ) {
+    await this.assertView(user);
+    return this.reports.encounterAcquisitionRevenue(
+      requireTenantId(user),
+      from,
+      to,
+      clinicId,
+      user,
+    );
+  }
+
   @Get("kiorex")
   @RequiresEntitlement("mod_revenue")
   @ApiOperation({ summary: "RP-03 Kiorex impact report for a billing period (all tiers with revenue)" })

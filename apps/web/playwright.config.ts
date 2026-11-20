@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/** Prefer localhost so IPv6-only Vite binds still resolve on macOS. */
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173";
+/** Prefer localhost so IPv6-only Vite binds still resolve on macOS. Preview/dev listen on 5174. */
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5174";
 /**
  * Wait on a path proxied to Nest so webServer is ready only when Vite + API both answer.
  * (A bare Vite origin can return 200 while Nest is still compiling, which breaks parallel logins.)

@@ -86,6 +86,7 @@ export class AuthService {
     roleNavTabKeys: string[] | null,
     navTabAccessModes: Record<string, "read" | "write"> | null = null,
     tenantBaseCurrency: string | null = null,
+    operationAcquisitionRequired = false,
   ) {
     const employeePrivilegeGrants =
       user.tenantId != null
@@ -96,10 +97,20 @@ export class AuthService {
         ? await loadUserMoneyVisibilityOverrides(this.prisma, user.tenantId, user.id)
         : undefined;
     const mfaEnabled = Boolean(user.mfaEnabled);
+    const platformSuperAdmin = isPlatformSuperAdmin({
+      email: user.email,
+      role: user.role,
+      additionalRoles: user.additionalRoles ?? [],
+    });
     const entitlementsBundle =
       user.tenantId != null ? await this.entitlements.resolve(user.tenantId) : null;
-    const planEntitlements = entitlementsBundle?.entitlements;
-    const planKey = entitlementsBundle?.plan?.key ?? PlanKey.ENTERPRISE;
+    // Platform operators have no org subscription — expose Enterprise-level flags so UI
+    // gates (e.g. AI assistant) do not show a false "upgrade to Pro" paywall.
+    const platformEntitlements = platformSuperAdmin && !user.tenantId
+      ? await this.entitlements.resolvePlatformOperator()
+      : null;
+    const planEntitlements = entitlementsBundle?.entitlements ?? platformEntitlements?.entitlements;
+    const planKey = entitlementsBundle?.plan?.key ?? platformEntitlements?.plan.key ?? PlanKey.ENTERPRISE;
     const effectiveNavTabKeys =
       navTabKeys?.length
         ? applyPlanNavPipeline(navTabKeys, planKey, planEntitlements)
@@ -120,11 +131,8 @@ export class AuthService {
       roleNavTabKeys: effectiveRoleNavTabKeys,
       navTabAccessModes: navTabAccessModes ?? undefined,
       tenantBaseCurrency,
-      platformSuperAdmin: isPlatformSuperAdmin({
-        email: user.email,
-        role: user.role,
-        additionalRoles: user.additionalRoles ?? [],
-      }),
+      operationAcquisitionRequired,
+      platformSuperAdmin,
       hasAvatar: Boolean(user.avatarRelativePath),
       mfaEnabled,
       mfaEnrollmentRequired: principalRequiresMfaEnrollment(user) && !mfaEnabled,
@@ -136,8 +144,8 @@ export class AuthService {
           moneyVisibilityOverrides.appointments !== "ROLE_DEFAULT")
           ? moneyVisibilityOverrides
           : undefined,
-      plan: entitlementsBundle?.plan ?? undefined,
-      entitlements: entitlementsBundle?.entitlements ?? undefined,
+      plan: entitlementsBundle?.plan ?? platformEntitlements?.plan,
+      entitlements: entitlementsBundle?.entitlements ?? platformEntitlements?.entitlements,
     };
   }
 
@@ -310,10 +318,14 @@ export class AuthService {
       user.tenantId != null
         ? await this.tenantRoleNav.effectiveRoleNavTabKeysForPrincipal(user.tenantId, user)
         : null;
-    const tenantBaseCurrency = user.tenantId
-      ? (await this.prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { baseCurrency: true } }))
-          ?.baseCurrency ?? null
+    const tenantRow = user.tenantId
+      ? await this.prisma.tenant.findUnique({
+          where: { id: user.tenantId },
+          select: { baseCurrency: true, operationAcquisitionRequired: true },
+        })
       : null;
+    const tenantBaseCurrency = tenantRow?.baseCurrency ?? null;
+    const operationAcquisitionRequired = Boolean(tenantRow?.operationAcquisitionRequired);
 
     void this.audit.recordLogin(user, user.email);
 
@@ -324,6 +336,7 @@ export class AuthService {
       roleNavTabKeys,
       navTabAccessModes,
       tenantBaseCurrency,
+      operationAcquisitionRequired,
     );
     return {
       ...base,
@@ -349,10 +362,18 @@ export class AuthService {
     roleNavTabKeys: string[] | null,
     navTabAccessModes: Record<string, "read" | "write"> | null,
     tenantBaseCurrency: string | null,
+    operationAcquisitionRequired = false,
   ) {
     return {
       accessToken,
-      user: await this.mapAuthUser(user, navTabKeys, roleNavTabKeys, navTabAccessModes, tenantBaseCurrency),
+      user: await this.mapAuthUser(
+        user,
+        navTabKeys,
+        roleNavTabKeys,
+        navTabAccessModes,
+        tenantBaseCurrency,
+        operationAcquisitionRequired,
+      ),
     };
   }
 
@@ -394,11 +415,20 @@ export class AuthService {
       user.tenantId != null
         ? await this.tenantRoleNav.effectiveRoleNavTabKeysForPrincipal(user.tenantId, user)
         : null;
-    const tenantBaseCurrency = user.tenantId
-      ? (await this.prisma.tenant.findUnique({ where: { id: user.tenantId }, select: { baseCurrency: true } }))
-          ?.baseCurrency ?? null
+    const tenantRow = user.tenantId
+      ? await this.prisma.tenant.findUnique({
+          where: { id: user.tenantId },
+          select: { baseCurrency: true, operationAcquisitionRequired: true },
+        })
       : null;
-    return await this.mapAuthUser(user, navTabKeys, roleNavTabKeys, navTabAccessModes, tenantBaseCurrency);
+    return await this.mapAuthUser(
+      user,
+      navTabKeys,
+      roleNavTabKeys,
+      navTabAccessModes,
+      tenantRow?.baseCurrency ?? null,
+      Boolean(tenantRow?.operationAcquisitionRequired),
+    );
   }
 
   async attachMyAvatar(

@@ -30,6 +30,13 @@ export class UpdateOperationDto {
   @Min(0)
   downPayment?: number;
 
+  @ApiPropertyOptional({
+    description: "Contract operation (تعاقد). Required when setting totalCost to 0.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  isContract?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

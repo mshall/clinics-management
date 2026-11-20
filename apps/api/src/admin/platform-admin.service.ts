@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { PlanKey, UserRole } from "@prisma/client";
+import { BillingInterval, PlanKey, SubscriptionStatus, UserRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import type { JwtUser } from "../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
@@ -31,6 +31,9 @@ import type { TrialConfigOverride } from "../subscriptions/trial-config";
 import { EntitlementsService } from "../entitlements/entitlements.service";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import { assertTenantDeploymentCellMatchesMarket } from "../markets/data-cells";
+import { ACTIVE_PRICE_WHERE } from "../plans/plans-active-prices";
+import { BillingSeatService } from "../subscriptions/billing-seat.service";
+import { addBillingPeriod } from "../subscriptions/subscription-period";
 
 @Injectable()
 export class PlatformAdminService {
@@ -43,6 +46,7 @@ export class PlatformAdminService {
     private readonly trialEngine: TrialEngineService,
     private readonly creditWallet: CreditWalletService,
     private readonly kiorlyPayments: KiorlyPaymentService,
+    private readonly billingSeats: BillingSeatService,
   ) {}
 
   verifyKiorlyPayment(user: JwtUser, paymentId: string, body: { approved: boolean }) {
@@ -118,6 +122,168 @@ export class PlatformAdminService {
     return row;
   }
 
+  /**
+   * Ops force-assign a catalog plan on an organization (immediate; skips owner self-serve billing flow).
+   * Use for demo/support — not a substitute for paid checkout in production.
+   */
+  async setTenantPlan(
+    user: JwtUser,
+    tenantId: string,
+    body: {
+      planKey: PlanKey;
+      reason: string;
+      interval?: BillingInterval;
+      clinicianSeats?: number;
+      status?: "ACTIVE" | "TRIALING";
+    },
+  ) {
+    this.assertPlatform(user);
+    const id = this.normalizeTenantId(tenantId);
+    const reason = body.reason?.trim() ?? "";
+    if (reason.length < 3) throw new BadRequestException("Reason is required (min 3 characters)");
+    if (!Object.values(PlanKey).includes(body.planKey)) {
+      throw new BadRequestException("Unknown planKey");
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id },
+      select: { id: true, marketId: true, name: true },
+    });
+    if (!tenant) throw new NotFoundException("Organization not found");
+    const marketId = tenant.marketId;
+    if (!marketId) throw new BadRequestException("Organization has no market — cannot price a plan");
+
+    await ensureTenantSubscription(this.prisma, id, {
+      planKey: body.planKey,
+      clinicianSeats: body.clinicianSeats ?? 5,
+    });
+
+    const plan = await this.prisma.plan.findUnique({ where: { key: body.planKey } });
+    if (!plan) throw new BadRequestException("Unknown plan");
+
+    const requestedInterval =
+      body.interval === BillingInterval.ANNUAL ? BillingInterval.ANNUAL : BillingInterval.MONTHLY;
+    const findPrice = (interval: BillingInterval) =>
+      this.prisma.planPrice.findFirst({
+        where: {
+          planId: plan.id,
+          marketId,
+          interval,
+          ...ACTIVE_PRICE_WHERE(),
+        },
+        orderBy: { priceVersion: "desc" },
+      });
+    // Prefer a price matching the requested interval. If Annual is missing, fall back to
+    // Monthly pricing for invoicing — but still store/period using the requested interval so
+    // ops "Annual" always advances currentPeriodEnd by ~1 year (not another month).
+    let price = await findPrice(requestedInterval);
+    if (!price && requestedInterval === BillingInterval.ANNUAL) {
+      price = await findPrice(BillingInterval.MONTHLY);
+    }
+    if (!price) {
+      throw new BadRequestException(
+        `No active ${requestedInterval} (or MONTHLY) price for ${body.planKey} in this market`,
+      );
+    }
+    const interval = requestedInterval;
+
+    const existing = await this.prisma.subscription.findUnique({
+      where: { tenantId: id },
+      include: { plan: true },
+    });
+    if (!existing) throw new NotFoundException("Subscription not found");
+
+    const seats = Math.max(1, body.clinicianSeats ?? existing.clinicianSeats);
+    const status =
+      body.status === "TRIALING"
+        ? SubscriptionStatus.TRIALING
+        : body.status === "ACTIVE"
+          ? SubscriptionStatus.ACTIVE
+          : existing.status === SubscriptionStatus.TRIALING
+            ? SubscriptionStatus.ACTIVE
+            : existing.status;
+
+    // Reset billing window so Annual shows ~1 year and Monthly ~1 month from now.
+    const periodStart = new Date();
+    const periodEnd = addBillingPeriod(periodStart, interval);
+
+    const updated = await this.prisma.subscription.update({
+      where: { id: existing.id },
+      data: {
+        planId: plan.id,
+        planPriceId: price.id,
+        interval,
+        clinicianSeats: seats,
+        status,
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: periodEnd,
+        activatedAt:
+          status === SubscriptionStatus.ACTIVE ? (existing.activatedAt ?? new Date()) : existing.activatedAt,
+        scheduledPlanId: null,
+        scheduledPlanPriceId: null,
+        scheduledInterval: null,
+        scheduledClinicianSeats: null,
+        scheduledEffectiveAt: null,
+      },
+      include: { plan: true },
+    });
+
+    await this.prisma.subscriptionEvent.create({
+      data: {
+        subscriptionId: updated.id,
+        type: "ops_plan_set",
+        fromJson: {
+          planKey: existing.plan.key,
+          planId: existing.planId,
+          planPriceId: existing.planPriceId,
+          clinicianSeats: existing.clinicianSeats,
+          status: existing.status,
+        },
+        toJson: {
+          planKey: updated.plan.key,
+          planId: updated.planId,
+          planPriceId: updated.planPriceId,
+          clinicianSeats: updated.clinicianSeats,
+          status: updated.status,
+          interval: updated.interval,
+          reason,
+        },
+        actorUserId: user.userId,
+      },
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        tenantId: id,
+        actorId: user.userId,
+        action: "subscription.ops_plan_set",
+        resource: "Subscription",
+        resourceId: updated.id,
+        metadata: {
+          fromPlanKey: existing.plan.key,
+          toPlanKey: updated.plan.key,
+          clinicianSeats: seats,
+          status: updated.status,
+          reason,
+        },
+      },
+    });
+
+    await this.billingSeats.reconcileToSeatCap(id, seats);
+
+    return {
+      tenantId: id,
+      tenantName: tenant.name,
+      planKey: updated.plan.key,
+      planNameEn: updated.plan.nameEn,
+      status: updated.status,
+      clinicianSeats: updated.clinicianSeats,
+      interval: updated.interval,
+      currentPeriodStart: updated.currentPeriodStart.toISOString(),
+      currentPeriodEnd: updated.currentPeriodEnd.toISOString(),
+    };
+  }
+
   private assertPlatform(user: JwtUser): void {
     if (!isPlatformSuperAdmin(user)) {
       throw new ForbiddenException("Only platform super administrators can use this API");
@@ -177,9 +343,10 @@ export class PlatformAdminService {
     pageSizeStr?: string,
     sortByStr?: string,
     sortOrderStr?: string,
+    q?: string,
   ) {
     this.assertPlatform(user);
-    return this.admin.listTenants(pageStr, pageSizeStr, sortByStr, sortOrderStr);
+    return this.admin.listTenants(pageStr, pageSizeStr, sortByStr, sortOrderStr, q);
   }
 
   async getTenant(user: JwtUser, tenantId: string) {
@@ -204,6 +371,7 @@ export class PlatformAdminService {
           select: {
             id: true,
             status: true,
+            interval: true,
             plan: { select: { key: true, nameEn: true, nameAr: true } },
             currentPeriodStart: true,
             currentPeriodEnd: true,
@@ -283,6 +451,7 @@ export class PlatformAdminService {
         ? {
             id: row.subscription.id,
             status: row.subscription.status,
+            interval: row.subscription.interval,
             planKey: row.subscription.plan.key,
             planNameEn: row.subscription.plan.nameEn,
             planNameAr: row.subscription.plan.nameAr,

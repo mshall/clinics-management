@@ -1,8 +1,7 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { login } from "./helpers";
 
-const API_BASE = process.env.PLAYWRIGHT_API_URL ?? `${process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173"}/api/v1`;
-
+const API_BASE = process.env.PLAYWRIGHT_API_URL ?? `${process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5174"}/api/v1`;
 async function apiLogin(request: APIRequestContext, email: string, password: string) {
   const res = await request.post(`${API_BASE}/auth/login`, { data: { email, password } });
   expect(res.ok()).toBeTruthy();

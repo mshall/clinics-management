@@ -1211,6 +1211,8 @@ model Tenant {
   etaHealthLastAlertAt               DateTime?
   whatsAppRemindersEnabled           Boolean                            @default(false)
   appointmentReminderHoursBefore     Int                                @default(24)
+  /// When true, creating an operation requires "How did they find us?" (acquisition channel).
+  operationAcquisitionRequired        Boolean                           @default(false)
   providerSettings                   Json                               @default("{}")
   users                              User[]
   clinics                            Clinic[]
@@ -2538,6 +2540,10 @@ model Operation {
   downPayment         Decimal                   @default(0) @db.Decimal(14, 2)
   paidAmount          Decimal                   @default(0) @db.Decimal(14, 2)
   feeCurrency         String                    @default("EGP")
+  /** Zero-value ops must be marked contract (تعاقد); allows totalCost = 0. */
+  isContract          Boolean                   @default(false)
+  /** Snapshot of how the patient found us at booking (for channel revenue reports). */
+  acquisitionChannel  PatientAcquisitionChannel?
   comments            String?
   status              OperationStatus           @default(SCHEDULED)
   noMedications       Boolean                   @default(false)
@@ -2560,6 +2566,8 @@ model Operation {
   @@index([tenantId, clinicianId, operationDate])
   @@index([patientId])
   @@index([tenantId, externalReference])
+  @@index([tenantId, isContract, operationDate])
+  @@index([tenantId, acquisitionChannel, operationDate])
 }
 
 model OperationDocument {

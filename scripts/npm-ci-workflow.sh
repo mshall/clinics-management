@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # npm ci with retries — mirrors GitHub Actions install; recovers from flaky registry/cache on ubuntu-latest.
+# CI workflows call this via .github/actions/setup-node-deps (skipped when node_modules cache hits
+# the current package-lock digest). Deploy jobs still run a fresh npm ci in scripts/cicd-deploy.sh.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

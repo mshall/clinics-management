@@ -30,6 +30,7 @@ export async function ensurePlanCatalog(prisma: PrismaClient): Promise<void> {
     extraClinicianAmount?: string | null;
   }> = [
     { planId: lite.id, interval: BillingInterval.MONTHLY, unit: PriceUnit.PER_TENANT, amount: "499" },
+    { planId: lite.id, interval: BillingInterval.ANNUAL, unit: PriceUnit.PER_TENANT, amount: "4990" },
     { planId: pro.id, interval: BillingInterval.MONTHLY, unit: PriceUnit.PER_CLINICIAN, amount: "1299" },
     {
       planId: pro.id,
@@ -54,6 +55,7 @@ export async function ensurePlanCatalog(prisma: PrismaClient): Promise<void> {
       extraClinicianAmount: "699",
     },
     { planId: enterprise.id, interval: BillingInterval.MONTHLY, unit: PriceUnit.PER_TENANT, amount: "9999" },
+    { planId: enterprise.id, interval: BillingInterval.ANNUAL, unit: PriceUnit.PER_TENANT, amount: "99990" },
   ];
 
   for (const row of egPrices) {

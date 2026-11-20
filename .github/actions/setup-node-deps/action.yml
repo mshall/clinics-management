@@ -1,0 +1,106 @@
+# Shared Node setup: npm download cache + node_modules restore.
+# Full `npm ci` runs only on cache miss (or when force-install=true).
+# Exact lockfile hash keys only — never reuse modules from a different lockfile.
+# Does not affect Docker/App Runner image builds (those still `npm ci` inside Dockerfiles).
+name: Setup Node.js dependencies
+description: Node + npm cache; restore node_modules or run npm ci when lockfiles change
+
+inputs:
+  node-version:
+    description: Node.js major version
+    required: false
+    default: "22"
+  include-infra:
+    description: Also cache/install infra/ (separate package-lock.json)
+    required: false
+    default: "false"
+  force-install:
+    description: Always run npm ci even on cache hit (host tooling correctness)
+    required: false
+    default: "false"
+  cache-key-prefix:
+    description: Namespace for this install shape (root vs root+infra)
+    required: false
+    default: "workspace"
+
+outputs:
+  cache-hit:
+    description: true when workspace node_modules was restored from cache
+    value: ${{ steps.cache-modules.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve lockfile cache key
+      id: lock
+      shell: bash
+      run: |
+        set -euo pipefail
+        files=(package-lock.json)
+        if [ "${{ inputs.include-infra }}" = "true" ]; then
+          files+=(infra/package-lock.json)
+        fi
+        for f in "${files[@]}"; do
+          if [ ! -f "$f" ]; then
+            echo "::error::Missing lockfile for dependency cache: $f"
+            exit 1
+          fi
+        done
+        # hashFiles is unavailable in composite actions — hash lockfiles in-shell.
+        digest="$(cat "${files[@]}" | sha256sum | awk '{print $1}')"
+        echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+        echo "Dependency cache digest=${digest:0:12}… (files: ${files[*]})"
+
+    - uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          infra/package-lock.json
+
+    - name: Restore workspace node_modules
+      id: cache-modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          apps/api/node_modules
+          apps/web/node_modules
+          apps/docs/node_modules
+        # Exact key only — no restore-keys (avoids stale/partial module trees).
+        key: nm-${{ runner.os }}-node${{ inputs.node-version }}-${{ inputs.cache-key-prefix }}-${{ steps.lock.outputs.digest }}
+
+    - name: Restore infra node_modules
+      id: cache-infra
+      if: ${{ inputs.include-infra == 'true' }}
+      uses: actions/cache@v4
+      with:
+        path: infra/node_modules
+        key: nm-infra-${{ runner.os }}-node${{ inputs.node-version }}-${{ steps.lock.outputs.digest }}
+
+    - name: Install workspace dependencies
+      if: ${{ inputs.force-install == 'true' || steps.cache-modules.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: bash scripts/npm-ci-workflow.sh
+
+    - name: Install infra dependencies
+      if: ${{ inputs.include-infra == 'true' && (inputs.force-install == 'true' || steps.cache-infra.outputs.cache-hit != 'true') }}
+      shell: bash
+      run: NPM_CONFIG_LOGLEVEL=error npm ci --prefix infra --no-audit --no-fund
+
+    - name: Report install source
+      shell: bash
+      run: |
+        if [ "${{ steps.cache-modules.outputs.cache-hit }}" = "true" ] && [ "${{ inputs.force-install }}" != "true" ]; then
+          echo "Restored workspace node_modules from Actions cache (skipped npm ci)."
+        else
+          echo "Ran workspace npm ci (cache miss or force-install)."
+        fi
+        if [ "${{ inputs.include-infra }}" = "true" ]; then
+          if [ "${{ steps.cache-infra.outputs.cache-hit }}" = "true" ] && [ "${{ inputs.force-install }}" != "true" ]; then
+            echo "Restored infra/node_modules from Actions cache (skipped infra npm ci)."
+          else
+            echo "Ran infra npm ci (cache miss or force-install)."
+          fi
+        fi

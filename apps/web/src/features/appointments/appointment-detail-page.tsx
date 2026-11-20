@@ -148,10 +148,52 @@ export function AppointmentDetailPage() {
   };
 
   const toastStatusDraft = (code: string) => {
+    if (
+      apt?.status === "CHECKED_IN" &&
+      (code === "SCHEDULED" || code === "CONFIRMED")
+    ) {
+      toast.success(
+        t(
+          "appointments.undoCheckInDraftToast",
+          "Undo check-in selected ({{status}}). Click Save to clear the ticket and draft visit, then you can start the flow again.",
+          { status: statusLabel(code) },
+        ),
+      );
+      return;
+    }
     toast.success(
       t("appointments.statusDraftToast", "Status: {{status}}. Click Save to apply.", { status: statusLabel(code) })
     );
   };
+
+  const undoCheckInMut = useMutation({
+    mutationFn: () =>
+      apiPatch<AppointmentDto>(`/api/v1/appointments/${id}`, { status: "CONFIRMED" }),
+    onSuccess: () => {
+      setStatus("CONFIRMED");
+      setFormErr(null);
+      void qc.invalidateQueries({ queryKey: ["appointment", id] });
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
+      void qc.invalidateQueries({ queryKey: ["encounters"] });
+      void qc.invalidateQueries({ queryKey: ["front-desk"] });
+      toast.success(
+        t(
+          "appointments.undoCheckInDone",
+          "Check-in undone. Status is Confirmed — queue ticket and draft visit cleared.",
+        ),
+      );
+    },
+    onError: (e: unknown) => {
+      const msg =
+        e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body
+          ? String((e.body as { message?: unknown }).message)
+          : e instanceof Error
+            ? e.message
+            : String(e);
+      setFormErr(msg);
+      toast.error(msg);
+    },
+  });
 
   const selectedPatientMissing = Boolean(patientId && !patients.some((p) => p.id === patientId));
   const { data: extraPatient } = usePatientQuery(selectedPatientMissing ? patientId : undefined);
@@ -685,9 +727,32 @@ export function AppointmentDetailPage() {
                 <p className="text-xs text-muted-foreground">
                   {t(
                     "appointments.statusQuickHint",
-                    "Choose a status below, then click Save to apply. Marking completed asks for confirmation first."
+                    "Choose a status below, then click Save to apply. Marking completed asks for confirmation first. From Checked in you can go back to Scheduled or Confirmed to reset the visit flow.",
                   )}
                 </p>
+                {apt.status === "CHECKED_IN" ? (
+                  <div
+                    className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2"
+                    data-testid="undo-check-in-banner"
+                  >
+                    <p className="flex-1 text-xs text-muted-foreground">
+                      {t(
+                        "appointments.undoCheckInBanner",
+                        "Patient is checked in. Undo to clear the ticket and draft encounter and return to Confirmed.",
+                      )}
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={undoCheckInMut.isPending || saveMut.isPending}
+                      data-testid="undo-check-in-detail"
+                      onClick={() => undoCheckInMut.mutate()}
+                    >
+                      {t("appointments.undoCheckIn", "Undo check-in")}
+                    </Button>
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
@@ -705,7 +770,7 @@ export function AppointmentDetailPage() {
                         type="button"
                         size="sm"
                         variant="outline"
-                        disabled={saveMut.isPending}
+                        disabled={saveMut.isPending || undoCheckInMut.isPending}
                         className={cn(
                           active
                             ? cn(appointmentStatusClassName(code), "font-semibold shadow-sm ring-2 ring-primary/50 hover:opacity-95")

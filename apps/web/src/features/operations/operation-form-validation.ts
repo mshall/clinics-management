@@ -15,6 +15,14 @@ function validatePatientAcquisitionRequired(
   if (!values.channel) {
     return t("operations.errorAcquisitionRequired", "Select how the patient found the clinic.");
   }
+  return validatePatientAcquisitionDetails(values, t);
+}
+
+/** When acquisition is optional, still validate referral/other details if a channel is chosen. */
+function validatePatientAcquisitionDetails(
+  values: OperationAcquisitionFormValues,
+  t: TFunction,
+): string | null {
   if (values.channel === "DOCTOR_REFERRAL" && !values.referralName.trim()) {
     return t("patients.errorExplainMoreRequired", "Explain more is required.");
   }
@@ -39,6 +47,8 @@ export type OperationCreateValidationInput = {
   downPayment: string;
   /** When true, total cost may be omitted (e.g. call center booking). */
   feesOptional?: boolean;
+  /** Contract / تعاقد — required when fee editors set total to 0. */
+  isContract?: boolean;
   docRows: PendingDocumentRow[];
   medTab: MedTab;
   prescriptionFile: File | null;
@@ -48,6 +58,8 @@ export type OperationCreateValidationInput = {
   /** When false, skip acquisition (e.g. scheduled operation edit). */
   requireAcquisition?: boolean;
 };
+
+export { isZeroCostWithoutContract } from "./operation-contract-cost";
 
 export type OperationCreateValidationResult = {
   issues: string[];
@@ -77,13 +89,25 @@ export function collectOperationCreateValidationIssues(
   }
   if (!input.feesOptional) {
     if (!input.totalCost.trim()) {
-      issues.push(t("operations.errorTotalRequired", "Enter the total cost."));
+      issues.push(
+        t(
+          "operations.errorTotalRequired",
+          "Enter the total cost or check if the operation is contract.",
+        ),
+      );
     } else {
       const total = Number.parseFloat(input.totalCost);
       if (Number.isNaN(total)) {
         issues.push(t("operations.errorTotalInvalid", "Enter a valid total cost amount."));
       } else if (total < 0) {
         issues.push(t("operations.errorTotalNegative", "Total cost cannot be negative."));
+      } else if (total === 0 && !input.isContract) {
+        issues.push(
+          t(
+            "operations.errorContractRequiredForZero",
+            "Enter the total cost or check if the operation is contract.",
+          ),
+        );
       }
     }
   } else if (input.totalCost.trim()) {
@@ -124,9 +148,12 @@ export function collectOperationCreateValidationIssues(
     );
   }
 
-  if (input.requireAcquisition !== false) {
+  if (input.requireAcquisition) {
     const acquisitionErr = validatePatientAcquisitionRequired(input.acquisition, t);
     if (acquisitionErr) issues.push(acquisitionErr);
+  } else if (input.acquisition.channel) {
+    const detailErr = validatePatientAcquisitionDetails(input.acquisition, t);
+    if (detailErr) issues.push(detailErr);
   }
 
   return { issues, invalidDocRowIds };
