@@ -8,8 +8,9 @@ import { AuthPasswordResetService } from "./auth-password-reset.service";
 import { AuthOtpChallengeService } from "./auth-otp-challenge.service";
 import { AuthSessionService } from "./auth-session.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const config = new ConfigService({ SIGNUP_OTP_DEV_CODE: "424242", AUTH_RESET_DEV_EXPOSE: "1" });
 const otp = new AuthOtpChallengeService(prisma as unknown as PrismaService, config);
 const sessions = new AuthSessionService(prisma as unknown as PrismaService);

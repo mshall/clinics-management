@@ -7,8 +7,9 @@ import { OutboxEventService } from "../messaging/outbox-event.service";
 import { SlotService } from "./slot.service";
 import { SLOT_CHANNEL, SLOTS_CHANGED_TOPIC } from "./slot-channel";
 import { emptyAvailabilityWeek } from "./availability-week-schema";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const outbox = new OutboxEventService(prisma as unknown as PrismaService);
 const slots = new SlotService(prisma as unknown as PrismaService, outbox);
 

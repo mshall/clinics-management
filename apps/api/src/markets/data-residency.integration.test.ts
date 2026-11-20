@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { PrismaClient } from "@prisma/client";
 import { attestTenantResidency, marketProductionBinding } from "./data-cells";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("SC-01 EG tenants in database", () => {
   before(async () => {

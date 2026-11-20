@@ -6,6 +6,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import type { PrismaService } from "../prisma/prisma.service";
 import { ReportsExportService } from "./reports-export.service";
 import { ReportsService } from "./reports.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
 function isMoneyDenied(err: unknown): boolean {
   return (
@@ -14,7 +15,7 @@ function isMoneyDenied(err: unknown): boolean {
   );
 }
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("RP-02 report export integration", () => {
   let tenantId: string;

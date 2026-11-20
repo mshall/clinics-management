@@ -6,11 +6,12 @@ import { ForbiddenException } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { assertEgyptPdpcPaidLaunchAllowed } from "./pdpc-egypt-launch-gate";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
 config({ path: resolve(process.cwd(), ".env") });
 
 describe("SC-02 PDPC paid launch gate", () => {
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   let tenantId: string;
 
   before(async () => {

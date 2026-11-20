@@ -9,8 +9,9 @@ import { NewPatientService } from "../../patients/new-patient.service";
 import type { PrismaService } from "../../prisma/prisma.service";
 import type { UploadBlobStorage } from "../../storage/upload-blob.storage";
 import { ImportsService } from "./imports.service";
+import { createPrismaClient } from "../../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const ps = prisma as unknown as PrismaService;
 const blobs = new Map<string, Buffer>();
 const storage: UploadBlobStorage = {

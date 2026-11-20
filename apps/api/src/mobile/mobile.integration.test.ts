@@ -12,9 +12,10 @@ import { MobileEntitlementService } from "./mobile-entitlement.service";
 import { MobilePushService } from "./mobile-push.service";
 import { MobileInterceptor } from "./mobile.interceptor";
 import { MobileService } from "./mobile.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
 /** Needs `npm run db:seed:demo` + `npm run db:seed:mobile` (demo tenants na = PRO, bs = BASIC, nsolo = NURSE_PRO, Kiorly Clinic Group = ENTERPRISE). */
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const p = prisma as unknown as PrismaService;
 const audit = new AuditService(p);
 const snaps = new KiorexFlagSnapshotService(p, {} as never);

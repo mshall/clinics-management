@@ -3,8 +3,9 @@ import { after, before, describe, it } from "node:test";
 import { AppointmentStatus, HomeVisitState, PrismaClient } from "@prisma/client";
 import { encryptVisitAddress } from "./address-crypto";
 import { buildKit, buildWorld, cleanup, seedVisit, snapshotFor, type World } from "./hv-test-kit";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const suffix = `${Date.now()}`.slice(-9);
 
 type Kit = Awaited<ReturnType<typeof buildKit>>;

@@ -11,6 +11,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 const HERE = import.meta.dirname ?? join(fileURLToPath(import.meta.url), "..");
 const require = createRequire(join(HERE, "../../api/package.json"));
 const { PrismaClient } = require("@prisma/client") as typeof import("@prisma/client");
+const { PrismaPg } = require("@prisma/adapter-pg") as typeof import("@prisma/adapter-pg");
 
 function databaseUrl(): string {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
@@ -18,10 +19,16 @@ function databaseUrl(): string {
   const line = env.split("\n").find((l) => l.startsWith("DATABASE_URL="));
   if (!line) throw new Error("DATABASE_URL not found");
   const raw = line.slice("DATABASE_URL=".length).replace(/"/g, "");
-  return `${raw}${raw.includes("?") ? "&" : "?"}connection_limit=2`;
+  return raw;
 }
 
-export const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl() } } });
+// Prisma 7: driver adapter (Prisma-only URL params become adapter options).
+const dbUrl = new URL(databaseUrl());
+const dbSchema = dbUrl.searchParams.get("schema") ?? undefined;
+for (const p of ["schema", "connection_limit", "pool_timeout", "connect_timeout"]) dbUrl.searchParams.delete(p);
+export const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: dbUrl.toString(), max: 2 }, dbSchema ? { schema: dbSchema } : undefined),
+});
 export const PASSWORD = process.env.NURSE_DEMO_PASSWORD ?? "Demo@12345";
 export const SOLO_EMAIL = "mona@nurse-demo.kiorly.test";
 export const AGENCY = { owner: "owner@nurse-demo.kiorly.test", dispatcher: "dispatch@nurse-demo.kiorly.test", nurse1: "nurse1@nurse-demo.kiorly.test", nurse2: "nurse2@nurse-demo.kiorly.test", aide: "aide@nurse-demo.kiorly.test" };

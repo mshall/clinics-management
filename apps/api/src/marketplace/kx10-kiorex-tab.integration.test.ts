@@ -34,8 +34,9 @@ import { MarketplaceListingService } from "./marketplace-listing.service";
 import { KiorexOverviewService } from "./kiorex-overview.service";
 import { KiorexSettingsService } from "./kiorex-settings.service";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const audit = new AuditService(prismaSvc);
 const outbox = new OutboxEventService(prismaSvc);

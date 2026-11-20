@@ -28,8 +28,9 @@ import { KiorlyPaymentService } from "./kiorly-payment.service";
 import { LiteFeesService } from "./lite-fees.service";
 import { PaymentGatewayRegistry } from "./payment-gateways/payment-gateway.registry";
 import { SettlementService } from "./settlement.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 describe("SB-05 Lite commission invoicing (integration)", () => {

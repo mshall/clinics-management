@@ -15,8 +15,9 @@ import {
 } from "./consent-policy.constants";
 import { MESSAGING_CONSENT_MARKETING } from "../patients/messaging-consent.constants";
 import { PrismaService } from "../prisma/prisma.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 function policy(): ConsentPolicyService {
   const prismaSvc = prisma as unknown as PrismaService;

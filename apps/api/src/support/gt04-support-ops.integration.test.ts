@@ -8,8 +8,9 @@ import { WhatsAppWebhookService } from "../messaging/whatsapp-webhook.service";
 import { WhatsAppInboundRepliesService } from "../messaging/whatsapp-inbound-replies.service";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
 import { AuditService } from "../audit/audit.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const support = new SupportService(prismaSvc);
 

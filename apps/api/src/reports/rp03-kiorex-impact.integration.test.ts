@@ -10,8 +10,9 @@ import { PaymentGatewayRegistry } from "../billing-platform/payment-gateways/pay
 import { SettlementService } from "../billing-platform/settlement.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { KiorexImpactService } from "./kiorex-impact.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 describe("RP-03 Kiorex impact integration", () => {

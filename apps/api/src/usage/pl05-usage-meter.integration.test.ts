@@ -5,8 +5,9 @@ import { PrismaClient, UsageMetric } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsageMeterService } from "./usage-meter.service";
 import { usageLimitsForPlan } from "./usage-limits";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const usage = new UsageMeterService(prisma as unknown as PrismaService);
 
 describe("PL-05 usage metering", () => {

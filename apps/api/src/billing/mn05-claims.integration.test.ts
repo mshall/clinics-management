@@ -5,8 +5,9 @@ import type { JwtUser } from "../auth/jwt-user";
 import type { PrismaService } from "../prisma/prisma.service";
 import { ClaimsService } from "./claims.service";
 import { PAYER_B2B_INVOICE_TOPIC } from "./claims";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const claims = new ClaimsService(prisma as unknown as PrismaService);
 
 describe("MN-05 company contracts & TPA claims", () => {

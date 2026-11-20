@@ -3,6 +3,7 @@
  * Assert exactly one posted visit charge and one sale fiscal submission per appointment.
  * Usage: node scripts/assert-single-visit-fee.mjs <appointmentId>
  */
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, RevenueStatus } from "@prisma/client";
 
 const appointmentId = process.argv[2]?.trim();
@@ -11,7 +12,12 @@ if (!appointmentId) {
   process.exit(1);
 }
 
-const prisma = new PrismaClient();
+const dbUrl = new URL(process.env.DATABASE_URL ?? "");
+const dbSchema = dbUrl.searchParams.get("schema") ?? undefined;
+for (const p of ["schema", "connection_limit", "pool_timeout", "connect_timeout"]) dbUrl.searchParams.delete(p);
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: dbUrl.toString() }, dbSchema ? { schema: dbSchema } : undefined),
+});
 try {
   const revenue = await prisma.revenueEntry.findMany({
     where: {

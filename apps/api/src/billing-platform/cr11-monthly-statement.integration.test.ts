@@ -22,8 +22,9 @@ import { PaymentGatewayRegistry } from "./payment-gateways/payment-gateway.regis
 import { settlePeriod } from "./settlement-calculator";
 import { SettlementService } from "./settlement.service";
 import { baseSettlementInput, EDGE_CASE_MATRIX, SECTION_04_MATRIX } from "./settlement-test-matrix";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("CR-11 monthly statements (persisted invoices)", () => {
   const suffix = `cr11-${Date.now()}`;

@@ -5,8 +5,9 @@ import { AppointmentStatus, PrismaClient } from "@prisma/client";
 import { ensurePlanCatalog } from "../../prisma/plan-catalog-seed";
 import { resetSalesDemoTenant, summarizePilotTenant } from "./sales-demo-reset";
 import { PILOT_TENANT_SPECS } from "./pilot-tenant-catalog";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("QA-06 sales demo reset", () => {
   const passwordHash = bcrypt.hashSync("demo", 10);

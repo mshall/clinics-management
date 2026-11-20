@@ -10,8 +10,9 @@ import { emptyAvailabilityWeek } from "../scheduling/availability-week-schema";
 import { SlotService } from "../scheduling/slot.service";
 import { CarePlanRequestService } from "./care-plan-request.service";
 import { CarePlanService } from "./care-plan.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const p = prisma as unknown as PrismaService;
 const suffix = `${Date.now()}`.slice(-9);
 const code = (e: { getResponse: () => { code: string } }) => e.getResponse().code;

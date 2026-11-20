@@ -12,8 +12,9 @@ import { WhatsAppWebhookService } from "../messaging/whatsapp-webhook.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { DevInboxGuard } from "./dev-inbox.guard";
 import { DevInboxService } from "./dev-inbox.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 describe("mock providers: every message lands in the dev inbox; delivery, replies and PSP callbacks are simulated", () => {

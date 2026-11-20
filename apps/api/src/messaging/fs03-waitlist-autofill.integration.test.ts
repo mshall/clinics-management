@@ -20,8 +20,9 @@ import { MessagingService } from "./messaging.service";
 import { OutboxEventService } from "./outbox-event.service";
 import { WaitlistAutofillService } from "./waitlist-autofill.service";
 import { WAITLIST_OFFER_TEMPLATE_KEY } from "./whatsapp-reply-payloads";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 function services() {

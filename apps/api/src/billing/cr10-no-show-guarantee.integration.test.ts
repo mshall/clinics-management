@@ -17,8 +17,9 @@ import { DEFAULT_COMMERCIAL_CONFIG } from "../markets/commercial-config.schema";
 import { PrismaService } from "../prisma/prisma.service";
 import { NO_SHOW_GUARANTEE_SOURCE_REF } from "./no-show-guarantee";
 import { NoShowGuaranteeService } from "./no-show-guarantee.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("CR-10 no-show guarantee service", () => {
   const suffix = `${Date.now()}`;

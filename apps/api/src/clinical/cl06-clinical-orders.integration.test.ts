@@ -10,8 +10,9 @@ import {
 import { MessagingService } from "../messaging/messaging.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ClinicalOrdersService, RESULTS_READY_TEMPLATE } from "./clinical-orders.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("CL-06 clinical orders integration", () => {
   const suffix = `${Date.now()}`;

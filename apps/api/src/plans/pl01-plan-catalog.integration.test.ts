@@ -12,8 +12,9 @@ import { PlansService } from "./plans.service";
 import { PriceIndexationService } from "./price-indexation.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const plansService = new PlansService(
   prisma as unknown as PrismaService,
   new PriceIndexationService(

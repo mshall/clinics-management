@@ -5,8 +5,9 @@ import { PrismaClient } from "@prisma/client";
 import type { JwtUser } from "./jwt-user";
 import { PrivilegedMfaGuard } from "./privileged-mfa.guard";
 import type { PrismaService } from "../prisma/prisma.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("SC-04 MFA policy integration", () => {
   let ownerId: string;

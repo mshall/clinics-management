@@ -4,8 +4,9 @@ import { ListingStatus, PrismaClient, SubscriptionStatus, UserRole } from "@pris
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { PlatformGrowthService } from "./platform-growth.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const growth = new PlatformGrowthService(prisma as unknown as PrismaService);
 
 describe("PA-05 growth analytics", () => {

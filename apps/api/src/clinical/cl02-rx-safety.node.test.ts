@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { allergyMatchesIngredients } from "./allergy-ingredient-map";
 import { normalizeRxSeverity, severityRequiresOverride } from "./rx-safety-severity";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
 describe("CL-02 Rx safety", () => {
   it("major and contraindicated severities require override", () => {
@@ -23,7 +24,7 @@ describe("CL-02 Rx safety", () => {
   it("free-text unresolved items are flagged unavailable in checkRx", async () => {
     const { RxSafetyCheckService } = await import("./rx-safety-check.service");
     const { PrismaClient } = await import("@prisma/client");
-    const prisma = new PrismaClient();
+    const prisma = createPrismaClient();
     await prisma.$connect();
     const clinic = await prisma.clinic.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
     const patient = await prisma.patient.findFirstOrThrow({ where: { tenantId: clinic.tenantId } });

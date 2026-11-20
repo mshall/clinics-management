@@ -5,8 +5,9 @@ import type { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "../audit/audit.service";
 import { KiorexOidcService } from "./kiorex-oidc.service";
 import { readKiorexOidcConfig, type KiorexOidcPort } from "./kiorex-oidc.port";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("KNED/ADR-031 OIDC is edition-aware without a second client", () => {
   const seen: { authRedirect?: string; exchangeRedirect?: string }[] = [];

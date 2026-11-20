@@ -8,7 +8,7 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/field-visit/package.json packages/field-visit/
-RUN npm ci && npm install -g prisma@6.19.3
+RUN npm ci && npm install -g prisma@7.10.1
 COPY packages ./packages
 COPY apps/api/prisma ./apps/api/prisma
 COPY apps/api/prisma.config.ts ./apps/api/prisma.config.ts
@@ -28,6 +28,7 @@ COPY --from=build /repo/apps/api/prisma ${LAMBDA_TASK_ROOT}/prisma
 COPY --from=build /repo/apps/api/prisma.config.ts ${LAMBDA_TASK_ROOT}/prisma.config.ts
 # prisma/*.ts imports under ../src (tsx resolves .ts at runtime) — keep in sync with dockerfile-seed-src-coverage.node.test.ts
 COPY apps/api/src/common/seed-demo-guard.ts ${LAMBDA_TASK_ROOT}/src/common/seed-demo-guard.ts
+COPY apps/api/src/prisma/create-prisma-client.ts ${LAMBDA_TASK_ROOT}/src/prisma/create-prisma-client.ts
 COPY apps/api/src/entitlements ${LAMBDA_TASK_ROOT}/src/entitlements
 COPY apps/api/src/feature-flags/feature-flag-keys.ts ${LAMBDA_TASK_ROOT}/src/feature-flags/feature-flag-keys.ts
 COPY apps/api/src/subscriptions ${LAMBDA_TASK_ROOT}/src/subscriptions

@@ -3,8 +3,9 @@ import { after, before, describe, it } from "node:test";
 import { PrismaClient } from "@prisma/client";
 import { SYSTEM_TEMPLATE_VERSION, ensureTenantDefaultClinicalFormTemplates } from "./clinical-default-form-templates";
 import { LAUNCH_SPECIALTIES, LAUNCH_TEMPLATE_REVIEWS } from "./launch-specialty-templates";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("CL-04 built-in templates in the database", () => {
   let tenantId: string;

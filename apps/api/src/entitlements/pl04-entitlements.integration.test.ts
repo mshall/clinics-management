@@ -5,8 +5,9 @@ import { ensurePlanEntitlements } from "../../prisma/plans.seed";
 import { PlanUpgradeRequiredException } from "./plan-upgrade-required.exception";
 import { EntitlementsService } from "./entitlements.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const entitlements = new EntitlementsService(prisma as unknown as PrismaService);
 
 describe("PL-04 module entitlements", () => {

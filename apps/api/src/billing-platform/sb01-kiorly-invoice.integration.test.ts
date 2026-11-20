@@ -14,8 +14,9 @@ import { KiorlyInvoicesService } from "./kiorly-invoices.service";
 import { PaymentGatewayRegistry } from "./payment-gateways/payment-gateway.registry";
 import { KiorlyPaymentMethodsService } from "./kiorly-payment-methods.service";
 import { KiorlyPaymentService } from "./kiorly-payment.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const creditWallet = new CreditWalletService(prismaSvc);
 const gateways = new PaymentGatewayRegistry();

@@ -9,8 +9,9 @@ import { CreditWalletService } from "../credits/credit-wallet.service";
 import { PaymentGatewayRegistry } from "./payment-gateways/payment-gateway.registry";
 import { KiorlyPaymentMethodsService } from "./kiorly-payment-methods.service";
 import { KiorlyPaymentService } from "./kiorly-payment.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("CR-07 kiorex progress nudges", () => {
   const suffix = `cr07-${Date.now()}`;

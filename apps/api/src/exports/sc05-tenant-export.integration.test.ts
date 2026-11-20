@@ -4,8 +4,9 @@ import { PrismaClient, SubscriptionStatus } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import type { PrismaService } from "../prisma/prisma.service";
 import { TenantExportService } from "./tenant-export.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("SC-05 tenant export integration", () => {
   let tenantId: string;

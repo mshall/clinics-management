@@ -18,8 +18,9 @@ import { KiorexCommissionService } from "./kiorex-commission.service";
 import { CommissionChargeService } from "./commission-charge.service";
 import { CommissionDisputeService } from "./commission-dispute.service";
 import { NewPatientService } from "../patients/new-patient.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 describe("CR-08 Commission disputes", () => {

@@ -5,8 +5,9 @@ import { AppointmentsService } from "../appointments/appointments.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ClinicAiService } from "./clinic-ai.service";
 import { NoShowRiskScheduler } from "./no-show-risk.scheduler";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 function appointmentsService(entitled: Set<string>) {

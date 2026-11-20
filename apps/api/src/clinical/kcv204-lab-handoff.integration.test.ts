@@ -7,8 +7,9 @@ import { RecordShareService } from "../marketplace/record-share.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { ClinicalOrdersService } from "./clinical-orders.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("KCV204 lab order handoff emits LabOrderPlaced with a consent token", () => {
   const suffix = `kcv204-${Date.now()}`;

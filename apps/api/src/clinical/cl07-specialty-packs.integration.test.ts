@@ -4,8 +4,9 @@ import { BillingInterval, PlanKey, PrismaClient, SubscriptionStatus, UserRole } 
 import { EntitlementsService } from "../entitlements/entitlements.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { SpecialtyPacksService } from "./specialty-packs.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("CL-07 specialty pack add-ons", () => {
   const suffix = `${Date.now()}`;

@@ -8,8 +8,9 @@ import type { PrismaService } from "../prisma/prisma.service";
 import { InternalOutboxConsumerService } from "./internal-outbox-consumer.service";
 import type { MessagingService } from "./messaging.service";
 import { OwnerNotificationsService } from "./owner-notifications.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const svc = prisma as unknown as PrismaService;
 
 describe("MN-03 owner WhatsApp shift summary (INTERNAL outbox consumer)", () => {

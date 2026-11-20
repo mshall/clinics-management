@@ -14,8 +14,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import { GrowthReferralService } from "./growth-referral.service";
 import { ReferralCodeService } from "./referral-code.service";
 import { ReferralRewardService } from "./referral-reward.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("CR-09 referral reward on first paid period", () => {
   const suffix = `cr09-${Date.now()}`;

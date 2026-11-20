@@ -16,8 +16,9 @@ import { CohortService } from "../cohorts/cohort.service";
 import { BillingSeatService } from "../subscriptions/billing-seat.service";
 import { ReferralAttributionService } from "../growth/referral-attribution.service";
 import { ReferralCodeService } from "../growth/referral-code.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 function services() {
   const prismaSvc = prisma as unknown as PrismaService;

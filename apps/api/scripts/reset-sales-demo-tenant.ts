@@ -9,6 +9,7 @@ import {
   resetSalesDemoTenant,
   summarizePilotTenant,
 } from "../src/staging/sales-demo-reset";
+import { createPrismaClient } from "../src/prisma/create-prisma-client";
 
 async function main() {
   const argv = process.argv.slice(2);
@@ -25,7 +26,7 @@ async function main() {
     process.exit(1);
   }
 
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   const passwordHash = bcrypt.hashSync("demo", 10);
   try {
     if (parsed === "all") {

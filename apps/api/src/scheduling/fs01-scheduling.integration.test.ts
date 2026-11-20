@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("FS-01 existing appointment types after migration", () => {
   before(async () => {

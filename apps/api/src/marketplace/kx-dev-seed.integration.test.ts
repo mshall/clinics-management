@@ -14,8 +14,9 @@ import type { PrismaService } from "../prisma/prisma.service";
 import { SlotService } from "../scheduling/slot.service";
 import { SLOT_CHANNEL } from "../scheduling/slot-channel";
 import { MarketplaceListingService } from "./marketplace-listing.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 
 describe("KX-DEV local Kiorex integration seed", () => {

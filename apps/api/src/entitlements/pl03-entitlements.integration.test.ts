@@ -7,8 +7,9 @@ import { EntitlementsService } from "./entitlements.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { PlanUpgradeRequiredException } from "./plan-upgrade-required.exception";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const entitlements = new EntitlementsService(prisma as unknown as PrismaService);
 const featureFlags = new FeatureFlagsService(prisma as unknown as PrismaService, entitlements);
 

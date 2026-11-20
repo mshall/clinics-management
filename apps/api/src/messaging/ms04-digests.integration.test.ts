@@ -7,8 +7,9 @@ import type { FeatureFlagsService } from "../feature-flags/feature-flags.service
 import type { PrismaService } from "../prisma/prisma.service";
 import { DigestsService } from "./digests.service";
 import type { MessagingService } from "./messaging.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const svc = prisma as unknown as PrismaService;
 
 describe("MS-04 digests respect quiet hours and opt-out", () => {

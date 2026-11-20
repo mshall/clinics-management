@@ -3,8 +3,9 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { createPrismaClient } from "../src/prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const demoEmail = "admin@drahmedshall.com";
 
 try {

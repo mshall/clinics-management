@@ -11,8 +11,9 @@ import { ENCOUNTER_LOCKED_CODE } from "../common/encounter-lock";
 import { PatientsService } from "../patients/patients.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { EncountersService } from "./encounters.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const uploads = { put: async () => undefined, deleteObject: async () => undefined } as never;
 

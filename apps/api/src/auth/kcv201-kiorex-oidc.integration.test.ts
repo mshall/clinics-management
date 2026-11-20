@@ -8,8 +8,9 @@ import { AuditService } from "../audit/audit.service";
 import { AuthSessionService } from "./auth-session.service";
 import { KiorexOidcService } from "./kiorex-oidc.service";
 import type { KiorexIdentityClaims, KiorexOidcPort } from "./kiorex-oidc.port";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const sessions = new AuthSessionService(prismaSvc);
 const ISSUER = "http://localhost:4400";

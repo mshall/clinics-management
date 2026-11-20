@@ -26,8 +26,9 @@ import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { emptyAvailabilityWeek } from "../scheduling/availability-week-schema";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 function bookingStack() {
   const prismaSvc = prisma as unknown as PrismaService;

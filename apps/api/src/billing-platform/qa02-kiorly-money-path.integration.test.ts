@@ -21,11 +21,12 @@ import { KiorlyPaymentMethodsService } from "./kiorly-payment-methods.service";
 import { KiorlyPaymentService } from "./kiorly-payment.service";
 import { KiorlyInvoicesService } from "./kiorly-invoices.service";
 import { buildKiorlyInvoicePdf } from "./kiorly-invoice-pdf";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
 config({ path: resolve(process.cwd(), ".env") });
 
 const isCi = process.env.CI === "true";
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("QA-02 Kiorly SaaS money path", () => {
   const suffix = `qa02-${Date.now()}`;

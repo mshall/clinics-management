@@ -6,9 +6,10 @@ import { EmailOutboxService } from "./email-outbox.service";
 import { DevEmailProvider } from "./email.provider";
 import { InternalOutboxConsumerService } from "./internal-outbox-consumer.service";
 import { OwnerNotificationsService } from "./owner-notifications.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
 describe("MS-05 transactional email integration", () => {
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   let tenantId: string;
   let email: EmailService;
   let outbox: EmailOutboxService;

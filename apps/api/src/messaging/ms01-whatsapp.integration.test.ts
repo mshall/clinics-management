@@ -13,8 +13,9 @@ import { MessagingConsentService } from "../patients/messaging-consent.service";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
 import { OutboundMessageWorker } from "./outbound-message.worker";
 import { WhatsAppSendService } from "./whatsapp-send.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 function webhookService(): WhatsAppWebhookService {
   const prismaSvc = prisma as unknown as PrismaService;

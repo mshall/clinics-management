@@ -10,8 +10,9 @@ import { OutboxEventService } from "../messaging/outbox-event.service";
 import type { PrismaService } from "../prisma/prisma.service";
 import { AppointmentsService } from "./appointments.service";
 import { DEPOSIT_LINK_TEMPLATE_KEY, DepositLinkService } from "./deposit-link.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const svc = prisma as unknown as PrismaService;
 const money = new PatientMoneyService(svc);
 const settlement = new DepositSettlementService(svc, money);

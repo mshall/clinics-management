@@ -10,8 +10,9 @@ import {
 import { OUTBOX_EVENT } from "../messaging/outbox-event-types";
 import { PrismaService } from "../prisma/prisma.service";
 import { RecordShareService } from "./record-share.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("KX-11 record share consent", () => {
   const suffix = `${Date.now()}`;

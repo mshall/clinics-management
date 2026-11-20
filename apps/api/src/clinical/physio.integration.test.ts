@@ -5,8 +5,9 @@ import { AuditService } from "../audit/audit.service";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { PhysioService } from "./physio.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const queued: { body: string; templateKey?: string; variables?: Record<string, string> }[] = [];
 const messaging = { queueMessage: async (_t: string, m: never) => (queued.push(m), { id: "msg1", status: "QUEUED" }) };
 const svc = new PhysioService(prisma as unknown as PrismaService, new AuditService(prisma as unknown as PrismaService), messaging as never);

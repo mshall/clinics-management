@@ -5,8 +5,9 @@ import type { JwtUser } from "../auth/jwt-user";
 import type { PrismaService } from "../prisma/prisma.service";
 import { SHIFT_CLOSED_TOPIC } from "./cashier-shift";
 import { CashierShiftService } from "./cashier-shift.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const svc = prisma as unknown as PrismaService;
 const shifts = new CashierShiftService(svc);
 

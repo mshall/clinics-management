@@ -11,13 +11,14 @@ import { REQUIRES_SCOPE_KEY } from "./requires-scope.decorator";
 import { SCOPE_NOT_ALLOWED, ScopeNotAllowedException } from "./scope-not-allowed.exception";
 import { ScopeGuard } from "./scope.guard";
 import { ScopeOfPracticeService } from "./scope-of-practice.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
 /**
  * Scope-of-practice contract tests (KX-22 wave A2 acceptance: "403 SCOPE_NOT_ALLOWED on every Rx endpoint for
  * physio/nurse"; KX-23 stop-ship: "nurse reaches prescribing endpoint"). Reflects over the real controllers, so a new
  * Rx / order / sign endpoint without @RequiresScope fails here.
  */
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const reflector = new Reflector();
 const guard = new ScopeGuard(reflector, new ScopeOfPracticeService(prisma as never));
 

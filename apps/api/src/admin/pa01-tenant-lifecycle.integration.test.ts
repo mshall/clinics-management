@@ -12,8 +12,9 @@ import { BillingSeatService } from "../subscriptions/billing-seat.service";
 import { SubscriptionService } from "../subscriptions/subscription.service";
 import { TrialEngineService } from "../subscriptions/trial-engine.service";
 import { ForbiddenException } from "@nestjs/common";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
 const billingSeats = new BillingSeatService(prismaSvc);

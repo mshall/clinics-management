@@ -24,6 +24,7 @@ import { NURSE_DEMO_PASSWORD, NURSE_DEMO_TENANT_NAMES, ensureNurseDemoTenants } 
 import { NURSE_SERVICE_CATALOGUE } from "../../src/nurse/nurse-services";
 import { PERSONAS } from "./demo-data";
 import { assertDemoSeedAllowed } from "../../src/common/demo-seed-guard";
+import { createPrismaClient } from "../../src/prisma/create-prisma-client";
 
 const DAY = 86_400_000;
 const MIN = 60_000;
@@ -442,7 +443,7 @@ export async function resetNurseDemo(prisma: PrismaClient, deleteTenant: (ids: s
 
 if (require.main === module) {
   assertDemoSeedAllowed("Kiorly Clinic Rev 2.3 part (Nurse edition, physio, home visits)");
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   const today0 = new Date(); today0.setUTCHours(0, 0, 0, 0);
   seedRev23(prisma, { at: (off, hour, min = 0) => new Date(today0.getTime() + off * DAY + hour * 3_600_000 + min * MIN) })
     .then((s) => console.log("Kiorly Rev 2.3 demo seed OK: " + s))

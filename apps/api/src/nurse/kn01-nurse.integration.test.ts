@@ -20,8 +20,9 @@ import { ShiftService } from "./shift.service";
 import { AgencyService } from "./agency.service";
 import { FamilyUpdateService } from "./family-update.service";
 import { EntitlementsService } from "../entitlements/entitlements.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const p = prisma as unknown as PrismaService;
 const suffix = `${Date.now()}`.slice(-9);
 const referralCodes = new ReferralCodeService(p);

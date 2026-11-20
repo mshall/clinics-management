@@ -9,8 +9,9 @@ import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { assertDemoSeedAllowed } from "../../src/common/demo-seed-guard";
 import { ensurePlanEntitlements } from "../plans.seed";
+import { createPrismaClient } from "../../src/prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const PASSWORD = "Demo@12345"; // DEV ONLY
 
 async function main() {

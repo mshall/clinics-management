@@ -4,8 +4,9 @@ import { ClaimBatchStatus, ClaimLineStatus, Prisma, PrismaClient, RevenueStatus,
 import type { JwtUser } from "../auth/jwt-user";
 import type { PrismaService } from "../prisma/prisma.service";
 import { ReportsService } from "./reports.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("RP-04 AR aging & branch P&L reconcile with billing", () => {
   const stamp = Date.now();

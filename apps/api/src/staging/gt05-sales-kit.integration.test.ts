@@ -4,8 +4,9 @@ import { PrismaClient, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
 import { SalesKitService } from "./sales-kit.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const prismaSvc = prisma as unknown as PrismaService;
 const kit = new SalesKitService(prismaSvc);
 

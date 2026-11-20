@@ -7,8 +7,9 @@ import { BillingService } from "./billing.service";
 import { DepositSettlementService } from "./deposit-settlement.service";
 import { KiorexDepositsService } from "./kiorex-deposits.service";
 import { PatientMoneyService } from "./patient-money.service";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const svc = prisma as unknown as PrismaService;
 const money = new PatientMoneyService(svc);
 const settlement = new DepositSettlementService(svc, money);

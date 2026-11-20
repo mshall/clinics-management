@@ -19,8 +19,9 @@ import { PROVIDER_PROFILE_UPDATED_TOPIC } from "./provider-profile-schema";
 import { MarketplaceListingService } from "./marketplace-listing.service";
 import { MarketplaceProviderProfileService } from "./marketplace-provider-profile.service";
 import type { JwtUser } from "../auth/jwt-user";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const uploads = new LocalUploadBlobStorage(path.join(process.cwd(), "uploads"));
 const audit = new AuditService(prisma as unknown as PrismaService);
 const outbox = new OutboxEventService(prisma as unknown as PrismaService);

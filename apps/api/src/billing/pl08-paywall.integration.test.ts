@@ -3,8 +3,9 @@ import { after, before, describe, it } from "node:test";
 import { PrismaClient } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingController } from "./billing.controller";
+import { createPrismaClient } from "../prisma/create-prisma-client";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 describe("PL-08 paywall events", () => {
   let tenantId: string;
