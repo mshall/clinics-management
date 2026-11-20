@@ -16,7 +16,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   /** Default CPU-parallel logins overwhelm a cold API + bcrypt; keep modest parallelism. */
-  workers: process.env.CI ? 1 : 2,
+  /** The nurse stacks (PLAYWRIGHT_NO_SERVER=1) share one solo-nurse tenant whose specs call clearToday(), so they must not run in parallel. */
+  workers: process.env.CI || process.env.PLAYWRIGHT_NO_SERVER ? 1 : 2,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,
