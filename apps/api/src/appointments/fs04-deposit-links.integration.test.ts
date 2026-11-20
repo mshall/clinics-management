@@ -206,6 +206,15 @@ describe("FS-04 deposits & payment links for high-risk bookings", () => {
       (e: { response?: { code?: string } }) => e.response?.code === "DEPOSIT_NOT_PENDING",
     );
 
+    // regression: re-using a payment reference on another deposit is a 409, not a 500 from the unique index
+    const apt2 = await booking(flaggedPatientId, { typed: true });
+    const link2 = await links.createLink(tenantId, desk, apt2.id, { send: false });
+    await assert.rejects(
+      settlement.markLinkPaid(tenantId, desk.userId, link2.depositId, { method: PaymentMethod.TRANSFER, externalRef: `IPN${stamp}` }),
+      (e: { status?: number; response?: { code?: string } }) => e.status === 409 && e.response?.code === "DEPOSIT_REFERENCE_DUPLICATE",
+    );
+    assert.equal((await prisma.patientDeposit.findUniqueOrThrow({ where: { id: link2.depositId } })).status, "PENDING");
+
     await prisma.appointment.update({ where: { id: apt.id }, data: { status: AppointmentStatus.CHECKED_IN, checkedInAt: new Date() } });
     await settle(apt.id);
     const applied = await prisma.patientDeposit.findUniqueOrThrow({ where: { id: link.depositId } });
