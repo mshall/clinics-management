@@ -51,3 +51,23 @@ export const LAUNCH_TEMPLATE_REVIEWS: Record<LaunchSpecialty, TemplateReview> = 
 export function isLaunchSpecialty(s: ClinicalSpecialty): s is LaunchSpecialty {
   return (LAUNCH_SPECIALTIES as readonly ClinicalSpecialty[]).includes(s);
 }
+
+/**
+ * CL07-PT: the physiotherapy template is launch-locked behind `clinic.specialty_templates.physio` (gate GPR2: specialty board with a
+ * physiotherapist reviewer). boardSignOff stays null until a named human signs (Docs/KIORLY_NEEDS_HUMAN.md); code never records it.
+ */
+export const PHYSIO_TEMPLATE_REVIEW: TemplateReview = review(["chief_region", "pain_nrs", "rom_per_joint", "strength_grades", "special_tests", "goals", "home_programme", "discharge_summary"]);
+
+/** Specialties whose built-in template is gated by a launch-locked flag, with their flag code. */
+export const GATED_TEMPLATE_SPECIALTY_CODES: Partial<Record<ClinicalSpecialty, string>> = {
+  [ClinicalSpecialty.PHYSIO_THERAPY]: "physio",
+};
+
+/** Flag code for a specialty's template flag (`clinic.specialty_templates.<code>`). */
+export function specialtyTemplateCode(s: ClinicalSpecialty): string {
+  return GATED_TEMPLATE_SPECIALTY_CODES[s] ?? s.toLowerCase();
+}
+
+export function isGatedTemplateSpecialty(s: ClinicalSpecialty): boolean {
+  return isLaunchSpecialty(s) || s in GATED_TEMPLATE_SPECIALTY_CODES;
+}

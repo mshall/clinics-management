@@ -229,7 +229,7 @@ export const CLINIC_FLAG_DEFINITIONS: readonly FlagDefinition[] = [
     class: "Launch-locked",
     dependsOn: [],
     launchLocked: true,
-    gate: "Specialty board sign-off (NH010)",
+    gate: "Specialty board sign-off (NH010); physio: GPR2",
     keyPattern: true,
     descriptionEn: "Built-in specialty encounter template (one flag per specialty code)",
     descriptionAr: "قالب الزيارة التخصصي المدمج (علم لكل تخصص)",

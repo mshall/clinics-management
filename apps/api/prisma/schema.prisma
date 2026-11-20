@@ -266,7 +266,6 @@ enum FinancialVisibilityOverride {
   HIDE
 }
 
-
 enum MessageChannel {
   SMS
   WHATSAPP
@@ -438,65 +437,66 @@ enum BookingSource {
 }
 
 model Market {
-  id                 String              @id @default(cuid())
-  code               String              @unique
-  nameEn             String
-  nameAr             String              @default("")
-  status             MarketLaunchStatus  @default(DRAFT)
-  launchedAt         DateTime?
-  dataRegion         String              @default("eu-central-1")
-  hostCell           String
-  defaultCurrency    String
-  defaultLocale      String
-  defaultTimezone    String
-  weekendDays        Json
-  enabledLanguages   Json
-  defaultPhoneRegion String
-  idDocumentTypes    Json                @default("[]")
-  taxConfig          Json                @default("{}")
-  providerConfig     Json                @default("{}")
-  clinicalConfig     Json                @default("{}")
-  legalConfig        Json                @default("{}")
-  paymentMethods     Json                @default("[]")
-  featureDefaults    Json                @default("{}")
-  commercialConfig   Json                @default("{}")
-  settingsSchema     Json                @default("{}")
-  translations       Json                @default("{}")
-  operationalStatus  MarketOperationalStatus @default(ACTIVE)
-  pausedUntil        DateTime?
-  lastProvisionNote  String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  tenants            Tenant[]
-  featureFlags       MarketFeatureFlag[]
-  drugDatasetVersions DrugDatasetVersion[]
-  drugProducts       DrugProduct[]
-  planPrices         PlanPrice[]
-  cohorts            Cohort[]
-  kiorexCommissionRates KiorexCommissionRate[]
+  id                           String                        @id @default(cuid())
+  code                         String                        @unique
+  nameEn                       String
+  nameAr                       String                        @default("")
+  status                       MarketLaunchStatus            @default(DRAFT)
+  launchedAt                   DateTime?
+  dataRegion                   String                        @default("eu-central-1")
+  hostCell                     String
+  defaultCurrency              String
+  defaultLocale                String
+  defaultTimezone              String
+  weekendDays                  Json
+  enabledLanguages             Json
+  defaultPhoneRegion           String
+  idDocumentTypes              Json                          @default("[]")
+  taxConfig                    Json                          @default("{}")
+  providerConfig               Json                          @default("{}")
+  clinicalConfig               Json                          @default("{}")
+  legalConfig                  Json                          @default("{}")
+  paymentMethods               Json                          @default("[]")
+  featureDefaults              Json                          @default("{}")
+  commercialConfig             Json                          @default("{}")
+  settingsSchema               Json                          @default("{}")
+  translations                 Json                          @default("{}")
+  operationalStatus            MarketOperationalStatus       @default(ACTIVE)
+  pausedUntil                  DateTime?
+  lastProvisionNote            String?
+  createdAt                    DateTime                      @default(now())
+  updatedAt                    DateTime                      @updatedAt
+  tenants                      Tenant[]
+  featureFlags                 MarketFeatureFlag[]
+  drugDatasetVersions          DrugDatasetVersion[]
+  drugProducts                 DrugProduct[]
+  planPrices                   PlanPrice[]
+  cohorts                      Cohort[]
+  kiorexCommissionRates        KiorexCommissionRate[]
   kiorlyInvoiceNumberSequences KiorlyInvoiceNumberSequence[]
 }
 
 model KiorexCommissionRate {
-  id                 String              @id @default(cuid())
+  id                 String             @id @default(cuid())
   marketId           String
-  market             Market              @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  market             Market             @relation(fields: [marketId], references: [id], onDelete: Cascade)
   specialty          ClinicalSpecialty?
-  feeType            FeeType             @default(FLAT)
-  amount             Decimal?            @db.Decimal(14, 2)
-  percent            Decimal?            @db.Decimal(5, 2)
-  minAmount          Decimal?            @db.Decimal(14, 2)
-  maxAmount          Decimal?            @db.Decimal(14, 2)
-  benchmarkFlat      Decimal?            @db.Decimal(14, 2)
-  benchmarkPercent   Decimal?            @db.Decimal(5, 2)
+  feeType            FeeType            @default(FLAT)
+  amount             Decimal?           @db.Decimal(14, 2)
+  percent            Decimal?           @db.Decimal(5, 2)
+  minAmount          Decimal?           @db.Decimal(14, 2)
+  maxAmount          Decimal?           @db.Decimal(14, 2)
+  benchmarkFlat      Decimal?           @db.Decimal(14, 2)
+  benchmarkPercent   Decimal?           @db.Decimal(5, 2)
   benchmarkSource    String?
   benchmarkCheckedAt DateTime?
-  validFrom          DateTime            @default(now())
+  validFrom          DateTime           @default(now())
   validTo            DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  commissionCharges    KiorexCommissionCharge[]
+  commissionCharges KiorexCommissionCharge[]
+
   @@index([marketId, specialty])
   @@index([marketId, validFrom, validTo])
 }
@@ -525,30 +525,30 @@ enum CommissionDisputeStatus {
 }
 
 model KiorexCommissionCharge {
-  id              String                 @id @default(cuid())
-  tenantId        String
-  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId        String
-  clinic          Clinic                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  appointmentId   String                 @unique
-  appointment     Appointment            @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  patientId       String
-  patient         Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  clinicianId     String
-  clinician       User                   @relation("KiorexCommissionClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
-  rateId          String
-  rate            KiorexCommissionRate   @relation(fields: [rateId], references: [id], onDelete: Restrict)
-  amount          Decimal                @db.Decimal(14, 2)
-  currency        String
-  status          CommissionChargeStatus @default(PENDING)
-  attendedAt      DateTime
-  confirmedAt     DateTime?
-  disputeDeadline DateTime
-  kiorlyInvoiceId String?
-  kiorlyInvoice   KiorlyInvoice?         @relation(fields: [kiorlyInvoiceId], references: [id], onDelete: SetNull)
-  reversalReason  String?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
+  id                String                 @id @default(cuid())
+  tenantId          String
+  tenant            Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId          String
+  clinic            Clinic                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  appointmentId     String                 @unique
+  appointment       Appointment            @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId         String
+  patient           Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId       String
+  clinician         User                   @relation("KiorexCommissionClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  rateId            String
+  rate              KiorexCommissionRate   @relation(fields: [rateId], references: [id], onDelete: Restrict)
+  amount            Decimal                @db.Decimal(14, 2)
+  currency          String
+  status            CommissionChargeStatus @default(PENDING)
+  attendedAt        DateTime
+  confirmedAt       DateTime?
+  disputeDeadline   DateTime
+  kiorlyInvoiceId   String?
+  kiorlyInvoice     KiorlyInvoice?         @relation(fields: [kiorlyInvoiceId], references: [id], onDelete: SetNull)
+  reversalReason    String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
   commissionDispute CommissionDispute?
 
   @@index([tenantId, status, attendedAt])
@@ -653,43 +653,43 @@ enum SubscriptionStatus {
 }
 
 model Plan {
-  id            String            @id @default(cuid())
-  key           PlanKey           @unique
-  nameEn        String
-  nameAr        String
-  isPublic      Boolean           @default(true)
-  sortOrder     Int               @default(0)
-  prices        PlanPrice[]
-  entitlements  PlanEntitlement[]
-  subscriptions Subscription[]
-  trialSubscriptions Subscription[] @relation("SubscriptionTrialPlan")
-  scheduledSubscriptions Subscription[] @relation("SubscriptionScheduledPlan")
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id                     String            @id @default(cuid())
+  key                    PlanKey           @unique
+  nameEn                 String
+  nameAr                 String
+  isPublic               Boolean           @default(true)
+  sortOrder              Int               @default(0)
+  prices                 PlanPrice[]
+  entitlements           PlanEntitlement[]
+  subscriptions          Subscription[]
+  trialSubscriptions     Subscription[]    @relation("SubscriptionTrialPlan")
+  scheduledSubscriptions Subscription[]    @relation("SubscriptionScheduledPlan")
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 }
 
 model PlanPrice {
-  id                   String          @id @default(cuid())
-  planId               String
-  plan                 Plan            @relation(fields: [planId], references: [id], onDelete: Cascade)
-  marketId             String
-  market               Market          @relation(fields: [marketId], references: [id], onDelete: Cascade)
-  currency             String
-  interval             BillingInterval
-  unit                 PriceUnit
-  amount               Decimal         @db.Decimal(14, 2)
-  includedClinicians   Int             @default(1)
-  extraClinicianAmount Decimal?        @db.Decimal(14, 2)
-  cohortKey            String?
-  priceVersion         Int             @default(1)
-  validFrom            DateTime        @default(now())
-  validTo              DateTime?
-  subscriptions        Subscription[]
-  scheduledSubscriptions Subscription[] @relation("SubscriptionScheduledPlanPrice")
-  priceMigrationsFrom  PlanPriceMigration[] @relation("PriceMigrationFrom")
-  priceMigrationsTo    PlanPriceMigration[] @relation("PriceMigrationTo")
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
+  id                     String               @id @default(cuid())
+  planId                 String
+  plan                   Plan                 @relation(fields: [planId], references: [id], onDelete: Cascade)
+  marketId               String
+  market                 Market               @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  currency               String
+  interval               BillingInterval
+  unit                   PriceUnit
+  amount                 Decimal              @db.Decimal(14, 2)
+  includedClinicians     Int                  @default(1)
+  extraClinicianAmount   Decimal?             @db.Decimal(14, 2)
+  cohortKey              String?
+  priceVersion           Int                  @default(1)
+  validFrom              DateTime             @default(now())
+  validTo                DateTime?
+  subscriptions          Subscription[]
+  scheduledSubscriptions Subscription[]       @relation("SubscriptionScheduledPlanPrice")
+  priceMigrationsFrom    PlanPriceMigration[] @relation("PriceMigrationFrom")
+  priceMigrationsTo      PlanPriceMigration[] @relation("PriceMigrationTo")
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
 
   @@index([planId, marketId, interval])
   @@index([marketId, validFrom, validTo])
@@ -708,47 +708,47 @@ model PlanEntitlement {
 }
 
 model Subscription {
-  id                     String             @id @default(cuid())
-  tenantId               String             @unique
-  tenant                 Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  planId                 String
-  plan                   Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
-  planPriceId            String?
-  planPrice              PlanPrice?         @relation(fields: [planPriceId], references: [id], onDelete: Restrict)
-  status                 SubscriptionStatus
-  interval               BillingInterval    @default(MONTHLY)
-  clinicianSeats         Int                @default(1)
-  trialStartsAt          DateTime?
-  trialEndsAt            DateTime?
-  trialPlanId            String?
-  trialPlan              Plan?              @relation("SubscriptionTrialPlan", fields: [trialPlanId], references: [id], onDelete: SetNull)
-  activatedAt            DateTime?
-  currentPeriodStart     DateTime
-  currentPeriodEnd       DateTime
-  prepaidUntil           DateTime?
-  cohortKey              String?
-  priceLockUntil         DateTime?
-  cancelAtPeriodEnd      Boolean            @default(false)
-  defaultPaymentMethodId String?
-  defaultPaymentMethod   KiorlyPaymentMethod? @relation(fields: [defaultPaymentMethodId], references: [id], onDelete: SetNull)
+  id                       String               @id @default(cuid())
+  tenantId                 String               @unique
+  tenant                   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planId                   String
+  plan                     Plan                 @relation(fields: [planId], references: [id], onDelete: Restrict)
+  planPriceId              String?
+  planPrice                PlanPrice?           @relation(fields: [planPriceId], references: [id], onDelete: Restrict)
+  status                   SubscriptionStatus
+  interval                 BillingInterval      @default(MONTHLY)
+  clinicianSeats           Int                  @default(1)
+  trialStartsAt            DateTime?
+  trialEndsAt              DateTime?
+  trialPlanId              String?
+  trialPlan                Plan?                @relation("SubscriptionTrialPlan", fields: [trialPlanId], references: [id], onDelete: SetNull)
+  activatedAt              DateTime?
+  currentPeriodStart       DateTime
+  currentPeriodEnd         DateTime
+  prepaidUntil             DateTime?
+  cohortKey                String?
+  priceLockUntil           DateTime?
+  cancelAtPeriodEnd        Boolean              @default(false)
+  defaultPaymentMethodId   String?
+  defaultPaymentMethod     KiorlyPaymentMethod? @relation(fields: [defaultPaymentMethodId], references: [id], onDelete: SetNull)
   kiorlyDunningPausedUntil DateTime?
-  trialQualifiedAt       DateTime?
-  trialShortenWarnedAt   DateTime?
-  trialConfigOverride    Json?
-  postTrialGraceUntil    DateTime?
-  salesRepCode           String?
-  referralCodeUsed       String?
-  scheduledPlanId        String?
-  scheduledPlan          Plan?              @relation("SubscriptionScheduledPlan", fields: [scheduledPlanId], references: [id], onDelete: SetNull)
-  scheduledPlanPriceId   String?
-  scheduledPlanPrice     PlanPrice?         @relation("SubscriptionScheduledPlanPrice", fields: [scheduledPlanPriceId], references: [id], onDelete: SetNull)
-  scheduledInterval      BillingInterval?
-  scheduledClinicianSeats Int?
-  scheduledEffectiveAt   DateTime?
-  events                 SubscriptionEvent[]
-  priceMigrations        PlanPriceMigration[]
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
+  trialQualifiedAt         DateTime?
+  trialShortenWarnedAt     DateTime?
+  trialConfigOverride      Json?
+  postTrialGraceUntil      DateTime?
+  salesRepCode             String?
+  referralCodeUsed         String?
+  scheduledPlanId          String?
+  scheduledPlan            Plan?                @relation("SubscriptionScheduledPlan", fields: [scheduledPlanId], references: [id], onDelete: SetNull)
+  scheduledPlanPriceId     String?
+  scheduledPlanPrice       PlanPrice?           @relation("SubscriptionScheduledPlanPrice", fields: [scheduledPlanPriceId], references: [id], onDelete: SetNull)
+  scheduledInterval        BillingInterval?
+  scheduledClinicianSeats  Int?
+  scheduledEffectiveAt     DateTime?
+  events                   SubscriptionEvent[]
+  priceMigrations          PlanPriceMigration[]
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
 
   @@index([planPriceId])
   @@index([scheduledPlanId])
@@ -870,38 +870,38 @@ model KiorexProgressNudge {
 
 /// MS-04 — staff WhatsApp digest / CR-07 nudge preferences (quiet hours + opt-out).
 model StaffDigestPreference {
-  userId                 String   @id
-  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenantId               String
-  doctorTomorrowList     Boolean  @default(true)
-  ownerWeeklyInsights    Boolean  @default(true)
-  ownerShiftSummaries    Boolean  @default(true)
-  kiorexProgressNudges   Boolean  @default(true)
-  optOutAll              Boolean  @default(false)
+  userId               String   @id
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId             String
+  doctorTomorrowList   Boolean  @default(true)
+  ownerWeeklyInsights  Boolean  @default(true)
+  ownerShiftSummaries  Boolean  @default(true)
+  kiorexProgressNudges Boolean  @default(true)
+  optOutAll            Boolean  @default(false)
   /// Local hour 0–23 when quiet hours start (inclusive). Default 21.
-  quietHoursStart        Int      @default(21)
+  quietHoursStart      Int      @default(21)
   /// Local hour 0–23 when quiet hours end (exclusive). Default 8 (wraps midnight).
-  quietHoursEnd          Int      @default(8)
-  updatedAt              DateTime @updatedAt
+  quietHoursEnd        Int      @default(8)
+  updatedAt            DateTime @updatedAt
 
   @@index([tenantId])
 }
 
 /// RP-02 — weekly Excel/PDF report delivery to owners (email + WhatsApp).
 model TenantReportSchedule {
-  tenantId         String   @id
-  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  enabled          Boolean  @default(true)
+  tenantId        String   @id
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enabled         Boolean  @default(true)
   /// xlsx | pdf
-  format           String   @default("xlsx")
+  format          String   @default("xlsx")
   /// JSON string array of report keys (e.g. ["payments","operations"]).
-  reportKeys       Json     @default("[\"payments\",\"operations\"]")
-  channelEmail     Boolean  @default(true)
-  channelWhatsApp  Boolean  @default(true)
+  reportKeys      Json     @default("[\"payments\",\"operations\"]")
+  channelEmail    Boolean  @default(true)
+  channelWhatsApp Boolean  @default(true)
   /// ISO day of week 1=Monday … 7=Sunday.
-  dayOfWeek        Int      @default(1)
-  hourLocal        Int      @default(9)
-  updatedAt        DateTime @updatedAt
+  dayOfWeek       Int      @default(1)
+  hourLocal       Int      @default(9)
+  updatedAt       DateTime @updatedAt
 }
 
 /// MS-04 — in-app owner/doctor notices (CR-07 progress, monthly recap, weekly insights).
@@ -937,31 +937,29 @@ model DigestSendLog {
   @@index([tenantId, kind, periodKey])
 }
 
-
-
 /// SC-05 — owner / data-subject export jobs with expiring download links.
 model TenantExportJob {
-  id           String   @id @default(cuid())
-  tenantId     String
-  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   /// TENANT | PATIENT | ORG_SQL | ORG_DOCUMENTS | ORG_FULL | ORG_IMPORT
-  scope        String
-  patientId    String?
-  status       String   @default("PENDING")
+  scope             String
+  patientId         String?
+  status            String    @default("PENDING")
   /// 0–100 while RUNNING / READY
-  progress     Int      @default(0)
+  progress          Int       @default(0)
   /// Selected explorer table keys for ORG_* exports
-  tablesJson   Json?
-  fileName     String?
-  contentType  String?
-  requestedBy  String
-  downloadTokenHash String? @unique
-  expiresAt    DateTime?
-  artifactPath String?
-  error        String?
-  rowCounts    Json?
-  createdAt    DateTime @default(now())
-  completedAt  DateTime?
+  tablesJson        Json?
+  fileName          String?
+  contentType       String?
+  requestedBy       String
+  downloadTokenHash String?   @unique
+  expiresAt         DateTime?
+  artifactPath      String?
+  error             String?
+  rowCounts         Json?
+  createdAt         DateTime  @default(now())
+  completedAt       DateTime?
 
   @@index([tenantId, createdAt])
   @@index([status, createdAt])
@@ -969,15 +967,15 @@ model TenantExportJob {
 
 /// SC-05 — cancellation → retention → deletion; legal hold blocks deletion.
 model TenantOffboarding {
-  tenantId          String   @id
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  cancelledAt       DateTime?
-  retentionEndsAt   DateTime?
+  tenantId            String    @id
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cancelledAt         DateTime?
+  retentionEndsAt     DateTime?
   deletionScheduledAt DateTime?
-  deletedAt         DateTime?
-  legalHold         Boolean  @default(false)
-  noticeSentAt      DateTime?
-  updatedAt         DateTime @updatedAt
+  deletedAt           DateTime?
+  legalHold           Boolean   @default(false)
+  noticeSentAt        DateTime?
+  updatedAt           DateTime  @updatedAt
 }
 
 enum ReferralStatus {
@@ -1012,15 +1010,15 @@ model Referral {
 }
 
 model TenantEntitlementOverride {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   key       String
   valueJson Json
   reason    String
   expiresAt DateTime?
   createdBy String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@unique([tenantId, key])
   @@index([tenantId])
@@ -1053,47 +1051,47 @@ model TenantFeatureFlag {
 }
 
 model ProviderCredential {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId    String?
-  clinic      Clinic?  @relation(fields: [clinicId], references: [id], onDelete: SetNull)
-  providerKey String
-  deviceId    String?
-  secretRef   String
-  label       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String        @id @default(cuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId     String?
+  clinic       Clinic?       @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  providerKey  String
+  deviceId     String?
+  secretRef    String
+  label        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   fiscalDevice FiscalDevice?
 
   @@index([tenantId, providerKey])
 }
 
 model FiscalDevice {
-  id                String             @id @default(cuid())
+  id                String              @id @default(cuid())
   tenantId          String
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clinicId          String
-  clinic            Clinic             @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinic            Clinic              @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   providerKey       String
   kind              FiscalDeviceKind
   serialNumber      String
   label             String?
   deviceModel       String?
   osVersion         String?
-  status            FiscalDeviceStatus @default(CREDENTIALS_PENDING)
-  isDefault         Boolean            @default(false)
-  credentialId      String?            @unique
+  status            FiscalDeviceStatus  @default(CREDENTIALS_PENDING)
+  isDefault         Boolean             @default(false)
+  credentialId      String?             @unique
   credential        ProviderCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
   lastReceiptUuid   String?
-  receiptSequence   Int                @default(0)
+  receiptSequence   Int                 @default(0)
   lastSubmittedAt   DateTime?
   registeredAt      DateTime?
   activatedAt       DateTime?
   deactivatedAt     DateTime?
   statusReason      String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   fiscalDocuments   FiscalDocument[]
   fiscalSubmissions FiscalSubmission[]
 
@@ -1103,60 +1101,62 @@ model FiscalDevice {
 }
 
 model FiscalDocument {
-  id              String           @id @default(cuid())
-  tenantId        String
-  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId        String
-  clinic          Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  patientId       String
-  patient         Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  fiscalDeviceId  String?
-  fiscalDevice    FiscalDevice?    @relation(fields: [fiscalDeviceId], references: [id], onDelete: SetNull)
-  providerKey     String
-  paymentId       String?          @unique
-  payment         BillingPayment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  revenueEntryId  String?          @unique
-  revenueEntry    RevenueEntry?    @relation(fields: [revenueEntryId], references: [id], onDelete: SetNull)
-  invoiceId       String?          @unique
-  invoice         Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  currency        String
-  totalAmount     Decimal          @db.Decimal(14, 2)
-  payloadJson     Json?
-  schemaVersion   String           @default("1")
-  createdAt       DateTime         @default(now())
-  submission      FiscalSubmission?
+  id             String            @id @default(cuid())
+  tenantId       String
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId       String
+  clinic         Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fiscalDeviceId String?
+  fiscalDevice   FiscalDevice?     @relation(fields: [fiscalDeviceId], references: [id], onDelete: SetNull)
+  providerKey    String
+  paymentId      String?           @unique
+  payment        BillingPayment?   @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  revenueEntryId String?           @unique
+  revenueEntry   RevenueEntry?     @relation(fields: [revenueEntryId], references: [id], onDelete: SetNull)
+  invoiceId      String?           @unique
+  invoice        Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  currency       String
+  totalAmount    Decimal           @db.Decimal(14, 2)
+  payloadJson    Json?
+  schemaVersion  String            @default("1")
+  createdAt      DateTime          @default(now())
+  submission     FiscalSubmission?
 }
 
 model FiscalSubmission {
-  id                   String                 @id @default(cuid())
-  tenantId             String
-  tenant               Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId             String
-  clinic               Clinic                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  patientId            String
-  patient              Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  fiscalDocumentId     String                 @unique
-  fiscalDocument       FiscalDocument         @relation(fields: [fiscalDocumentId], references: [id], onDelete: Cascade)
-  fiscalDeviceId       String?
-  fiscalDevice         FiscalDevice?          @relation(fields: [fiscalDeviceId], references: [id], onDelete: SetNull)
-  providerKey          String
-  deviceId             String?
-  receiptNumber        Int?
-  status               FiscalSubmissionStatus @default(PENDING)
-  providerDocumentUuid String?
-  payloadJson          Json?
-  signature            String?
-  idempotencyKey       String?                @unique
-  submittedAt          DateTime?
-  errorMessage         String?
-  submitAttempts            Int                    @default(0)
-  nextRetryAt               DateTime?
-  claimedUntil              DateTime?
-  claimedBy                 String?
-  /** ETA acceptance vs later validity (VALID, INVALID, PENDING, UNKNOWN) */
-  providerValidationStatus  String                 @default("PENDING")
-  updatedAt                 DateTime               @updatedAt
-  createdAt                 DateTime               @default(now())
+  id                       String                 @id @default(cuid())
+  tenantId                 String
+  tenant                   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId                 String
+  clinic                   Clinic                 @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId                String
+  patient                  Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fiscalDocumentId         String                 @unique
+  fiscalDocument           FiscalDocument         @relation(fields: [fiscalDocumentId], references: [id], onDelete: Cascade)
+  fiscalDeviceId           String?
+  fiscalDevice             FiscalDevice?          @relation(fields: [fiscalDeviceId], references: [id], onDelete: SetNull)
+  providerKey              String
+  deviceId                 String?
+  receiptNumber            Int?
+  status                   FiscalSubmissionStatus @default(PENDING)
+  providerDocumentUuid     String?
+  payloadJson              Json?
+  signature                String?
+  idempotencyKey           String?                @unique
+  submittedAt              DateTime?
+  errorMessage             String?
+  submitAttempts           Int                    @default(0)
+  nextRetryAt              DateTime?
+  claimedUntil             DateTime?
+  claimedBy                String?
+  /**
+   * ETA acceptance vs later validity (VALID, INVALID, PENDING, UNKNOWN)
+   */
+  providerValidationStatus String                 @default("PENDING")
+  updatedAt                DateTime               @updatedAt
+  createdAt                DateTime               @default(now())
 
   @@index([tenantId, clinicId, status])
   @@index([tenantId, clinicId, providerKey, deviceId, status, createdAt])
@@ -1174,140 +1174,147 @@ model FiscalPosChain {
 }
 
 model Tenant {
-  cashierShifts CashierShift[]
-  id                    String          @id @default(cuid())
-  name                  String
-  nameAr                String          @default("")
-  marketId              String?
-  market                Market?         @relation(fields: [marketId], references: [id], onDelete: SetNull)
-  deploymentCell        String
-  status                TenantStatus    @default(ACTIVE)
+  cashierShifts                      CashierShift[]
+  id                                 String                             @id @default(cuid())
+  name                               String
+  nameAr                             String                             @default("")
+  marketId                           String?
+  market                             Market?                            @relation(fields: [marketId], references: [id], onDelete: SetNull)
+  deploymentCell                     String
+  status                             TenantStatus                       @default(ACTIVE)
   /// ON-07 — SalesRep.id that created the tenant on the owner's behalf.
-  createdBySalesRepId   String?
-  ownerConfirmedAt      DateTime?
-  baseCurrency          String          @default("EGP")
-  defaultLocale         String          @default("en")
-  defaultVisitFee                Decimal?        @db.Decimal(14, 2)
-  encounterAutoLockHours         Int             @default(72)
-  defaultTaxRegistrationNumber String?
-  defaultLicenseNumber         String?
-  defaultInvoiceVatPercent     Decimal?        @db.Decimal(5, 2)
-  integrationFailureRetentionDays     Int       @default(30)
-  integrationFailureLastSpikeAlertAt  DateTime?
-  /** MN-04: first production ETA day for pilot success week-1 metric */
-  etaPilotProductionStartedAt         DateTime?
-  /** MN-04: cooldown for ETA success rate below-threshold audit alerts */
-  etaHealthLastAlertAt                DateTime?
-  whatsAppRemindersEnabled            Boolean   @default(false)
-  appointmentReminderHoursBefore      Int       @default(24)
-  providerSettings                    Json      @default("{}")
-  users          User[]
-  clinics        Clinic[]
-  clinicAdminScopes ClinicAdminScope[]
-  patients       Patient[]
-  encounters     Encounter[]
-  clinicalOrders ClinicalOrder[]
-  dentalChartTeeth DentalChartTooth[]
-  revenueEntries RevenueEntry[]
-  expenses       Expense[]
-  employees      Employee[]
-  appointments   Appointment[]
-  operations     Operation[]
-  auditLogs              AuditLog[]
-  diagnoses              Diagnosis[]
-  encounterMedications   EncounterMedication[]
-  encounterDocuments     EncounterDocument[]
-  operationDocuments     OperationDocument[]
-  operationMedications   OperationMedication[]
-  patientDocuments       PatientDocument[]
-  patientAllergies       PatientAllergy[]
-  invoices               Invoice[]
-  userNavTabGrants       UserNavTabGrant[]
-  tenantRoleNavTabGrants TenantRoleNavTabGrant[]
-  userClinicEmployeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
-  supportTickets                 SupportTicket[]
-  supportAccessSessions          SupportAccessSession[]
-  integrationClients             IntegrationClient[]
-  integrationWebhooks            IntegrationWebhook[]
-  integrationFailureLogs         IntegrationFailureLog[]
-  clinicalFormTemplates          ClinicalFormTemplate[]
-  icd10Entries                   Icd10Entry[]
-  clinicianShortcuts             ClinicianShortcut[]
-  clinicianDiagnosisFavorites    ClinicianDiagnosisFavorite[]
-  drugInteractionRules           DrugInteractionRule[]
-  clinicalLetters                ClinicalLetter[]
-  appointmentTypes               AppointmentType[]
-  clinicianAppointmentTypeOverrides ClinicianAppointmentTypeOverride[]
-  clinicianAvailabilityTemplates ClinicianAvailabilityTemplate[]
-  appointmentSeries              AppointmentSeries[]
-  appointmentWaitlist            AppointmentWaitlistEntry[]
-  slotHolds                      SlotHold[]
-  patientActiveProblems          PatientActiveProblem[]
-  patientFamilyLinks             PatientFamilyLink[]
-  patientClinicalPhotos          PatientClinicalPhoto[]
-  serviceCatalogItems            ServiceCatalogItem[]
-  payerCompanies                 PayerCompany[]
-  claimBatches                   ClaimBatch[]
-  claimRemittances               ClaimRemittance[]
-  messageTemplates               MessageTemplate[]
-  recallCampaigns                RecallCampaign[]
-  commissionRules                CommissionRule[]
-  cashierShiftCloses             CashierShiftClose[]
-  patientServicePackages         PatientServicePackage[]
-  billingPayments                BillingPayment[]
-  fiscalDocuments                FiscalDocument[]
-  fiscalSubmissions              FiscalSubmission[]
-  fiscalDevices                  FiscalDevice[]
-  providerCredentials            ProviderCredential[]
-  tenantFeatureFlags             TenantFeatureFlag[]
-  subscription                   Subscription?
-  entitlementOverrides           TenantEntitlementOverride[]
-  paymentChannels                TenantPaymentChannel[]
-  userMoneyVisibilityOverrides   UserMoneyVisibilityOverride[]
-  reportSchedule                 TenantReportSchedule?
-  exportJobs                     TenantExportJob[]
-  offboarding                    TenantOffboarding?
-  salesRepCode                   String?
-  referralCode                   String?
-  creditWallet                   CreditWallet?
-  referralCodeRow                ReferralCode?
-  referralsGiven                 Referral[]             @relation("ReferrerTenant")
-  referralReceived               Referral?              @relation("ReferredTenant")
-  kiorlyInvoices                 KiorlyInvoice[]
-  kiorlyPaymentMethods           KiorlyPaymentMethod[]
-  kiorlyPayments                 KiorlyPayment[]
-  kiorexCommissionCharges        KiorexCommissionCharge[]
-  commissionDisputes             CommissionDispute[]
-  clinicianVerifications         ClinicianVerification[]
-  professionalRegistrations      ProfessionalRegistration[]
-  marketplaceListings            MarketplaceListing[]
-  kiorexRatings                  KiorexRating[]
-  kiorexReviews                  KiorexReview[]
-  kiorexProfileViews             KiorexProfileViewDaily[]
-  kiorlySettlementCarry          Decimal?               @db.Decimal(14, 2)
+  createdBySalesRepId                String?
+  ownerConfirmedAt                   DateTime?
+  baseCurrency                       String                             @default("EGP")
+  defaultLocale                      String                             @default("en")
+  defaultVisitFee                    Decimal?                           @db.Decimal(14, 2)
+  encounterAutoLockHours             Int                                @default(72)
+  defaultTaxRegistrationNumber       String?
+  defaultLicenseNumber               String?
+  defaultInvoiceVatPercent           Decimal?                           @db.Decimal(5, 2)
+  integrationFailureRetentionDays    Int                                @default(30)
+  integrationFailureLastSpikeAlertAt DateTime?
+  /**
+   * MN-04: first production ETA day for pilot success week-1 metric
+   */
+  etaPilotProductionStartedAt        DateTime?
+  /**
+   * MN-04: cooldown for ETA success rate below-threshold audit alerts
+   */
+  etaHealthLastAlertAt               DateTime?
+  whatsAppRemindersEnabled           Boolean                            @default(false)
+  appointmentReminderHoursBefore     Int                                @default(24)
+  providerSettings                   Json                               @default("{}")
+  users                              User[]
+  clinics                            Clinic[]
+  clinicAdminScopes                  ClinicAdminScope[]
+  patients                           Patient[]
+  encounters                         Encounter[]
+  clinicalOrders                     ClinicalOrder[]
+  dentalChartTeeth                   DentalChartTooth[]
+  revenueEntries                     RevenueEntry[]
+  expenses                           Expense[]
+  employees                          Employee[]
+  appointments                       Appointment[]
+  operations                         Operation[]
+  auditLogs                          AuditLog[]
+  diagnoses                          Diagnosis[]
+  encounterMedications               EncounterMedication[]
+  encounterDocuments                 EncounterDocument[]
+  operationDocuments                 OperationDocument[]
+  operationMedications               OperationMedication[]
+  patientDocuments                   PatientDocument[]
+  patientAllergies                   PatientAllergy[]
+  invoices                           Invoice[]
+  userNavTabGrants                   UserNavTabGrant[]
+  tenantRoleNavTabGrants             TenantRoleNavTabGrant[]
+  userClinicEmployeePrivilegeGrants  UserClinicEmployeePrivilegeGrant[]
+  supportTickets                     SupportTicket[]
+  supportAccessSessions              SupportAccessSession[]
+  integrationClients                 IntegrationClient[]
+  integrationWebhooks                IntegrationWebhook[]
+  integrationFailureLogs             IntegrationFailureLog[]
+  clinicalFormTemplates              ClinicalFormTemplate[]
+  icd10Entries                       Icd10Entry[]
+  clinicianShortcuts                 ClinicianShortcut[]
+  clinicianDiagnosisFavorites        ClinicianDiagnosisFavorite[]
+  drugInteractionRules               DrugInteractionRule[]
+  clinicalLetters                    ClinicalLetter[]
+  appointmentTypes                   AppointmentType[]
+  clinicianAppointmentTypeOverrides  ClinicianAppointmentTypeOverride[]
+  clinicianAvailabilityTemplates     ClinicianAvailabilityTemplate[]
+  appointmentSeries                  AppointmentSeries[]
+  appointmentWaitlist                AppointmentWaitlistEntry[]
+  slotHolds                          SlotHold[]
+  patientActiveProblems              PatientActiveProblem[]
+  patientFamilyLinks                 PatientFamilyLink[]
+  patientClinicalPhotos              PatientClinicalPhoto[]
+  serviceCatalogItems                ServiceCatalogItem[]
+  payerCompanies                     PayerCompany[]
+  claimBatches                       ClaimBatch[]
+  claimRemittances                   ClaimRemittance[]
+  messageTemplates                   MessageTemplate[]
+  recallCampaigns                    RecallCampaign[]
+  commissionRules                    CommissionRule[]
+  cashierShiftCloses                 CashierShiftClose[]
+  patientServicePackages             PatientServicePackage[]
+  billingPayments                    BillingPayment[]
+  fiscalDocuments                    FiscalDocument[]
+  fiscalSubmissions                  FiscalSubmission[]
+  fiscalDevices                      FiscalDevice[]
+  providerCredentials                ProviderCredential[]
+  tenantFeatureFlags                 TenantFeatureFlag[]
+  subscription                       Subscription?
+  entitlementOverrides               TenantEntitlementOverride[]
+  paymentChannels                    TenantPaymentChannel[]
+  userMoneyVisibilityOverrides       UserMoneyVisibilityOverride[]
+  reportSchedule                     TenantReportSchedule?
+  exportJobs                         TenantExportJob[]
+  offboarding                        TenantOffboarding?
+  salesRepCode                       String?
+  referralCode                       String?
+  creditWallet                       CreditWallet?
+  referralCodeRow                    ReferralCode?
+  referralsGiven                     Referral[]                         @relation("ReferrerTenant")
+  referralReceived                   Referral?                          @relation("ReferredTenant")
+  kiorlyInvoices                     KiorlyInvoice[]
+  kiorlyPaymentMethods               KiorlyPaymentMethod[]
+  kiorlyPayments                     KiorlyPayment[]
+  kiorexCommissionCharges            KiorexCommissionCharge[]
+  commissionDisputes                 CommissionDispute[]
+  clinicianVerifications             ClinicianVerification[]
+  professionalRegistrations          ProfessionalRegistration[]
+  physioReferrals                    PhysioReferral[]
+  physioAssessments                  PhysioAssessment[]
+  physioPlans                        PhysioTreatmentPlan[]
+  marketplaceListings                MarketplaceListing[]
+  kiorexRatings                      KiorexRating[]
+  kiorexReviews                      KiorexReview[]
+  kiorexProfileViews                 KiorexProfileViewDaily[]
+  kiorlySettlementCarry              Decimal?                           @db.Decimal(14, 2)
   /// SB-05: period whose settlement last wrote `kiorlySettlementCarry` (re-runs reuse `kiorlySettlementCarryIn`).
-  kiorlySettlementCarryPeriodKey String?
-  kiorlySettlementCarryIn        Decimal?               @db.Decimal(14, 2)
+  kiorlySettlementCarryPeriodKey     String?
+  kiorlySettlementCarryIn            Decimal?                           @db.Decimal(14, 2)
   /// SB-05: Lite commission unpaid past the market pause window — Kiorex listings paused (Kiorly keeps working).
-  kiorexBillingPausedAt          DateTime?
-  planPriceMigrations            PlanPriceMigration[]
-  onboardingProgress             OnboardingProgress?
-  importJobs                     ImportJob[]
-  invitations                    Invitation[]
-  outboxEvents                   OutboxEvent[]
-  emailMessages                  EmailMessage[]
-  appointmentRescheduleTokens    AppointmentRescheduleToken[]
-  prescriptionVerificationTokens PrescriptionVerificationToken[]
-  encounterAmendments            EncounterAmendment[]
-  waitlistOpenSlots              WaitlistOpenSlot[]
-  waitlistSlotOffers             WaitlistSlotOffer[]
-  whatsAppInboundEvents          WhatsAppInboundEvent[]
-  whatsAppReceptionistTurns      WhatsAppReceptionistTurn[]
-  messagingConsents              MessagingConsent[]
-  legalAcceptances               LegalAcceptance[]
-  pushSubscriptions              PushSubscription[]
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  kiorexBillingPausedAt              DateTime?
+  planPriceMigrations                PlanPriceMigration[]
+  onboardingProgress                 OnboardingProgress?
+  importJobs                         ImportJob[]
+  invitations                        Invitation[]
+  outboxEvents                       OutboxEvent[]
+  emailMessages                      EmailMessage[]
+  appointmentRescheduleTokens        AppointmentRescheduleToken[]
+  prescriptionVerificationTokens     PrescriptionVerificationToken[]
+  encounterAmendments                EncounterAmendment[]
+  waitlistOpenSlots                  WaitlistOpenSlot[]
+  waitlistSlotOffers                 WaitlistSlotOffer[]
+  whatsAppInboundEvents              WhatsAppInboundEvent[]
+  whatsAppReceptionistTurns          WhatsAppReceptionistTurn[]
+  messagingConsents                  MessagingConsent[]
+  legalAcceptances                   LegalAcceptance[]
+  pushSubscriptions                  PushSubscription[]
+  createdAt                          DateTime                           @default(now())
+  updatedAt                          DateTime                           @updatedAt
 }
 
 model OnboardingProgress {
@@ -1410,100 +1417,101 @@ model Invitation {
 }
 
 model TenantPaymentChannel {
-  id            String   @id @default(cuid())
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name          String
-  channelKey    String
-  accountNumber      String?
-  mobileNumber       String?
-  referencePattern   String   @default("^[A-Za-z0-9][A-Za-z0-9\\-_.]{5,31}$")
-  fiscalPaymentCode  String   @default("O")
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name              String
+  channelKey        String
+  accountNumber     String?
+  mobileNumber      String?
+  referencePattern  String   @default("^[A-Za-z0-9][A-Za-z0-9\\-_.]{5,31}$")
+  fiscalPaymentCode String   @default("O")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@unique([tenantId, channelKey])
   @@index([tenantId])
 }
 
 model User {
-  id           String         @id @default(cuid())
-  tenantId     String?
-  tenant       Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  email        String
-  passwordHash String
-  displayName  String
-  role             UserRole
-  additionalRoles  UserRole[]     @default([])
-  isTenantOwner    Boolean        @default(false)
+  id                              String                             @id @default(cuid())
+  tenantId                        String?
+  tenant                          Tenant?                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email                           String
+  passwordHash                    String
+  displayName                     String
+  role                            UserRole
+  additionalRoles                 UserRole[]                         @default([])
+  isTenantOwner                   Boolean                            @default(false)
   /// PL-07 — when false, physician cannot book or sign (billing seat over limit).
-  billingSeatActive Boolean       @default(true)
+  billingSeatActive               Boolean                            @default(true)
   /// PRSOP01 — expand phase: nullable; backfilled to PHYSICIAN/DENTIST for physician-role users. Clinician roles must carry one (service-enforced).
-  profession        Profession?
+  profession                      Profession?
   /// PRSOP03 — named supervising clinician (required when profession = ASSISTANT).
-  supervisorUserId  String?
-  supervisor        User?         @relation("UserSupervisor", fields: [supervisorUserId], references: [id], onDelete: SetNull)
-  supervisees       User[]        @relation("UserSupervisor")
-  professionalRegistrations ProfessionalRegistration[]
-  mfaEnabled   Boolean        @default(false)
-  mfaTotpSecret String?
+  supervisorUserId                String?
+  supervisor                      User?                              @relation("UserSupervisor", fields: [supervisorUserId], references: [id], onDelete: SetNull)
+  supervisees                     User[]                             @relation("UserSupervisor")
+  professionalRegistrations       ProfessionalRegistration[]
+  mfaEnabled                      Boolean                            @default(false)
+  mfaTotpSecret                   String?
   /// SC-04 — physicians may use WhatsApp OTP as the second factor instead of (or with) TOTP.
-  mfaWhatsAppEnabled Boolean  @default(false)
-  mfaRecoveryHashes Json?
-  avatarRelativePath String?
-  avatarMimeType     String?
-  employee     Employee?
-  encounters   Encounter[]    @relation("EncounterClinician")
-  appointments Appointment[] @relation("AppointmentClinician")
-  kiorexCommissionCharges KiorexCommissionCharge[] @relation("KiorexCommissionClinician")
-  operationsPerformed Operation[] @relation("OperationClinician")
-  operationsCreated   Operation[] @relation("OperationCreatedBy")
-  invoicesCreated     Invoice[]   @relation("InvoiceCreatedBy")
-  auditLogsAsActor AuditLog[] @relation("AuditLogActor")
-  clinicAdminScopes ClinicAdminScope[]
-  navTabGrant       UserNavTabGrant? @relation("UserNavTabGrantUser")
-  navTabGrantsUpdated UserNavTabGrant[] @relation("UserNavTabGrantUpdatedBy")
-  tenantRoleNavTabGrantsUpdated TenantRoleNavTabGrant[] @relation("TenantRoleNavTabGrantUpdatedBy")
-  employeePrivilegeGrants UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUser")
-  employeePrivilegeGrantsUpdated UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUpdatedBy")
-  moneyVisibilityOverride UserMoneyVisibilityOverride? @relation("UserMoneyVisibilityOverrideUser")
-  moneyVisibilityOverridesUpdated UserMoneyVisibilityOverride[] @relation("UserMoneyVisibilityOverrideUpdatedBy")
-  supportTicketsReported         SupportTicket[] @relation("SupportTicketReporter")
-  supportTicketsAssigned         SupportTicket[] @relation("SupportTicketAssignee")
-  supportTicketEvents            SupportTicketEvent[] @relation("SupportTicketEventActor")
-  supportAccessRequested         SupportAccessSession[] @relation("SupportAccessRequester")
-  supportAccessApproved          SupportAccessSession[] @relation("SupportAccessApprover")
-  integrationClientsCreated      IntegrationClient[] @relation("IntegrationClientCreatedBy")
-  integrationFailuresResolved    IntegrationFailureLog[] @relation("IntegrationFailureResolvedBy")
-  clinicianAvailabilityTemplates ClinicianAvailabilityTemplate[] @relation("ClinicianAvailability")
-  appointmentTypeOverrides       ClinicianAppointmentTypeOverride[] @relation("ClinicianApptTypeOverride")
-  appointmentSeriesAsClinician   AppointmentSeries[] @relation("AppointmentSeriesClinician")
-  waitlistAsClinician            AppointmentWaitlistEntry[] @relation("WaitlistClinician")
-  clinicalFormTemplatesOwned     ClinicalFormTemplate[] @relation("ClinicalFormTemplateOwner")
-  clinicianShortcuts               ClinicianShortcut[]
-  clinicianDiagnosisFavorites    ClinicianDiagnosisFavorite[]
-  encountersSigned               Encounter[] @relation("EncounterSignedBy")
-  encountersAmended              Encounter[] @relation("EncounterAmendedBy")
-  passwordResetTokens            PasswordResetToken[]
-  authSessions                   UserSession[]
-  legalAcceptances               LegalAcceptance[]
-  digestPreference               StaffDigestPreference?
-  inAppNotices                   StaffInAppNotice[]
-  digestSendLogs                 DigestSendLog[]
-  clinicianVerification          ClinicianVerification?
-  clinicianVerificationsReviewed ClinicianVerification[] @relation("ClinicianVerificationReviewer")
-  marketplaceListings            MarketplaceListing[]
-  slotHoldsAsClinician           SlotHold[] @relation("SlotHoldClinician")
-  pushSubscriptions              PushSubscription[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  deactivatedAt DateTime?
-  deletedAt     DateTime?
+  mfaWhatsAppEnabled              Boolean                            @default(false)
+  mfaRecoveryHashes               Json?
+  avatarRelativePath              String?
+  avatarMimeType                  String?
+  employee                        Employee?
+  encounters                      Encounter[]                        @relation("EncounterClinician")
+  appointments                    Appointment[]                      @relation("AppointmentClinician")
+  kiorexCommissionCharges         KiorexCommissionCharge[]           @relation("KiorexCommissionClinician")
+  operationsPerformed             Operation[]                        @relation("OperationClinician")
+  operationsCreated               Operation[]                        @relation("OperationCreatedBy")
+  invoicesCreated                 Invoice[]                          @relation("InvoiceCreatedBy")
+  auditLogsAsActor                AuditLog[]                         @relation("AuditLogActor")
+  clinicAdminScopes               ClinicAdminScope[]
+  navTabGrant                     UserNavTabGrant?                   @relation("UserNavTabGrantUser")
+  navTabGrantsUpdated             UserNavTabGrant[]                  @relation("UserNavTabGrantUpdatedBy")
+  tenantRoleNavTabGrantsUpdated   TenantRoleNavTabGrant[]            @relation("TenantRoleNavTabGrantUpdatedBy")
+  employeePrivilegeGrants         UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUser")
+  employeePrivilegeGrantsUpdated  UserClinicEmployeePrivilegeGrant[] @relation("EmployeePrivilegeGrantUpdatedBy")
+  moneyVisibilityOverride         UserMoneyVisibilityOverride?       @relation("UserMoneyVisibilityOverrideUser")
+  moneyVisibilityOverridesUpdated UserMoneyVisibilityOverride[]      @relation("UserMoneyVisibilityOverrideUpdatedBy")
+  supportTicketsReported          SupportTicket[]                    @relation("SupportTicketReporter")
+  supportTicketsAssigned          SupportTicket[]                    @relation("SupportTicketAssignee")
+  supportTicketEvents             SupportTicketEvent[]               @relation("SupportTicketEventActor")
+  supportAccessRequested          SupportAccessSession[]             @relation("SupportAccessRequester")
+  supportAccessApproved           SupportAccessSession[]             @relation("SupportAccessApprover")
+  integrationClientsCreated       IntegrationClient[]                @relation("IntegrationClientCreatedBy")
+  integrationFailuresResolved     IntegrationFailureLog[]            @relation("IntegrationFailureResolvedBy")
+  clinicianAvailabilityTemplates  ClinicianAvailabilityTemplate[]    @relation("ClinicianAvailability")
+  appointmentTypeOverrides        ClinicianAppointmentTypeOverride[] @relation("ClinicianApptTypeOverride")
+  appointmentSeriesAsClinician    AppointmentSeries[]                @relation("AppointmentSeriesClinician")
+  waitlistAsClinician             AppointmentWaitlistEntry[]         @relation("WaitlistClinician")
+  clinicalFormTemplatesOwned      ClinicalFormTemplate[]             @relation("ClinicalFormTemplateOwner")
+  clinicianShortcuts              ClinicianShortcut[]
+  clinicianDiagnosisFavorites     ClinicianDiagnosisFavorite[]
+  encountersSigned                Encounter[]                        @relation("EncounterSignedBy")
+  encountersAmended               Encounter[]                        @relation("EncounterAmendedBy")
+  passwordResetTokens             PasswordResetToken[]
+  authSessions                    UserSession[]
+  legalAcceptances                LegalAcceptance[]
+  digestPreference                StaffDigestPreference?
+  inAppNotices                    StaffInAppNotice[]
+  digestSendLogs                  DigestSendLog[]
+  clinicianVerification           ClinicianVerification?
+  clinicianVerificationsReviewed  ClinicianVerification[]            @relation("ClinicianVerificationReviewer")
+  marketplaceListings             MarketplaceListing[]
+  slotHoldsAsClinician            SlotHold[]                         @relation("SlotHoldClinician")
+  pushSubscriptions               PushSubscription[]
+  createdAt                       DateTime                           @default(now())
+  updatedAt                       DateTime                           @updatedAt
+  deactivatedAt                   DateTime?
+  deletedAt                       DateTime?
+  kiorexIdentityLink              KiorexIdentityLink?
 
   @@unique([tenantId, email])
   @@index([tenantId])
   @@index([tenantId, deletedAt])
-  kiorexIdentityLink KiorexIdentityLink?
+  @@index([supervisorUserId])
 }
 
 /// UX-01 — Web Push subscription for Kiorex booking alerts (and future digests).
@@ -1526,44 +1534,44 @@ model PushSubscription {
 }
 
 model ClinicianVerification {
-  id              String              @id @default(cuid())
-  userId          String              @unique
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenantId        String
-  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  syndicateNumber String?
-  specialty       ClinicalSpecialty?
-  titleEn         String?
-  titleAr         String?
-  nationalIdEnc   String?
-  documentKeys    Json                @default("[]")
-  status          VerificationStatus  @default(UNVERIFIED)
-  rejectReason      String?
-  rejectReasonCode  String?
-  reviewedBy        String?
-  reviewer          User?               @relation("ClinicianVerificationReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
-  reviewedAt        DateTime?
-  pendingAt         DateTime?
-  reviewDurationMs  Int?
-  lastReviewChecklist Json              @default("[]")
-  verifiedSpecialty ClinicalSpecialty?
+  id                  String                     @id @default(cuid())
+  userId              String                     @unique
+  user                User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId            String
+  tenant              Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  syndicateNumber     String?
+  specialty           ClinicalSpecialty?
+  titleEn             String?
+  titleAr             String?
+  nationalIdEnc       String?
+  documentKeys        Json                       @default("[]")
+  status              VerificationStatus         @default(UNVERIFIED)
+  rejectReason        String?
+  rejectReasonCode    String?
+  reviewedBy          String?
+  reviewer            User?                      @relation("ClinicianVerificationReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  reviewedAt          DateTime?
+  pendingAt           DateTime?
+  reviewDurationMs    Int?
+  lastReviewChecklist Json                       @default("[]")
+  verifiedSpecialty   ClinicalSpecialty?
   /// PRVER01 — profession this record is being / was verified for (snapshot of User.profession at submit / approval).
   profession          Profession?
   verifiedProfession  Profession?
   /// PRVER03 — name at last approval; a change forces re-verification (hazard H11).
   verifiedName        String?
   /// PRVER04 — solo practitioner (no agency/clinic behind them): extra identity evidence required.
-  isSolo              Boolean             @default(false)
+  isSolo              Boolean                    @default(false)
   /// PRVER03 — why the record was sent back to PENDING / EXPIRED (NAME_CHANGED, PROFESSION_CHANGED, SPECIALTY_CHANGED, LICENCE_EXPIRED).
   reverifyReason      String?
   verifiedAt          DateTime?
   /// PRVER03 — earliest of licence expiry and the pack's periodic re-verification date.
   nextReverifyAt      DateTime?
   /// PRVER03 — highest expiry-reminder stage sent (index into the pack's reminderDays).
-  expiryReminderStage Int                 @default(0)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  registrations   ProfessionalRegistration[]
+  expiryReminderStage Int                        @default(0)
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  registrations       ProfessionalRegistration[]
 
   @@index([tenantId, status])
   @@index([status])
@@ -1573,23 +1581,23 @@ model ClinicianVerification {
 
 /// PRVER01 — one row per professional register checked before LIVE (syndicate, MoH licence, ...), per market pack rule.
 model ProfessionalRegistration {
-  id               String              @id @default(cuid())
-  tenantId         String
-  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId           String
-  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  verificationId   String?
-  verification     ClinicianVerification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
-  profession       Profession
+  id                 String                 @id @default(cuid())
+  tenantId           String
+  tenant             Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationId     String?
+  verification       ClinicianVerification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
+  profession         Profession
   /// Register code from the market pack, e.g. EG_MEDICAL_SYNDICATE, EG_MOH_LICENCE.
-  registerCode     String
+  registerCode       String
   registrationNumber String
-  issuedAt         DateTime?
-  expiresAt        DateTime?
-  status           VerificationStatus  @default(PENDING)
-  verifiedAt       DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  issuedAt           DateTime?
+  expiresAt          DateTime?
+  status             VerificationStatus     @default(PENDING)
+  verifiedAt         DateTime?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
   @@unique([userId, registerCode])
   @@index([tenantId, status])
@@ -1597,18 +1605,18 @@ model ProfessionalRegistration {
 }
 
 model UserNavTabGrant {
-  id                String   @id @default(cuid())
-  tenantId          String
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId            String   @unique
-  user              User     @relation("UserNavTabGrantUser", fields: [userId], references: [id], onDelete: Cascade)
-  tabKeys           Json
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId          String   @unique
+  user            User     @relation("UserNavTabGrantUser", fields: [userId], references: [id], onDelete: Cascade)
+  tabKeys         Json
   /// Per-tab access when granted beyond role defaults: "read" (view only) or "write" (create/update).
-  tabAccessModes    Json?
-  updatedByUserId   String?
-  updatedBy         User?    @relation("UserNavTabGrantUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  tabAccessModes  Json?
+  updatedByUserId String?
+  updatedBy       User?    @relation("UserNavTabGrantUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([tenantId, userId])
   @@index([tenantId])
@@ -1630,18 +1638,18 @@ model TenantRoleNavTabGrant {
 }
 
 model UserMoneyVisibilityOverride {
-  id                  String                      @id @default(cuid())
-  tenantId            String
-  tenant              Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId              String                      @unique
-  user                User                        @relation("UserMoneyVisibilityOverrideUser", fields: [userId], references: [id], onDelete: Cascade)
-  operationsOverride  FinancialVisibilityOverride @default(ROLE_DEFAULT)
-  encountersOverride  FinancialVisibilityOverride @default(ROLE_DEFAULT)
+  id                   String                      @id @default(cuid())
+  tenantId             String
+  tenant               Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId               String                      @unique
+  user                 User                        @relation("UserMoneyVisibilityOverrideUser", fields: [userId], references: [id], onDelete: Cascade)
+  operationsOverride   FinancialVisibilityOverride @default(ROLE_DEFAULT)
+  encountersOverride   FinancialVisibilityOverride @default(ROLE_DEFAULT)
   appointmentsOverride FinancialVisibilityOverride @default(ROLE_DEFAULT)
-  updatedByUserId     String?
-  updatedBy           User?                       @relation("UserMoneyVisibilityOverrideUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
-  createdAt           DateTime                    @default(now())
-  updatedAt           DateTime                    @updatedAt
+  updatedByUserId      String?
+  updatedBy            User?                       @relation("UserMoneyVisibilityOverrideUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
 
   @@index([tenantId, userId])
 }
@@ -1665,90 +1673,90 @@ model UserClinicEmployeePrivilegeGrant {
 }
 
 model Clinic {
-  cashierShifts CashierShift[]
-  id               String          @id @default(cuid())
-  tenantId         String
-  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  parentClinicId   String?
-  parent           Clinic?         @relation("ClinicHierarchy", fields: [parentClinicId], references: [id])
-  branches         Clinic[]        @relation("ClinicHierarchy")
-  nameEn           String
-  nameAr           String
-  logoUrl          String?
-  country          String
-  city             String
-  addressEn        String
-  addressAr        String
-  locationUrl      String
-  latitude         Decimal?        @db.Decimal(10, 7)
-  longitude        Decimal?        @db.Decimal(10, 7)
-  phone            String
-  email            String
-  licenseNumber    String
-  clinicalSpecialty ClinicalSpecialty @default(POLYCLINIC)
-  taxRegistrationNumber String?
-  invoiceVatPercent   Decimal?      @db.Decimal(5, 2)
-  defaultLanguage  Locale          @default(en)
-  defaultCurrency  String          @default("EGP")
-  invoiceLogoRelativePath String?
-  invoiceLogoOriginalName String?
-  invoiceLogoMimeType     String?
-  invoiceBackgroundColor  String      @default("white")
-  invoiceSections         Json        @default("[\"clinicHeader\",\"patientDetails\",\"invoiceMeta\",\"lineItems\",\"totals\",\"footer\"]")
-  prescriptionLogoRelativePath String?
-  prescriptionLogoOriginalName String?
-  prescriptionLogoMimeType     String?
-  prescriptionHeaderDescriptionEn String @default("")
-  prescriptionHeaderDescriptionAr String @default("")
-  openingTime        String          @default("09:00") @db.VarChar(5)
-  closingTime        String          @default("00:00") @db.VarChar(5)
-  frontDeskRoomLabels Json           @default("[\"Room 1\",\"Room 2\",\"Room 3\"]")
-  providerSettings        Json        @default("{}")
-  lastCalledTicketNumber Int?
-  patientsHome     Patient[]       @relation("PatientHomeBranch")
-  encounters       Encounter[]
-  clinicalOrders   ClinicalOrder[]
-  revenueEntries   RevenueEntry[]
-  expenses         Expense[]
-  employees        Employee[]
-  appointments     Appointment[]
-  operations       Operation[]
-  invoices         Invoice[]
-  billingPayments  BillingPayment[]
-  clinicalFormTemplates ClinicalFormTemplate[]
-  cashierShiftCloses CashierShiftClose[]
-  fiscalDocuments  FiscalDocument[]
-  fiscalSubmissions FiscalSubmission[]
-  fiscalDevices    FiscalDevice[]
-  providerCredentials ProviderCredential[]
-  timezone         String?
-  weekendDays      Json?
-  settingsOverrides Json?
-  auditLogs        AuditLog[]
-  clinicAdminScopes ClinicAdminScope[]
-  employeePrivilegeGrants UserClinicEmployeePrivilegeGrant[]
-  recordStatus      ClinicRecordStatus      @default(ACTIVE)
-  disabledAt        DateTime?
-  operatingPeriods  ClinicOperatingPeriod[]
-  supportTickets    SupportTicket[]
-  integrationFailureLogs IntegrationFailureLog[]
-  appointmentTypes       AppointmentType[]
-  clinicianAvailabilityTemplates ClinicianAvailabilityTemplate[]
-  appointmentSeries      AppointmentSeries[]
-  appointmentWaitlist    AppointmentWaitlistEntry[]
-  kiorexCommissionCharges KiorexCommissionCharge[]
-  marketplaceListings   MarketplaceListing[]
-  slotHolds             SlotHold[]
+  cashierShifts                   CashierShift[]
+  id                              String                             @id @default(cuid())
+  tenantId                        String
+  tenant                          Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentClinicId                  String?
+  parent                          Clinic?                            @relation("ClinicHierarchy", fields: [parentClinicId], references: [id])
+  branches                        Clinic[]                           @relation("ClinicHierarchy")
+  nameEn                          String
+  nameAr                          String
+  logoUrl                         String?
+  country                         String
+  city                            String
+  addressEn                       String
+  addressAr                       String
+  locationUrl                     String
+  latitude                        Decimal?                           @db.Decimal(10, 7)
+  longitude                       Decimal?                           @db.Decimal(10, 7)
+  phone                           String
+  email                           String
+  licenseNumber                   String
+  clinicalSpecialty               ClinicalSpecialty                  @default(POLYCLINIC)
+  taxRegistrationNumber           String?
+  invoiceVatPercent               Decimal?                           @db.Decimal(5, 2)
+  defaultLanguage                 Locale                             @default(en)
+  defaultCurrency                 String                             @default("EGP")
+  invoiceLogoRelativePath         String?
+  invoiceLogoOriginalName         String?
+  invoiceLogoMimeType             String?
+  invoiceBackgroundColor          String                             @default("white")
+  invoiceSections                 Json                               @default("[\"clinicHeader\",\"patientDetails\",\"invoiceMeta\",\"lineItems\",\"totals\",\"footer\"]")
+  prescriptionLogoRelativePath    String?
+  prescriptionLogoOriginalName    String?
+  prescriptionLogoMimeType        String?
+  prescriptionHeaderDescriptionEn String                             @default("")
+  prescriptionHeaderDescriptionAr String                             @default("")
+  openingTime                     String                             @default("09:00") @db.VarChar(5)
+  closingTime                     String                             @default("00:00") @db.VarChar(5)
+  frontDeskRoomLabels             Json                               @default("[\"Room 1\",\"Room 2\",\"Room 3\"]")
+  providerSettings                Json                               @default("{}")
+  lastCalledTicketNumber          Int?
+  patientsHome                    Patient[]                          @relation("PatientHomeBranch")
+  encounters                      Encounter[]
+  clinicalOrders                  ClinicalOrder[]
+  revenueEntries                  RevenueEntry[]
+  expenses                        Expense[]
+  employees                       Employee[]
+  appointments                    Appointment[]
+  operations                      Operation[]
+  invoices                        Invoice[]
+  billingPayments                 BillingPayment[]
+  clinicalFormTemplates           ClinicalFormTemplate[]
+  cashierShiftCloses              CashierShiftClose[]
+  fiscalDocuments                 FiscalDocument[]
+  fiscalSubmissions               FiscalSubmission[]
+  fiscalDevices                   FiscalDevice[]
+  providerCredentials             ProviderCredential[]
+  timezone                        String?
+  weekendDays                     Json?
+  settingsOverrides               Json?
+  auditLogs                       AuditLog[]
+  clinicAdminScopes               ClinicAdminScope[]
+  employeePrivilegeGrants         UserClinicEmployeePrivilegeGrant[]
+  recordStatus                    ClinicRecordStatus                 @default(ACTIVE)
+  disabledAt                      DateTime?
+  operatingPeriods                ClinicOperatingPeriod[]
+  supportTickets                  SupportTicket[]
+  integrationFailureLogs          IntegrationFailureLog[]
+  appointmentTypes                AppointmentType[]
+  clinicianAvailabilityTemplates  ClinicianAvailabilityTemplate[]
+  appointmentSeries               AppointmentSeries[]
+  appointmentWaitlist             AppointmentWaitlistEntry[]
+  kiorexCommissionCharges         KiorexCommissionCharge[]
+  marketplaceListings             MarketplaceListing[]
+  slotHolds                       SlotHold[]
   /// When false, Kiorex bookings stay SCHEDULED until front desk confirms (KX-04).
-  marketplaceBookingAutoConfirm Boolean @default(true)
+  marketplaceBookingAutoConfirm   Boolean                            @default(true)
   /// KX-06: clinic override of the market pack Kiorex cancellation policy (partial JSON; null = market default).
-  kiorexCancellationPolicy Json?
+  kiorexCancellationPolicy        Json?
   /// FS-04 — partial override of market pack `commercialConfig.deposits` (rules, link expiry, auto-cancel).
-  depositPolicy            Json?
+  depositPolicy                   Json?
   /// KX-09: public clinic booking page slug (commission-free CLINIC_LINK bookings). Shares a namespace with listing slugs.
-  bookingSlug      String?         @unique
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  bookingSlug                     String?                            @unique
+  createdAt                       DateTime                           @default(now())
+  updatedAt                       DateTime                           @updatedAt
 
   @@index([tenantId])
   @@index([parentClinicId])
@@ -1756,13 +1764,13 @@ model Clinic {
 }
 
 model ClinicOperatingPeriod {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   clinicId  String
-  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  startDate DateTime @db.Date
+  clinic    Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  startDate DateTime  @db.Date
   endDate   DateTime? @db.Date
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([clinicId])
   @@index([clinicId, startDate])
@@ -1783,64 +1791,64 @@ model ClinicAdminScope {
 }
 
 model Patient {
-  id           String         @id @default(cuid())
-  tenantId     String
-  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  mrn          String
-  firstNameEn  String
-  lastNameEn   String
-  firstNameAr  String?
-  lastNameAr   String?
-  dob          DateTime?
-  gender       Gender
-  phone        String
-  email        String?
-  nationalId   String?
-  nationalIdDocRelativePath String?
-  nationalIdDocOriginalName String?
-  nationalIdDocMimeType     String?
-  acquisitionChannel          PatientAcquisitionChannel?
-  acquisitionReferralName     String?
-  acquisitionOtherDetail      String?
-  homeBranchId String?
-  homeBranch   Clinic?        @relation("PatientHomeBranch", fields: [homeBranchId], references: [id])
-  deletedAt    DateTime?
-  encounters   Encounter[]
-  appointments Appointment[]
-  operations   Operation[]
-  documents    PatientDocument[]
-  invoices     Invoice[]
-  supportTickets SupportTicket[]
-  allergies    PatientAllergy[]
-  clinicalLetters ClinicalLetter[]
-  activeProblems PatientActiveProblem[]
-  familyLinksFrom PatientFamilyLink[] @relation("PatientFamilyFrom")
-  familyLinksTo   PatientFamilyLink[] @relation("PatientFamilyTo")
-  clinicalPhotos  PatientClinicalPhoto[]
-  waitlistEntries AppointmentWaitlistEntry[]
-  appointmentSeries AppointmentSeries[]
-  noShowCount          Int      @default(0)
-  requiresAppointmentDeposit Boolean @default(false)
-  isVip                Boolean  @default(false)
-  needsChaperone       Boolean  @default(false)
+  id                         String                         @id @default(cuid())
+  tenantId                   String
+  tenant                     Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mrn                        String
+  firstNameEn                String
+  lastNameEn                 String
+  firstNameAr                String?
+  lastNameAr                 String?
+  dob                        DateTime?
+  gender                     Gender
+  phone                      String
+  email                      String?
+  nationalId                 String?
+  nationalIdDocRelativePath  String?
+  nationalIdDocOriginalName  String?
+  nationalIdDocMimeType      String?
+  acquisitionChannel         PatientAcquisitionChannel?
+  acquisitionReferralName    String?
+  acquisitionOtherDetail     String?
+  homeBranchId               String?
+  homeBranch                 Clinic?                        @relation("PatientHomeBranch", fields: [homeBranchId], references: [id])
+  deletedAt                  DateTime?
+  encounters                 Encounter[]
+  appointments               Appointment[]
+  operations                 Operation[]
+  documents                  PatientDocument[]
+  invoices                   Invoice[]
+  supportTickets             SupportTicket[]
+  allergies                  PatientAllergy[]
+  clinicalLetters            ClinicalLetter[]
+  activeProblems             PatientActiveProblem[]
+  familyLinksFrom            PatientFamilyLink[]            @relation("PatientFamilyFrom")
+  familyLinksTo              PatientFamilyLink[]            @relation("PatientFamilyTo")
+  clinicalPhotos             PatientClinicalPhoto[]
+  waitlistEntries            AppointmentWaitlistEntry[]
+  appointmentSeries          AppointmentSeries[]
+  noShowCount                Int                            @default(0)
+  requiresAppointmentDeposit Boolean                        @default(false)
+  isVip                      Boolean                        @default(false)
+  needsChaperone             Boolean                        @default(false)
   /// ON-08 — "Try with sample patient": excluded from reports, never revenue, commissions or messages.
-  isSample             Boolean  @default(false)
+  isSample                   Boolean                        @default(false)
   /// False for quick-book first-visit placeholders: appointment allowed; check-in/encounter/complete blocked until staff finish registration.
-  profileComplete      Boolean  @default(true)
-  dataProtectionConsents PatientDataProtectionConsent[]
-  consents             PatientConsent[]
-  messagingConsents      MessagingConsent[]
-  recordShareConsents  PatientRecordShareConsent[]
-  clinicalOrders       ClinicalOrder[]
-  dentalChartTeeth     DentalChartTooth[]
-  servicePackages      PatientServicePackage[]
-  billingPayments      BillingPayment[]
-  fiscalDocuments      FiscalDocument[]
-  fiscalSubmissions    FiscalSubmission[]
-  satisfactionSurveys  SatisfactionSurveyResponse[]
-  kiorexCommissionCharges KiorexCommissionCharge[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  profileComplete            Boolean                        @default(true)
+  dataProtectionConsents     PatientDataProtectionConsent[]
+  consents                   PatientConsent[]
+  messagingConsents          MessagingConsent[]
+  recordShareConsents        PatientRecordShareConsent[]
+  clinicalOrders             ClinicalOrder[]
+  dentalChartTeeth           DentalChartTooth[]
+  servicePackages            PatientServicePackage[]
+  billingPayments            BillingPayment[]
+  fiscalDocuments            FiscalDocument[]
+  fiscalSubmissions          FiscalSubmission[]
+  satisfactionSurveys        SatisfactionSurveyResponse[]
+  kiorexCommissionCharges    KiorexCommissionCharge[]
+  createdAt                  DateTime                       @default(now())
+  updatedAt                  DateTime                       @updatedAt
 
   @@unique([tenantId, mrn])
   @@unique([tenantId, nationalId])
@@ -1892,14 +1900,14 @@ model ClinicianShortcut {
 }
 
 model ClinicianDiagnosisFavorite {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  icd10Code   String
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  icd10Code String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
 
   @@unique([tenantId, userId, icd10Code])
   @@index([tenantId, userId])
@@ -1920,29 +1928,29 @@ model Icd10Entry {
 }
 
 model DrugInteractionRule {
-  id           String   @id @default(cuid())
-  tenantId     String?
-  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  drugA        String
-  drugB        String
-  ingredientA  String
-  ingredientB  String
-  severity     String   @default("moderate")
-  messageEn    String
-  messageAr    String   @default("")
-  createdAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  drugA       String
+  drugB       String
+  ingredientA String
+  ingredientB String
+  severity    String   @default("moderate")
+  messageEn   String
+  messageAr   String   @default("")
+  createdAt   DateTime @default(now())
 
   @@index([tenantId])
   @@index([ingredientA, ingredientB])
 }
 
 model ActiveIngredient {
-  id        String   @id @default(cuid())
+  id        String                  @id @default(cuid())
   nameEn    String
   nameAr    String?
   atcCode   String?
   products  DrugProductIngredient[]
-  createdAt DateTime @default(now())
+  createdAt DateTime                @default(now())
 
   @@unique([nameEn])
 }
@@ -1960,31 +1968,31 @@ model DrugDatasetVersion {
   productCount     Int           @default(0)
   products         DrugProduct[]
 
-  @@index([marketId, isActive])
   @@unique([marketId, versionLabel])
+  @@index([marketId, isActive])
 }
 
 model DrugProduct {
-  id                 String        @id @default(cuid())
-  marketId           String
-  market             Market        @relation(fields: [marketId], references: [id], onDelete: Cascade)
-  datasetVersionId   String
-  datasetVersion     DrugDatasetVersion @relation(fields: [datasetVersionId], references: [id], onDelete: Cascade)
-  brandNameEn        String
-  brandNameAr        String?
-  form               String
-  strength           String?
-  pack               String?
-  manufacturer       String?
-  registrationNo     String?
-  defaultSigEn       String?
-  defaultSigAr       String?
-  instructionPhrases Json          @default("[]")
-  isActive           Boolean       @default(true)
-  ingredients        DrugProductIngredient[]
+  id                   String                      @id @default(cuid())
+  marketId             String
+  market               Market                      @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  datasetVersionId     String
+  datasetVersion       DrugDatasetVersion          @relation(fields: [datasetVersionId], references: [id], onDelete: Cascade)
+  brandNameEn          String
+  brandNameAr          String?
+  form                 String
+  strength             String?
+  pack                 String?
+  manufacturer         String?
+  registrationNo       String?
+  defaultSigEn         String?
+  defaultSigAr         String?
+  instructionPhrases   Json                        @default("[]")
+  isActive             Boolean                     @default(true)
+  ingredients          DrugProductIngredient[]
   encounterMedications EncounterMedication[]
-  clinicianUsage     ClinicianDrugProductUsage[]
-  createdAt          DateTime      @default(now())
+  clinicianUsage       ClinicianDrugProductUsage[]
+  createdAt            DateTime                    @default(now())
 
   @@index([marketId, brandNameEn])
   @@index([marketId, isActive])
@@ -2013,20 +2021,20 @@ model ClinicianDrugProductUsage {
 }
 
 model ClinicalLetter {
-  id             String             @id @default(cuid())
-  tenantId       String
-  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  encounterId    String?
-  encounter      Encounter?         @relation(fields: [encounterId], references: [id], onDelete: SetNull)
-  patientId      String
-  patient        Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  type           ClinicalLetterType
-  titleEn        String
-  titleAr        String             @default("")
-  bodyEn         String
-  bodyAr         String             @default("")
+  id              String             @id @default(cuid())
+  tenantId        String
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  encounterId     String?
+  encounter       Encounter?         @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  patientId       String
+  patient         Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type            ClinicalLetterType
+  titleEn         String
+  titleAr         String             @default("")
+  bodyEn          String
+  bodyAr          String             @default("")
   createdByUserId String
-  createdAt      DateTime           @default(now())
+  createdAt       DateTime           @default(now())
 
   @@index([tenantId, patientId])
   @@index([encounterId])
@@ -2067,69 +2075,69 @@ model PatientDocument {
 }
 
 model Encounter {
-  id             String            @id @default(cuid())
-  tenantId       String
-  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId       String
-  clinic         Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  patientId      String
-  patient        Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  clinicianId    String
-  clinician      User              @relation("EncounterClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
-  status         EncounterStatus   @default(DRAFT)
-  visitType      String
-  chiefComplaint String?
-  subjective     String?
-  objective      String?
-  assessment     String?
-  plan           String?
-  vitalsJson     Json?
-  heartRate      Int?
-  spo2           Int?
-  bpSystolic     Int?
-  bpDiastolic    Int?
-  temperature    Decimal?          @db.Decimal(4, 1)
-  weightKg       Decimal?          @db.Decimal(6, 2)
-  heightCm       Decimal?          @db.Decimal(6, 2)
-  noMedications  Boolean           @default(false)
-  visitFeeAmount Decimal           @default(0) @db.Decimal(14, 2)
-  visitFeeCurrency String          @default("EGP")
-  appointmentId  String?
-  appointment    Appointment?     @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  finalizedAt    DateTime?
-  clinicalTemplateId String?
-  clinicalTemplate   ClinicalFormTemplate? @relation(fields: [clinicalTemplateId], references: [id], onDelete: SetNull)
-  specialtyFormResponses Json?
-  noteLockedAt   DateTime?
-  signedAt       DateTime?
-  signedByUserId String?
-  signedBy       User?             @relation("EncounterSignedBy", fields: [signedByUserId], references: [id], onDelete: SetNull)
-  amendReason    String?
-  amendedByUserId String?
-  amendedBy      User?             @relation("EncounterAmendedBy", fields: [amendedByUserId], references: [id], onDelete: SetNull)
-  amendedAt      DateTime?
-  clinicalLetters ClinicalLetter[]
-  diagnoses      Diagnosis[]
-  revenueEntries RevenueEntry[]
-  medications    EncounterMedication[]
-  documents      EncounterDocument[]
-  patientAllergies PatientAllergy[]
-  activeProblemsEncounter PatientActiveProblem[]
-  invoices       Invoice[]
+  id                             String                          @id @default(cuid())
+  tenantId                       String
+  tenant                         Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId                       String
+  clinic                         Clinic                          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId                      String
+  patient                        Patient                         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId                    String
+  clinician                      User                            @relation("EncounterClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  status                         EncounterStatus                 @default(DRAFT)
+  visitType                      String
+  chiefComplaint                 String?
+  subjective                     String?
+  objective                      String?
+  assessment                     String?
+  plan                           String?
+  vitalsJson                     Json?
+  heartRate                      Int?
+  spo2                           Int?
+  bpSystolic                     Int?
+  bpDiastolic                    Int?
+  temperature                    Decimal?                        @db.Decimal(4, 1)
+  weightKg                       Decimal?                        @db.Decimal(6, 2)
+  heightCm                       Decimal?                        @db.Decimal(6, 2)
+  noMedications                  Boolean                         @default(false)
+  visitFeeAmount                 Decimal                         @default(0) @db.Decimal(14, 2)
+  visitFeeCurrency               String                          @default("EGP")
+  appointmentId                  String?
+  appointment                    Appointment?                    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  finalizedAt                    DateTime?
+  clinicalTemplateId             String?
+  clinicalTemplate               ClinicalFormTemplate?           @relation(fields: [clinicalTemplateId], references: [id], onDelete: SetNull)
+  specialtyFormResponses         Json?
+  noteLockedAt                   DateTime?
+  signedAt                       DateTime?
+  signedByUserId                 String?
+  signedBy                       User?                           @relation("EncounterSignedBy", fields: [signedByUserId], references: [id], onDelete: SetNull)
+  amendReason                    String?
+  amendedByUserId                String?
+  amendedBy                      User?                           @relation("EncounterAmendedBy", fields: [amendedByUserId], references: [id], onDelete: SetNull)
+  amendedAt                      DateTime?
+  clinicalLetters                ClinicalLetter[]
+  diagnoses                      Diagnosis[]
+  revenueEntries                 RevenueEntry[]
+  medications                    EncounterMedication[]
+  documents                      EncounterDocument[]
+  patientAllergies               PatientAllergy[]
+  activeProblemsEncounter        PatientActiveProblem[]
+  invoices                       Invoice[]
   prescriptionVerificationTokens PrescriptionVerificationToken[]
-  amendments     EncounterAmendment[]
-  followUpDueAt  DateTime?
-  followUpWeeks  Int?
-  followUpNote   String?
-  followUpStatus EncounterFollowUpStatus @default(NONE)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  amendments                     EncounterAmendment[]
+  followUpDueAt                  DateTime?
+  followUpWeeks                  Int?
+  followUpNote                   String?
+  followUpStatus                 EncounterFollowUpStatus         @default(NONE)
+  createdAt                      DateTime                        @default(now())
+  updatedAt                      DateTime                        @updatedAt
+  clinicalOrders                 ClinicalOrder[]
 
   @@index([tenantId, clinicId, finalizedAt])
   @@index([patientId])
   @@index([appointmentId])
   @@index([tenantId, followUpStatus, followUpDueAt])
-  clinicalOrders ClinicalOrder[]
 }
 
 /// CL-06 — lab & radiology orders as first-class records (results structured + PDF).
@@ -2190,40 +2198,40 @@ model ClinicalOrderItem {
 }
 
 model Diagnosis {
-  id             String    @id @default(cuid())
-  tenantId       String
-  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  encounterId    String
-  encounter      Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
-  icd10Code      String
-  descriptionEn  String
-  descriptionAr  String?
-  isPrimary      Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  encounterId   String
+  encounter     Encounter @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  icd10Code     String
+  descriptionEn String
+  descriptionAr String?
+  isPrimary     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([tenantId])
   @@index([encounterId])
 }
 
 model EncounterMedication {
-  id             String       @id @default(cuid())
-  tenantId       String
-  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  encounterId    String
-  encounter      Encounter    @relation(fields: [encounterId], references: [id], onDelete: Cascade)
-  drugName       String
-  drugProductId  String?
-  drugProduct    DrugProduct? @relation(fields: [drugProductId], references: [id], onDelete: SetNull)
-  drugUnverified         Boolean      @default(false)
-  safetyOverrideReason   String?
-  dosage         String?
-  route          String?
-  frequency      String?
-  duration       String?
-  instructions   String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id                   String       @id @default(cuid())
+  tenantId             String
+  tenant               Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  encounterId          String
+  encounter            Encounter    @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  drugName             String
+  drugProductId        String?
+  drugProduct          DrugProduct? @relation(fields: [drugProductId], references: [id], onDelete: SetNull)
+  drugUnverified       Boolean      @default(false)
+  safetyOverrideReason String?
+  dosage               String?
+  route                String?
+  frequency            String?
+  duration             String?
+  instructions         String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
 
   @@index([tenantId])
   @@index([encounterId])
@@ -2248,41 +2256,45 @@ model EncounterDocument {
 }
 
 model RevenueEntry {
-  id            String        @id @default(cuid())
-  tenantId      String
-  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId      String
-  clinic        Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  appointmentId String?
-  appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  encounterId   String?
-  encounter     Encounter?    @relation(fields: [encounterId], references: [id], onDelete: SetNull)
-  operationId   String?
-  operation     Operation?    @relation(fields: [operationId], references: [id], onDelete: SetNull)
-  category      String
-  description   String?
-  grossAmount   Decimal       @db.Decimal(14, 2)
-  taxAmount     Decimal       @db.Decimal(14, 2)
-  netAmount     Decimal       @db.Decimal(14, 2)
-  currency      String
-  postedAt      DateTime
-  status        RevenueStatus @default(POSTED)
-  collectionMode VisitCollectionMode?
-  transferChannel String?
-  transferReference String?
-  transferReceiptPath String?
-  transferReceiptMimeType String?
-  transferReceiptFileName String?
+  id                         String                     @id @default(cuid())
+  tenantId                   String
+  tenant                     Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId                   String
+  clinic                     Clinic                     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  appointmentId              String?
+  appointment                Appointment?               @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  encounterId                String?
+  encounter                  Encounter?                 @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  operationId                String?
+  operation                  Operation?                 @relation(fields: [operationId], references: [id], onDelete: SetNull)
+  category                   String
+  description                String?
+  grossAmount                Decimal                    @db.Decimal(14, 2)
+  taxAmount                  Decimal                    @db.Decimal(14, 2)
+  netAmount                  Decimal                    @db.Decimal(14, 2)
+  currency                   String
+  postedAt                   DateTime
+  status                     RevenueStatus              @default(POSTED)
+  collectionMode             VisitCollectionMode?
+  transferChannel            String?
+  transferReference          String?
+  transferReceiptPath        String?
+  transferReceiptMimeType    String?
+  transferReceiptFileName    String?
   transferVerificationStatus TransferVerificationStatus @default(NOT_APPLICABLE)
-  counterpartyName       String?
-  counterpartyTaxNumber  String?
-  /** Increments on each queued ETA sale for this revenue row (distinct idempotency keys). */
-  fiscalSaleSeq          Int           @default(0)
-  /** Increments on each queued return/credit for this revenue row. */
-  fiscalReturnSeq        Int           @default(0)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  fiscalDocument FiscalDocument?
+  counterpartyName           String?
+  counterpartyTaxNumber      String?
+  /**
+   * Increments on each queued ETA sale for this revenue row (distinct idempotency keys).
+   */
+  fiscalSaleSeq              Int                        @default(0)
+  /**
+   * Increments on each queued return/credit for this revenue row.
+   */
+  fiscalReturnSeq            Int                        @default(0)
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  fiscalDocument             FiscalDocument?
 
   @@index([tenantId, clinicId, postedAt])
   @@index([appointmentId])
@@ -2317,41 +2329,41 @@ model Expense {
 }
 
 model Employee {
-  id                String          @id @default(cuid())
-  tenantId          String
-  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId          String
-  clinic            Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  employeeNumber    String
-  firstNameEn       String
-  lastNameEn        String
-  firstNameAr       String?
-  lastNameAr        String?
-  email             String?
-  phone             String
-  jobTitle          String
-  employmentType    EmploymentType
-  clinicalSpecialty ClinicalSpecialty?
-  commissionPercent Decimal?        @db.Decimal(5, 2)
-  hireDate          DateTime
-  salaryBase        Decimal         @db.Decimal(14, 2)
-  salaryCurrency    String?
-  recordStatus      EmployeeRecordStatus      @default(ACTIVE)
-  resignationDate   DateTime?                 @db.Date
-  separationReason  EmployeeSeparationReason?
-  userId            String?         @unique
-  user              User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id                   String                     @id @default(cuid())
+  tenantId             String
+  tenant               Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId             String
+  clinic               Clinic                     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  employeeNumber       String
+  firstNameEn          String
+  lastNameEn           String
+  firstNameAr          String?
+  lastNameAr           String?
+  email                String?
+  phone                String
+  jobTitle             String
+  employmentType       EmploymentType
+  clinicalSpecialty    ClinicalSpecialty?
+  commissionPercent    Decimal?                   @db.Decimal(5, 2)
+  hireDate             DateTime
+  salaryBase           Decimal                    @db.Decimal(14, 2)
+  salaryCurrency       String?
+  recordStatus         EmployeeRecordStatus       @default(ACTIVE)
+  resignationDate      DateTime?                  @db.Date
+  separationReason     EmployeeSeparationReason?
+  userId               String?                    @unique
+  user                 User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
   defaultExamRoomLabel String?
-  idDocRelativePath String?
-  idDocOriginalName String?
-  idDocMimeType     String?
-  attendances       Attendance[]
-  leaveRequests     LeaveRequest[]
-  employmentPeriods EmployeeEmploymentPeriod[]
-  payrollExpenses   Expense[]
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  deletedAt         DateTime?
+  idDocRelativePath    String?
+  idDocOriginalName    String?
+  idDocMimeType        String?
+  attendances          Attendance[]
+  leaveRequests        LeaveRequest[]
+  employmentPeriods    EmployeeEmploymentPeriod[]
+  payrollExpenses      Expense[]
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  deletedAt            DateTime?
 
   @@unique([tenantId, employeeNumber])
   @@index([tenantId])
@@ -2375,95 +2387,95 @@ model EmployeeEmploymentPeriod {
 }
 
 model Attendance {
-  id         String            @id @default(cuid())
+  id         String           @id @default(cuid())
   employeeId String
-  employee   Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  workDate   DateTime          @db.Date
+  employee   Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  workDate   DateTime         @db.Date
   clockIn    DateTime?
   clockOut   DateTime?
-  status     AttendanceStatus  @default(PRESENT)
+  status     AttendanceStatus @default(PRESENT)
   notes      String?
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   @@index([employeeId, workDate])
 }
 
 model LeaveRequest {
-  id          String      @id @default(cuid())
-  employeeId  String
-  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  type        LeaveType
-  startDate   DateTime    @db.Date
-  endDate     DateTime    @db.Date
-  status      LeaveStatus @default(PENDING)
-  reason      String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id         String      @id @default(cuid())
+  employeeId String
+  employee   Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       LeaveType
+  startDate  DateTime    @db.Date
+  endDate    DateTime    @db.Date
+  status     LeaveStatus @default(PENDING)
+  reason     String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   @@index([employeeId])
 }
 
 model Appointment {
-  id             String            @id @default(cuid())
-  tenantId       String
-  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId       String
-  clinic         Clinic            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  patientId      String
-  patient        Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  clinicianId    String
-  clinician      User              @relation("AppointmentClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
-  appointmentTypeId String?
-  appointmentType   AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
-  seriesId       String?
-  series         AppointmentSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
-  startsAt       DateTime
-  endsAt         DateTime?
-  feeAmount      Decimal           @default(0) @db.Decimal(14, 2)
-  scheduledCollectionMode VisitCollectionMode?
-  scheduledTransferChannel String?
-  status         AppointmentStatus @default(SCHEDULED)
-  whatsappConfirmedAt DateTime?
-  roomLabel      String?
-  queueStage     AppointmentQueueStage?
-  preferredRoomLabel String?
-  roomAssignedAt DateTime?
-  allowDoubleBook Boolean          @default(false)
-  checkedInAt    DateTime?
-  queueTicketNumber Int?
-  checkInPaymentAmount Decimal?    @db.Decimal(14, 2)
-  checkInCollectionMode VisitCollectionMode?
-  checkInTransferChannel String?
-  checkInTransferReference String?
-  calledAt       DateTime?
-  noShowAt       DateTime?
-  noShowRiskScore Decimal?  @db.Decimal(5, 2)
-  recurrenceIndex Int?
-  notes          String?
-  bookingSource          BookingSource @default(FRONT_DESK)
-  attributionJson        Json?
-  isNewPatientAtBooking  Boolean?
-  newPatientCheckedAt    DateTime?
-  satisfactionSurveys SatisfactionSurveyResponse[]
-  integrationClientId String?
-  integrationClient   IntegrationClient? @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
-  platformIntegrationClientId String?
-  platformIntegrationClient   PlatformIntegrationClient? @relation(fields: [platformIntegrationClientId], references: [id], onDelete: SetNull)
-  externalReference   String?
+  id                           String                       @id @default(cuid())
+  tenantId                     String
+  tenant                       Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId                     String
+  clinic                       Clinic                       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId                    String
+  patient                      Patient                      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId                  String
+  clinician                    User                         @relation("AppointmentClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  appointmentTypeId            String?
+  appointmentType              AppointmentType?             @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
+  seriesId                     String?
+  series                       AppointmentSeries?           @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  startsAt                     DateTime
+  endsAt                       DateTime?
+  feeAmount                    Decimal                      @default(0) @db.Decimal(14, 2)
+  scheduledCollectionMode      VisitCollectionMode?
+  scheduledTransferChannel     String?
+  status                       AppointmentStatus            @default(SCHEDULED)
+  whatsappConfirmedAt          DateTime?
+  roomLabel                    String?
+  queueStage                   AppointmentQueueStage?
+  preferredRoomLabel           String?
+  roomAssignedAt               DateTime?
+  allowDoubleBook              Boolean                      @default(false)
+  checkedInAt                  DateTime?
+  queueTicketNumber            Int?
+  checkInPaymentAmount         Decimal?                     @db.Decimal(14, 2)
+  checkInCollectionMode        VisitCollectionMode?
+  checkInTransferChannel       String?
+  checkInTransferReference     String?
+  calledAt                     DateTime?
+  noShowAt                     DateTime?
+  noShowRiskScore              Decimal?                     @db.Decimal(5, 2)
+  recurrenceIndex              Int?
+  notes                        String?
+  bookingSource                BookingSource                @default(FRONT_DESK)
+  attributionJson              Json?
+  isNewPatientAtBooking        Boolean?
+  newPatientCheckedAt          DateTime?
+  satisfactionSurveys          SatisfactionSurveyResponse[]
+  integrationClientId          String?
+  integrationClient            IntegrationClient?           @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
+  platformIntegrationClientId  String?
+  platformIntegrationClient    PlatformIntegrationClient?   @relation(fields: [platformIntegrationClientId], references: [id], onDelete: SetNull)
+  externalReference            String?
   marketplaceConfirmationDueAt DateTime?
   /// KX-06: who cancelled (PATIENT | CLINIC | SYSTEM), the reason shown to the patient, and deposit refund decision.
-  cancelledAt        DateTime?
-  cancelledBy        String?
-  cancellationReason String?
-  depositRefundable  Boolean?
-  rescheduleCount    Int       @default(0)
-  revenueEntries RevenueEntry[]
-  encounters     Encounter[]
-  rescheduleToken AppointmentRescheduleToken?
-  kiorexCommissionCharge KiorexCommissionCharge?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  cancelledAt                  DateTime?
+  cancelledBy                  String?
+  cancellationReason           String?
+  depositRefundable            Boolean?
+  rescheduleCount              Int                          @default(0)
+  revenueEntries               RevenueEntry[]
+  encounters                   Encounter[]
+  rescheduleToken              AppointmentRescheduleToken?
+  kiorexCommissionCharge       KiorexCommissionCharge?
+  createdAt                    DateTime                     @default(now())
+  updatedAt                    DateTime                     @updatedAt
 
   @@unique([integrationClientId, externalReference])
   @@unique([platformIntegrationClientId, externalReference])
@@ -2475,38 +2487,38 @@ model Appointment {
 }
 
 model Operation {
-  id              String   @id @default(cuid())
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId        String
-  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  patientId       String
-  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  clinicianId     String
-  clinician       User     @relation("OperationClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
-  createdByUserId String?
-  createdBy       User?    @relation("OperationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  operationDate   DateTime
-  totalCost       Decimal  @db.Decimal(14, 2)
-  downPayment     Decimal         @default(0) @db.Decimal(14, 2)
-  paidAmount      Decimal         @default(0) @db.Decimal(14, 2)
-  feeCurrency     String          @default("EGP")
-  comments        String?
-  status          OperationStatus @default(SCHEDULED)
-  noMedications   Boolean         @default(false)
+  id                  String                    @id @default(cuid())
+  tenantId            String
+  tenant              Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId            String
+  clinic              Clinic                    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId           String
+  patient             Patient                   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId         String
+  clinician           User                      @relation("OperationClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  createdByUserId     String?
+  createdBy           User?                     @relation("OperationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  operationDate       DateTime
+  totalCost           Decimal                   @db.Decimal(14, 2)
+  downPayment         Decimal                   @default(0) @db.Decimal(14, 2)
+  paidAmount          Decimal                   @default(0) @db.Decimal(14, 2)
+  feeCurrency         String                    @default("EGP")
+  comments            String?
+  status              OperationStatus           @default(SCHEDULED)
+  noMedications       Boolean                   @default(false)
   integrationClientId String?
-  integrationClient   IntegrationClient? @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
+  integrationClient   IntegrationClient?        @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
   externalReference   String?
-  documents       OperationDocument[]
-  medications     OperationMedication[]
-  preOpChecklist  OperationPreOpCheckItem[]
-  supplyUsages    OperationSupplyUsed[]
-  installments    OperationInstallment[]
-  operationNote   Json?
-  revenueEntries  RevenueEntry[]
-  invoices        Invoice[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime @updatedAt
+  documents           OperationDocument[]
+  medications         OperationMedication[]
+  preOpChecklist      OperationPreOpCheckItem[]
+  supplyUsages        OperationSupplyUsed[]
+  installments        OperationInstallment[]
+  operationNote       Json?
+  revenueEntries      RevenueEntry[]
+  invoices            Invoice[]
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
 
   @@unique([integrationClientId, externalReference])
   @@index([tenantId, clinicId, operationDate])
@@ -2553,44 +2565,44 @@ model OperationMedication {
 }
 
 model Invoice {
-  id                 String        @id @default(cuid())
-  tenantId           String
-  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId           String
-  clinic             Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  patientId          String
-  patient            Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  encounterId        String?
-  encounter          Encounter?    @relation(fields: [encounterId], references: [id], onDelete: SetNull)
-  operationId        String?
-  operation          Operation?    @relation(fields: [operationId], references: [id], onDelete: SetNull)
+  id                          String           @id @default(cuid())
+  tenantId                    String
+  tenant                      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId                    String
+  clinic                      Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId                   String
+  patient                     Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  encounterId                 String?
+  encounter                   Encounter?       @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  operationId                 String?
+  operation                   Operation?       @relation(fields: [operationId], references: [id], onDelete: SetNull)
   /// MN-05 — optional corporate / TPA payer for claim batching.
-  payerCompanyId     String?
-  payerCompany       PayerCompany? @relation(fields: [payerCompanyId], references: [id], onDelete: SetNull)
-  invoiceNumber      String
-  issueDate          DateTime      @default(now())
-  currency           String
-  backgroundColor    String
-  sectionsSnapshot   Json
-  patientName        String
-  patientMrn         String?
-  clinicNameEn       String
-  clinicNameAr       String
-  clinicAddressEn    String
-  clinicAddressAr    String
-  clinicPhone        String
-  clinicEmail        String
-  clinicLicenseNumber String
+  payerCompanyId              String?
+  payerCompany                PayerCompany?    @relation(fields: [payerCompanyId], references: [id], onDelete: SetNull)
+  invoiceNumber               String
+  issueDate                   DateTime         @default(now())
+  currency                    String
+  backgroundColor             String
+  sectionsSnapshot            Json
+  patientName                 String
+  patientMrn                  String?
+  clinicNameEn                String
+  clinicNameAr                String
+  clinicAddressEn             String
+  clinicAddressAr             String
+  clinicPhone                 String
+  clinicEmail                 String
+  clinicLicenseNumber         String
   clinicTaxRegistrationNumber String?
-  vatPercentSnapshot Decimal      @default(5) @db.Decimal(5, 2)
-  createdByUserId    String?
-  createdBy          User?         @relation("InvoiceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  lines              InvoiceLine[]
-  billingPayments    BillingPayment[]
-  fiscalDocument     FiscalDocument?
-  claimLines         ClaimLine[]
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  vatPercentSnapshot          Decimal          @default(5) @db.Decimal(5, 2)
+  createdByUserId             String?
+  createdBy                   User?            @relation("InvoiceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lines                       InvoiceLine[]
+  billingPayments             BillingPayment[]
+  fiscalDocument              FiscalDocument?
+  claimLines                  ClaimLine[]
+  createdAt                   DateTime         @default(now())
+  updatedAt                   DateTime         @updatedAt
 
   @@unique([clinicId, invoiceNumber])
   @@index([tenantId])
@@ -2602,19 +2614,19 @@ model Invoice {
 }
 
 model InvoiceLine {
-  id         String   @id @default(cuid())
-  invoiceId  String
-  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  purpose    String
-  amountPaid Decimal  @db.Decimal(14, 2)
-  quantity           Decimal  @default(1) @db.Decimal(10, 2)
-  unitPrice          Decimal? @db.Decimal(14, 2)
-  discountPercent    Decimal  @default(0) @db.Decimal(5, 2)
-  taxPercent         Decimal  @default(0) @db.Decimal(5, 2)
-  serviceCatalogItemId String?
-  serviceCatalogItem   ServiceCatalogItem? @relation(fields: [serviceCatalogItemId], references: [id], onDelete: SetNull)
-  discountNeedsApproval Boolean @default(false)
-  sortOrder  Int      @default(0)
+  id                    String              @id @default(cuid())
+  invoiceId             String
+  invoice               Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  purpose               String
+  amountPaid            Decimal             @db.Decimal(14, 2)
+  quantity              Decimal             @default(1) @db.Decimal(10, 2)
+  unitPrice             Decimal?            @db.Decimal(14, 2)
+  discountPercent       Decimal             @default(0) @db.Decimal(5, 2)
+  taxPercent            Decimal             @default(0) @db.Decimal(5, 2)
+  serviceCatalogItemId  String?
+  serviceCatalogItem    ServiceCatalogItem? @relation(fields: [serviceCatalogItemId], references: [id], onDelete: SetNull)
+  discountNeedsApproval Boolean             @default(false)
+  sortOrder             Int                 @default(0)
 
   @@index([invoiceId])
   @@index([serviceCatalogItemId])
@@ -2654,38 +2666,38 @@ model AuditLog {
 }
 
 model SupportTicket {
-  id               String               @id @default(cuid())
-  tenantId         String
-  tenant           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId         String?
-  clinic           Clinic?              @relation(fields: [clinicId], references: [id], onDelete: SetNull)
-  ticketNo         String
-  title            String
-  description      String
-  module           SupportProductModule
-  priority         SupportTicketPriority @default(MEDIUM)
-  status           SupportTicketStatus   @default(OPEN)
+  id                        String                @id @default(cuid())
+  tenantId                  String
+  tenant                    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId                  String?
+  clinic                    Clinic?               @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  ticketNo                  String
+  title                     String
+  description               String
+  module                    SupportProductModule
+  priority                  SupportTicketPriority @default(MEDIUM)
+  status                    SupportTicketStatus   @default(OPEN)
   /// GT-04: IN_APP | WHATSAPP
-  channel          String               @default("IN_APP")
-  sourcePhone      String?
-  firstRespondedAt DateTime?
-  firstResponseDueAt DateTime?
-  escalatedToEngineeringAt DateTime?
+  channel                   String                @default("IN_APP")
+  sourcePhone               String?
+  firstRespondedAt          DateTime?
+  firstResponseDueAt        DateTime?
+  escalatedToEngineeringAt  DateTime?
   engineeringEscalationNote String?
-  reporterUserId   String?
-  reporter         User?                @relation("SupportTicketReporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
-  assigneeUserId   String?
-  assignee         User?                @relation("SupportTicketAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
-  patientId        String?
-  patient          Patient?             @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  resourceType     String?
-  resourceId       String?
-  linkedAuditLogId String?
-  resolutionNotes  String?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  resolvedAt       DateTime?
-  events           SupportTicketEvent[]
+  reporterUserId            String?
+  reporter                  User?                 @relation("SupportTicketReporter", fields: [reporterUserId], references: [id], onDelete: SetNull)
+  assigneeUserId            String?
+  assignee                  User?                 @relation("SupportTicketAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  patientId                 String?
+  patient                   Patient?              @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  resourceType              String?
+  resourceId                String?
+  linkedAuditLogId          String?
+  resolutionNotes           String?
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  resolvedAt                DateTime?
+  events                    SupportTicketEvent[]
 
   @@unique([tenantId, ticketNo])
   @@index([tenantId, status, createdAt])
@@ -2710,22 +2722,22 @@ model SupportTicketEvent {
 
 /// PA-04 — owner-approved, time-boxed platform support session (PHI masked by default).
 model SupportAccessSession {
-  id                 String              @id @default(cuid())
+  id                 String                 @id @default(cuid())
   tenantId           String
-  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant             Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   requesterUserId    String
-  requester          User                @relation("SupportAccessRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  requester          User                   @relation("SupportAccessRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
   reason             String
-  status             SupportAccessStatus @default(PENDING)
-  durationMinutes    Int                 @default(60)
-  requestedUnmaskPhi Boolean             @default(false)
-  phiUnmasked        Boolean             @default(false)
+  status             SupportAccessStatus    @default(PENDING)
+  durationMinutes    Int                    @default(60)
+  requestedUnmaskPhi Boolean                @default(false)
+  phiUnmasked        Boolean                @default(false)
   approverUserId     String?
-  approver           User?               @relation("SupportAccessApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
+  approver           User?                  @relation("SupportAccessApprover", fields: [approverUserId], references: [id], onDelete: SetNull)
   decidedAt          DateTime?
   expiresAt          DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
   readLogs           SupportAccessReadLog[]
 
   @@index([tenantId, status, createdAt])
@@ -2749,21 +2761,21 @@ model SupportAccessReadLog {
 }
 
 model MarketplaceListing {
-  id            String         @id @default(cuid())
-  tenantId      String
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId      String
-  clinic        Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicianId   String
-  clinician     User           @relation(fields: [clinicianId], references: [id], onDelete: Cascade)
-  status        ListingStatus  @default(DRAFT)
-  pausedReason  String?
-  profileJson   Json           @default("{}")
-  listedAt      DateTime?
+  id           String        @id @default(cuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId     String
+  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicianId  String
+  clinician    User          @relation(fields: [clinicianId], references: [id], onDelete: Cascade)
+  status       ListingStatus @default(DRAFT)
+  pausedReason String?
+  profileJson  Json          @default("{}")
+  listedAt     DateTime?
   /// KX-09: per-doctor booking page slug (shares a namespace with clinic slugs).
-  bookingSlug   String?        @unique
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  bookingSlug  String?       @unique
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@unique([clinicId, clinicianId])
   @@index([tenantId, clinicId])
@@ -2828,37 +2840,37 @@ model KiorexReview {
 }
 
 model PlatformIntegrationClient {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String
-  clientKey     String    @unique
+  clientKey     String        @unique
   secretHash    String
-  scopes        String[]  @default(["MARKETPLACE"])
-  ipAllowlist   String[]  @default([])
+  scopes        String[]      @default(["MARKETPLACE"])
+  ipAllowlist   String[]      @default([])
   lastUsedAt    DateTime?
   deactivatedAt DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   slotHolds     SlotHold[]
   appointments  Appointment[]
 }
 
 model SlotHold {
-  id                          String   @id @default(cuid())
+  id                          String                    @id @default(cuid())
   tenantId                    String
-  tenant                      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                      Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clinicId                    String
-  clinic                      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinic                      Clinic                    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   clinicianId                 String
-  clinician                   User     @relation("SlotHoldClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  clinician                   User                      @relation("SlotHoldClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
   appointmentTypeId           String
-  appointmentType             AppointmentType @relation(fields: [appointmentTypeId], references: [id], onDelete: Restrict)
+  appointmentType             AppointmentType           @relation(fields: [appointmentTypeId], references: [id], onDelete: Restrict)
   startsAt                    DateTime
   endsAt                      DateTime
-  externalRef                 String   @unique
+  externalRef                 String                    @unique
   platformIntegrationClientId String
   platformIntegrationClient   PlatformIntegrationClient @relation(fields: [platformIntegrationClientId], references: [id], onDelete: Cascade)
   expiresAt                   DateTime
-  createdAt                   DateTime @default(now())
+  createdAt                   DateTime                  @default(now())
 
   @@index([clinicianId, startsAt])
   @@index([expiresAt])
@@ -2866,24 +2878,24 @@ model SlotHold {
 }
 
 model IntegrationClient {
-  id                String             @id @default(cuid())
-  tenantId          String
-  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name              String
-  clientKey         String
-  secretHash        String
-  scopes            IntegrationScope[]
-  allowedClinicIds  String[]           @default([])
-  createdByUserId   String?
-  createdBy         User?              @relation("IntegrationClientCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  lastUsedAt        DateTime?
-  deactivatedAt     DateTime?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  appointments      Appointment[]
-  operations        Operation[]
-  webhooks          IntegrationWebhook[]
-  failureLogs       IntegrationFailureLog[]
+  id               String                  @id @default(cuid())
+  tenantId         String
+  tenant           Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name             String
+  clientKey        String
+  secretHash       String
+  scopes           IntegrationScope[]
+  allowedClinicIds String[]                @default([])
+  createdByUserId  String?
+  createdBy        User?                   @relation("IntegrationClientCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  lastUsedAt       DateTime?
+  deactivatedAt    DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  appointments     Appointment[]
+  operations       Operation[]
+  webhooks         IntegrationWebhook[]
+  failureLogs      IntegrationFailureLog[]
 
   @@unique([tenantId, clientKey])
   @@index([tenantId])
@@ -2931,35 +2943,35 @@ model IntegrationFailureLog {
 }
 
 model PatientActiveProblem {
-  id           String                   @id @default(cuid())
-  tenantId     String
-  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  patientId    String
-  patient      Patient                  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  icd10Code    String?
-  labelEn      String
-  labelAr      String?
-  status       PatientActiveProblemStatus @default(ACTIVE)
-  onsetDate    DateTime?                @db.Date
-  resolvedAt   DateTime?
-  encounterId  String?
-  encounter    Encounter?               @relation(fields: [encounterId], references: [id], onDelete: SetNull)
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
+  id          String                     @id @default(cuid())
+  tenantId    String
+  tenant      Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId   String
+  patient     Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  icd10Code   String?
+  labelEn     String
+  labelAr     String?
+  status      PatientActiveProblemStatus @default(ACTIVE)
+  onsetDate   DateTime?                  @db.Date
+  resolvedAt  DateTime?
+  encounterId String?
+  encounter   Encounter?                 @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
 
   @@index([tenantId, patientId, status])
 }
 
 model PatientFamilyLink {
-  id              String              @id @default(cuid())
-  tenantId        String
-  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  fromPatientId   String
-  fromPatient     Patient             @relation("PatientFamilyFrom", fields: [fromPatientId], references: [id], onDelete: Cascade)
-  toPatientId     String
-  toPatient       Patient             @relation("PatientFamilyTo", fields: [toPatientId], references: [id], onDelete: Cascade)
-  relation        PatientFamilyRelation
-  createdAt       DateTime            @default(now())
+  id            String                @id @default(cuid())
+  tenantId      String
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromPatientId String
+  fromPatient   Patient               @relation("PatientFamilyFrom", fields: [fromPatientId], references: [id], onDelete: Cascade)
+  toPatientId   String
+  toPatient     Patient               @relation("PatientFamilyTo", fields: [toPatientId], references: [id], onDelete: Cascade)
+  relation      PatientFamilyRelation
+  createdAt     DateTime              @default(now())
 
   @@unique([tenantId, fromPatientId, toPatientId, relation])
   @@index([tenantId, fromPatientId])
@@ -3006,119 +3018,119 @@ model DentalChartTooth {
 }
 
 model AppointmentType {
-  id                   String   @id @default(cuid())
-  tenantId             String
-  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId             String?
-  clinic               Clinic?  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  nameEn               String
-  nameAr               String   @default("")
-  durationMinutes      Int      @default(15)
-  feeAmount            Decimal  @default(0) @db.Decimal(14, 2)
-  colorHex             String   @default("#3b82f6")
-  bufferBeforeMin      Int      @default(0)
-  bufferAfterMin       Int      @default(0)
-  requiresRoom         Boolean  @default(false)
-  marketplaceBookable  Boolean  @default(false)
-  minNoticeMinutes     Int      @default(120)
-  maxDaysAhead         Int      @default(30)
-  depositAmount        Decimal? @db.Decimal(14, 2)
-  newPatientOnly       Boolean  @default(false)
-  isActive             Boolean  @default(true)
-  appointments         Appointment[]
-  series               AppointmentSeries[]
-  waitlist             AppointmentWaitlistEntry[]
-  slotHolds            SlotHold[]
-  clinicianOverrides   ClinicianAppointmentTypeOverride[]
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                  String                             @id @default(cuid())
+  tenantId            String
+  tenant              Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId            String?
+  clinic              Clinic?                            @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  nameEn              String
+  nameAr              String                             @default("")
+  durationMinutes     Int                                @default(15)
+  feeAmount           Decimal                            @default(0) @db.Decimal(14, 2)
+  colorHex            String                             @default("#3b82f6")
+  bufferBeforeMin     Int                                @default(0)
+  bufferAfterMin      Int                                @default(0)
+  requiresRoom        Boolean                            @default(false)
+  marketplaceBookable Boolean                            @default(false)
+  minNoticeMinutes    Int                                @default(120)
+  maxDaysAhead        Int                                @default(30)
+  depositAmount       Decimal?                           @db.Decimal(14, 2)
+  newPatientOnly      Boolean                            @default(false)
+  isActive            Boolean                            @default(true)
+  appointments        Appointment[]
+  series              AppointmentSeries[]
+  waitlist            AppointmentWaitlistEntry[]
+  slotHolds           SlotHold[]
+  clinicianOverrides  ClinicianAppointmentTypeOverride[]
+  createdAt           DateTime                           @default(now())
+  updatedAt           DateTime                           @updatedAt
 
   @@index([tenantId, clinicId])
 }
 
 model ClinicianAppointmentTypeOverride {
-  tenantId            String
-  tenant              Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicianId         String
-  clinician           User            @relation("ClinicianApptTypeOverride", fields: [clinicianId], references: [id], onDelete: Cascade)
-  appointmentTypeId   String
-  appointmentType     AppointmentType @relation(fields: [appointmentTypeId], references: [id], onDelete: Cascade)
-  durationMinutes     Int?
-  feeAmount           Decimal?        @db.Decimal(14, 2)
-  updatedAt           DateTime        @updatedAt
+  tenantId          String
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicianId       String
+  clinician         User            @relation("ClinicianApptTypeOverride", fields: [clinicianId], references: [id], onDelete: Cascade)
+  appointmentTypeId String
+  appointmentType   AppointmentType @relation(fields: [appointmentTypeId], references: [id], onDelete: Cascade)
+  durationMinutes   Int?
+  feeAmount         Decimal?        @db.Decimal(14, 2)
+  updatedAt         DateTime        @updatedAt
 
   @@id([clinicianId, appointmentTypeId])
   @@index([tenantId, appointmentTypeId])
 }
 
 model ClinicianAvailabilityTemplate {
-  id           String   @id @default(cuid())
-  tenantId     String
-  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId     String
-  clinic       Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  clinicianId  String
-  clinician    User     @relation("ClinicianAvailability", fields: [clinicianId], references: [id], onDelete: Cascade)
-  weekJson             Json
-  blockedJson          Json     @default("[]")
+  id                  String   @id @default(cuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId            String
+  clinic              Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicianId         String
+  clinician           User     @relation("ClinicianAvailability", fields: [clinicianId], references: [id], onDelete: Cascade)
+  weekJson            Json
+  blockedJson         Json     @default("[]")
   /// Max marketplace bookings per local clinic day (KX-03).
-  marketplaceDailyCap  Int      @default(20)
-  updatedAt            DateTime @updatedAt
-  createdAt    DateTime @default(now())
+  marketplaceDailyCap Int      @default(20)
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
 
   @@unique([tenantId, clinicId, clinicianId])
 }
 
 model AppointmentSeries {
-  id                String   @id @default(cuid())
+  id                String           @id @default(cuid())
   tenantId          String
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clinicId          String
-  clinic            Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinic            Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   patientId         String
-  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient           Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
   clinicianId       String
-  clinician         User     @relation("AppointmentSeriesClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  clinician         User             @relation("AppointmentSeriesClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
   appointmentTypeId String?
   appointmentType   AppointmentType? @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
   label             String
   totalSessions     Int
-  completedSessions Int      @default(0)
-  packagePaidAmount Decimal  @default(0) @db.Decimal(14, 2)
-  cadenceDays       Int      @default(7)
-  startsOn          DateTime @db.Date
+  completedSessions Int              @default(0)
+  packagePaidAmount Decimal          @default(0) @db.Decimal(14, 2)
+  cadenceDays       Int              @default(7)
+  startsOn          DateTime         @db.Date
   appointments      Appointment[]
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([tenantId, patientId])
 }
 
 model AppointmentWaitlistEntry {
-  id                String                  @id @default(cuid())
-  tenantId          String
-  tenant            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId          String
-  clinic            Clinic                  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  patientId         String
-  patient           Patient                 @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  clinicianId       String?
-  clinician         User?                   @relation("WaitlistClinician", fields: [clinicianId], references: [id], onDelete: SetNull)
-  appointmentTypeId String?
-  appointmentType   AppointmentType?        @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
-  preferredFrom     DateTime?
-  preferredTo       DateTime?
-  status            AppointmentWaitlistStatus @default(WAITING)
-  offeredSlotAt     DateTime?
-  notes             String?
+  id                          String                    @id @default(cuid())
+  tenantId                    String
+  tenant                      Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId                    String
+  clinic                      Clinic                    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId                   String
+  patient                     Patient                   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinicianId                 String?
+  clinician                   User?                     @relation("WaitlistClinician", fields: [clinicianId], references: [id], onDelete: SetNull)
+  appointmentTypeId           String?
+  appointmentType             AppointmentType?          @relation(fields: [appointmentTypeId], references: [id], onDelete: SetNull)
+  preferredFrom               DateTime?
+  preferredTo                 DateTime?
+  status                      AppointmentWaitlistStatus @default(WAITING)
+  offeredSlotAt               DateTime?
+  notes                       String?
   /// CLINIC (front desk) | KIOREX (joined from the Kiorex patient app via marketplace/v1/waitlist).
-  source            String                  @default("CLINIC")
+  source                      String                    @default("CLINIC")
   /// Kiorex waitlist reference for source=KIOREX (idempotency key for join / leave / offers).
-  externalRef       String?                 @unique
+  externalRef                 String?                   @unique
   platformIntegrationClientId String?
-  createdAt         DateTime                @default(now())
-  updatedAt         DateTime                @updatedAt
-  slotOffers        WaitlistSlotOffer[]
+  createdAt                   DateTime                  @default(now())
+  updatedAt                   DateTime                  @updatedAt
+  slotOffers                  WaitlistSlotOffer[]
 
   @@index([tenantId, clinicId, status])
   @@index([patientId])
@@ -3166,17 +3178,17 @@ model WaitlistOpenSlot {
 
 /// FS-03 one WhatsApp offer of a slot to one waitlisted patient. activeSlotId = slotId while PENDING, so a slot can never be on offer to two people at once.
 model WaitlistSlotOffer {
-  id                  String              @id @default(cuid())
+  id                  String                   @id @default(cuid())
   tenantId            String
-  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant              Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   slotId              String
-  slot                WaitlistOpenSlot    @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  slot                WaitlistOpenSlot         @relation(fields: [slotId], references: [id], onDelete: Cascade)
   waitlistEntryId     String
   waitlistEntry       AppointmentWaitlistEntry @relation(fields: [waitlistEntryId], references: [id], onDelete: Cascade)
   patientId           String
-  status              WaitlistOfferStatus @default(PENDING)
-  activeSlotId        String?             @unique
-  offeredAt           DateTime            @default(now())
+  status              WaitlistOfferStatus      @default(PENDING)
+  activeSlotId        String?                  @unique
+  offeredAt           DateTime                 @default(now())
   expiresAt           DateTime
   respondedAt         DateTime?
   outboundMessageId   String?
@@ -3209,16 +3221,16 @@ model IntegrationWebhook {
 }
 
 model OperationPreOpCheckItem {
-  id          String    @id @default(cuid())
-  tenantId    String
-  operationId String
-  operation   Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  labelEn     String
-  labelAr     String    @default("")
-  completedAt DateTime?
+  id                String    @id @default(cuid())
+  tenantId          String
+  operationId       String
+  operation         Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  labelEn           String
+  labelAr           String    @default("")
+  completedAt       DateTime?
   completedByUserId String?
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
+  sortOrder         Int       @default(0)
+  createdAt         DateTime  @default(now())
 
   @@index([operationId])
   @@index([tenantId])
@@ -3240,72 +3252,72 @@ model OperationSupplyUsed {
 }
 
 model OperationInstallment {
-  id          String    @id @default(cuid())
-  tenantId    String
-  operationId String
-  operation   Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  dueOn       DateTime  @db.Date
-  amount      Decimal   @db.Decimal(14, 2)
-  paidAt      DateTime?
+  id             String    @id @default(cuid())
+  tenantId       String
+  operationId    String
+  operation      Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  dueOn          DateTime  @db.Date
+  amount         Decimal   @db.Decimal(14, 2)
+  paidAt         DateTime?
   /// MN-06 — split payment that completed this installment.
-  paymentId   String?
+  paymentId      String?
   /// MN-06 — last WhatsApp due reminder sent to the patient.
   reminderSentAt DateTime?
-  createdAt   DateTime  @default(now())
+  createdAt      DateTime  @default(now())
 
   @@index([operationId])
   @@index([tenantId, dueOn])
 }
 
 model ServiceCatalogItem {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  code      String
-  nameEn    String
-  nameAr    String   @default("")
-  category  String   @default("GENERAL")
-  active    Boolean  @default(true)
-  prices    ServicePrice[]
+  id             String                 @id @default(cuid())
+  tenantId       String
+  tenant         Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code           String
+  nameEn         String
+  nameAr         String                 @default("")
+  category       String                 @default("GENERAL")
+  active         Boolean                @default(true)
+  prices         ServicePrice[]
   contractPrices ContractServicePrice[]
-  invoiceLines InvoiceLine[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  invoiceLines   InvoiceLine[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
 
   @@unique([tenantId, code])
   @@index([tenantId, active])
 }
 
 model ServicePrice {
-  id              String             @id @default(cuid())
-  tenantId        String
-  catalogItemId   String
-  catalogItem     ServiceCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
-  effectiveFrom   DateTime           @db.Date
-  effectiveTo     DateTime?          @db.Date
-  amount          Decimal            @db.Decimal(14, 2)
-  currency        String             @default("EGP")
-  createdAt       DateTime           @default(now())
+  id            String             @id @default(cuid())
+  tenantId      String
+  catalogItemId String
+  catalogItem   ServiceCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  effectiveFrom DateTime           @db.Date
+  effectiveTo   DateTime?          @db.Date
+  amount        Decimal            @db.Decimal(14, 2)
+  currency      String             @default("EGP")
+  createdAt     DateTime           @default(now())
 
   @@index([catalogItemId, effectiveFrom])
   @@index([tenantId])
 }
 
 model PayerCompany {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  nameEn      String
-  nameAr      String   @default("")
-  contractRef String?
-  active      Boolean  @default(true)
+  id             String                  @id @default(cuid())
+  tenantId       String
+  tenant         Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nameEn         String
+  nameAr         String                  @default("")
+  contractRef    String?
+  active         Boolean                 @default(true)
   contractPrices ContractServicePrice[]
-  preAuths    PayerPreAuthorization[]
-  invoices    Invoice[]
-  claimBatches ClaimBatch[]
-  remittances ClaimRemittance[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  preAuths       PayerPreAuthorization[]
+  invoices       Invoice[]
+  claimBatches   ClaimBatch[]
+  remittances    ClaimRemittance[]
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
 
   @@index([tenantId, active])
 }
@@ -3335,52 +3347,52 @@ enum RemittanceLineMatchStatus {
 }
 
 model ClaimBatch {
-  id               String           @id @default(cuid())
-  tenantId         String
-  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  payerCompanyId   String
-  payerCompany     PayerCompany     @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
-  periodFrom       DateTime         @db.Date
-  periodTo         DateTime         @db.Date
-  status           ClaimBatchStatus @default(DRAFT)
-  currency         String           @default("EGP")
-  submittedAt      DateTime?
-  b2bInvoiceNumber String?
+  id                String            @id @default(cuid())
+  tenantId          String
+  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payerCompanyId    String
+  payerCompany      PayerCompany      @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
+  periodFrom        DateTime          @db.Date
+  periodTo          DateTime          @db.Date
+  status            ClaimBatchStatus  @default(DRAFT)
+  currency          String            @default("EGP")
+  submittedAt       DateTime?
+  b2bInvoiceNumber  String?
   b2bInvoicePayload Json?
-  lines            ClaimLine[]
-  remittances      ClaimRemittance[]
-  createdByUserId  String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  lines             ClaimLine[]
+  remittances       ClaimRemittance[]
+  createdByUserId   String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@index([tenantId, payerCompanyId, periodFrom])
   @@index([tenantId, status])
 }
 
 model ClaimLine {
-  id               String          @id @default(cuid())
+  id               String                @id @default(cuid())
   tenantId         String
   batchId          String
-  batch            ClaimBatch      @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch            ClaimBatch            @relation(fields: [batchId], references: [id], onDelete: Cascade)
   invoiceId        String
-  invoice          Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  invoice          Invoice               @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   invoiceLineId    String?
   patientId        String
   preAuthId        String?
   /// Stable ref for remittance matching (defaults to invoice number).
   externalRef      String
-  amountClaimed    Decimal         @db.Decimal(14, 2)
-  amountCopay      Decimal         @default(0) @db.Decimal(14, 2)
-  amountApproved   Decimal?        @db.Decimal(14, 2)
-  amountPaid       Decimal?        @db.Decimal(14, 2)
-  status           ClaimLineStatus @default(PENDING)
+  amountClaimed    Decimal               @db.Decimal(14, 2)
+  amountCopay      Decimal               @default(0) @db.Decimal(14, 2)
+  amountApproved   Decimal?              @db.Decimal(14, 2)
+  amountPaid       Decimal?              @db.Decimal(14, 2)
+  status           ClaimLineStatus       @default(PENDING)
   rejectionReason  String?
   resubmissionOfId String?
-  resubmissionOf   ClaimLine?      @relation("ClaimLineResubmit", fields: [resubmissionOfId], references: [id], onDelete: SetNull)
-  resubmissions    ClaimLine[]     @relation("ClaimLineResubmit")
+  resubmissionOf   ClaimLine?            @relation("ClaimLineResubmit", fields: [resubmissionOfId], references: [id], onDelete: SetNull)
+  resubmissions    ClaimLine[]           @relation("ClaimLineResubmit")
   remittanceLines  ClaimRemittanceLine[]
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   @@unique([batchId, invoiceId, invoiceLineId])
   @@index([tenantId, status])
@@ -3410,109 +3422,109 @@ model ClaimRemittance {
 }
 
 model ClaimRemittanceLine {
-  id          String                    @id @default(cuid())
+  id           String                    @id @default(cuid())
   remittanceId String
-  remittance  ClaimRemittance           @relation(fields: [remittanceId], references: [id], onDelete: Cascade)
-  claimLineId String?
-  claimLine   ClaimLine?                @relation(fields: [claimLineId], references: [id], onDelete: SetNull)
-  externalRef String
-  amount      Decimal                   @db.Decimal(14, 2)
-  status      RemittanceLineMatchStatus @default(UNMATCHED)
-  createdAt   DateTime                  @default(now())
+  remittance   ClaimRemittance           @relation(fields: [remittanceId], references: [id], onDelete: Cascade)
+  claimLineId  String?
+  claimLine    ClaimLine?                @relation(fields: [claimLineId], references: [id], onDelete: SetNull)
+  externalRef  String
+  amount       Decimal                   @db.Decimal(14, 2)
+  status       RemittanceLineMatchStatus @default(UNMATCHED)
+  createdAt    DateTime                  @default(now())
 
   @@index([remittanceId])
   @@index([claimLineId])
 }
 
 model ContractServicePrice {
-  id            String             @id @default(cuid())
-  tenantId      String
-  payerCompanyId String
-  payerCompany  PayerCompany       @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
-  catalogItemId String
-  catalogItem   ServiceCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
-  amount        Decimal            @db.Decimal(14, 2)
-  currency      String             @default("EGP")
-  effectiveFrom DateTime           @db.Date
-  effectiveTo   DateTime?          @db.Date
-  patientCopayPercent Decimal      @default(0) @db.Decimal(5, 2)
-  createdAt     DateTime           @default(now())
+  id                  String             @id @default(cuid())
+  tenantId            String
+  payerCompanyId      String
+  payerCompany        PayerCompany       @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
+  catalogItemId       String
+  catalogItem         ServiceCatalogItem @relation(fields: [catalogItemId], references: [id], onDelete: Cascade)
+  amount              Decimal            @db.Decimal(14, 2)
+  currency            String             @default("EGP")
+  effectiveFrom       DateTime           @db.Date
+  effectiveTo         DateTime?          @db.Date
+  patientCopayPercent Decimal            @default(0) @db.Decimal(5, 2)
+  createdAt           DateTime           @default(now())
 
   @@index([payerCompanyId, catalogItemId])
   @@index([tenantId])
 }
 
 model BillingPayment {
-  id              String   @id @default(cuid())
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId        String
-  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  patientId       String
-  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  invoiceId       String?
-  invoice         Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  totalAmount     Decimal  @db.Decimal(14, 2)
-  currency        String   @default("EGP")
-  cashierUserId   String?
-  allocations     BillingPaymentAllocation[]
-  fiscalDocument  FiscalDocument?
-  createdAt       DateTime @default(now())
+  id             String                     @id @default(cuid())
+  tenantId       String
+  tenant         Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId       String
+  clinic         Clinic                     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  invoiceId      String?
+  invoice        Invoice?                   @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  totalAmount    Decimal                    @db.Decimal(14, 2)
+  currency       String                     @default("EGP")
+  cashierUserId  String?
+  allocations    BillingPaymentAllocation[]
+  fiscalDocument FiscalDocument?
+  createdAt      DateTime                   @default(now())
 
   @@index([tenantId, clinicId, createdAt])
   @@index([patientId])
 }
 
 model BillingPaymentAllocation {
-  id        String        @id @default(cuid())
-  paymentId String
-  payment   BillingPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  method    PaymentMethod
-  amount    Decimal       @db.Decimal(14, 2)
+  id             String         @id @default(cuid())
+  paymentId      String
+  payment        BillingPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  method         PaymentMethod
+  amount         Decimal        @db.Decimal(14, 2)
   /// Revenue row posted (via postRevenue) for this allocation.
-  revenueEntryId String?  @unique
+  revenueEntryId String?        @unique
 
   @@index([paymentId])
 }
 
 model CreditNote {
-  id          String   @id @default(cuid())
-  tenantId    String
-  clinicId    String
-  patientId   String
-  invoiceId   String?
-  amount      Decimal  @db.Decimal(14, 2)
-  currency    String   @default("EGP")
-  reason      String
+  id               String   @id @default(cuid())
+  tenantId         String
+  clinicId         String
+  patientId        String
+  invoiceId        String?
+  amount           Decimal  @db.Decimal(14, 2)
+  currency         String   @default("EGP")
+  reason           String
   approvedByUserId String?
-  createdAt   DateTime @default(now())
+  createdAt        DateTime @default(now())
 
   @@index([tenantId, clinicId])
   @@index([patientId])
 }
 
 model PatientServicePackage {
-  id                String   @id @default(cuid())
+  id                String                      @id @default(cuid())
   tenantId          String
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant            Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   patientId         String
-  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient           Patient                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
   nameEn            String
-  nameAr            String   @default("")
+  nameAr            String                      @default("")
   totalSessions     Int
   sessionsRemaining Int
-  paidAmount        Decimal  @default(0) @db.Decimal(14, 2)
-  currency          String   @default("EGP")
-  expiresOn         DateTime? @db.Date
+  paidAmount        Decimal                     @default(0) @db.Decimal(14, 2)
+  currency          String                      @default("EGP")
+  expiresOn         DateTime?                   @db.Date
   /// MN-01 — clinic that sold the package (cash movement + per-session revenue land here).
   clinicId          String?
   /// MN-01 — ACTIVE | EXHAUSTED | CANCELLED. Expiry is derived from `expiresOn`.
-  status            String   @default("ACTIVE")
+  status            String                      @default("ACTIVE")
   paymentMethod     PaymentMethod?
   soldByUserId      String?
   consumptions      PatientPackageConsumption[]
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
 
   @@index([tenantId, patientId])
 }
@@ -3585,36 +3597,36 @@ model BillingRefund {
 
 /// MN-01 — money taken before the service: a liability until applied (revenue) or released (cash back).
 model PatientDeposit {
-  id              String        @id @default(cuid())
-  tenantId        String
-  clinicId        String
-  patientId       String
-  appointmentId   String?
-  amount          Decimal       @db.Decimal(14, 2)
-  currency        String
-  method          PaymentMethod
+  id                 String        @id @default(cuid())
+  tenantId           String
+  clinicId           String
+  patientId          String
+  appointmentId      String?
+  amount             Decimal       @db.Decimal(14, 2)
+  currency           String
+  method             PaymentMethod
   /// CLINIC | KIOREX_PAY | PAYMENT_LINK
-  source          String        @default("CLINIC")
+  source             String        @default("CLINIC")
   /// PENDING | HELD | APPLIED | RELEASED | FORFEITED | EXPIRED | CANCELLED (EXPIRED/CANCELLED: unpaid link voided)
-  status          String        @default("HELD")
-  revenueEntryId  String?       @unique
-  paymentId       String?       @unique
+  status             String        @default("HELD")
+  revenueEntryId     String?       @unique
+  paymentId          String?       @unique
   /// KX-07 — payment reference from the collector (Kiorex Pay payment id, gateway ref).
-  externalRef     String?
+  externalRef        String?
   /// KX-07 — Kiorex payout that settled this deposit to the clinic.
-  payoutRef       String?
+  payoutRef          String?
   /// FS-04 — sha256 of the payment-link token (raw token only ever goes to the patient).
-  linkTokenHash   String?       @unique
-  linkExpiresAt   DateTime?
-  linkSentAt      DateTime?
+  linkTokenHash      String?       @unique
+  linkExpiresAt      DateTime?
+  linkSentAt         DateTime?
   /// FS-04 — why the deposit was asked for: PATIENT_FLAG | NO_SHOWS | RISK_SCORE | APPOINTMENT_TYPE | MANUAL
   requirementReasons Json?
-  paidAt          DateTime?
-  createdByUserId String?
-  appliedAt       DateTime?
-  releasedAt      DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  paidAt             DateTime?
+  createdByUserId    String?
+  appliedAt          DateTime?
+  releasedAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   @@unique([tenantId, source, externalRef])
   @@index([tenantId, patientId])
@@ -3639,19 +3651,19 @@ model KiorexPayout {
 }
 
 model CashierShiftClose {
-  id              String   @id @default(cuid())
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId        String
-  clinic          Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  cashierUserId   String
-  shiftDate       DateTime @db.Date
-  expectedCash    Decimal  @db.Decimal(14, 2)
-  countedCash     Decimal  @db.Decimal(14, 2)
-  expectedCard    Decimal  @db.Decimal(14, 2)
-  countedCard     Decimal  @db.Decimal(14, 2)
-  notes           String?
-  closedAt        DateTime @default(now())
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId      String
+  clinic        Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  cashierUserId String
+  shiftDate     DateTime @db.Date
+  expectedCash  Decimal  @db.Decimal(14, 2)
+  countedCash   Decimal  @db.Decimal(14, 2)
+  expectedCard  Decimal  @db.Decimal(14, 2)
+  countedCard   Decimal  @db.Decimal(14, 2)
+  notes         String?
+  closedAt      DateTime @default(now())
 
   @@index([tenantId, clinicId, shiftDate])
 }
@@ -3696,28 +3708,28 @@ model CashierShift {
 
 /// MN-02 — doctor revenue-share rule. The most specific active match wins (clinician > service > payer > clinic, then priority).
 model CommissionRule {
-  id              String   @id @default(cuid())
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicianId     String?
-  clinicId        String?
+  id                   String   @id @default(cuid())
+  tenantId             String
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicianId          String?
+  clinicId             String?
   serviceCatalogItemId String?
   /// MN-02 — service match on the visit's appointment type.
-  appointmentTypeId String?
+  appointmentTypeId    String?
   /// MN-02 — service match on the revenue category (VISIT_FEE, OPERATION_PAYMENT, PACKAGE_SESSION…).
-  revenueCategory String?
+  revenueCategory      String?
   /// MN-02 — payer match: PATIENT, KIOREX_PAY (deposit collected by Kiorex)…
-  payerKey        String?
+  payerKey             String?
   /// PERCENT | FIXED_PER_VISIT | ROOM_RENTAL
-  ruleType        String   @default("PERCENT")
-  percent         Decimal? @db.Decimal(5, 2)
-  fixedAmount     Decimal? @db.Decimal(14, 2)
-  roomRental      Boolean  @default(false)
-  priority        Int      @default(0)
-  label           String?
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  ruleType             String   @default("PERCENT")
+  percent              Decimal? @db.Decimal(5, 2)
+  fixedAmount          Decimal? @db.Decimal(14, 2)
+  roomRental           Boolean  @default(false)
+  priority             Int      @default(0)
+  label                String?
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@index([tenantId, active])
 }
@@ -3745,33 +3757,33 @@ model DoctorStatement {
 }
 
 model PayerPreAuthorization {
-  id              String       @id @default(cuid())
-  tenantId        String
-  payerCompanyId  String
-  payerCompany    PayerCompany @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
-  patientId       String
-  referenceCode   String
-  approvedAmount  Decimal?     @db.Decimal(14, 2)
-  status          String       @default("PENDING")
-  validUntil      DateTime?    @db.Date
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id             String       @id @default(cuid())
+  tenantId       String
+  payerCompanyId String
+  payerCompany   PayerCompany @relation(fields: [payerCompanyId], references: [id], onDelete: Cascade)
+  patientId      String
+  referenceCode  String
+  approvedAmount Decimal?     @db.Decimal(14, 2)
+  status         String       @default("PENDING")
+  validUntil     DateTime?    @db.Date
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([tenantId, patientId])
   @@index([payerCompanyId])
 }
 
 model PatientDataProtectionConsent {
-  id              String   @id @default(cuid())
-  tenantId        String
-  patientId       String
-  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  signedAt        DateTime @default(now())
-  signedOnTablet  Boolean  @default(true)
-  signerName      String?
-  locale          String   @default("ar")
-  ipAddress       String?
-  createdAt       DateTime @default(now())
+  id             String   @id @default(cuid())
+  tenantId       String
+  patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  signedAt       DateTime @default(now())
+  signedOnTablet Boolean  @default(true)
+  signerName     String?
+  locale         String   @default("ar")
+  ipAddress      String?
+  createdAt      DateTime @default(now())
 
   @@index([tenantId, patientId])
 }
@@ -3803,18 +3815,18 @@ model PatientRecordShareConsent {
 
 /// SC-03 — effective consent per purpose (AI, marketplace, data processing).
 model PatientConsent {
-  id               String   @id @default(cuid())
-  tenantId         String
-  patientId        String
-  patient          Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  purpose          String
-  granted          Boolean
-  source           String
-  capturedAt       DateTime @default(now())
-  signerName       String?
-  signedOnTablet   Boolean?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id             String   @id @default(cuid())
+  tenantId       String
+  patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  purpose        String
+  granted        Boolean
+  source         String
+  capturedAt     DateTime @default(now())
+  signerName     String?
+  signedOnTablet Boolean?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@unique([patientId, purpose])
   @@index([tenantId, patientId])
@@ -3854,18 +3866,18 @@ model MessagingConsent {
 }
 
 model MessageTemplate {
-  id          String         @id @default(cuid())
-  tenantId    String
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  key         String
-  channel     MessageChannel
-  subjectEn   String?
-  subjectAr   String?
-  bodyEn      String
-  bodyAr      String
-  active      Boolean        @default(true)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id        String         @id @default(cuid())
+  tenantId  String
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  key       String
+  channel   MessageChannel
+  subjectEn String?
+  subjectAr String?
+  bodyEn    String
+  bodyAr    String
+  active    Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@unique([tenantId, key, channel])
 }
@@ -3891,15 +3903,15 @@ model OutboxEvent {
 }
 
 model AppointmentRescheduleToken {
-  id            String       @id @default(cuid())
+  id            String      @id @default(cuid())
   tenantId      String
-  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  appointmentId String       @unique
-  appointment   Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  tokenHash     String       @unique
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointmentId String      @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  tokenHash     String      @unique
   expiresAt     DateTime
   usedAt        DateTime?
-  createdAt     DateTime     @default(now())
+  createdAt     DateTime    @default(now())
 
   @@index([tenantId])
 }
@@ -4017,55 +4029,55 @@ model OutboundMessage {
 }
 
 model RecallCampaign {
-  id          String             @id @default(cuid())
-  tenantId    String
-  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  kind        RecallCampaignKind
-  nameEn      String
-  nameAr      String             @default("")
+  id                 String                     @id @default(cuid())
+  tenantId           String
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kind               RecallCampaignKind
+  nameEn             String
+  nameAr             String                     @default("")
   acquisitionChannel PatientAcquisitionChannel?
-  active      Boolean            @default(true)
-  createdAt   DateTime           @default(now())
+  active             Boolean                    @default(true)
+  createdAt          DateTime                   @default(now())
 
   @@index([tenantId, kind])
 }
 
 /// Retired by KX-08: Kiorex is the single source of reviews (see KiorexRating / KiorexReview). Kept read-only; no writers.
 model SatisfactionSurveyResponse {
-  id            String   @id @default(cuid())
+  id            String       @id @default(cuid())
   tenantId      String
   patientId     String
-  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
   appointmentId String?
   appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   encounterId   String?
   clinicianId   String?
   score         Int
   comment       String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime     @default(now())
 
   @@index([tenantId, clinicianId])
 }
 
 model ClinicalIncident {
-  id          String   @id @default(cuid())
-  tenantId    String
-  clinicId    String
+  id               String   @id @default(cuid())
+  tenantId         String
+  clinicId         String
   reportedByUserId String?
-  severity    String   @default("LOW")
-  summaryEn   String
-  summaryAr   String   @default("")
-  status      String   @default("OPEN")
-  createdAt   DateTime @default(now())
+  severity         String   @default("LOW")
+  summaryEn        String
+  summaryAr        String   @default("")
+  status           String   @default("OPEN")
+  createdAt        DateTime @default(now())
 
   @@index([tenantId, clinicId])
 }
 
 model AiScribeSession {
-  id                      String    @id @default(cuid())
+  id                      String               @id @default(cuid())
   tenantId                String
   encounterId             String
-  status                  String    @default("DRAFT")
+  status                  String               @default("DRAFT")
   transcript              String?
   draftNote               Json?
   draftRx                 Json?
@@ -4074,14 +4086,14 @@ model AiScribeSession {
   recordingStartedAt      DateTime?
   recordingStoppedAt      DateTime?
   /// Billed / metered audio length in whole seconds.
-  audioSeconds            Int       @default(0)
+  audioSeconds            Int                  @default(0)
   /// Clinic opt-in to keep audio after sign-off (default delete).
-  retainAudioAfterSignOff Boolean   @default(false)
+  retainAudioAfterSignOff Boolean              @default(false)
   sttProvider             String?
   draftLatencyMs          Int?
   approvedAt              DateTime?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
   audioChunks             AiScribeAudioChunk[]
 
   @@index([tenantId, encounterId])
@@ -4089,15 +4101,15 @@ model AiScribeSession {
 
 /// Transient audio chunks for AI-02; deleted on approve unless retainAudioAfterSignOff.
 model AiScribeAudioChunk {
-  id        String         @id @default(cuid())
-  sessionId String
-  session   AiScribeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  seq       Int
-  mimeType  String         @default("audio/webm")
+  id         String          @id @default(cuid())
+  sessionId  String
+  session    AiScribeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  seq        Int
+  mimeType   String          @default("audio/webm")
   /// Base64 payload (dev/local). Production may swap to object storage keys.
   payloadB64 String
   byteLength Int
-  createdAt DateTime       @default(now())
+  createdAt  DateTime        @default(now())
 
   @@unique([sessionId, seq])
   @@index([sessionId])
@@ -4129,19 +4141,19 @@ model CreditWallet {
 }
 
 model CreditLedgerEntry {
-  id        String           @id @default(cuid())
+  id        String          @id @default(cuid())
   walletId  String
-  wallet    CreditWallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  wallet    CreditWallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
   type      CreditEntryType
   reason    CreditReason
-  amount    Decimal          @db.Decimal(14, 2)
-  remaining Decimal?         @db.Decimal(14, 2)
+  amount    Decimal         @db.Decimal(14, 2)
+  remaining Decimal?        @db.Decimal(14, 2)
   expiresAt DateTime?
   sourceRef String?
   invoiceId String?
   note      String?
   createdBy String?
-  createdAt DateTime         @default(now())
+  createdAt DateTime        @default(now())
 
   @@index([walletId, createdAt])
   @@index([walletId, expiresAt])
@@ -4159,37 +4171,37 @@ model KiorlyInvoiceNumberSequence {
 }
 
 model KiorlyInvoice {
-  id              String              @id @default(cuid())
-  tenantId        String
-  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  number          String              @unique
-  periodKey       String
-  periodStart     DateTime
-  periodEnd       DateTime
-  status          KiorlyInvoiceStatus @default(DRAFT)
-  currency        String
-  subtotal        Decimal             @db.Decimal(14, 2)
-  creditsApplied  Decimal             @default(0) @db.Decimal(14, 2)
-  tax             Decimal             @db.Decimal(14, 2)
-  total           Decimal             @db.Decimal(14, 2)
-  amountPaid      Decimal             @default(0) @db.Decimal(14, 2)
-  issuedAt        DateTime?
-  dueAt           DateTime?
-  paidAt          DateTime?
-  etaUuid         String?
-  creditMemo      Boolean             @default(false)
-  voidOfInvoiceId String?
-  voidOfInvoice   KiorlyInvoice?      @relation("KiorlyInvoiceVoid", fields: [voidOfInvoiceId], references: [id], onDelete: SetNull)
-  voidCredits        KiorlyInvoice[]     @relation("KiorlyInvoiceVoid")
-  lines              KiorlyInvoiceLine[]
-  payments           KiorlyPayment[]
+  id                      String                   @id @default(cuid())
+  tenantId                String
+  tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number                  String                   @unique
+  periodKey               String
+  periodStart             DateTime
+  periodEnd               DateTime
+  status                  KiorlyInvoiceStatus      @default(DRAFT)
+  currency                String
+  subtotal                Decimal                  @db.Decimal(14, 2)
+  creditsApplied          Decimal                  @default(0) @db.Decimal(14, 2)
+  tax                     Decimal                  @db.Decimal(14, 2)
+  total                   Decimal                  @db.Decimal(14, 2)
+  amountPaid              Decimal                  @default(0) @db.Decimal(14, 2)
+  issuedAt                DateTime?
+  dueAt                   DateTime?
+  paidAt                  DateTime?
+  etaUuid                 String?
+  creditMemo              Boolean                  @default(false)
+  voidOfInvoiceId         String?
+  voidOfInvoice           KiorlyInvoice?           @relation("KiorlyInvoiceVoid", fields: [voidOfInvoiceId], references: [id], onDelete: SetNull)
+  voidCredits             KiorlyInvoice[]          @relation("KiorlyInvoiceVoid")
+  lines                   KiorlyInvoiceLine[]
+  payments                KiorlyPayment[]
   kiorexCommissionCharges KiorexCommissionCharge[]
-  paymentUnderReview Boolean             @default(false)
-  autoChargeAttempts Int                 @default(0)
-  nextAutoChargeAt   DateTime?
-  settlementSummaryJson Json?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  paymentUnderReview      Boolean                  @default(false)
+  autoChargeAttempts      Int                      @default(0)
+  nextAutoChargeAt        DateTime?
+  settlementSummaryJson   Json?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
 
   @@unique([tenantId, periodKey])
   @@index([tenantId, status])
@@ -4198,18 +4210,18 @@ model KiorlyInvoice {
 }
 
 model KiorlyPaymentMethod {
-  id        String                  @id @default(cuid())
-  tenantId  String
-  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  provider  String
-  kind      KiorlyPaymentMethodKind
-  tokenRef  String?
-  brand     String?
-  last4     String?
-  expMonth  Int?
-  expYear   Int?
-  isDefault Boolean                 @default(false)
-  createdAt DateTime                @default(now())
+  id                      String                  @id @default(cuid())
+  tenantId                String
+  tenant                  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  provider                String
+  kind                    KiorlyPaymentMethodKind
+  tokenRef                String?
+  brand                   String?
+  last4                   String?
+  expMonth                Int?
+  expYear                 Int?
+  isDefault               Boolean                 @default(false)
+  createdAt               DateTime                @default(now())
   defaultForSubscriptions Subscription[]
 
   @@index([tenantId, isDefault])
@@ -4233,9 +4245,9 @@ model KiorlyPayment {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
+  @@unique([provider, idempotencyKey])
   @@index([tenantId, createdAt])
   @@index([invoiceId, status])
-  @@unique([provider, idempotencyKey])
 }
 
 model KiorlyPaymentWebhookEvent {
@@ -4250,18 +4262,18 @@ model KiorlyPaymentWebhookEvent {
 }
 
 model KiorlyInvoiceLine {
-  id         String          @id @default(cuid())
+  id         String         @id @default(cuid())
   invoiceId  String
-  invoice    KiorlyInvoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice    KiorlyInvoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   type       KiorlyLineType
   descEn     String
   descAr     String
-  quantity   Decimal         @db.Decimal(14, 2)
-  unitAmount Decimal         @db.Decimal(14, 2)
-  amount     Decimal         @db.Decimal(14, 2)
+  quantity   Decimal        @db.Decimal(14, 2)
+  unitAmount Decimal        @db.Decimal(14, 2)
+  amount     Decimal        @db.Decimal(14, 2)
   refId      String?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 
   @@index([invoiceId])
 }
@@ -4378,7 +4390,6 @@ model KiorexOidcTransaction {
   @@index([expiresAt])
 }
 
-
 /// Mock-mode dev inbox (CLAUDE.md: messaging and provider integrations are MOCKED by default). One row per rendered
 /// outbound message (email / WhatsApp / SMS / push) and per simulated inbound reply. Written ONLY by mock adapters
 /// (KIORLY_PROVIDER_MODE != real), never in real mode, so it never holds real-provider traffic.
@@ -4409,4 +4420,124 @@ model DevInboxMessage {
   @@index([channel, createdAt])
   @@index([toAddress, createdAt])
   @@index([tenantId, createdAt])
+}
+
+/// CL07-PT04 — doctor's referral attached to / received for a physiotherapy patient.
+model PhysioReferral {
+  id                  String                @id @default(cuid())
+  tenantId            String
+  tenant              Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId           String
+  /// ATTACHED_DOCUMENT | KIORLY_REFERRAL (ReferralIssued by consent) | DIRECT_ACCESS (only where the market pack allows, Q9)
+  source              String
+  referringDoctorName String?
+  diagnosis           String?
+  documentKey         String?
+  /// ReferralIssued id for idempotent receipt.
+  externalRef         String?               @unique
+  createdByUserId     String?
+  createdAt           DateTime              @default(now())
+  plans               PhysioTreatmentPlan[]
+
+  @@index([tenantId, patientId])
+}
+
+/// CL07-PT01 — initial assessment.
+model PhysioAssessment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId       String
+  clinicianId     String
+  encounterId     String?
+  complaint       String
+  history         String   @default("")
+  painNrs         Int
+  rom             Json     @default("[]")
+  strength        Json     @default("[]")
+  specialTests    Json     @default("[]")
+  functionalGoals Json     @default("[]")
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId, patientId])
+}
+
+/// CL07-PT02 — treatment plan; sold as a package (MN01 PatientServicePackage) with a session counter.
+model PhysioTreatmentPlan {
+  id                String               @id @default(cuid())
+  tenantId          String
+  tenant            Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId         String
+  clinicianId       String
+  clinicId          String?
+  referralId        String?
+  referral          PhysioReferral?      @relation(fields: [referralId], references: [id], onDelete: SetNull)
+  assessmentId      String?
+  packageId         String?
+  seriesId          String?
+  sessionCount      Int
+  sessionsCompleted Int                  @default(0)
+  frequencyPerWeek  Int
+  modalities        Json                 @default("[]")
+  homeProgramme     Json                 @default("[]")
+  /// ACTIVE | DISCHARGED
+  status            String               @default("ACTIVE")
+  dischargeSummary  String?
+  dischargedAt      DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  notes             PhysioProgressNote[]
+  hepLinks          PhysioHepLink[]
+
+  @@index([tenantId, patientId])
+}
+
+/// CL07-PT03 — progress note per session.
+model PhysioProgressNote {
+  id            String              @id @default(cuid())
+  tenantId      String
+  planId        String
+  plan          PhysioTreatmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  patientId     String
+  clinicianId   String
+  appointmentId String?
+  sessionNo     Int
+  subjective    String              @default("")
+  intervention  String              @default("")
+  response      String              @default("")
+  nextPlan      String              @default("")
+  createdAt     DateTime            @default(now())
+
+  @@unique([planId, sessionNo])
+  @@index([tenantId, patientId])
+}
+
+/// CL07-PT01/03 — outcome measure points for trend charts (pain, ROM, strength, function scores).
+model PhysioOutcomeMeasure {
+  id         String   @id @default(cuid())
+  tenantId   String
+  patientId  String
+  planId     String?
+  /// PAIN_NRS | ROM | STRENGTH | FUNCTION
+  kind       String
+  /// Joint / movement / scale name, e.g. "knee_flexion", "ODI".
+  label      String
+  side       String?
+  value      Decimal  @db.Decimal(8, 2)
+  unit       String
+  measuredAt DateTime @default(now())
+
+  @@index([tenantId, patientId, kind, label])
+}
+
+/// CL07-PT05 — hashed share token for the home exercise programme page (no PHI on the page or in the message).
+model PhysioHepLink {
+  id        String              @id @default(cuid())
+  tenantId  String
+  planId    String
+  plan      PhysioTreatmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  tokenHash String              @unique
+  expiresAt DateTime
+  sharedAt  DateTime?
+  createdAt DateTime            @default(now())
 }

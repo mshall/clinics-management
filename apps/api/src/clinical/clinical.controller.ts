@@ -1,5 +1,5 @@
 import { FeatureGuard, FeatureFlagsService, RequiresFeature, specialtyTemplateFlagKey } from "../feature-flags/feature-flags-public";
-import { LAUNCH_SPECIALTIES } from "./launch-specialty-templates";
+import { isGatedTemplateSpecialty, specialtyTemplateCode } from "./launch-specialty-templates";
 import { Body, Controller, Delete, Get, Optional, Param, Patch, Post, Put, Query, StreamableFile, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { memoryStorage } from "multer";
@@ -55,8 +55,8 @@ export class ClinicalController {
     if (!this.flags) return rows;
     const visible: typeof rows = [];
     for (const r of rows) {
-      const gated = r.isSystemDefault && (LAUNCH_SPECIALTIES as readonly string[]).includes(r.specialty);
-      if (!gated || (await this.flags.isSpecialtyTemplateVisible(tenantId, specialtyTemplateFlagKey(r.specialty)))) visible.push(r);
+      const gated = r.isSystemDefault && isGatedTemplateSpecialty(r.specialty);
+      if (!gated || (await this.flags.isSpecialtyTemplateVisible(tenantId, specialtyTemplateFlagKey(specialtyTemplateCode(r.specialty))))) visible.push(r);
     }
     return visible;
   }

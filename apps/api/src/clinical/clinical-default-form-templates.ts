@@ -248,13 +248,27 @@ function specialtyParts(specialty: ClinicalSpecialty): SpecialtyParts {
         extra: [
           section("pt_assessment", "PT assessment", "تقييم العلاج الطبيعي", [
             f("chief_region", "Chief region", "المنطقة الرئيسية"),
+            f("pt_complaint", "Complaint", "الشكوى"),
+            f("pt_history", "History", "التاريخ المرضي"),
+            n("pain_nrs", "Pain (0–10)", "درجة الألم (0–10)"),
             f("posture_gait", "Posture & gait", "الوضعية والمشية"),
             f("rom_strength", "ROM & strength", "مدى الحركة والقوة"),
+            f("rom_per_joint", "Range of motion per joint (degrees)", "مدى الحركة لكل مفصل (بالدرجات)"),
+            f("strength_grades", "Strength grades (MRC 0–5)", "درجات القوة (0–5)"),
+            f("special_tests", "Special tests", "الاختبارات الخاصة"),
+            f("referral_source", "Referral (doctor / document)", "التحويل (الطبيب / المستند)"),
           ]),
           section("pt_plan", "PT plan", "خطة العلاج الطبيعي", [
             f("goals", "Functional goals", "الأهداف الوظيفية"),
             f("exercises", "Exercises / modalities", "التمارين / الوسائل"),
             n("sessions", "Sessions prescribed", "الجلسات الموصوفة"),
+            n("frequency_per_week", "Sessions per week", "عدد الجلسات أسبوعيًا"),
+            f("home_programme", "Home exercise programme", "برنامج التمارين المنزلي"),
+          ]),
+          section("pt_progress", "Progress note & discharge", "ملاحظة التقدم والخروج", [
+            f("session_response", "Response to this session", "الاستجابة لهذه الجلسة"),
+            n("pain_now", "Pain today (0–10)", "الألم اليوم (0–10)"),
+            f("discharge_summary", "Discharge summary", "ملخص الخروج"),
           ]),
         ],
       };

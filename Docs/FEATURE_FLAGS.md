@@ -28,7 +28,7 @@ dependencies live in code). Scopes: G global · M market · O organization.
 | `clinic.eprescription_handoff` | Module | G M O | pharmacy.module | `POST /encounters/:id/prescription/handoff` emits `PrescriptionIssued` (patient PRESCRIPTIONS consent token required, once per encounter) |
 | `clinic.lab_order_handoff` | Module | G M O | lab.module | `POST /clinical/orders/:id/handoff` emits `LabOrderPlaced` (patient LAB_RESULTS consent token required, once per order) |
 | `clinic.payers_tpa` | Module | G M O | — | claims: new payers / batches |
-| `clinic.specialty_templates.<code>` | Launch-locked | G M | gate: specialty board sign-off (NH010) | form-template list: hidden **only when a Kiorex snapshot exists AND marks the specialty gate-unsatisfied** (or OFF); no snapshot or a snapshot without the key ⇒ dev defaults show them |
+| `clinic.specialty_templates.<code>` | Launch-locked | G M | gate: specialty board sign-off (NH010); physio (`clinic.specialty_templates.physio`): GPR2, human, never recorded by code | form-template list: hidden **only when a Kiorex snapshot exists AND marks the specialty gate-unsatisfied** (or OFF); no snapshot or a snapshot without the key ⇒ dev defaults show them |
 | `clinic.referral_rewards` | Commercial | G M | — | referral attribution at signup, **new code minting** (`GET /growth/referral`) and **new reward grants** (referral stays PENDING while OFF; credits already earned are honoured) |
 | `clinic.field_rep_onboarding` | Commercial | G M | — | rep code at public signup |
 

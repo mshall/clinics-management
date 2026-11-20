@@ -79,6 +79,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "cohorts/public-cohorts.controller.ts": { kind: "open" },
   "clinician-verification/clinician-verification.controller.ts": { kind: "open" },
   "clinician-verification/profession.controller.ts": { kind: "open" },
+  "clinical/physio.controller.ts": { kind: "mixed", entitlement: "pack_physio", minDecorators: 1 },
   "clinician-verification/platform-verifications.controller.ts": { kind: "platform" },
   "clinics/clinics.controller.ts": { kind: "open" },
   "compliance/compliance.controller.ts": { kind: "open" },
@@ -169,7 +170,7 @@ export const ENTITLEMENT_MIN_PLAN: Record<string, PlanKey> = {
   dedicated_support: PlanKey.ENTERPRISE,
   pack_dental: PlanKey.PRO,
   pack_aesthetics: PlanKey.PRO,
-  pack_physio: PlanKey.PRO,
+  pack_physio: PlanKey.LITE,
   max_clinicians: PlanKey.PRO,
   max_branches: PlanKey.CLINIC,
   max_assistant_seats: PlanKey.PRO,
@@ -359,7 +360,7 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
     dedicated_support: true,
     pack_dental: false,
     pack_aesthetics: false,
-    pack_physio: false,
+    pack_physio: true,
   },
 };
 
@@ -367,7 +368,21 @@ export const PLAN_MATRIX: Record<PlanKey, Record<string, EntitlementSeedValue>> 
 export const SPECIALTY_PACK_ADDONS = [
   { key: "pack_dental", nameEn: "Dental chart pack", nameAr: "باقة مخطط الأسنان", monthlyAmount: 299 },
   { key: "pack_aesthetics", nameEn: "Aesthetics before/after pack", nameAr: "باقة التجميل قبل/بعد", monthlyAmount: 249 },
-  { key: "pack_physio", nameEn: "Physio treatment plans", nameAr: "خطط العلاج الطبيعي", monthlyAmount: 199 },
+  {
+    key: "pack_physio",
+    nameEn: "Physiotherapy pack",
+    nameAr: "باقة العلاج الطبيعي",
+    /** PROPOSED (KX-05 Rev 2.3 §07, KX-12): EGP 300 / org / month. NEEDS_HUMAN: pricing owner confirms before any billing. */
+    monthlyAmount: 300,
+    currency: "EGP",
+    priceStatus: "PROPOSED",
+    needsHuman: "NEEDS_HUMAN",
+    /** Plans on which it is an add-on; Enterprise includes it. */
+    addOnFor: ["LITE", "PRO", "CLINIC"],
+    includedIn: ["ENTERPRISE"],
+    /** Template flag (launch-locked, gate GPR2: never recorded by code). */
+    flagKey: "clinic.specialty_templates.physio",
+  },
 ] as const;
 
 export function planEntitlementRowsForSeed(): Record<PlanKey, Array<{ key: string; value: EntitlementSeedValue }>> {

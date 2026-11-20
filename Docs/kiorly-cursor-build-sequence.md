@@ -357,6 +357,10 @@ Cursor: tick a step only after its acceptance tests pass. Add the PR or commit a
 - [x] Step FF06 · Audit events on snapshot change + `FLAG_SNAPSHOT_STALE` on-call alert (>10 min) — `Docs/runbooks/FLAG_SNAPSHOT_STALE.md`
 - [x] Step KCV201 · Sign in with Kiorex Passport (OIDC auth code + PKCE, verified account link, back-channel logout) — `auth/kcv201-kiorex-oidc.integration.test.ts` · `Docs/AUTH_SESSIONS.md` · migration `20261119290000_kcv201_kiorex_oidc`
 - [x] Step KX-DEV · Local Kiorex integration seed: marketplace client `kx_dev_client`, 3 LIVE verified doctors in 2 clinics (Cairo/Giza), 14-day slots, idempotent — `marketplace/kx-dev-seed.integration.test.ts` · `Docs/KIOREX_CONNECTOR.md`
+- [x] Step PRSOP01-04 · Profession model, scope-of-practice matrix (market pack), `@RequiresScope` 403 `SCOPE_NOT_ALLOWED`, AI prompts carry profession — `scope-of-practice/*.test.ts` · `Docs/PROFESSIONS_AND_SCOPE.md` · migration `20261120103000_prsop01_profession_prver_registrations_expand`
+- [x] Step PRVER01-04 · Per-profession verification, registrations, badges, re-verification schedule, solo-nurse evidence — `clinician-verification/prsop-prver.integration.test.ts`
+- [x] Step KCV206 · `@kiorly/field-visit` package (zones, buffers, lifecycle, privacy, safety timer/SOS) + safety-drill suite + `FieldVisitPort` — `packages/field-visit` · `Docs/FIELD_VISIT.md`
+- [x] Step CL07-PT01..05 · Physio pack behind `clinic.specialty_templates.physio` (GPR2 human gate), `pack_physio` EGP 300 PROPOSED/NEEDS_HUMAN — `clinical/physio.integration.test.ts` · `Docs/CL07_SPECIALTY_PACKS.md` · migration `20261120113000_cl07_physio_pack_expand`
 
 ---
 

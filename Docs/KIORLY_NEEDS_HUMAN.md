@@ -31,6 +31,11 @@ Items the autonomous build cannot finish without you. **STOP** entries block FIN
 | NH-025 | UX-04 | Verify the 80 mm receipt / ticket / Z-report output on two real thermal printers (Epson TM-T20III, Star TSP143III). CI only asserts the 80 mm page size and profile; physical print quality needs hardware. | needs human | open |
 | NH-026 | KCV203/204 | Pharmacy (M9) and Lab (M15) consumers of `PrescriptionIssued` / `LabOrderPlaced` do not exist yet. Kiorly emits both with a patient consent token (flags `clinic.eprescription_handoff`, `clinic.lab_order_handoff`); the Kiorex side must route them and the Pharmacy/Lab products must accept them. Contract: `@kiorex/contracts` 1.1.0. | needs human | open |
 | NH-027 | KX-11 | Kiorex consumer for `PRESCRIPTION_SHARED` (now carries `pdf.url`, fetch before `pdf.expiresAt`), `VISIT_SUMMARY_SHARED`, `WAITLIST_OFFER` and the new `slot-capacity` / `waitlist` marketplace endpoints (kiorex-platform). | needs human | open |
+| NH-028 | CL07-PT / GPR2 | Specialty board with a physiotherapist reviewer signs the physio template (gate GPR2). Code never records the gate; `clinic.specialty_templates.physio` stays launch-locked until evidence arrives from the Kiorex snapshot. | needs human | open |
+| NH-029 | CL07-PT / KX-12 | Confirm the physio add-on price (PROPOSED EGP 300 / org / month, `pack_physio`) before it is billed. | needs human | open |
+| NH-030 | CL07-PT05 | Approve the Meta WhatsApp template `physio_hep_link` (EN + AR; variables `clinic`, `link`; no PHI) and add it to the market pack templates. | needs human | open |
+| NH-031 | CL07-PT04 / Q9 | Decide whether physiotherapy direct access without a doctor's referral is allowed in Egypt (`clinicalConfig.physioDirectAccess`, default off). | needs human | open |
+| NH-032 | PRSOP02 / PRVER | CMO sign-off of the scope-of-practice matrix (`EG_PROFESSION_PACK`, `cmoSignOff: null`); confirm register number formats and the criminal-record certificate wording (Q8). | needs human | open |
 
 ## Provider go-live
 
