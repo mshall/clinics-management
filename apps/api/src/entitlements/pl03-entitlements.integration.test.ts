@@ -15,6 +15,7 @@ const featureFlags = new FeatureFlagsService(prisma as unknown as PrismaService,
 
 describe("PL-03 entitlements resolution", () => {
   let tenantId: string;
+  let prevSub: { planId: string; status: SubscriptionStatus; trialPlanId: string | null; clinicianSeats: number } | null = null;
 
   before(async () => {
     await prisma.$connect();
@@ -24,6 +25,16 @@ describe("PL-03 entitlements resolution", () => {
     const pro = await prisma.plan.findUniqueOrThrow({ where: { key: PlanKey.PRO } });
     const tenant = await prisma.tenant.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
     tenantId = tenant.id;
+
+    const existing = await prisma.subscription.findUnique({ where: { tenantId } });
+    if (existing) {
+      prevSub = {
+        planId: existing.planId,
+        status: existing.status,
+        trialPlanId: existing.trialPlanId,
+        clinicianSeats: existing.clinicianSeats,
+      };
+    }
 
     await prisma.subscription.update({
       where: { tenantId },
@@ -40,6 +51,9 @@ describe("PL-03 entitlements resolution", () => {
   });
 
   after(async () => {
+    if (prevSub) {
+      await prisma.subscription.update({ where: { tenantId }, data: prevSub }).catch(() => undefined);
+    }
     await prisma.$disconnect();
   });
 
