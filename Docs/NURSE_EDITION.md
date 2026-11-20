@@ -41,8 +41,7 @@ Plans exist as non-public `Plan` rows with entitlements (`nurse_family_updates`,
 
 ## Demo tenants
 
-`npm run db:seed:nurse -w api` (idempotent, additive, local): a solo practice (`mona@nurse-demo.kiorly.test`) and an agency (owner, dispatcher, two nurses, an aide), password `demo`.
-Professions are left unverified on purpose so the dispatch guard is visible; a data agent may extend it.
+`npm run db:seed:nurse -w api` (idempotent, additive, local): a solo practice (`mona@nurse-demo.kiorly.test`) and an agency (owner, dispatcher, five nurses, an aide), password `Demo@12345`. The full Rev 2.3 demo dataset (verification in every state, home visits, care plans, MAR) is `prisma/demo/seed-rev23.ts`, run by `db:seed:demo` (see `Docs/TEST_DATA.md`).
 
 ## Tests
 

@@ -16,6 +16,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isDemoSeedBlockedInProduction } from "../../src/common/seed-demo-guard";
 import { FIRST_F, FIRST_M, LAST, PERSONAS, TENANTS, type DocSpec } from "./demo-data";
+import { NURSE_DEMO_TENANT_NAMES } from "../nurse-demo.seed";
+import { seedRev23 } from "./seed-rev23";
 
 const prisma = new PrismaClient();
 const DEMO_PASSWORD = "Demo@12345"; // DEV ONLY
@@ -66,7 +68,7 @@ async function main() {
   if (!mpClient) throw new Error("kx_dev_client missing: run `npm run db:seed -w api` first");
   const passwordHash = bcrypt.hashSync(DEMO_PASSWORD, 10);
 
-  const demoNames = TENANTS.map((t) => t.name);
+  const demoNames = [...TENANTS.map((t) => t.name), ...NURSE_DEMO_TENANT_NAMES]; // + the Rev 2.3 Nurse-edition demo tenants (seed-rev23.ts)
   if (RESET) {
     const old = await prisma.tenant.findMany({ where: { name: { in: demoNames } }, select: { id: true } });
     await resetDemo(old.map((o) => o.id));
@@ -321,7 +323,7 @@ async function main() {
         const iid = `demo_ki_${tk}_${m}`; const periodStart = at(-m * 30, 0); const key = `${periodStart.getUTCFullYear()}-${String(periodStart.getUTCMonth() + 1).padStart(2, "0")}`;
         const comm = T.key === "df" ? 60 * 3 : 0; const sub = pm; const tax = Math.round((sub + comm) * VAT) / 100; const total = sub + comm + tax;
         const status = m === 1 ? (T.key === "df" ? "PARTIALLY_PAID" : "ISSUED") : "PAID";
-        await many("kiorlyInvoice", [{ id: iid, tenantId: tid, number: `KDEMO-${tk.toUpperCase()}-${key}`, periodKey: key, periodStart, periodEnd: at(-m * 30 + 30, 0), currency: "EGP", subtotal: sub + comm, tax, total, status, amountPaid: status === "PAID" ? total : status === "PARTIALLY_PAID" ? Math.round(total / 2) : 0, issuedAt: periodStart, dueAt: at(-m * 30 + 14, 0), paidAt: status === "PAID" ? at(-m * 30 + 3, 0) : null }]);
+        await many("kiorlyInvoice", [{ id: iid, tenantId: tid, number: `KDEMO-${tk.toUpperCase()}-${key}`, periodKey: key, periodStart, periodEnd: at(-m * 30 + 30, 0), currency: "EGP", subtotal: sub + comm, tax, total, status, amountPaid: status === "PAID" ? total : status === "PARTIALLY_PAID" ? Math.round(total / 2) : 0, issuedAt: periodStart, dueAt: m === 1 && status !== "PAID" ? at(10, 0) : at(-m * 30 + 14, 0), paidAt: status === "PAID" ? at(-m * 30 + 3, 0) : null }]);
         await many("kiorlyInvoiceLine", [
           { id: `${iid}_1`, invoiceId: iid, type: "SUBSCRIPTION", descEn: `${plan.nameEn} plan (monthly)`, descAr: `باقة ${plan.nameAr} (شهري)`, quantity: 1, unitAmount: sub, amount: sub },
           ...(comm ? [{ id: `${iid}_2`, invoiceId: iid, type: "KIOREX_COMMISSION", descEn: "Kiorex marketplace commission (3 attended new patients, DEMO rate)", descAr: "عمولة كيوريكس (٣ مرضى جدد) - سعر تجريبي", quantity: 3, unitAmount: 60, amount: comm }] : []),
@@ -332,6 +334,8 @@ async function main() {
     }
     summary.push(`${T.name}: ${T.clinics.length} clinics, ${T.docs.length} doctors, ${patRows.length} patients, ${apptRows.length} appointments (${Object.entries(stat).map(([k, v]) => `${k}:${v}`).join(" ")}), ${encRows.length} encounters, ${invRows.length} invoices`);
   }
+  // Rev 2.3: Nurse edition tenants, physio, registrations, home visits, care plans, MAR (needs the three tenants above)
+  summary.push("Rev 2.3: " + (await seedRev23(prisma, { at, reset: RESET })));
   console.log("Kiorly demo seed OK\n  " + summary.join("\n  ") + `\n  logins: <role>.<na|df|ss>@demo.kiorex.test / ${DEMO_PASSWORD} (DEV ONLY) — see /TEST_DATA.md`);
 }
 

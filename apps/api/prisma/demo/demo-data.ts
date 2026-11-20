@@ -20,7 +20,7 @@ export const PERSONAS: { first: [string, string]; last: [string, string]; male: 
   { first: ["Youssef", "يوسف"], last: ["Ramadan", "رمضان"], male: true }, { first: ["Rana", "رنا"], last: ["Khaled", "خالد"], male: false },
 ];
 
-const bio = (s: string) => ({ bioEn: `Demo profile: ${s}.`, bioAr: `ملف تجريبي: ${s}.` });
+const bio = (s: string) => ({ bioEn: `Demo profile (synthetic data): ${s}, seeing patients by appointment.`, bioAr: `ملف تجريبي (بيانات وهمية): ${s}، يستقبل المرضى بالموعد.` });
 const doc = (key: string, nameEn: string, nameAr: string, spec: string, titleEn: string, titleAr: string, clinic: string, fee: number, years: number, listing: DocSpec["listing"] = "LIVE", extra: Partial<DocSpec> = {}): DocSpec =>
   ({ key, nameEn, nameAr, spec, titleEn, titleAr, clinic, fee, years, listing, ...bio(titleEn.toLowerCase()), ...extra });
 

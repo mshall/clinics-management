@@ -13,6 +13,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:demo": "tsx prisma/demo/seed-demo.ts",
     "db:seed:nurse": "tsx prisma/nurse-demo.seed.ts",
+    "db:seed:demo:rev23": "tsx prisma/demo/seed-rev23.ts",
     "demo:reset": "tsx scripts/reset-sales-demo-tenant.ts",
     "db:setup": "prisma generate && prisma migrate deploy && PRISMA_SEED_ENSURE_DEMO_PASSWORDS=true tsx prisma/seed.ts",
     "db:doctor": "tsx scripts/db-doctor.mjs",
