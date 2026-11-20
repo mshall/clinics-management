@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Briefcase, Building2, Calendar, Mail, Phone, UserCircle } from "lucide-react";
+import { Briefcase, Building2, Calendar, Mail, Phone, Wallet } from "lucide-react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
@@ -109,7 +109,7 @@ export function EmployeeProfilePage() {
             <ProfileFact icon={Mail} label={t("hr.email")} value={emp.email ?? "—"} />
             <ProfileFact icon={Phone} label={t("hr.phone")} value={<span className="ltr-nums">{emp.phone}</span>} />
             <ProfileFact icon={Calendar} label={t("hr.hireDate")} value={<span className="ltr-nums">{emp.hireDate}</span>} />
-            <ProfileFact icon={UserCircle} label={t("hr.salaryBase", { currency: orgBaseCurrency })} value={<span className="ltr-nums">{formatEmployeeSalaryAmount(emp, clinics, locale, orgBaseCurrency)}</span>} />
+            <ProfileFact icon={Wallet} label={t("hr.salaryBase", { currency: orgBaseCurrency })} value={<span className="text-base font-semibold tabular-nums ltr-nums" dir="ltr">{formatEmployeeSalaryAmount(emp, clinics, locale, orgBaseCurrency)}</span>} />
           </dl>
 
           {emp.linkedUserDisplayName ? (
@@ -138,7 +138,7 @@ function ProfileFact({
   value: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-muted/20 p-4">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-[var(--kx-shadow-1)]">
       <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <Icon className="size-3.5" aria-hidden />
         {label}

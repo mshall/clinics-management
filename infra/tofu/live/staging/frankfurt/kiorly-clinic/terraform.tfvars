@@ -77,3 +77,13 @@ scheduled_jobs = {
 }
 
 enable_demo_seed = true # Q10: staging demo data (non-production only; seeded by hand via scripts/seed-staging.sh)
+
+# HVPRV01: 32-byte AES-256-GCM key for home addresses at rest, generated into Secrets Manager (<name>/home-visit-address-key) and injected as
+# HOME_VISIT_ADDRESS_ENCRYPTION_KEY. The API refuses to start in production without it. Do not taint/replace it once visits exist.
+enable_home_visit_address_key = true
+
+# HB07 outbound path for third-party APIs. Cost-safe default: no NAT (providers are MOCK until the Provider go-live pass). Switch to
+# "nat_single" (~USD 32/month) in staging to test real providers, "nat_per_az" (~USD 65/month) for prod once they are live.
+# AWS-only needs (SES API, logs) can use extra_interface_endpoints = ["email"] instead. See Docs/HB07_EGRESS.md.
+egress_mode               = "none"
+extra_interface_endpoints = []

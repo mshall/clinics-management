@@ -22,6 +22,15 @@ variable "generated_secrets" {
   default = {}
 }
 
+variable "generated_hex_secrets" {
+  description = "Secrets that are N random BYTES rendered as lowercase hex (e.g. an AES-256 key: bytes = 32 gives 64 hex chars), stored as JSON {<key>: <hex>}. The generated value is in state (KMS-encrypted client-side). LOSING OR REPLACING such a key makes data encrypted with it unreadable: never taint/destroy it once a tenant exists."
+  type = map(object({
+    key   = string
+    bytes = optional(number, 32)
+  }))
+  default = {}
+}
+
 variable "placeholder_secrets" {
   description = "Secret containers without a value, to be populated by a human (PSP keys, WhatsApp tokens, HMAC client secrets). Values never pass through OpenTofu."
   type        = set(string)

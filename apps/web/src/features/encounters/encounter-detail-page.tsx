@@ -9,7 +9,6 @@ import {
   Heart,
   Lock,
   Pill,
-  Printer,
   Ruler,
   Scale,
   ScanLine,
@@ -33,7 +32,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { EncounterDeleteConfirmDialog } from "@/features/encounters/encounter-delete-confirm-dialog";
 import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dialog";
@@ -69,8 +68,8 @@ import { PatientChartAlerts } from "@/components/patient-chart-alerts";
 import { EncounterSpecialtyForm } from "@/features/clinical/encounter-specialty-form";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
 import { SignedPrescriptionActions } from "@/features/prescriptions/signed-prescription-actions";
+import { AddMedForm, ComposerEmpty, ComposerHint, ComposerModeTabs, ComposerPanel, GenerateBar, MedLine, RxDropzone, RxFileRow, RxPreview } from "@/features/prescriptions/composer-kit";
 import { encountersBackPath } from "@/lib/nav-policy";
-import { cn } from "@/lib/utils";
 import { registerUnsavedWork } from "@/lib/unsaved-work-registry";
 import { CollectVisitBalanceCard } from "@/features/front-desk/collect-visit-balance-card";
 
@@ -1117,253 +1116,149 @@ export function EncounterDetailPage() {
             </CardHeader>
             <CardContent>
               <Tabs value={activeMedTab} onValueChange={(v) => selectMedTab(v as MedTab)}>
-                <TabsList className="grid h-auto w-full grid-cols-3 gap-1 p-1">
-                  <TabsTrigger
-                    value="none"
-                    className="gap-1.5 data-[state=active]:bg-kx-neutral-100 data-[state=active]:text-kx-neutral-950 dark:data-[state=active]:bg-kx-neutral-900 dark:data-[state=active]:text-kx-neutral-100"
-                  >
-                    <Ban className="h-4 w-4 shrink-0" aria-hidden />
-                    <span className="hidden sm:inline">{t("encounters.medModeNone")}</span>
-                    <span className="sm:hidden">{t("encounters.medTabNoneShort", "None")}</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="manual"
-                    className="gap-1.5 data-[state=active]:bg-[hsl(var(--success)/0.12)] data-[state=active]:text-[hsl(var(--success))] dark:data-[state=active]:bg-emerald-950 dark:data-[state=active]:text-emerald-50"
-                  >
-                    <Pill className="h-4 w-4 shrink-0" aria-hidden />
-                    <span className="hidden sm:inline">{t("encounters.medModeManual")}</span>
-                    <span className="sm:hidden">{t("encounters.medTabManualShort", "Manual")}</span>
+                <ComposerModeTabs medCount={meds.length} rxCount={prescriptions.length} />
+
+                <TabsContent value="none">
+                  <ComposerPanel>
+                    <ComposerHint>
+                      {t("encounters.noMedsTabHint", "No medications were prescribed for this visit. Switch to Manual or Prescription tabs to add entries.")}
+                    </ComposerHint>
+                    {draft && noMedications ? <StatusChip tone="brand">{t("encounters.noMedsActive", "Selected")}</StatusChip> : null}
+                  </ComposerPanel>
+                </TabsContent>
+
+                <TabsContent value="manual">
+                  <ComposerPanel>
+                    {!medsPanelActive && draft ? <ComposerHint tone="warn">{t("encounters.panelDisabledNoMeds")}</ComposerHint> : null}
                     {meds.length > 0 ? (
-                      <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px]">
-                        {meds.length}
-                      </Badge>
-                    ) : null}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="prescription"
-                    className="gap-1.5 data-[state=active]:bg-kx-indigo-100 data-[state=active]:text-kx-indigo-950 dark:data-[state=active]:bg-kx-indigo-950 dark:data-[state=active]:text-kx-indigo-50"
-                  >
-                    <FileUp className="h-4 w-4 shrink-0" aria-hidden />
-                    <span className="hidden sm:inline">{t("encounters.medModePrescription")}</span>
-                    <span className="sm:hidden">{t("encounters.medTabRxShort", "Rx")}</span>
-                    {prescriptions.length > 0 ? (
-                      <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px]">
-                        {prescriptions.length}
-                      </Badge>
-                    ) : null}
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="none" className="rounded-xl border border-kx-neutral-200 bg-kx-neutral-50/50 p-4 dark:border-kx-neutral-900 dark:bg-kx-neutral-950/30">
-                  <p className="text-sm text-muted-foreground">
-                    {t(
-                      "encounters.noMedsTabHint",
-                      "No medications were prescribed for this visit. Switch to Manual or Prescription tabs to add entries."
-                    )}
-                  </p>
-                  {draft && noMedications ? (
-                    <p className="mt-2 text-sm font-medium text-kx-neutral-800 dark:text-kx-neutral-300">{t("encounters.noMedsActive", "Selected")}</p>
-                  ) : null}
-                </TabsContent>
-
-                <TabsContent value="manual" className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.08)] p-4 ">
-                  {!medsPanelActive && draft ? (
-                    <p className="mb-3 text-sm text-muted-foreground">{t("encounters.panelDisabledNoMeds")}</p>
-                  ) : null}
-                  <ul className="space-y-2 text-sm">
-                    {meds.map((m) => (
-                      <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-background px-2 py-1.5">
-                        <div className="min-w-0">
-                          <span className="font-medium">{m.drugName}</span>
-                          {m.drugUnverified ? (
-                            <Badge variant="outline" className="ms-1 text-xs">
-                              {t("drugs.unverifiedBadge", "Unverified")}
-                            </Badge>
-                          ) : null}
-                          {m.dosage ? <span className="text-muted-foreground"> · {m.dosage}</span> : null}
-                          {m.frequency ? <span className="text-muted-foreground"> · {m.frequency}</span> : null}
-                        </div>
-                        {draft && medsPanelActive ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => removeMedMutation.mutate(m.id)}
-                            disabled={removeMedMutation.isPending}
-                          >
-                            {t("common.remove")}
-                          </Button>
-                        ) : null}
-                      </li>
-                    ))}
-                    {meds.length === 0 ? <li className="text-muted-foreground">{t("encounters.noMedsYet")}</li> : null}
-                  </ul>
-                  {meds.length > 0 ? (
-                    <div className="mt-4 space-y-3">
-                      {enc.signedAt ? <SignedPrescriptionActions encounterId={enc.id} clinicId={enc.clinicId} /> : null}
-                      {draft && medsPanelActive ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            className="gap-2"
-                            disabled={generatePrescriptionMutation.isPending}
-                            onClick={() => generatePrescriptionMutation.mutate()}
-                          >
-                            <FileText className="h-4 w-4 shrink-0" aria-hidden />
-                            {t("encounters.generatePrescription")}
-                          </Button>
-                          <p className="text-xs text-muted-foreground">{t("encounters.generatePrescriptionHint")}</p>
-                        </div>
-                      ) : null}
-                      {generatedRxPreview ? (
-                        <div className="rounded-xl border border-[hsl(var(--success)/0.3)] bg-background p-3 ">
-                          <p className="mb-2 text-sm font-medium">{t("encounters.generatedPrescription")}</p>
-                          <img
-                            src={generatedRxPreview}
-                            alt={t("encounters.generatedPrescription")}
-                            className="mx-auto max-h-[min(70vh,520px)] w-full rounded-md border border-border object-contain"
+                      <ul className="space-y-2">
+                        {meds.map((m) => (
+                          <MedLine
+                            key={m.id}
+                            name={m.drugName}
+                            dosage={m.dosage}
+                            frequency={m.frequency}
+                            unverified={!!m.drugUnverified}
+                            unverifiedLabel={t("drugs.unverifiedBadge", "Unverified")}
+                            removeLabel={t("common.remove")}
+                            removing={removeMedMutation.isPending}
+                            onRemove={draft && medsPanelActive ? () => removeMedMutation.mutate(m.id) : undefined}
                           />
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            <Button type="button" size="sm" variant="outline" asChild>
-                              <a href={generatedRxPreview} download={`prescription-${enc.patientMrn ?? enc.id}.png`}>
-                                {t("encounters.downloadFile")}
-                              </a>
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="gap-1.5"
-                              onClick={() => {
-                                const ok = printPrescriptionImage(
-                                  generatedRxPreview,
-                                  t("encounters.generatedPrescription")
-                                );
-                                if (!ok) toast.error(t("encounters.printBlocked", "Allow pop-ups to print the prescription."));
-                              }}
-                            >
-                              <Printer className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                              {t("encounters.printPrescription")}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {draft && medsPanelActive ? (
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                      <div className="space-y-1">
-                        <Label required>{t("encounters.drugName")}</Label>
-                        <DrugSearchAutocomplete
-                          value={drugName}
-                          onValueChange={setDrugName}
-                          drugProductId={drugProductId}
-                          onProductSelect={(hit: DrugSearchHit | null) => {
-                            setDrugProductId(hit?.id ?? null);
-                            if (hit) {
-                              const sig = i18n.language.startsWith("ar")
-                                ? hit.defaultSigAr ?? hit.defaultSigEn
-                                : hit.defaultSigEn;
-                              if (sig && !frequency.trim()) setFrequency(sig);
-                            }
-                          }}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>{t("encounters.dosage")}</Label>
-                        <Input value={dosage} onChange={(e) => setDosage(e.target.value)} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>{t("encounters.frequency")}</Label>
-                        <Input value={frequency} onChange={(e) => setFrequency(e.target.value)} />
-                      </div>
-                      <div className="space-y-1 sm:col-span-2 lg:col-span-4">
-                        <Label optional>{t("clinical.rxOverrideReason", "Safety override reason")}</Label>
-                        <Input
-                          value={safetyOverrideReason}
-                          onChange={(e) => setSafetyOverrideReason(e.target.value)}
-                          placeholder={t("clinical.rxOverrideReasonPh", "Required if major/contraindicated alert")}
-                        />
-                      </div>
-                      <div className="flex items-end sm:col-span-2 lg:col-span-4">
-                        <Button type="button" className="w-full" onClick={() => addMedMutation.mutate()} disabled={!drugName.trim() || addMedMutation.isPending}>
-                          {t("encounters.addMed")}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </TabsContent>
-
-                <TabsContent value="prescription" className="rounded-xl border border-kx-indigo-200/80 bg-kx-indigo-50/30 p-4 dark:border-kx-indigo-950/50 dark:bg-kx-indigo-950/20">
-                  {!medsPanelActive && draft ? (
-                    <p className="mb-3 text-sm text-muted-foreground">{t("encounters.panelDisabledNoMeds")}</p>
-                  ) : null}
-                  {draft && medsPanelActive ? (
-                    <>
-                      <input
-                        ref={prescriptionFileRef}
-                        type="file"
-                        accept="application/pdf,image/*,text/plain"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          e.target.value = "";
-                          if (f) uploadMutation.mutate({ files: [f], kind: "PRESCRIPTION" });
+                        ))}
+                      </ul>
+                    ) : (
+                      <ComposerEmpty>{t("encounters.noMedsYet")}</ComposerEmpty>
+                    )}
+                    {meds.length > 0 && enc.signedAt ? <SignedPrescriptionActions encounterId={enc.id} clinicId={enc.clinicId} /> : null}
+                    {meds.length > 0 && draft && medsPanelActive ? (
+                      <GenerateBar
+                        onGenerate={() => generatePrescriptionMutation.mutate()}
+                        pending={generatePrescriptionMutation.isPending}
+                        label={t("encounters.generatePrescription")}
+                        hint={t("encounters.generatePrescriptionHint")}
+                      />
+                    ) : null}
+                    {meds.length > 0 && generatedRxPreview ? (
+                      <RxPreview
+                        url={generatedRxPreview}
+                        title={t("encounters.generatedPrescription")}
+                        downloadName={`prescription-${enc.patientMrn ?? enc.id}.png`}
+                        downloadLabel={t("encounters.downloadFile")}
+                        printLabel={t("encounters.printPrescription")}
+                        maxHeight="min(70vh,520px)"
+                        onPrint={() => {
+                          const ok = printPrescriptionImage(generatedRxPreview, t("encounters.generatedPrescription"));
+                          if (!ok) toast.error(t("encounters.printBlocked", "Allow pop-ups to print the prescription."));
                         }}
                       />
-                      <button
-                        type="button"
-                        disabled={uploadMutation.isPending}
-                        onClick={() => prescriptionFileRef.current?.click()}
-                        className={cn(
-                          "mb-4 flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-sm transition-colors",
-                          "border-kx-indigo-300 bg-kx-indigo-50/50 text-kx-indigo-950 hover:border-kx-indigo-400 hover:bg-kx-indigo-50",
-                          "dark:border-kx-indigo-800 dark:bg-kx-indigo-950/30 dark:text-kx-indigo-100 dark:hover:border-kx-indigo-600 dark:hover:bg-kx-indigo-950/50",
-                          uploadMutation.isPending && "pointer-events-none opacity-60"
-                        )}
-                      >
-                        <FileUp className="h-8 w-8 text-kx-indigo-600 dark:text-kx-indigo-400" aria-hidden />
-                        <span className="font-medium">{t("encounters.uploadPrescription", "Upload prescription")}</span>
-                        <span className="text-xs text-kx-indigo-800/80 dark:text-kx-indigo-300/80">{t("encounters.prescriptionUploadHint")}</span>
-                      </button>
-                    </>
-                  ) : null}
-                  <ul className="space-y-2 text-sm">
-                    {prescriptions.map((d) => (
-                      <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border bg-background px-2 py-1.5">
-                        <span className="truncate font-medium">{d.originalFileName}</span>
-                        <div className="flex shrink-0 gap-1">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => void openDocument(d)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">{t("encounters.viewDoc")}</span>
-                          </Button>
-                          {draft && medsPanelActive ? (
-                            <>
-                              <Button type="button" variant="ghost" size="sm" onClick={() => startReplace(d.id, "PRESCRIPTION")}>
-                                <Upload className="h-4 w-4" />
-                                <span className="sr-only">{t("encounters.replaceDoc", "Replace")}</span>
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive"
-                                onClick={() => removeDocMutation.mutate(d.id)}
-                                disabled={removeDocMutation.isPending}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
-                    {prescriptions.length === 0 ? (
-                      <li className="text-muted-foreground">{t("encounters.noPrescriptionYet")}</li>
                     ) : null}
-                  </ul>
+                    {draft && medsPanelActive ? (
+                      <AddMedForm>
+                        <div className="space-y-1.5">
+                          <Label required>{t("encounters.drugName")}</Label>
+                          <DrugSearchAutocomplete
+                            value={drugName}
+                            onValueChange={setDrugName}
+                            drugProductId={drugProductId}
+                            onProductSelect={(hit: DrugSearchHit | null) => {
+                              setDrugProductId(hit?.id ?? null);
+                              if (hit) {
+                                const sig = i18n.language.startsWith("ar") ? hit.defaultSigAr ?? hit.defaultSigEn : hit.defaultSigEn;
+                                if (sig && !frequency.trim()) setFrequency(sig);
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>{t("encounters.dosage")}</Label>
+                          <Input value={dosage} onChange={(e) => setDosage(e.target.value)} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>{t("encounters.frequency")}</Label>
+                          <Input value={frequency} onChange={(e) => setFrequency(e.target.value)} />
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+                          <Label optional>{t("clinical.rxOverrideReason", "Safety override reason")}</Label>
+                          <Input
+                            value={safetyOverrideReason}
+                            onChange={(e) => setSafetyOverrideReason(e.target.value)}
+                            placeholder={t("clinical.rxOverrideReasonPh", "Required if major/contraindicated alert")}
+                          />
+                        </div>
+                        <div className="flex items-end sm:col-span-2 lg:col-span-4">
+                          <Button type="button" className="w-full sm:w-auto" onClick={() => addMedMutation.mutate()} disabled={!drugName.trim() || addMedMutation.isPending}>
+                            {t("encounters.addMed")}
+                          </Button>
+                        </div>
+                      </AddMedForm>
+                    ) : null}
+                  </ComposerPanel>
+                </TabsContent>
+
+                <TabsContent value="prescription">
+                  <ComposerPanel>
+                    {!medsPanelActive && draft ? <ComposerHint tone="warn">{t("encounters.panelDisabledNoMeds")}</ComposerHint> : null}
+                    {draft && medsPanelActive ? (
+                      <>
+                        <input
+                          ref={prescriptionFileRef}
+                          type="file"
+                          accept="application/pdf,image/*,text/plain"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = "";
+                            if (f) uploadMutation.mutate({ files: [f], kind: "PRESCRIPTION" });
+                          }}
+                        />
+                        <RxDropzone
+                          disabled={uploadMutation.isPending}
+                          onPick={() => prescriptionFileRef.current?.click()}
+                          title={t("encounters.uploadPrescription", "Upload prescription")}
+                          hint={t("encounters.prescriptionUploadHint")}
+                        />
+                      </>
+                    ) : null}
+                    {prescriptions.length > 0 ? (
+                      <ul className="space-y-2">
+                        {prescriptions.map((d) => (
+                          <RxFileRow
+                            key={d.id}
+                            name={d.originalFileName}
+                            viewLabel={t("encounters.viewDoc")}
+                            replaceLabel={t("encounters.replaceDoc", "Replace")}
+                            removeLabel={t("common.remove")}
+                            busy={removeDocMutation.isPending}
+                            onView={() => void openDocument(d)}
+                            onReplace={draft && medsPanelActive ? () => startReplace(d.id, "PRESCRIPTION") : undefined}
+                            onRemove={draft && medsPanelActive ? () => removeDocMutation.mutate(d.id) : undefined}
+                          />
+                        ))}
+                      </ul>
+                    ) : (
+                      <ComposerEmpty icon={<FileUp className="h-5 w-5" />}>{t("encounters.noPrescriptionYet")}</ComposerEmpty>
+                    )}
+                  </ComposerPanel>
                 </TabsContent>
               </Tabs>
             </CardContent>

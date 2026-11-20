@@ -227,6 +227,28 @@ variable "generated_secrets" {
   default = {}
 }
 
+variable "enable_home_visit_address_key" {
+  description = "Kiorly Clinic / Nurse: generate the 32-byte HOME_VISIT_ADDRESS_ENCRYPTION_KEY (AES-256-GCM, home addresses at rest, HVPRV01) and inject it as a runtime secret. The API REQUIRES it when NODE_ENV=production. Never rotate by replacing the secret once visits exist (data would become unreadable)."
+  type        = bool
+  default     = false
+}
+
+variable "egress_mode" {
+  description = "HB07 outbound path for the API (VPC connector): none (default, USD 0, fine while providers are mock), nat_single (~USD 32/mo), nat_per_az (~USD 65/mo). See clinics-management Docs/HB07_EGRESS.md."
+  type        = string
+  default     = "none"
+  validation {
+    condition     = contains(["none", "nat_single", "nat_per_az"], var.egress_mode)
+    error_message = "egress_mode must be none, nat_single or nat_per_az."
+  }
+}
+
+variable "extra_interface_endpoints" {
+  description = "Extra AWS-API interface endpoints in the VPC (e.g. [\"email\", \"logs\"]); AWS services only, about USD 7.3/month per AZ each."
+  type        = set(string)
+  default     = []
+}
+
 variable "placeholder_secrets" {
   description = "Secret containers populated by a human (PSP keys, HMAC client secrets, WhatsApp tokens)."
   type        = set(string)

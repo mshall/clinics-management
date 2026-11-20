@@ -234,3 +234,21 @@ variable "demo_seed_env" {
   type        = map(string)
   default     = {}
 }
+
+variable "enable_home_visit_address_key" {
+  description = "Generate and inject HOME_VISIT_ADDRESS_ENCRYPTION_KEY (HVPRV01, required by the API in production)."
+  type        = bool
+  default     = true
+}
+
+variable "egress_mode" {
+  description = "HB07 outbound path: none (default, USD 0; providers are MOCK), nat_single (~USD 32/mo) or nat_per_az (~USD 65/mo). See Docs/HB07_EGRESS.md."
+  type        = string
+  default     = "none"
+}
+
+variable "extra_interface_endpoints" {
+  description = "Extra AWS-API interface endpoints (e.g. email, logs); about USD 7.3/month per AZ each."
+  type        = set(string)
+  default     = []
+}

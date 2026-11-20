@@ -69,7 +69,7 @@ approves the first deploy. Repository variables: `AWS_TOFU_PLAN_ROLE_ARN`, `AWS_
 ## Known blockers
 - AWS Organization SCPs: in account 599243104052, user `cursor-admin` gets explicit denies on `cloudformation:ListStacks`,
   `apprunner:ListServices`, `rds:DescribeDBInstances`, `s3:ListAllMyBuckets`. The org admin must relax them before plan/apply.
-- HB07: with App Runner VPC egress and no NAT, calls to third-party APIs need a path — verify in staging; add a NAT or egress proxy.
+- HB07: with App Runner VPC egress and no NAT, calls to third-party APIs need a path. Implemented as `egress_mode` (`none` default = USD 0 while providers are mock; `nat_single` ~USD 32/mo; `nat_per_az` ~USD 65/mo) and `extra_interface_endpoints`; options and costs in `Docs/HB07_EGRESS.md`. The real-provider pass must set it and verify in staging.
 - tflint is not installed locally; config is kept and runs in CI. App Runner log retention is set by the AWS CLI via a
   `terraform_data` provisioner (the service owns those log groups) — runners need the AWS CLI.
 - CDK -> OpenTofu mapping is implemented as in KX-21 §01 (CDK is kept until T5). Prod defaults: HB01 WAF attached, HB02 db.t4g.medium +
@@ -86,6 +86,8 @@ Validated offline only (`tofu fmt`, `init -backend=false`, `validate`); **nothin
 | `nurse.kiorly.com` alias of the Clinic stack | `product-stack` var `alias_domains`; live vars `nurse_alias_enabled`, `nurse_domain` | prod **on** (`nurse.kiorly.com`), staging **off** (staging uses the CloudFront default domain) |
 | Amazon Location map + route calculator | `modules/aws/location`; live var `enable_location` | **off** (mock adapter) |
 | Safety-alert delivery alarms | `modules/aws/safety-alerts`; live var `safety_alerts` | on in staging + prod, quiet until the API emits the log events |
+| `HOME_VISIT_ADDRESS_ENCRYPTION_KEY` (HVPRV01) | `product-stack` var `enable_home_visit_address_key` -> `modules/aws/secrets` `generated_hex_secrets` (random_id, 32 bytes hex) -> runtime secret | **on** in both clinic live stacks; other products off |
+| HB07 outbound path | `egress_mode`, `extra_interface_endpoints` (`modules/aws/network`) | `none` (cost-safe) |
 | Geostamp retention purge | `scheduled_jobs["geostamp-retention-purge"]` in tfvars (existing EventBridge Scheduler -> job-runner Lambda -> API) | defined, **`enabled = false`** |
 
 **nurse.kiorly.com.** The alias is an extra ACM SAN on the existing us-east-1 certificate (DNS-validated in the same zone), an extra

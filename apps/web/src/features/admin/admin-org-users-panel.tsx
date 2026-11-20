@@ -1,3 +1,4 @@
+import { CompensationFields } from "@/features/hr/compensation-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -900,15 +901,10 @@ export function AdminOrgUsersPanel() {
               ) : null}
               {isEdit ? (
                 <>
-                  <div className="space-y-2 md:col-span-2">
-                    <p className="text-sm font-medium">{t("admin.orgUserHrSection", "HR & payroll")}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t(
-                        "admin.orgUserHrSectionHint",
-                        "Contract type and monthly salary for the linked employee record. Salaries appear automatically in monthly PAYROLL expenses.",
-                      )}
-                    </p>
-                  </div>
+                  <CompensationFields
+                    title={t("admin.orgUserHrSection", "HR & payroll")}
+                    hint={t("admin.orgUserHrSectionHint", "Contract type and monthly salary for the linked employee record. Salaries appear automatically in monthly PAYROLL expenses.")}
+                  >
                   <div className="space-y-2">
                     <Label>{t("hr.contractType", "Contract type")}</Label>
                     <select
@@ -941,6 +937,7 @@ export function AdminOrgUsersPanel() {
                       {t("hr.salaryCurrencyOrgDefaultHint", { currency: orgBaseCurrency })}
                     </p>
                   </div>
+                  </CompensationFields>
                 </>
               ) : null}
               <div className="flex flex-wrap gap-2 pt-2 md:col-span-2">
