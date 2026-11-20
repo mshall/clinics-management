@@ -1335,9 +1335,9 @@ export function ReportsPage() {
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
                   <ChartTooltip
-                    formatter={(value: number, name: string) => {
-                      const currency = name.split("_").pop() ?? series.data?.baseCurrency ?? orgBaseCurrency;
-                      const kind = name.startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses");
+                    formatter={(value, name) => {
+                      const currency = String(name ?? "").split("_").pop() ?? series.data?.baseCurrency ?? orgBaseCurrency;
+                      const kind = String(name ?? "").startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses");
                       return [money(Number(value), currency), `${kind} (${currency})`];
                     }}
                   />
@@ -1399,9 +1399,9 @@ export function ReportsPage() {
                         <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                         <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => money(Number(v), currency)} />
                         <ChartTooltip
-                          formatter={(value: number, name: string) => [
+                          formatter={(value, name) => [
                             money(Number(value), currency),
-                            name.startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses"),
+                            String(name ?? "").startsWith("revenue_") ? t("nav.revenue") : t("nav.expenses"),
                           ]}
                         />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -1445,7 +1445,7 @@ export function ReportsPage() {
                   <CartesianGrid vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={40} />
-                  <ChartTooltip formatter={(value: number) => [value, t("reports.visits", "Visits")]} labelFormatter={(l) => String(l)} />
+                  <ChartTooltip formatter={(value) => [value, t("reports.visits", "Visits")]} labelFormatter={(l) => String(l)} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Area
                     type="monotone"
@@ -1483,7 +1483,7 @@ export function ReportsPage() {
                     <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                     <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => String(v)} />
                     <ChartTooltip
-                      formatter={(value: number, name: string) => {
+                      formatter={(value, name) => {
                         const currency = String(name).replace(/^revenue_/, "");
                         return [money(Number(value), currency), `${t("nav.revenue")} (${currency})`];
                       }}
@@ -1519,7 +1519,7 @@ export function ReportsPage() {
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} width={40} />
-                <ChartTooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />
+                <ChartTooltip formatter={(value) => [value, t("reports.newPatients", "New patients")]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="newPatients" name={t("reports.newPatients", "New patients")} fill={REVENUE_CHART_COLOR} radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -1567,8 +1567,8 @@ export function ReportsPage() {
                         cx="50%"
                         cy="50%"
                         outerRadius="72%"
-                        label={({ label, percent }) =>
-                          `${label ?? ""} (${typeof percent === "number" ? Math.round(percent * 100) : 0}%)`
+                        label={({ name, percent }) =>
+                          `${name ?? ""} (${typeof percent === "number" ? Math.round(percent * 100) : 0}%)`
                         }
                         labelLine={false}
                       >
@@ -1577,7 +1577,7 @@ export function ReportsPage() {
                         ))}
                       </Pie>
                       <ChartTooltip
-                        formatter={(value: number, _name, item) => [
+                        formatter={(value, _name, item) => [
                           value,
                           (item as { payload?: { label?: string } })?.payload?.label ?? "",
                         ]}
@@ -1592,7 +1592,7 @@ export function ReportsPage() {
                       <CartesianGrid horizontal={false} />
                       <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                       <YAxis type="category" dataKey="label" width={96} tick={{ fontSize: 10 }} />
-                      <ChartTooltip formatter={(value: number) => [value, t("reports.newPatients", "New patients")]} />
+                      <ChartTooltip formatter={(value) => [value, t("reports.newPatients", "New patients")]} />
                       <Bar dataKey="count" name={t("reports.newPatients", "New patients")} radius={[0, 4, 4, 0]}>
                         {acquisitionChartData.map((_, index) => (
                           <Cell key={index} fill={ACQUISITION_CHART_COLORS[index % ACQUISITION_CHART_COLORS.length]} />

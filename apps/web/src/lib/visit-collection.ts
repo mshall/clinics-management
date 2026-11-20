@@ -1,3 +1,5 @@
+import type { TranslateFn } from "@/lib/translate-fn";
+
 export type VisitCollectionMode = "CASH_ON_VISIT" | "MONEY_TRANSFER";
 
 /** Market-defined transfer channel id (e.g. INSTAPAY, FAWRY). */
@@ -79,7 +81,7 @@ export function transferReferenceIssue(
 export function transferReferenceMessage(
   issue: Exclude<TransferReferenceIssue, null>,
   channelLabel: string,
-  t: (key: string, fallback: string, params?: Record<string, unknown>) => string,
+  t: TranslateFn,
 ): string {
   return issue === "required"
     ? t("visitCollection.transactionIdRequired", "Enter the transfer transaction ID.")
@@ -91,7 +93,7 @@ export function transferReferenceMessage(
 export function validateVisitCollection(
   amount: number,
   collection: VisitCollectionValue,
-  t: (key: string, fallback: string, params?: Record<string, unknown>) => string,
+  t: TranslateFn,
   rules: TransferReferenceRule[] = [],
 ): string | null {
   if (amount <= 0) return null;

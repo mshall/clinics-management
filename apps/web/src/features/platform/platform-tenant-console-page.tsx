@@ -1,3 +1,4 @@
+import type { TranslateFn } from "@/lib/translate-fn";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Timer } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -55,7 +56,7 @@ function formatPeriodEnd(iso: string | null | undefined, language: string): stri
 
 function formatPeriodRelative(
   iso: string | null | undefined,
-  t: (key: string, fallback: string, opts?: Record<string, unknown>) => string,
+  t: TranslateFn,
 ): string | null {
   if (!iso) return null;
   const end = new Date(iso);

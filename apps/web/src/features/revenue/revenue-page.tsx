@@ -857,7 +857,7 @@ export function RevenuePage() {
                       <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                       <YAxis tick={{ fontSize: 11 }} width={56} />
                       <ChartTooltip
-                        formatter={(value: number, name: string) => {
+                        formatter={(value, name) => {
                           const currency = String(name).replace(/^revenue_/, "");
                           return [money(Number(value), currency), `${t("nav.revenue")} (${currency})`];
                         }}
@@ -896,7 +896,7 @@ export function RevenuePage() {
                       <XAxis dataKey="month" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                       <YAxis tick={{ fontSize: 11 }} width={56} />
                       <ChartTooltip
-                        formatter={(value: number, name: string) => {
+                        formatter={(value, name) => {
                           const currency = String(name).replace(/^revenue_/, "");
                           return [money(Number(value), currency), `${t("nav.revenue")} (${currency})`];
                         }}
@@ -939,7 +939,7 @@ export function RevenuePage() {
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={50} />
                       <YAxis tick={{ fontSize: 11 }} width={56} tickFormatter={(v) => money(Number(v))} />
-                      <ChartTooltip formatter={(value: number) => [money(Number(value)), t("revenue.totalNet", "Total net")]} />
+                      <ChartTooltip formatter={(value) => [money(Number(value)), t("revenue.totalNet", "Total net")]} />
                       <Bar dataKey="net" name={t("revenue.totalNet", "Total net")} fill={currencyChartColor(0)} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>

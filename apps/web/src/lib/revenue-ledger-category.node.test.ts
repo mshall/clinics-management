@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { TFunction } from "i18next";
 import { formatRevenueLedgerCategory } from "./locale-display";
 
-const t = ((key: string, fallback?: string) => fallback ?? key) as TFunction;
+const t = (key: string, fallback?: string): string => fallback ?? key;
 
 describe("formatRevenueLedgerCategory", () => {
   it("maps visit fee categories to Encounter", () => {
