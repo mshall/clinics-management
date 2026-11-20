@@ -1,0 +1,11 @@
+# Merge main → kiorex (then push)
+
+When the user asks to **merge `main` into `kiorex`** (any similar phrasing):
+
+1. Checkout `kiorex`, integrate `origin/kiorex` if needed, merge `main` (resolve conflicts).
+2. **Push `kiorex` to GitHub** automatically after a successful merge (`git push origin HEAD`). Treat “merge into kiorex” as authorization to push that branch — do not wait for a separate “push kiorex” ask.
+3. Run the usual pre-push `ci:test` gate (unless `SKIP_CI_TEST=1`).
+4. **Switch back to `main`** and leave the working tree on `main`.
+5. Restart local `npm run dev` on `main` when shell access is available so the stack matches `main`.
+
+If push fails, fix and retry until `kiorex` is on the remote (or report the blocker). Do not leave unpushed merge commits on local `kiorex` after this flow unless the user cancels.
