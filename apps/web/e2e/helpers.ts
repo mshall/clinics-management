@@ -5,7 +5,10 @@ export async function login(page: Page, email: string, password = "demo"): Promi
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.evaluate(() => {
     localStorage.removeItem("cms-auth");
+    // Keep the per-tab theme choice (made on the login screen before signing in); wipe everything else.
+    const theme = sessionStorage.getItem("cms-theme-session");
     sessionStorage.clear();
+    if (theme) sessionStorage.setItem("cms-theme-session", theme);
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   const emailField = page.locator("#email").or(page.getByLabel(/^email|البريد/i));

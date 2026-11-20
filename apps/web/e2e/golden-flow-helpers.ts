@@ -1,6 +1,6 @@
 import { expect, type APIRequestContext, type Page } from "@playwright/test";
 
-export const API_BASE = process.env.PLAYWRIGHT_API_URL ?? "http://127.0.0.1:3000/api/v1";
+export const API_BASE = process.env.PLAYWRIGHT_API_URL ?? `${process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173"}/api/v1`;
 
 export type ApiSession = {
   accessToken: string;
