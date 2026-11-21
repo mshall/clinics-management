@@ -11,7 +11,7 @@
     "check:boot-proxy-order": "node ../scripts/check-boot-proxy-order.mjs",
     "synth": "npm run check:ascii-descriptions && npm run check:boot-proxy-order && npm run build && cdk synth && npm run check:ascii-cfn && npm run check:apprunner-connector-cfn",
     "deploy": "npm run check:ascii-descriptions && npm run check:boot-proxy-order && npm run build && cdk synth && npm run check:ascii-cfn && npm run check:apprunner-connector-cfn && cdk deploy --app cdk.out --require-approval never",
-    "test:unit": "node --import tsx --test src/**/*.node.test.ts"
+    "test:unit": "node --import tsx --test src/**/*.node.test.ts && node --test lambda/**/*.node.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
