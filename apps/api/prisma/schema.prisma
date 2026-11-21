@@ -5084,6 +5084,25 @@ model MobileAlertAck {
   @@unique([tenantId, alertKey])
 }
 
+/// Kiorly Work: a staff member asked their org owner/admin to upgrade to a plan that includes `mobile_staff_app`. Allowed on Basic (not entitlement-gated).
+/// Repeat requests by the same user for the same feature within 24h are de-duplicated by the service.
+model MobileUpgradeRequest {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String
+  role          String
+  /// A module key (e.g. clinic.vitals) or "general".
+  featureKey    String
+  plan          String
+  note          String?
+  status        String   @default("OPEN")
+  notifiedCount Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, userId, featureKey, createdAt])
+  @@index([tenantId, status, createdAt])
+}
+
 /// Doctor review (approval) of a lab/imaging result from the staff app.
 model MobileResultReview {
   id         String   @id @default(cuid())

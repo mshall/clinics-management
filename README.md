@@ -26,6 +26,7 @@ Multi-clinic tenants, front desk and queues, encounters and prescriptions, HR, b
 </div>
 
 > **Synthetic data only.** Demo logins, URLs and reset steps: [Docs/TEST_DATA.md](Docs/TEST_DATA.md) (DEV ONLY, blocked in production). Repository: [github.com/mshall/kiorly-clinics-management](https://github.com/mshall/kiorly-clinics-management). Working branch: **`kiorex`** (never push it without founder approval).
+> **Demo data for manual testing** (personas, counts, click-path test scripts, role checklists): [DEMO_DATA.md](DEMO_DATA.md) (DEV ONLY).
 
 ---
 

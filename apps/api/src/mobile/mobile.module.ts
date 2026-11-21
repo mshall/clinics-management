@@ -8,6 +8,7 @@ import { MobileAlertsService } from "./mobile-alerts.service";
 import { MobileEntitlementService } from "./mobile-entitlement.service";
 import { MobilePushModule } from "./mobile-push.module";
 import { MobilePushService } from "./mobile-push.service";
+import { MobileUpgradeService } from "./mobile-upgrade.service";
 import { MobileController } from "./mobile.controller";
 import { MobileInterceptor } from "./mobile.interceptor";
 import { MobileService } from "./mobile.service";
@@ -16,7 +17,7 @@ import { MobileService } from "./mobile.service";
 @Module({
   imports: [MobilePushModule, EncountersModule, EntitlementsModule, NurseModule, RevenueModule],
   controllers: [MobileController],
-  providers: [MobileService, MobileAlertsService, MobileEntitlementService, { provide: APP_INTERCEPTOR, useClass: MobileInterceptor }],
+  providers: [MobileService, MobileUpgradeService, MobileAlertsService, MobileEntitlementService, { provide: APP_INTERCEPTOR, useClass: MobileInterceptor }],
   exports: [MobileEntitlementService, MobileAlertsService],
 })
 export class MobileModule {}

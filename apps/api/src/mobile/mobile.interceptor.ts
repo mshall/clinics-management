@@ -9,9 +9,10 @@ import { sha256 } from "./mobile.service";
 type Req = { user?: JwtUser; headers: Record<string, string | string[] | undefined>; originalUrl: string; method: string };
 const pathOf = (req: Req) => req.originalUrl.split("?")[0].replace(/^\/api\/v1/, "").replace(/\/+$/, "");
 
-/** Routes open on EVERY plan: /auth/*, GET /mobile/bootstrap, /mobile/alerts* (ADR-025 safety inbox), DELETE /mobile/devices/:id (remote sign-out). */
+/** Routes open on EVERY plan: /auth/*, GET /mobile/bootstrap, /mobile/alerts* (ADR-025 safety inbox), POST /mobile/upgrade-request (a Basic org must be able to ask), DELETE /mobile/devices/:id (remote sign-out). */
 export function isMobileExempt(method: string, p: string): boolean {
   if (p.startsWith("/auth/") || p === "/auth") return true;
+  if (method === "POST" && p === "/mobile/upgrade-request") return true;
   if (p === "/mobile/bootstrap" || p === "/mobile/alerts" || p.startsWith("/mobile/alerts/")) return true;
   return method === "DELETE" && /^\/mobile\/devices\/[^/]+$/.test(p);
 }

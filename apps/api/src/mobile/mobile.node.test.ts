@@ -55,13 +55,19 @@ describe("Kiorly Work: modules per role", () => {
     assert.ok(m.includes("clinic.vitals") && m.includes("clinic.homevisits"));
     assert.ok(!m.includes("clinic.prescriptions") && !m.includes("clinic.visits"));
   });
+  it("Nurse-edition dispatcher (RECEPTIONIST / CALL_CENTER) gets home visits, still no clinical-record or prescription modules; clinic front desk unchanged", () => {
+    for (const r of [UserRole.RECEPTIONIST, UserRole.CALL_CENTER]) {
+      assert.deepEqual(on(r, "NURSE").sort(), ["clinic.homevisits", "clinic.patients", "clinic.schedule"]);
+      assert.deepEqual(on(r, "CLINIC").sort(), ["clinic.patients", "clinic.schedule"]);
+    }
+  });
   it("HR officer has no modules", () => assert.deepEqual(on(UserRole.HR_OFFICER), []));
 });
 
 describe("Kiorly Work: gating contract", () => {
   it("alerts, bootstrap, auth and remote sign-out stay open on every plan", () => {
-    for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/hv_1/ack"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/refresh"]] as const) assert.ok(isMobileExempt(m, p), `${m} ${p}`);
-    for (const [m, p] of [["GET", "/mobile/inbox"], ["POST", "/mobile/devices"], ["GET", "/mobile/schedule"], ["GET", "/patients"]] as const) assert.ok(!isMobileExempt(m, p), `${m} ${p}`);
+    for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/hv_1/ack"], ["POST", "/mobile/upgrade-request"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/refresh"]] as const) assert.ok(isMobileExempt(m, p), `${m} ${p}`);
+    for (const [m, p] of [["GET", "/mobile/inbox"], ["GET", "/mobile/upgrade-request"], ["POST", "/mobile/devices"], ["GET", "/mobile/schedule"], ["GET", "/patients"]] as const) assert.ok(!isMobileExempt(m, p), `${m} ${p}`);
   });
   it("alerts service never references the commercial entitlement (ADR-025)", () => {
     const src = readFileSync(join(process.cwd(), "src/mobile/mobile-alerts.service.ts"), "utf8");

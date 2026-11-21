@@ -11,6 +11,7 @@ export const MOBILE_TEMPLATES: Record<string, Template> = {
   CRITICAL_VITALS: { kind: "SAFETY", title: "Critical vital signs recorded", titleAr: "علامات حيوية حرجة", body: "A critical observation needs an escalation entry.", bodyAr: "ملاحظة حرجة تحتاج إلى تسجيل إجراء التصعيد." },
   LAB_RESULT_READY: { kind: "CLINICAL", title: "Lab results ready", titleAr: "نتائج التحاليل جاهزة", body: "Results for one of your patients are ready for review.", bodyAr: "نتائج أحد مرضاك جاهزة للمراجعة." },
   PATIENT_CHECKED_IN: { kind: "CLINICAL", title: "Patient checked in", titleAr: "وصل المريض", body: "Your next patient has checked in and is waiting.", bodyAr: "وصل مريضك التالي وهو في الانتظار." },
+  UPGRADE_REQUEST: { kind: "OPS", title: "Staff asked to upgrade Kiorly Work", titleAr: "طلب موظف ترقية Kiorly Work", body: "A team member asked for the Kiorly Work staff app (Pro plan). Review plans in Billing.", bodyAr: "طلب أحد أعضاء الفريق تطبيق Kiorly Work للموظفين (باقة Pro). راجع الباقات من الفوترة." },
   TEST: { kind: "GENERAL", title: "Kiorly Work test notification", titleAr: "إشعار تجريبي من Kiorly Work", body: "Push is working on this device.", bodyAr: "الإشعارات تعمل على هذا الجهاز." },
 };
 
