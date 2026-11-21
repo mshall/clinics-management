@@ -87,7 +87,7 @@ export function RoleAssistantWidget() {
     return (
       <div
         className={cn(
-          "fixed bottom-5 z-50 w-[min(100vw-2rem,22rem)] rounded-xl border border-border bg-card p-3 shadow-lg",
+          "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] md:bottom-5 z-50 w-[min(100vw-2rem,22rem)] rounded-xl border border-border bg-card p-3 shadow-lg",
           rtl ? "left-4" : "right-4",
         )}
         dir={rtl ? "rtl" : "ltr"}
@@ -108,7 +108,7 @@ export function RoleAssistantWidget() {
   return (
     <div
       className={cn(
-        "fixed bottom-5 z-50 flex flex-col items-end gap-2",
+        "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] md:bottom-5 z-50 flex flex-col items-end gap-2",
         rtl ? "left-4 items-start" : "right-4 items-end",
       )}
       dir={rtl ? "rtl" : "ltr"}
