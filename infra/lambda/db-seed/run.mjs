@@ -40,9 +40,10 @@ async function buildDatabaseUrl() {
 
 function runSql(label, sql) {
   console.log(`[db-seed] ${label} …`);
+  // Prisma 7: datasource/schema come from prisma.config.ts — `db execute` no longer accepts `--schema`.
   const result = spawnSync(
     "npx",
-    ["prisma", "db", "execute", "--stdin", "--schema", "prisma/schema.prisma"],
+    ["prisma", "db", "execute", "--stdin"],
     {
       encoding: "utf8",
       input: sql,
