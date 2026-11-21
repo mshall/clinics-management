@@ -13,6 +13,13 @@ import { apiErrorMessage } from "@/lib/api-error-message";
 import type { OperationDocumentDto } from "@/lib/api-types";
 import { apiFetchBlob, apiPostFormData } from "@/lib/http";
 import { localeForLanguage } from "@/lib/locale-display";
+import {
+  OPERATION_DOCUMENT_CATEGORIES,
+  appendOperationDocumentFormData,
+  operationDocumentCategoryLabel,
+  operationDocumentKindLabel,
+  type OperationDocumentCategory,
+} from "@/lib/operation-document-categories";
 
 type Props = {
   operationId: string;
@@ -42,13 +49,17 @@ export function OperationPostSurgeryDocumentsSection({ operationId, documents, c
         throw new Error("nothing_to_upload");
       }
       for (const row of pending) {
-        const desc = pendingDocumentDescription(row, t);
+        if (!row.category) continue;
+        const desc = pendingDocumentDescription(row, t, operationDocumentCategoryLabel);
         if (!desc) continue;
         for (const file of row.files) {
           const fd = new FormData();
-          fd.append("file", file);
-          fd.append("kind", "POST_SURGERY");
-          fd.append("description", desc);
+          appendOperationDocumentFormData(fd, {
+            file,
+            category: row.category as OperationDocumentCategory,
+            description: desc,
+            phase: "post",
+          });
           await apiPostFormData(`/api/v1/operations/${operationId}/documents`, fd);
         }
       }
@@ -89,7 +100,12 @@ export function OperationPostSurgeryDocumentsSection({ operationId, documents, c
           {postSurgeryDocs.map((doc) => (
             <li key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
               <div className="min-w-0">
-                <p className="font-medium">{doc.description?.trim() || doc.originalFileName}</p>
+                <p className="font-medium">
+                  <span className="text-foreground">{operationDocumentKindLabel(doc.kind, t)}</span>
+                  {doc.description?.trim()
+                    ? ` — ${doc.description.trim()}`
+                    : ` — ${doc.originalFileName}`}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {new Date(doc.createdAt).toLocaleString(localeForLanguage(i18n.language))}
                 </p>
@@ -114,6 +130,12 @@ export function OperationPostSurgeryDocumentsSection({ operationId, documents, c
               if (invalidRowIds.size > 0) setInvalidRowIds(new Set());
             }}
             invalidRowIds={invalidRowIds.size > 0 ? invalidRowIds : undefined}
+            categories={OPERATION_DOCUMENT_CATEGORIES}
+            categoryLabel={operationDocumentCategoryLabel}
+            optionalHint={t(
+              "operations.postSurgeryDocumentsHint",
+              "Optional — attach consent, operation report, labs, imaging, or other post-surgery files.",
+            )}
           />
           <Button
             type="button"
@@ -139,7 +161,7 @@ function UsageHeading() {
       <p className="text-xs text-muted-foreground">
         {t(
           "operations.postSurgeryHint",
-          "Add reports, pathology, or imaging after the operation is discharged.",
+          "Add consent, operation report, pathology, or imaging after the operation is discharged.",
         )}
       </p>
     </div>

@@ -11,6 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import { apiPostFormData } from "@/lib/http";
+import {
+  OPERATION_DOCUMENT_CATEGORIES,
+  appendOperationDocumentFormData,
+  operationDocumentCategoryLabel,
+  type OperationDocumentCategory,
+} from "@/lib/operation-document-categories";
 
 type Props = {
   operationId: string;
@@ -33,12 +39,16 @@ export function OperationPreSurgeryProfileDocs({ operationId, canUpload }: Props
       const pending = rows.filter((r) => r.files.length > 0 && r.category);
       if (pending.length === 0) throw new Error("nothing_to_upload");
       for (const row of pending) {
-        const desc = pendingDocumentDescription(row, t);
+        if (!row.category) continue;
+        const desc = pendingDocumentDescription(row, t, operationDocumentCategoryLabel);
         for (const file of row.files) {
           const fd = new FormData();
-          fd.append("file", file);
-          fd.append("kind", "ATTACHMENT");
-          fd.append("description", desc);
+          appendOperationDocumentFormData(fd, {
+            file,
+            category: row.category as OperationDocumentCategory,
+            description: desc,
+            phase: "pre",
+          });
           await apiPostFormData(`/api/v1/operations/${operationId}/documents`, fd);
         }
       }
@@ -68,7 +78,10 @@ export function OperationPreSurgeryProfileDocs({ operationId, canUpload }: Props
           {t("patients.operationPreDocsTitle", "Add pre-surgery documents")}
         </p>
         <p className="text-xs text-muted-foreground">
-          {t("patients.operationPreDocsHint", "Consent forms, imaging, or plans while the operation is scheduled.")}
+          {t(
+            "patients.operationPreDocsHint",
+            "Consent forms, operation report, imaging, or plans while the operation is scheduled.",
+          )}
         </p>
       </div>
       <PendingDocumentAttachments
@@ -78,6 +91,12 @@ export function OperationPreSurgeryProfileDocs({ operationId, canUpload }: Props
           if (invalidRowIds.size > 0) setInvalidRowIds(new Set());
         }}
         invalidRowIds={invalidRowIds.size > 0 ? invalidRowIds : undefined}
+        categories={OPERATION_DOCUMENT_CATEGORIES}
+        categoryLabel={operationDocumentCategoryLabel}
+        optionalHint={t(
+          "operations.documentsOptionalHint",
+          "Optional — attach consent, operation report, labs, imaging, or other files.",
+        )}
       />
       <Button type="button" size="sm" disabled={uploadMut.isPending} onClick={() => uploadMut.mutate()}>
         {uploadMut.isPending ? t("common.saving", "Saving…") : t("common.upload", "Upload")}

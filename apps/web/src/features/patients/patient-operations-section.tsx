@@ -21,6 +21,7 @@ import { filterFieldClassName, filterToolbarCompactClassName, nativeSelectClassN
 import { Label } from "@/components/ui/label";
 import { OperationPostSurgeryDocumentsSection } from "@/features/operations/operation-post-surgery-documents";
 import { OperationPreSurgeryProfileDocs } from "@/features/patients/operation-pre-surgery-profile-docs";
+import { operationDocumentKindLabel } from "@/lib/operation-document-categories";
 import { operationStatusIsEditable } from "@/lib/operation-status-policy";
 
 const PATIENT_OPS_PAGE_SIZE = 5;
@@ -254,7 +255,12 @@ function OperationDocumentsBlock({
           {documents.map((doc) => (
             <li key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
               <div>
-                <p className="font-medium">{doc.description?.trim() || doc.originalFileName}</p>
+                <p className="font-medium">
+                  <span className="text-foreground">{operationDocumentKindLabel(doc.kind, t)}</span>
+                  {doc.description?.trim()
+                    ? ` — ${doc.description.trim()}`
+                    : ` — ${doc.originalFileName}`}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {new Date(doc.createdAt).toLocaleDateString(localeForLanguage(i18n.language))}
                 </p>

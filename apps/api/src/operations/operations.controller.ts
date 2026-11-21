@@ -262,7 +262,10 @@ export class OperationsController {
   }
 
   @Post(":id/documents")
-  @ApiOperation({ summary: "Upload attachment or prescription document (multipart: file, kind, optional description)" })
+  @ApiOperation({
+    summary:
+      "Upload operation document (multipart: file, kind ATTACHMENT|PRESCRIPTION|CONSENT|OPERATION_NOTE|POST_SURGERY, description required except prescription)",
+  })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
@@ -270,7 +273,10 @@ export class OperationsController {
       required: ["file", "kind"],
       properties: {
         file: { type: "string", format: "binary" },
-        kind: { type: "string", enum: ["ATTACHMENT", "PRESCRIPTION"] },
+        kind: {
+          type: "string",
+          enum: ["ATTACHMENT", "PRESCRIPTION", "CONSENT", "OPERATION_NOTE", "POST_SURGERY"],
+        },
         description: { type: "string" },
       },
     },
@@ -299,9 +305,15 @@ export class OperationsController {
           ? OperationDocumentKind.ATTACHMENT
           : normalized === "POST_SURGERY"
             ? OperationDocumentKind.POST_SURGERY
-            : null;
+            : normalized === "CONSENT"
+              ? OperationDocumentKind.CONSENT
+              : normalized === "OPERATION_NOTE" || normalized === "OPERATION_REPORT"
+                ? OperationDocumentKind.OPERATION_NOTE
+                : null;
     if (!kind) {
-      throw new BadRequestException("kind must be ATTACHMENT, PRESCRIPTION, or POST_SURGERY");
+      throw new BadRequestException(
+        "kind must be ATTACHMENT, PRESCRIPTION, CONSENT, OPERATION_NOTE, or POST_SURGERY",
+      );
     }
     return this.operations.uploadDocument(requireTenantId(user), id, kind, description, file, user);
   }

@@ -16,10 +16,13 @@ export const PATIENT_DOCUMENT_CATEGORIES: PatientDocumentCategory[] = [
   "OTHER",
 ];
 
+/** Categories used by patients + operations (operations may pass a wider list). */
+export type DocumentCategoryOption = string;
+
 export type PendingDocumentRow = {
   id: string;
   files: File[];
-  category: PatientDocumentCategory | "";
+  category: DocumentCategoryOption | "";
   otherDetail: string;
 };
 
@@ -46,10 +49,20 @@ export function patientDocumentCategoryLabel(
 export function pendingDocumentDescription(
   row: PendingDocumentRow,
   t: (key: string, fallback: string) => string,
+  categoryLabel?: (category: string, t: (key: string, fallback: string) => string) => string,
 ): string {
   if (!row.category) return "";
   if (row.category === "OTHER") return row.otherDetail.trim();
-  return patientDocumentCategoryLabel(row.category, t);
+  if (categoryLabel) return categoryLabel(row.category, t);
+  if (
+    row.category === "LAB_RESULTS" ||
+    row.category === "RADIOLOGY" ||
+    row.category === "PRESCRIPTION" ||
+    row.category === "OTHER"
+  ) {
+    return patientDocumentCategoryLabel(row.category, t);
+  }
+  return row.category;
 }
 
 export function validatePendingDocuments(rows: PendingDocumentRow[]): string | null {
@@ -89,6 +102,10 @@ type PendingDocumentAttachmentsProps = {
   className?: string;
   /** Highlight specific row fields after validation */
   invalidRowIds?: Set<string>;
+  /** Override category options (e.g. operations include Consent + Operation Report). */
+  categories?: readonly DocumentCategoryOption[];
+  categoryLabel?: (category: string, t: (key: string, fallback: string) => string) => string;
+  optionalHint?: string;
 };
 
 export function PendingDocumentAttachments({
@@ -96,10 +113,26 @@ export function PendingDocumentAttachments({
   onChange,
   className,
   invalidRowIds,
+  categories = PATIENT_DOCUMENT_CATEGORIES,
+  categoryLabel,
+  optionalHint,
 }: PendingDocumentAttachmentsProps) {
   const { t } = useTranslation();
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraRowId, setCameraRowId] = useState<string | null>(null);
+
+  const labelFor = (category: string) => {
+    if (categoryLabel) return categoryLabel(category, t);
+    if (
+      category === "LAB_RESULTS" ||
+      category === "RADIOLOGY" ||
+      category === "PRESCRIPTION" ||
+      category === "OTHER"
+    ) {
+      return patientDocumentCategoryLabel(category, t);
+    }
+    return category;
+  };
 
   const handleCameraOpenChange = (open: boolean) => {
     if (!open) setCameraRowId(null);
@@ -142,7 +175,8 @@ export function PendingDocumentAttachments({
       </div>
       {rows.length === 0 ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          {t("patients.documentsOptionalHint", "Optional — attach files with a description for each.")}
+          {optionalHint ??
+            t("patients.documentsOptionalHint", "Optional — attach files with a description for each.")}
         </p>
       ) : (
         <div className="mt-3 space-y-3">
@@ -175,7 +209,7 @@ export function PendingDocumentAttachments({
                   )}
                   value={row.category}
                   onChange={(e) => {
-                    const category = e.target.value as PatientDocumentCategory | "";
+                    const category = e.target.value;
                     onChange((prev) =>
                       prev.map((r) =>
                         r.id === row.id
@@ -186,9 +220,9 @@ export function PendingDocumentAttachments({
                   }}
                 >
                   <option value="">{t("patients.docCategorySelect", "Select type…")}</option>
-                  {PATIENT_DOCUMENT_CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat} value={cat}>
-                      {patientDocumentCategoryLabel(cat, t)}
+                      {labelFor(cat)}
                     </option>
                   ))}
                 </select>

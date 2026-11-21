@@ -93,6 +93,12 @@ export class OperationsService {
       }
       return;
     }
+    // Consent + operation report: allowed while booking/prep is editable, and after discharge (post-surgery).
+    if (kind === OperationDocumentKind.CONSENT || kind === OperationDocumentKind.OPERATION_NOTE) {
+      if (operationAllowsPostSurgeryDocuments(status)) return;
+      this.ensureEditableStatus(status);
+      return;
+    }
     if (kind === OperationDocumentKind.ATTACHMENT || kind === OperationDocumentKind.PRESCRIPTION) {
       this.ensureEditableStatus(status);
       return;
@@ -1183,10 +1189,12 @@ export class OperationsService {
     if (!ALLOWED_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
 
     const desc = description?.trim() || null;
-    if (
-      (kind === OperationDocumentKind.ATTACHMENT || kind === OperationDocumentKind.POST_SURGERY) &&
-      !desc
-    ) {
+    const needsDescription =
+      kind === OperationDocumentKind.ATTACHMENT ||
+      kind === OperationDocumentKind.POST_SURGERY ||
+      kind === OperationDocumentKind.CONSENT ||
+      kind === OperationDocumentKind.OPERATION_NOTE;
+    if (needsDescription && !desc) {
       throw new BadRequestException("Document description is required");
     }
 
@@ -1209,8 +1217,7 @@ export class OperationsService {
         tenantId,
         operationId,
         kind,
-        description:
-          kind === OperationDocumentKind.ATTACHMENT || kind === OperationDocumentKind.POST_SURGERY ? desc : null,
+        description: needsDescription ? desc : null,
         originalFileName: file.originalname || base,
         mimeType: mime,
         sizeBytes: file.size,
