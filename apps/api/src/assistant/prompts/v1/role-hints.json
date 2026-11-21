@@ -44,7 +44,7 @@
     "ar": "استقبال، مواعيد، بحث مرضى أساسي."
   },
   "call_center": {
-    "en": "Patient lookup, appointments, customer support tickets.",
-    "ar": "بحث مرضى، مواعيد، تذاكر دعم."
+    "en": "Patient lookup, appointments, encounters (no fee amounts by default), customer support tickets.",
+    "ar": "بحث مرضى، مواعيد، زيارات (بدون مبالغ افتراضياً)، تذاكر دعم."
   }
 }

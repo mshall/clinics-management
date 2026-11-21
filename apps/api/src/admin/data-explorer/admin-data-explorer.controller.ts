@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   Res,
   UploadedFile,
   UseGuards,
@@ -15,7 +16,7 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import { diskStorage } from "multer";
 import { mkdirSync } from "fs";
 import { join } from "path";
@@ -101,9 +102,16 @@ export class AdminDataExplorerController {
   @Get("export/jobs/:id/download")
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
   @ApiOperation({ summary: "Stream a READY organization export artifact (authenticated)" })
-  async downloadExportJob(@CurrentUser() user: JwtUser, @Param("id") id: string, @Res() res: Response) {
+  async downloadExportJob(
+    @CurrentUser() user: JwtUser,
+    @Param("id") id: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
     const file = await this.orgBackup.downloadJob(user, id);
-    await streamOrgBackupArtifact(res, file);
+    req.setTimeout?.(0);
+    res.setTimeout?.(0);
+    await streamOrgBackupArtifact(res, file, req);
   }
 
   @Post("import")

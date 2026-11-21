@@ -20,7 +20,7 @@ npm run db:seed:mobile                           # Kiorly Work add-on: Basic cli
 ../../scripts/seed-all.sh [--reset]              # all products in order (needed once for the Kiorex mirror and the Lab hand-off)
 ```
 
-* `npm run dev` at the repo root (API + web + docs, with `scripts/wait-api-and-dev-web.sh`) is safe next to the founder's other checkout since 21 Nov 2026: `scripts/free-dev-ports.sh` only frees this checkout's own ports (API 3010, web 5174, docs 5176; overridable with `API_PORT` / `WEB_PORT` / `DOCS_PORT`) and refuses to free 3000 / 5173 / 5175 / 4175. When the stack from `up.sh` already runs the API on :3010, `npm run dev` would stop it (it is on an own port); to only add the web use `npm run dev -w web` (:5174). The docs portal moved from 5175 to 5176 for the same reason.
+* `npm run dev` at the repo root (API + web + docs, with `scripts/wait-api-and-dev-web.sh`) uses branch-specific ports from `scripts/local-dev-ports.sh` (`kiorex`: API 3010, web 5174, docs 5175; `main`: 3020 / 5190 / 5191). CAUTION: `scripts/free-dev-ports.sh` also frees the shared alternates (3000 / 3010 / 3020 / 5173 / 5174 / 5175 / 5190 / 5191 / 4175), so it stops a second checkout's servers and the stack's API on :3010. To only add the web, use `npm run dev -w web` (:5174).
 * Live home visits (en route / arrived / just aborted) are anchored to the seed instant; the 15 s safety scheduler prompts/escalates an *arrived* visit nobody answers after about 40 min. Re-run with `--reset` for fresh ones.
 * First login of any staff user shows the legal-terms acceptance banner (real UI behaviour).
 

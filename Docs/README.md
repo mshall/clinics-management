@@ -15,7 +15,7 @@ npm run docs:sync   # refresh PiggyMetrics README from GitHub master
 npm run docs:dev    # http://localhost:5175  (also starts with npm run dev)
 ```
 
-See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, sync workflow, and ports (API 3000 · Web 5173 · Docs 5175).
+See **[Documentation_Portal.md](./Documentation_Portal.md)** for module layout, sync workflow, and ports (`main`: API 3020 · Web 5190 · Docs 5191; other branches: API 3010 · Web 5174 · Docs 5175).
 
 ---
 

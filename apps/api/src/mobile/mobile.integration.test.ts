@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { PrismaClient, UserRole } from "@prisma/client";
+import { PlanKey, PrismaClient, UserRole } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { JwtUser } from "../auth/jwt-user";
 import { EntitlementsService } from "../entitlements/entitlements.service";
@@ -64,6 +64,12 @@ describe("Kiorly Work backend (real DB)", () => {
     assert.equal((await ent.evaluate("demo_t_na")).enabled, true);
     assert.equal((await ent.evaluate("demo_t_nsolo")).plan, "PRO");
     const e = await prisma.tenant.findFirstOrThrow({ where: { name: "Kiorly Clinic Group (Demo)" } });
+    // Shared-DB hygiene: earlier suites (PL-03/04) mutate the oldest seed tenant to LITE without always restoring.
+    const enterprise = await prisma.plan.findUniqueOrThrow({ where: { key: PlanKey.ENTERPRISE } });
+    await prisma.subscription.update({
+      where: { tenantId: e.id },
+      data: { planId: enterprise.id, status: "ACTIVE", trialPlanId: null },
+    });
     const big = await ent.evaluate(e.id);
     assert.deepEqual([big.enabled, big.plan], [true, "ENTERPRISE"]);
   });

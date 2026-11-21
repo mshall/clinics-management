@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { after, before, describe, it } from "node:test";
+import { DateTime } from "luxon";
 import { PaymentMethod, UserRole, type PrismaClient } from "@prisma/client";
 import { createPrismaClient } from "../prisma/create-prisma-client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -106,7 +107,9 @@ describe("QA-02 patient billing money path", () => {
       t.skip("DATABASE_URL not set");
       return;
     }
-    const shiftDate = new Date().toISOString().slice(0, 10);
+    // Must match BillingService.closeCashierShift: calendar day in the clinic timezone (UTC ISO date misses Cairo evenings).
+    const tz = (await prisma.clinic.findUniqueOrThrow({ where: { id: clinicId } })).timezone?.trim() || "Africa/Cairo";
+    const shiftDate = DateTime.now().setZone(tz).toISODate()!;
     const close = await billing.closeCashierShift(tenantId, { userId: financeUserId, role: UserRole.FINANCE_OFFICER } as never, {
       clinicId,
       shiftDate,
@@ -116,7 +119,7 @@ describe("QA-02 patient billing money path", () => {
     });
     assert.equal(Number(close.countedCash), 80);
     assert.equal(Number(close.countedCard), 70);
-    assert.ok(Number(close.expectedCash) >= 80);
-    assert.ok(Number(close.expectedCard) >= 70);
+    assert.ok(Number(close.expectedCash) >= 80, `expectedCash=${close.expectedCash} shiftDate=${shiftDate} tz=${tz}`);
+    assert.ok(Number(close.expectedCard) >= 70, `expectedCard=${close.expectedCard}`);
   });
 });

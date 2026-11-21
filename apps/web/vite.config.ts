@@ -33,7 +33,7 @@ function apiProxyConfigure(proxy: {
         JSON.stringify({
           statusCode: 503,
           message:
-            "Local API is not reachable. From the repo root run npm run dev and wait for API listening on port 3010.",
+            `Local API is not reachable. From the repo root run npm run dev and wait for API listening on port ${process.env.API_PORT ?? process.env.VITE_DEV_API_PORT ?? "3010"}.`,
           error: "ApiUnavailable",
         }),
       );
@@ -41,9 +41,12 @@ function apiProxyConfigure(proxy: {
   });
 }
 
+const apiPort = process.env.API_PORT ?? process.env.VITE_DEV_API_PORT ?? "3010";
+const webPort = Number(process.env.WEB_PORT ?? 5174);
+
 const apiDevProxy = {
   "/api": {
-    target: process.env.API_PROXY_TARGET ?? "http://127.0.0.1:3010",
+    target: process.env.API_PROXY_TARGET ?? `http://127.0.0.1:${apiPort}`,
     changeOrigin: true,
     // KNED: forward the original Host (x-forwarded-host) so nurse.localhost selects the Nurse edition on sign-in surfaces.
     xfwd: true,
@@ -58,6 +61,7 @@ export default defineConfig({
   define: {
     "import.meta.env.VITE_BUILD_ID": JSON.stringify(loadBuildId()),
     "import.meta.env.VITE_BUILD_BUILT_AT": JSON.stringify(loadBuildBuiltAt()),
+    "import.meta.env.VITE_DEV_API_PORT": JSON.stringify(String(apiPort)),
   },
   plugins: [
     react(),
@@ -85,7 +89,15 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: "/index.html",
+        // Never let the SW own API navigations / large backup downloads.
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith("/api/v1/admin/org-backup/") ||
+              /\/api\/v1\/admin\/data-explorer\/export\/jobs\/[^/]+\/download/.test(url.pathname),
+            handler: "NetworkOnly",
+          },
           {
             urlPattern: ({ url }) =>
               url.pathname.startsWith("/api/v1/dashboards/today") ||
@@ -128,14 +140,15 @@ export default defineConfig({
   },
   server: {
     host: "127.0.0.1",
-    port: 5174,
+    port: webPort,
     strictPort: true,
     open: "/login",
     proxy: apiDevProxy,
   },
   preview: {
     host: "127.0.0.1",
-    port: 5174,
+    // Playwright CI keeps the historical preview port unless WEB_PORT is set.
+    port: Number(process.env.WEB_PORT ?? 5174),
     strictPort: true,
     proxy: apiDevProxy,
   },

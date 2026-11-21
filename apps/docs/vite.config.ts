@@ -10,12 +10,12 @@ export default defineConfig({
     },
   },
   server: {
-    port: Number(process.env.DOCS_PORT ?? 5176),
+    port: Number(process.env.DOCS_PORT ?? 5175),
     strictPort: true,
     host: true,
   },
   preview: {
-    port: Number(process.env.DOCS_PREVIEW_PORT ?? 4176),
+    port: Number(process.env.DOCS_PREVIEW_PORT ?? 4175),
     strictPort: true,
     host: true,
   },

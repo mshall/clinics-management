@@ -73,7 +73,8 @@ const ROLE_KEYS: Record<DemoRole, NavItemKey[]> = {
   physician: ["patients", "encounters", "appointments", "operations", "doctor_revenue", "profile", "reports"],
   nurse: ["patients", "appointments", "encounters", "profile"],
   receptionist: ["patients", "appointments", "encounters", "operations", "profile"],
-  call_center: ["patients", "appointments", "operations", "customer_support", "profile"],
+  // Encounters CRUD; fee/balance amounts stay hidden unless money-visibility override shows them.
+  call_center: ["patients", "appointments", "encounters", "operations", "customer_support", "profile"],
   clinic_admin: [
     "dashboard",
     "patients",

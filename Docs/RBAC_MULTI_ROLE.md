@@ -27,6 +27,11 @@ JWT/session payload includes `roles[]`, `additionalRoles`, `isTenantOwner`. Nav 
 - `rbac-role-check.node.test.ts` — grep guard + owner-physician unit cases.
 - `apps/web/e2e/owner-physician-flow.spec.ts` — E2E golden flow.
 
+## Call center
+
+- Default nav includes **encounters** (CRUD via nav-tab mutate) plus patients, appointments, operations, customer support.
+- **Money visibility:** encounter / appointment fee amounts stay hidden unless a per-user override shows them (`user-money-visibility`; role default excludes `CALL_CENTER` from encounter money roles).
+
 ## Follow-ups
 
 - Plan-based seat limits for additional roles (currently capped at 3 in API).

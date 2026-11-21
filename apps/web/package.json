@@ -13,9 +13,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:unit": "node --import tsx --test \"src/**/*.node.test.ts\"",
-    "test:e2e": "playwright test",
-    "test:e2e:golden": "playwright test qa01-golden-flow.spec.ts",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e": "bash ../../scripts/playwright-with-local-ports.sh",
+    "test:e2e:golden": "bash ../../scripts/playwright-with-local-ports.sh qa01-golden-flow.spec.ts",
+    "test:e2e:ui": "bash ../../scripts/playwright-with-local-ports.sh --ui"
   },
   "dependencies": {
     "@fontsource-variable/jost": "^5.3.0",

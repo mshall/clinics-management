@@ -28,7 +28,7 @@
     "sync:aws:deploy": "bash scripts/sync-github.sh && SYNC_AWS_DEPLOY=1 bash scripts/sync-aws.sh",
     "sync:aws:smoke": "bash scripts/cicd-post-deploy-smoke.sh",
     "dev:web:aws": "bash -c 'set -a; [ -f apps/web/.env.aws ] && . apps/web/.env.aws; set +a; npm run dev -w web'",
-    "dev": "bash scripts/free-dev-ports.sh && concurrently -n api,web,docs -c blue,green,magenta \"npm run dev -w api\" \"bash scripts/wait-api-and-dev-web.sh\" \"npm run dev -w docs\"",
+    "dev": "bash scripts/dev-local.sh",
     "dev:e2e": "bash scripts/dev-e2e.sh",
     "dev:web": "npm run dev -w web",
     "dev:api": "npm run dev -w api",

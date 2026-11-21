@@ -12,6 +12,7 @@ const entitlements = new EntitlementsService(prisma as unknown as PrismaService)
 
 describe("PL-04 module entitlements", () => {
   let tenantId: string;
+  let prevSub: { planId: string; status: SubscriptionStatus; trialPlanId: string | null } | null = null;
 
   before(async () => {
     await prisma.$connect();
@@ -19,6 +20,10 @@ describe("PL-04 module entitlements", () => {
     const lite = await prisma.plan.findUniqueOrThrow({ where: { key: PlanKey.LITE } });
     const tenant = await prisma.tenant.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
     tenantId = tenant.id;
+    const existing = await prisma.subscription.findUnique({ where: { tenantId } });
+    if (existing) {
+      prevSub = { planId: existing.planId, status: existing.status, trialPlanId: existing.trialPlanId };
+    }
     await prisma.subscription.update({
       where: { tenantId },
       data: { planId: lite.id, status: SubscriptionStatus.ACTIVE, trialPlanId: null },
@@ -26,6 +31,9 @@ describe("PL-04 module entitlements", () => {
   });
 
   after(async () => {
+    if (prevSub) {
+      await prisma.subscription.update({ where: { tenantId }, data: prevSub }).catch(() => undefined);
+    }
     await prisma.$disconnect();
   });
 

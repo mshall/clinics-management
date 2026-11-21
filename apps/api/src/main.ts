@@ -43,7 +43,14 @@ async function bootstrap() {
   app.enableCors({
     origin: true,
     credentials: true,
-    exposedHeaders: ["X-Kiorly-Web-Build-Id", "X-Kiorly-Web-Build-Built-At", "X-Kiorly-Web-Min-Built-At"],
+    exposedHeaders: [
+      "X-Kiorly-Web-Build-Id",
+      "X-Kiorly-Web-Build-Built-At",
+      "X-Kiorly-Web-Min-Built-At",
+      // Org-backup fetch downloads (cross-origin from Vite → API) need these for progress / filename.
+      "Content-Length",
+      "Content-Disposition",
+    ],
   });
   app.use(webBuildIdMiddleware);
   app.setGlobalPrefix("api/v1", {
@@ -84,6 +91,18 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3000);
   const host = process.env.LISTEN_HOST ?? "0.0.0.0";
   await app.listen(port, host);
+  // Large org-backup ZIP downloads can exceed default Node HTTP timeouts mid-stream
+  // (Chrome then shows "Failed - Network error").
+  const httpServer = app.getHttpServer() as {
+    requestTimeout?: number;
+    headersTimeout?: number;
+    keepAliveTimeout?: number;
+    timeout?: number;
+  };
+  httpServer.requestTimeout = 0;
+  httpServer.headersTimeout = 0;
+  httpServer.keepAliveTimeout = 120_000;
+  httpServer.timeout = 0;
   console.log(`API listening on http://localhost:${port}/api/v1`);
   if (process.env.SWAGGER_ENABLED !== "false") {
     console.log(`OpenAPI UI: http://localhost:${port}/docs`);

@@ -353,14 +353,14 @@ Prerequisites: Node 26 (Active LTS, see `.nvmrc`), npm 11+, PostgreSQL (the work
 npm install
 cp apps/api/.env.example apps/api/.env   # set DATABASE_URL; never commit .env
 npm run db:setup                         # migrate + full demo seed
-npm run dev                              # API :3010 + web :5174 + docs portal :5175
+npm run dev                              # branch ports: main → API :3020 + web :5190 + docs :5191; else :3010 / :5174 / :5175
 ```
 
 | Service | URL | Command |
 |---|---|---|
-| API | http://localhost:3010/api/v1 | `npm run dev:api` (`/health/live`, `/health/ready`) |
-| Swagger | http://localhost:3010/docs | on by default in development |
-| Web | http://localhost:5174 | `npm run dev:web` |
+| API | http://localhost:3020/api/v1 on `main` (else :3010) | `npm run dev` (`/health/live`, `/health/ready`) |
+| Swagger | http://localhost:3020/docs on `main` (else :3010) | on by default in development |
+| Web | http://localhost:5190 on `main` (else :5174) | `npm run dev` |
 | Docs portal | http://localhost:5175 | `npm run docs:dev` |
 | Nurse e2e stack | OPEN `:3011` / `:5185`, locked `:3012` / `:5186` | `bash scripts/nurse-e2e-stack.sh` |
 
@@ -607,7 +607,7 @@ Typical flows:
 
 - **Tickets** across product modules with status workflow and timeline.
 - **Log tracking:** searchable audit trail with **resolution hints**; open a ticket from any log row.
-- Roles: group admin, group supervisor, branch/clinic admin, call center (sidebar **Customer support**).
+- Roles: group admin, group supervisor, branch/clinic admin, call center (sidebar **Customer support** + **Encounters**; fees hidden by default).
 
 ### Profile & HR
 
