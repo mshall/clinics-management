@@ -13,6 +13,14 @@ import { resetMedicationsPrescriptionDraft } from "@/components/medications-pres
 import { PendingDocumentAttachments } from "@/components/pending-document-attachments";
 import { type PendingDocumentRow } from "@/components/pending-document-utils";
 import { pendingDocumentDescription } from "@/components/pending-document-utils";
+import {
+  OPERATION_DOCUMENT_CATEGORIES,
+  appendOperationDocumentFormData,
+  isOperationClinicalDocumentKind,
+  operationDocumentCategoryLabel,
+  operationDocumentKindLabel,
+  type OperationDocumentCategory,
+} from "@/lib/operation-document-categories";
 import { OperationStatusBadge } from "@/components/operation-status-badge";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh } from "@/components/sortable-th";
@@ -104,7 +112,9 @@ function operationDetailToMedState(detail: OperationDetailDto): {
   hasExistingPrescription: boolean;
   existingAttachments: OperationDocumentDto[];
 } {
-  const existingAttachments = detail.documents.filter((d) => d.kind === "ATTACHMENT");
+  const existingAttachments = detail.documents.filter(
+    (d) => isOperationClinicalDocumentKind(d.kind) && d.kind !== "PRESCRIPTION",
+  );
   const hasExistingPrescription = detail.documents.some((d) => d.kind === "PRESCRIPTION");
   const medications = detail.medications.map((m) => ({
     id: crypto.randomUUID(),
@@ -697,12 +707,16 @@ export function OperationsPage() {
     });
 
     for (const row of editDocRows) {
-      const description = pendingDocumentDescription(row, t);
+      if (!row.category) continue;
+      const description = pendingDocumentDescription(row, t, operationDocumentCategoryLabel);
       for (const file of row.files) {
         const fd = new FormData();
-        fd.append("file", file);
-        fd.append("kind", "ATTACHMENT");
-        fd.append("description", description);
+        appendOperationDocumentFormData(fd, {
+          file,
+          category: row.category as OperationDocumentCategory,
+          description,
+          phase: "pre",
+        });
         await apiPostFormData(`/api/v1/operations/${editOp.id}/documents`, fd);
       }
     }
@@ -913,12 +927,16 @@ export function OperationsPage() {
       });
 
       for (const row of docRows) {
-        const description = pendingDocumentDescription(row, t);
+        if (!row.category) continue;
+        const description = pendingDocumentDescription(row, t, operationDocumentCategoryLabel);
         for (const file of row.files) {
           const fd = new FormData();
-          fd.append("file", file);
-          fd.append("kind", "ATTACHMENT");
-          fd.append("description", description);
+          appendOperationDocumentFormData(fd, {
+            file,
+            category: row.category as OperationDocumentCategory,
+            description,
+            phase: "pre",
+          });
           await apiPostFormData(`/api/v1/operations/${op.id}/documents`, fd);
         }
       }
@@ -1730,7 +1748,12 @@ export function OperationsPage() {
                         <p className="text-sm font-medium">{t("operations.existingDocuments", "Saved documents")}</p>
                         <ul className="space-y-1 text-sm text-muted-foreground">
                           {editExistingAttachments.map((doc) => (
-                            <li key={doc.id}>{doc.description || doc.originalFileName}</li>
+                            <li key={doc.id}>
+                              <span className="font-medium text-foreground">
+                                {operationDocumentKindLabel(doc.kind, t)}
+                              </span>
+                              {doc.description ? ` — ${doc.description}` : ` — ${doc.originalFileName}`}
+                            </li>
                           ))}
                         </ul>
                       </div>
@@ -1744,6 +1767,12 @@ export function OperationsPage() {
                           if (editDocInvalidRowIds.size > 0) setEditDocInvalidRowIds(new Set());
                         }}
                         invalidRowIds={editDocInvalidRowIds.size > 0 ? editDocInvalidRowIds : undefined}
+                        categories={OPERATION_DOCUMENT_CATEGORIES}
+                        categoryLabel={operationDocumentCategoryLabel}
+                        optionalHint={t(
+                          "operations.documentsOptionalHint",
+                          "Optional — attach consent, operation report, labs, imaging, or other files.",
+                        )}
                       />
                     </fieldset>
                     <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4 lg:col-span-2">
@@ -2166,6 +2195,12 @@ export function OperationsPage() {
                     if (docInvalidRowIds.size > 0) setDocInvalidRowIds(new Set());
                   }}
                   invalidRowIds={docInvalidRowIds.size > 0 ? docInvalidRowIds : undefined}
+                  categories={OPERATION_DOCUMENT_CATEGORIES}
+                  categoryLabel={operationDocumentCategoryLabel}
+                  optionalHint={t(
+                    "operations.documentsOptionalHint",
+                    "Optional — attach consent, operation report, labs, imaging, or other files.",
+                  )}
                 />
               </fieldset>
 

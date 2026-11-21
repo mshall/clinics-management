@@ -20,6 +20,9 @@ If push fails, fix and retry. Do not leave unpushed kiorex commits after this fl
 ## Phrasing that triggers this
 
 - “push this fix into kiorex”
+- “push into kiorex branch”
 - “merge this into kiorex”
 - “push to main and kiorex”
 - Similar: ship **this** change to both branches, then return to **main**
+
+When the user says only “push into kiorex” **for the current fix**, still: commit/push the fix on `main` if needed → cherry-pick onto `kiorex` → push `kiorex` → checkout `main`.

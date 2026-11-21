@@ -1,3 +1,14 @@
+export type PatientDocumentCategory = "LAB_RESULTS" | "RADIOLOGY" | "PRESCRIPTION" | "OTHER";
+
+/** Categories used by patients + operations (operations may pass a wider list). */
+export type DocumentCategoryOption = string;
+
+export type PendingDocumentRow = {
+  id: string;
+  files: File[];
+  category: DocumentCategoryOption | "";
+  otherDetail: string;
+};
 
 export const PATIENT_DOCUMENT_CATEGORIES: PatientDocumentCategory[] = [
   "LAB_RESULTS",
@@ -29,10 +40,20 @@ export function patientDocumentCategoryLabel(
 export function pendingDocumentDescription(
   row: PendingDocumentRow,
   t: (key: string, fallback: string) => string,
+  categoryLabel?: (category: string, t: (key: string, fallback: string) => string) => string,
 ): string {
   if (!row.category) return "";
   if (row.category === "OTHER") return row.otherDetail.trim();
-  return patientDocumentCategoryLabel(row.category, t);
+  if (categoryLabel) return categoryLabel(row.category, t);
+  if (
+    row.category === "LAB_RESULTS" ||
+    row.category === "RADIOLOGY" ||
+    row.category === "PRESCRIPTION" ||
+    row.category === "OTHER"
+  ) {
+    return patientDocumentCategoryLabel(row.category, t);
+  }
+  return row.category;
 }
 
 export function validatePendingDocuments(rows: PendingDocumentRow[]): string | null {
@@ -81,12 +102,3 @@ export function pendingDocumentValidationMessage(
   }
   return null;
 }
-
-export type PatientDocumentCategory = "LAB_RESULTS" | "RADIOLOGY" | "PRESCRIPTION" | "OTHER";
-
-export type PendingDocumentRow = {
-  id: string;
-  files: File[];
-  category: PatientDocumentCategory | "";
-  otherDetail: string;
-};

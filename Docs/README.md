@@ -209,7 +209,7 @@ Shipped capabilities are listed in the PRD [§12.1 Delivered on `main`](./Clinic
 Create and edit use a **two-stage wizard**:
 
 1. **Booking details** — patient, date & time, doctor, total cost / down payment, how they found us. Initiated and edited by **group supervisor** or **clinic (doctor) assistant** (plus org admins). **Call center cannot start a new operation** (create button hidden) and cannot return to stage 1 when editing; the UI explains that only supervisor/assistant can change booking fields.
-2. **Clinical prep** — lab/radiology/other documents, prescriptions/medications, comments. Call center may complete this stage on existing operations.
+2. **Clinical prep** — documents (lab, radiology, **consent**, **operation report**, other), prescriptions/medications, comments. Call center may complete this stage on existing operations. The same document types (including consent and operation report) can also be attached on **post-surgery** upload after discharge (`CONSENT` / `OPERATION_NOTE` / `POST_SURGERY` kinds).
 
 **Same-day duplicate guard:** before create, `GET /operations/same-day-duplicates` checks patient + doctor + calendar day; a rich dialog shows existing operation details and warns against duplicates (create-anyway still available).
 

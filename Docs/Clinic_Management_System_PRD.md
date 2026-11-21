@@ -231,7 +231,7 @@ See [`Test_Data_Users.md`](./Test_Data_Users.md) for demo logins and QA scenario
 - Schedule **operations** (procedures) per clinic with patient, clinician, date, cost, down payment, and balance.
 - **`feeCurrency`** per operation (EGP, USD, OMR, SAR, AED) — defaults to the clinic’s **`defaultCurrency`**; revenue posts in the operation currency.
 - Status workflow posts or voids linked **revenue** when completed or cancelled; completion dialog collects remaining balance in the operation currency.
-- Attach documents and medications per operation (same patterns as encounters).
+- Attach documents and medications per operation (same patterns as encounters), including **Consent** and **Operation Report** on create and post-surgery.
 - **Scheduled edit parity:** edit dialog matches create layout (fieldset sections, two-column grids on desktop, responsive scroll on mobile); `GET /operations/:id` loads clinical detail; `POST /operations/:id/reset-clinical` replaces meds/docs on save.
 - **Completed operation correction:** group/clinic admins may edit fees, patient, clinician, and comments; linked revenue updates automatically.
 - Physicians see only operations where they are the assigned clinician; clinic-scoped roles see assigned clinics.
