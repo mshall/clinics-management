@@ -30,34 +30,36 @@ export class ProvisionalPatientService {
       throw new BadRequestException("Valid phone is required for a new patient booking");
     }
     const e164 = normalizePhoneToE164(phoneRaw) ?? phoneRaw;
-    const existing = await this.findConflictByPhone(tenantId, phoneRaw);
-    if (existing) {
-      throw new BadRequestException({
-        message: "phone already in use",
-        code: "PHONE_IN_USE",
-        existingPatient: existing,
-      });
-    }
-
-    const mrn = await this.nextMrn(tenantId);
     const firstNameAr = (input.firstNameAr?.trim() || firstNameEn).trim();
     const lastNameAr = (input.lastNameAr?.trim() || lastNameEn).trim();
-    const created = await this.prisma.patient.create({
-      data: {
-        tenantId,
-        mrn,
-        firstNameEn,
-        lastNameEn,
-        firstNameAr,
-        lastNameAr,
-        gender: Gender.UNKNOWN,
-        phone: e164,
-        homeBranchId: clinicId,
-        acquisitionChannel: PatientAcquisitionChannel.OTHER,
-        acquisitionOtherDetail: "Provisional booking — complete profile before visit",
-        profileComplete: false,
-      },
-      select: { id: true },
+    const created = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`patient-phone:${tenantId}:${normalizePhoneDigits(e164)}`}))`;
+      const existing = await this.findConflictByPhone(tenantId, phoneRaw);
+      if (existing) {
+        throw new BadRequestException({
+          message: "phone already in use",
+          code: "PHONE_IN_USE",
+          existingPatient: existing,
+        });
+      }
+      const mrn = await this.nextMrn(tenantId);
+      return tx.patient.create({
+        data: {
+          tenantId,
+          mrn,
+          firstNameEn,
+          lastNameEn,
+          firstNameAr,
+          lastNameAr,
+          gender: Gender.UNKNOWN,
+          phone: e164,
+          homeBranchId: clinicId,
+          acquisitionChannel: PatientAcquisitionChannel.OTHER,
+          acquisitionOtherDetail: "Provisional booking — complete profile before visit",
+          profileComplete: false,
+        },
+        select: { id: true },
+      });
     });
     return { patientId: created.id, created: true };
   }
