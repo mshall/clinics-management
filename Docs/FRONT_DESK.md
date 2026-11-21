@@ -166,6 +166,7 @@ Edit VIP / chaperone on the patient record (patient update DTO).
 
 - Global search: any signed-in staff user (header is outside route gates).
 - Board, check-in, search API: tenant JWT; patient search respects existing patient list RBAC via `PatientsService`.
+- **Call center** may set appointment status (including **Checked in**) without fee-edit permission; appointment save omits fee fields, and `PATCH /appointments/:id` ignores fee payloads when the actor cannot edit appointment fees.
 - Sidebar: **Front desk board** sub-link under **Appointments** (hidden for physician “My appointments” nav).
 
 ---
