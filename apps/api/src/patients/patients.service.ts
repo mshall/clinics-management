@@ -39,6 +39,7 @@ import {
   patientCategoryToClinicalKind,
 } from "./patient-document-category";
 import { MIN_PHONE_DIGITS, normalizePhoneDigits } from "./patient-phone";
+import { normalizePhoneToE164 } from "../common/phone-e164";
 import {
   assertUploadSizeBytes,
   throwUploadDescriptionRequired,
@@ -451,40 +452,59 @@ export class PatientsService {
       });
       if (clash) throw new BadRequestException("nationalId already in use");
     }
-    const phone = dto.phone.trim();
-    const phoneClash = await this.findPatientByPhone(tenantId, phone);
-    if (phoneClash) this.throwPhoneInUse(phoneClash);
-    const mrn = await this.nextMrn(tenantId);
+    const phoneRaw = dto.phone.trim();
+    if (normalizePhoneDigits(phoneRaw).length < MIN_PHONE_DIGITS) {
+      throw new BadRequestException("Valid phone is required");
+    }
+    const phone = normalizePhoneToE164(phoneRaw) ?? phoneRaw;
     const allergyInputs = normalizePatientAllergyInputs(dto.allergies);
-    const row = await this.prisma.patient.create({
-      data: {
-        tenantId,
-        mrn,
-        firstNameEn: dto.firstNameEn,
-        lastNameEn: dto.lastNameEn,
-        firstNameAr: dto.firstNameAr.trim(),
-        lastNameAr: dto.lastNameAr.trim(),
-        dob: dto.dob?.trim() ? new Date(dto.dob) : null,
-        gender: dto.gender,
-        phone,
-        email: dto.email?.trim() || null,
-        nationalId,
-        ...patientAcquisitionUpdateData(dto),
-        homeBranchId: dto.homeBranchId ?? null,
-        isVip: dto.isVip ?? false,
-        needsChaperone: dto.needsChaperone ?? false,
-        profileComplete: true,
-        allergies: allergyInputs.length
-          ? {
-              create: allergyInputs.map((a) => ({
-                tenantId,
-                code: a.code,
-                otherComment: a.code === PatientAllergyCode.OTHER ? a.otherComment ?? null : null,
-              })),
-            }
-          : undefined,
-      },
-      include: { homeBranch: { select: { nameEn: true } } },
+    // Serialize creates for the same org+phone so double-submit / parallel M+F posts cannot
+    // both pass the pre-insert conflict check (application-level uniqueness only).
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`patient-phone:${tenantId}:${normalizePhoneDigits(phone)}`}))`;
+      const phoneClash = await this.findPatientByPhone(tenantId, phone);
+      if (phoneClash) this.throwPhoneInUse(phoneClash);
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const mrn = await this.nextMrn(tenantId);
+        try {
+          return await tx.patient.create({
+            data: {
+              tenantId,
+              mrn,
+              firstNameEn: dto.firstNameEn,
+              lastNameEn: dto.lastNameEn,
+              firstNameAr: dto.firstNameAr.trim(),
+              lastNameAr: dto.lastNameAr.trim(),
+              dob: dto.dob?.trim() ? new Date(dto.dob) : null,
+              gender: dto.gender,
+              phone,
+              email: dto.email?.trim() || null,
+              nationalId,
+              ...patientAcquisitionUpdateData(dto),
+              homeBranchId: dto.homeBranchId ?? null,
+              isVip: dto.isVip ?? false,
+              needsChaperone: dto.needsChaperone ?? false,
+              profileComplete: true,
+              allergies: allergyInputs.length
+                ? {
+                    create: allergyInputs.map((a) => ({
+                      tenantId,
+                      code: a.code,
+                      otherComment: a.code === PatientAllergyCode.OTHER ? a.otherComment ?? null : null,
+                    })),
+                  }
+                : undefined,
+            },
+            include: { homeBranch: { select: { nameEn: true } } },
+          });
+        } catch (e) {
+          if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw new BadRequestException("Could not allocate MRN");
     });
     return this.map(row);
   }

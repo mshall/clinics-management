@@ -370,6 +370,14 @@ async function ensureClinicStaff(
   ]);
 }
 
+/** Stable unique demo phone per clinic slug + slot (never reuse the clinic line). */
+function demoPatientPhone(slug: string, idx: number): string {
+  let h = 0;
+  for (const ch of slug) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const n = (h % 80_000_000) + idx * 97;
+  return `+2010${String(n).padStart(8, "0").slice(-8)}`;
+}
+
 async function ensureDemoPatientsForClinic(
   tenantId: string,
   clinicId: string,
@@ -377,13 +385,27 @@ async function ensureDemoPatientsForClinic(
   spec: DrAhmedClinicSpec
 ) {
   const target = 5;
-  const existing = await prisma.patient.count({ where: { tenantId, homeBranchId: clinicId } });
-  if (existing >= target) return;
-
   const firstNames = ["Fatma", "Mahmoud", "Nadia", "Karim", "Salma"];
   const lastNames = ["Mostafa", "Abdel Rahman", "Fouad", "Gamal", "Salem"];
   const firstNamesAr = ["فاطمة", "محمود", "نادية", "كريم", "سلمى"];
   const lastNamesAr = ["مصطفى", "عبد الرحمن", "فؤاد", "جمال", "سالم"];
+
+  // Repair older seeds that stamped every demo patient with the clinic phone (looked like M/F duplicates).
+  const aesRows = await prisma.patient.findMany({
+    where: { tenantId, mrn: { startsWith: `AES-${slug.toUpperCase()}-` }, deletedAt: null },
+    select: { id: true, mrn: true, phone: true },
+  });
+  for (const row of aesRows) {
+    const m = /-(\d+)$/.exec(row.mrn);
+    const idx = m ? Number.parseInt(m[1]!, 10) : 0;
+    if (!idx) continue;
+    const phone = demoPatientPhone(slug, idx);
+    if (row.phone === phone) continue;
+    await prisma.patient.update({ where: { id: row.id }, data: { phone } });
+  }
+
+  const existing = await prisma.patient.count({ where: { tenantId, homeBranchId: clinicId } });
+  if (existing >= target) return;
 
   for (let i = existing; i < target; i += 1) {
     const idx = i + 1;
@@ -400,7 +422,7 @@ async function ensureDemoPatientsForClinic(
         lastNameAr: lastNamesAr[i] ?? null,
         dob: new Date(1970 + i * 3, (i % 12) + 1, (i % 27) + 1),
         gender: i % 2 === 0 ? Gender.F : Gender.M,
-        phone: spec.phone,
+        phone: demoPatientPhone(slug, idx),
         email: `patient.${slug}${idx}@demo.example.com`,
         nationalId: `EG-${slug}-${String(2800101000000 + idx)}`,
         homeBranchId: clinicId,

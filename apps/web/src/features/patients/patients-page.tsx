@@ -144,6 +144,7 @@ export function PatientsPage() {
   const [allergyItems, setAllergyItems] = useState<PatientAllergyFormItem[]>([]);
   const [docInvalidRowIds, setDocInvalidRowIds] = useState<Set<string>>(() => new Set());
   const formErrRef = useRef<HTMLParagraphElement>(null);
+  const createInFlightRef = useRef(false);
   const validation = useValidationIssuesDialog({ intent: "create" });
 
   const resetForm = () => {
@@ -182,6 +183,7 @@ export function PatientsPage() {
   };
 
   const handleSubmitRegister = () => {
+    if (createInFlightRef.current || createMut.isPending) return;
     const result = collectPatientRegisterValidationIssues(
       {
         firstNameEn,
@@ -215,6 +217,7 @@ export function PatientsPage() {
     }
     setDocInvalidRowIds(new Set());
     validation.clear();
+    createInFlightRef.current = true;
     createMut.mutate();
   };
 
@@ -285,6 +288,9 @@ export function PatientsPage() {
         }
       }
       return patient;
+    },
+    onSettled: () => {
+      createInFlightRef.current = false;
     },
     onSuccess: async () => {
       validation.clear();

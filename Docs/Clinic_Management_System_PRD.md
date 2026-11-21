@@ -188,7 +188,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 **Registration (Patients → New patient)**
 - Required: English/Arabic names (Arabic first and last required), gender, phone. **Date of birth is optional.**
-- **Phone uniqueness:** Each phone number may belong to only one active patient per organization. While typing, the form checks for conflicts, highlights the phone field, shows the existing patient’s name/MRN, and links to their profile; **Create patient** stays disabled until resolved.
+- **Phone uniqueness:** Each phone number may belong to only one active patient per organization (digit-normalized; create is serialized with a DB advisory lock so double-submit cannot create a male+female pair). While typing, the form checks for conflicts, highlights the phone field, shows the existing patient’s name/MRN, and links to their profile; **Create patient** stays disabled until resolved. Demo AES patients each get a unique phone (not the clinic line).
 - Optional: email, national ID, national ID scan (PDF/image), home branch, **how did they find us?** (social, website, doctor referral with name, other with free text).
 - Optional **attached documents** at registration: type **Lab results**, **Radiology**, **Prescription**, or **Other** (custom description); multiple photos/files per row; **camera capture** — on mobile/touch devices the app opens the **native OS camera** (`capture="environment"`) for a lighter UX; desktop uses in-browser preview where supported.
 
