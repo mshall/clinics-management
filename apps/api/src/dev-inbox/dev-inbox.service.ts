@@ -6,6 +6,8 @@ import { PaymentGatewayRegistry } from "../billing-platform/payment-gateways/pay
 import { DevInboxRecorder } from "../messaging/dev-inbox.recorder";
 import { EmailService } from "../messaging/email.service";
 import { WhatsAppWebhookService } from "../messaging/whatsapp-webhook.service";
+import { SmsService } from "../messaging/providers/sms.service";
+import { WhatsAppSendService } from "../messaging/whatsapp-send.service";
 import { providerModes } from "../common/provider-mode";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -26,6 +28,8 @@ export class DevInboxService implements OnModuleInit {
     private readonly email: EmailService,
     private readonly payments: KiorlyPaymentService,
     private readonly gateways: PaymentGatewayRegistry,
+    private readonly sms: SmsService,
+    private readonly whatsappSend: WhatsAppSendService,
   ) {}
 
   onModuleInit(): void {
@@ -200,5 +204,49 @@ export class DevInboxService implements OnModuleInit {
           };
     const raw = JSON.stringify(payload);
     return this.payments.handleWebhook(gateway.key, raw, gateway.signMockWebhook(raw), payload);
+  }
+
+  /**
+   * Smoke-test a channel through the SAME port production uses. Mock mode: lands in this inbox. Real mode: calls the
+   * configured provider (use it once on staging as the go-live check). Never for patients: pass your own number/email.
+   */
+  async sendTest(input: { channel: string; to: string; body?: string; templateKey?: string; tenantId?: string }) {
+    const to = input.to?.trim();
+    if (!to) throw new BadRequestException("to is required");
+    const channel = input.channel?.toLowerCase();
+    const body = input.body?.trim() || "Kiorly provider smoke test";
+    const reference = `smoke-${randomUUID()}`;
+    if (channel === "sms") {
+      this.sms.refresh();
+      return { channel, modes: providerModes().sms, result: await this.sms.send({ to, body, reference, tenantId: input.tenantId ?? null }) };
+    }
+    if (channel === "email") {
+      const r = await this.email.send({ tenantId: input.tenantId ?? null, to, templateKey: "password_reset", variables: { name: "Test", link: "https://example.invalid/smoke", code: "000000" } });
+      return { channel, modes: providerModes().email, result: r };
+    }
+    if (channel === "whatsapp") {
+      if (!input.tenantId) throw new BadRequestException("tenantId is required for WhatsApp (market templates)");
+      const r = await this.whatsappSend.sendTemplateForTenant(input.tenantId, input.templateKey ?? "appointment_reminder_whatsapp", to, { name: "Test", body }, { renderedBody: body, relatedId: reference });
+      return { channel, modes: providerModes().whatsapp, result: r };
+    }
+    throw new BadRequestException("channel must be sms | email | whatsapp");
+  }
+
+  /** Refund a succeeded Kiorly payment and (mock) settle it through the signed refund webhook. */
+  async simulatePspRefund(input: { paymentId: string; amount?: string }) {
+    const payment = await this.prisma.kiorlyPayment.findUnique({ where: { id: input.paymentId } });
+    if (!payment) throw new NotFoundException("Payment not found");
+    const started = await this.payments.refundPaymentInternal(payment.id, input.amount);
+    if (started.status !== "PENDING") return started;
+    const gateway = this.gateways.get(payment.provider);
+    if (!gateway?.signMockWebhook) return started;
+    const key = `dev-refund-${randomUUID()}`;
+    const amount = input.amount ?? payment.amount.toFixed(2);
+    const payload =
+      gateway.key === "paymob"
+        ? { idempotency_key: key, type: "refund", transaction_id: payment.providerRef, success: true, amount, currency: payment.currency }
+        : { requestId: key, fawryRefNumber: payment.providerRef, paymentAmount: amount, paymentCurrency: payment.currency, orderStatus: "REFUNDED" };
+    const raw = JSON.stringify(payload);
+    return { ...started, settled: await this.payments.handleWebhook(gateway.key, raw, gateway.signMockWebhook(raw), payload) };
   }
 }

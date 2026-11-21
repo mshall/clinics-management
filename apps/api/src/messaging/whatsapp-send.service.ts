@@ -11,6 +11,8 @@ import {
 } from "./whatsapp-market-config";
 import type { WhatsAppSendResult, WhatsAppTemplateSendInput } from "./whatsapp-provider.types";
 import { sendWhatsAppMessageLegacy } from "./whatsapp.provider";
+import { whatsAppBackend } from "../common/provider-env";
+import { httpWhatsAppProviderFromEnv } from "./providers/whatsapp-http.provider";
 
 function normalizePhoneE164(phone: string): string {
   return phone.replace(/\s/g, "");
@@ -112,6 +114,13 @@ export class WhatsAppSendService {
       documentLink: options?.documentLink,
       documentFilename: options?.documentFilename,
     };
+
+    if (whatsAppBackend() === "http") {
+      // Generic BSP: reference = OutboundMessage id when known, doubles as the idempotency key across retries.
+      const result = await httpWhatsAppProviderFromEnv().sendTemplate({ ...input, reference: options?.relatedId });
+      if (!result.ok) this.log.warn(`WhatsApp template ${marketTpl.name} failed: ${result.error}`);
+      return result;
+    }
 
     if (!(process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN)) {
       if (process.env.NODE_ENV === "production") {

@@ -67,6 +67,7 @@ export class EmailService {
       to,
       rendered,
       tags: { template: input.templateKey, ...(input.tags ?? {}) },
+      reference: row.id,
     });
 
     if (!result.ok) {

@@ -8,6 +8,7 @@ import { resolveMarketTemplate, whatsAppConfigFromMarket } from "./whatsapp-mark
 import { DEFAULT_REMINDER_QUICK_REPLIES, WAITLIST_OFFER_QUICK_REPLIES, WAITLIST_OFFER_TEMPLATE_KEY } from "./whatsapp-reply-payloads";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { WhatsAppSendService } from "./whatsapp-send.service";
+import { SmsService } from "./providers/sms.service";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
 import { UsageMeterService } from "../usage/usage-meter.service";
 import { UsageMetric } from "@prisma/client";
@@ -25,6 +26,7 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
     private readonly whatsapp: WhatsAppSendService,
     private readonly consent: MessagingConsentService,
     private readonly usage: UsageMeterService,
+    private readonly sms: SmsService,
   ) {}
 
   onModuleInit() {
@@ -57,11 +59,13 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
       }
       if (row.channel === MessageChannel.WHATSAPP) {
         await this.processWhatsApp(row);
-      } else if (isMock(row.channel === MessageChannel.EMAIL ? "email" : "sms")) {
+      } else if (row.channel === MessageChannel.SMS) {
+        await this.processSms(row);
+      } else if (isMock("email")) {
         // Mock mode (default): "send" into the dev inbox with a deterministic provider id.
-        const providerMessageId = `dev-sms-${row.id}`;
+        const providerMessageId = `dev-email-${row.id}`;
         await DevInboxRecorder.record({
-          channel: row.channel === MessageChannel.EMAIL ? "EMAIL" : "SMS",
+          channel: "EMAIL",
           tenantId: row.tenantId,
           toAddress: row.toPhone,
           templateKey: row.templateKey,
@@ -81,6 +85,51 @@ export class OutboundMessageWorker implements OnModuleInit, OnModuleDestroy {
         });
       }
     }
+  }
+
+  /** SMS goes through the SmsService port: mock => dev inbox, real => generic HTTP aggregator (SMS_* env). */
+  private async processSms(row: {
+    id: string;
+    tenantId: string;
+    patientId: string | null;
+    templateKey: string | null;
+    variablesJson: unknown;
+    toPhone: string;
+    body: string;
+    attemptCount: number;
+  }): Promise<void> {
+    if (row.patientId && !isMock("sms")) {
+      try {
+        await this.consent.assertCanSend(row.tenantId, row.patientId, MessageChannel.SMS, row.templateKey);
+      } catch {
+        await this.prisma.outboundMessage.update({
+          where: { id: row.id },
+          data: { status: "FAILED", failureClass: "CONSENT", error: "Patient messaging consent not granted" },
+        });
+        return;
+      }
+    }
+    const attempt = row.attemptCount + 1;
+    const result = await this.sms.send({
+      to: row.toPhone,
+      body: row.body,
+      reference: row.id,
+      tenantId: row.tenantId,
+      templateKey: row.templateKey,
+      variables: (row.variablesJson as Record<string, unknown> | null) ?? null,
+    });
+    if (result.ok) {
+      await this.prisma.outboundMessage.update({
+        where: { id: row.id },
+        data: { status: "SENT", sentAt: new Date(), providerMessageId: result.providerMessageId, attemptCount: attempt, error: null, failureClass: null, nextRetryAt: null },
+      });
+      return;
+    }
+    const status = workerStatusForFailure(result.retryable, attempt);
+    await this.prisma.outboundMessage.update({
+      where: { id: row.id },
+      data: { status, attemptCount: attempt, error: result.error, failureClass: result.failureClass, nextRetryAt: status === "RETRY" ? nextRetryAt(attempt) : null },
+    });
   }
 
   private async processWhatsApp(row: {

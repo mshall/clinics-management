@@ -55,4 +55,18 @@ export class DevInboxController {
   ) {
     return this.inbox.simulatePspCallback(body);
   }
+
+  @Post("psp/refund")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Refund a succeeded Kiorly payment (mock settles via the signed refund webhook)" })
+  pspRefund(@Body() body: { paymentId: string; amount?: string }) {
+    return this.inbox.simulatePspRefund(body);
+  }
+
+  @Post("send-test")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Smoke-test sms | email | whatsapp through the live provider port (mock => inbox, real => provider)" })
+  sendTest(@Body() body: { channel: string; to: string; body?: string; templateKey?: string; tenantId?: string }) {
+    return this.inbox.sendTest(body);
+  }
 }

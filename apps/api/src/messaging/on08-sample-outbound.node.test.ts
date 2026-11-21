@@ -1,3 +1,4 @@
+import { SmsService } from "./providers/sms.service";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MessageChannel } from "@prisma/client";
@@ -28,7 +29,7 @@ test("ON-08: queued WhatsApp/SMS for a sample patient is failed, never sent", as
     },
   } as unknown as WhatsAppSendService;
   const consent = { isSamplePatient: async () => true } as unknown as MessagingConsentService;
-  const worker = new OutboundMessageWorker(prisma, whatsapp, consent, {} as UsageMeterService);
+  const worker = new OutboundMessageWorker(prisma, whatsapp, consent, {} as UsageMeterService, new SmsService());
   await worker.processBatch();
   assert.deepEqual(
     updates.map((u) => [u.id, u.data.status, u.data.failureClass]),

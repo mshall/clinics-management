@@ -15,7 +15,7 @@ import type {
 import { isMock } from "../../common/provider-mode";
 
 function webhookSecret(): string {
-  return process.env.KIORLY_FAWRY_WEBHOOK_SECRET ?? "dev-fawry-secret";
+  return process.env.KIORLY_FAWRY_WEBHOOK_SECRET ?? (isMock("psp") ? "dev-fawry-secret" : "");
 }
 
 export class FawryGateway implements PaymentGateway {
@@ -65,7 +65,8 @@ export class FawryGateway implements PaymentGateway {
       invoiceId: typeof obj.merchantRefNum === "string" ? obj.merchantRefNum.split(":")[1] : undefined,
       amount: String(obj.paymentAmount ?? obj.amount ?? "0"),
       currency: String(obj.paymentCurrency ?? "EGP"),
-      status: obj.orderStatus === "PAID" || obj.status === "succeeded" ? "succeeded" : "failed",
+      status: obj.orderStatus === "PAID" || obj.orderStatus === "REFUNDED" || obj.status === "succeeded" ? "succeeded" : "failed",
+      kind: obj.orderStatus === "REFUNDED" ? "refund" : "payment",
     };
   }
 

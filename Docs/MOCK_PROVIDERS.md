@@ -25,7 +25,7 @@ the dev inbox.
 |------|----------------|
 | Email | `DevEmailProvider`; `EmailService` mirrors subject, text and HTML into the inbox |
 | WhatsApp | `WhatsAppSendService` and the free-form sender record the message, variables, quick replies and document link |
-| SMS | Outbound worker marks the message `SENT` with a deterministic id and records it |
+| SMS | `MockSmsProvider` via `SmsService`: worker marks the message `SENT` with a deterministic id and records it. Real: [PROVIDER_INTEGRATION.md](./PROVIDER_INTEGRATION.md) |
 | Push | `PushService` records the notification instead of calling web-push |
 | PSP | Gateways return deterministic fake sessions/charges; callbacks are simulated (below) |
 | Maps | `MockRouteMapsAdapter`: deterministic symmetric district-to-district travel minutes (10-45), mock navigation links; same `RouteMapsPort` the Amazon Location adapter will implement (PG-10) |
@@ -38,6 +38,8 @@ the dev inbox.
   - `GET /status` provider modes · `GET /?channel=&to=&direction=&limit=` list · `GET /messages/:id`
   - `POST /messages/:id/delivery` `{ state: delivered | read | failed | bounced }`: goes through the Meta status-webhook handler (WhatsApp/SMS) or `EmailService.recordBounce`
   - `POST /inbound/whatsapp` `{ fromPhone, text | buttonPayload, replyToId? }`: goes through `WhatsAppWebhookService` (STOP opt-out, reminder Confirm/Cancel, waitlist Accept/Decline, AI receptionist, support line)
+  - `POST /send-test` `{ channel: sms | email | whatsapp, to, tenantId? }`: smoke test through the live provider port (mock => inbox, real => vendor)
+  - `POST /psp/refund` `{ paymentId, amount? }`: refund a succeeded Kiorly payment (mock settles via the signed refund webhook)
   - `POST /psp/callback` `{ provider: paymob | fawry, outcome: succeeded | failed, tenantId, invoiceId, amount? }`: signed with the dev secret and sent through `KiorlyPaymentService.handleWebhook`
 - **Storage:** table `DevInboxMessage`, written **only** by mock adapters, never in real mode.
 - **Access:** open in any non-production `NODE_ENV`. In production it returns 404 unless `DEV_INBOX_ENABLED=1`, and then every call needs the header `X-Dev-Inbox-Key` (= `DEV_INBOX_KEY`).

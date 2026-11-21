@@ -31,6 +31,9 @@ import { EmailBounceController } from "./email-bounce.controller";
 import { ScheduledReportsService } from "./scheduled-reports.service";
 import { WhatsAppAiReceptionistController } from "./whatsapp-ai-receptionist.controller";
 import { WhatsAppAiReceptionistService } from "./whatsapp-ai-receptionist.service";
+import { SmsService } from "./providers/sms.service";
+import { DeliveryReceiptService } from "./providers/delivery-receipt.service";
+import { ProviderWebhooksController } from "./providers/provider-webhooks.controller";
 
 @Module({
   imports: [AuditModule, forwardRef(() => SchedulingModule), PatientsModule, SupportModule],
@@ -42,6 +45,7 @@ import { WhatsAppAiReceptionistService } from "./whatsapp-ai-receptionist.servic
     DigestsController,
     EmailBounceController,
     WhatsAppAiReceptionistController,
+    ProviderWebhooksController,
   ],
   providers: [
     WaitlistAutofillService,
@@ -65,6 +69,8 @@ import { WhatsAppAiReceptionistService } from "./whatsapp-ai-receptionist.servic
     AppointmentRescheduleTokenService,
     OutboundMessageWorker,
     AppointmentReminderScheduler,
+    SmsService,
+    DeliveryReceiptService,
   ],
   exports: [
     WaitlistAutofillService,
@@ -81,6 +87,7 @@ import { WhatsAppAiReceptionistService } from "./whatsapp-ai-receptionist.servic
     OutboxDispatcherService,
     AppointmentOutboxService,
     WhatsAppWebhookService,
+    SmsService,
   ],
 })
 export class MessagingModule {}

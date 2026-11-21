@@ -27,7 +27,9 @@ function parse(raw: string | undefined): ProviderMode | null {
 }
 
 export function providerMode(kind: ProviderKind): ProviderMode {
-  const explicit = parse(process.env[`KIORLY_PROVIDER_MODE_${kind.toUpperCase()}`]) ?? parse(process.env.KIORLY_PROVIDER_MODE);
+  const K = kind.toUpperCase();
+  // Precedence: KIORLY_PROVIDER_MODE_<KIND> > <KIND>_MODE (short alias) > KIORLY_PROVIDER_MODE (global).
+  const explicit = parse(process.env[`KIORLY_PROVIDER_MODE_${K}`]) ?? parse(process.env[`${K}_MODE`]) ?? parse(process.env.KIORLY_PROVIDER_MODE);
   if (explicit) return explicit;
   if (process.env.NODE_ENV === "production" && LEGACY_REAL_SWITCH[kind]()) return "real";
   return "mock";

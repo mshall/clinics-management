@@ -239,6 +239,17 @@ export class KiorlyPaymentService {
     const existingPayment = await this.prisma.kiorlyPayment.findUnique({
       where: { providerRef: event.providerRef },
     });
+    if (event.kind === "refund") {
+      // Refund status callback: finalise (idempotent through the webhook-event row) and never create a payment.
+      let paymentId: string | null = existingPayment?.id ?? null;
+      if (existingPayment && event.status === "succeeded") {
+        await this.finalizeRefund(existingPayment.id, event.amount);
+      }
+      await this.prisma.kiorlyPaymentWebhookEvent.create({
+        data: { provider, idempotencyKey: event.idempotencyKey, paymentId, payloadHash },
+      });
+      return { ok: true, duplicate: false, refund: true, paymentId };
+    }
     if (existingPayment?.status === KiorlyPaymentStatus.SUCCEEDED) {
       await this.prisma.kiorlyPaymentWebhookEvent.create({
         data: {
@@ -321,6 +332,79 @@ export class KiorlyPaymentService {
       }
       const { reactivate: _r, tenantId: _t, ...rest } = result;
       return rest;
+    });
+  }
+
+  /** Super-admin refund of a SUCCEEDED gateway payment (full amount unless `amount` given). */
+  async refundPayment(user: JwtUser, paymentId: string, body: { amount?: string } = {}) {
+    if (!isPlatformSuperAdmin(user)) throw new ForbiddenException();
+    return this.refundPaymentInternal(paymentId, body.amount, user.userId);
+  }
+
+  /**
+   * Starts a refund at the provider with a stable idempotency key (`refund_<paymentId>_<amount>`), so a retried call can
+   * never double-refund. A synchronous `succeeded` finalises immediately; `pending` waits for the `refund.*` webhook.
+   */
+  async refundPaymentInternal(paymentId: string, amount?: string, actorId: string | null = null) {
+    const payment = await this.prisma.kiorlyPayment.findUnique({ where: { id: paymentId } });
+    if (!payment) throw new NotFoundException("Payment not found");
+    if (payment.status === KiorlyPaymentStatus.REFUNDED) return { status: "REFUNDED", alreadyRefunded: true };
+    if (payment.status !== KiorlyPaymentStatus.SUCCEEDED) throw new BadRequestException("Only a succeeded payment can be refunded");
+    const gateway = this.gateways.get(payment.provider);
+    if (!gateway) throw new BadRequestException("Payment method not available");
+    const refundAmount = amount ? new Prisma.Decimal(amount) : payment.amount;
+    if (refundAmount.lte(0) || refundAmount.gt(payment.amount)) throw new BadRequestException("Invalid refund amount");
+    const result = await gateway.refund({
+      providerRef: payment.providerRef,
+      amount: refundAmount.toFixed(2),
+      currency: payment.currency,
+      idempotencyKey: `refund_${payment.id}_${refundAmount.toFixed(2)}`,
+    });
+    await this.prisma.auditLog.create({
+      data: {
+        tenantId: payment.tenantId,
+        actorId,
+        action: "kiorly_payment.refund_requested",
+        resource: "KiorlyPayment",
+        resourceId: payment.id,
+        metadata: { amount: refundAmount.toFixed(2), refundRef: result.providerRef, status: result.status } as Prisma.InputJsonValue,
+      },
+    });
+    if (result.status === "succeeded") await this.finalizeRefund(payment.id, refundAmount.toFixed(2));
+    return { status: result.status === "succeeded" ? "REFUNDED" : result.status.toUpperCase(), refundRef: result.providerRef };
+  }
+
+  /** Marks the payment REFUNDED (full) and reverses it on the invoice. Safe to call twice. */
+  private async finalizeRefund(paymentId: string, amountStr: string) {
+    await this.prisma.$transaction(async (tx) => {
+      const payment = await tx.kiorlyPayment.findUniqueOrThrow({ where: { id: paymentId } });
+      if (payment.status === KiorlyPaymentStatus.REFUNDED) return;
+      const amount = Prisma.Decimal.min(new Prisma.Decimal(amountStr), payment.amount);
+      if (amount.gte(payment.amount)) {
+        await tx.kiorlyPayment.update({ where: { id: paymentId }, data: { status: KiorlyPaymentStatus.REFUNDED } });
+      }
+      if (payment.invoiceId) {
+        const invoice = await tx.kiorlyInvoice.findUniqueOrThrow({ where: { id: payment.invoiceId } });
+        const paid = Prisma.Decimal.max(invoice.amountPaid.sub(amount), new Prisma.Decimal(0));
+        await tx.kiorlyInvoice.update({
+          where: { id: invoice.id },
+          data: {
+            amountPaid: paid,
+            status: paid.lte(0) ? KiorlyInvoiceStatus.ISSUED : KiorlyInvoiceStatus.PARTIALLY_PAID,
+            paidAt: null,
+          },
+        });
+      }
+      await tx.auditLog.create({
+        data: {
+          tenantId: payment.tenantId,
+          actorId: null,
+          action: "kiorly_payment.refunded",
+          resource: "KiorlyPayment",
+          resourceId: paymentId,
+          metadata: { amount: amount.toFixed(2) } as Prisma.InputJsonValue,
+        },
+      });
     });
   }
 

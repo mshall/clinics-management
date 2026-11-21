@@ -59,6 +59,8 @@ export type ParsedWebhookEvent = {
   amount: string;
   currency: string;
   status: "succeeded" | "failed" | "pending";
+  /** Default "payment". "refund" events finalise a refund started with {@link PaymentGateway.refund}. */
+  kind?: "payment" | "refund";
 };
 
 export type RefundRequest = {

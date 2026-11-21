@@ -159,3 +159,22 @@ Patients: the first 12 of `na` are the Passport personas (`+201000001001..1012`,
 
 ---
 Verified: 2026-11-21 (seed scripts, `kiorly` database via SELECT, `free-dev-ports.sh` guard check).
+
+
+## 8. Provider flows in mock mode, and the go-live checklist
+
+Everything messaging and payments runs on mock adapters (default). Dev inbox: `/dev/inbox` in the web app, API `/api/v1/dev/inbox` (disabled in production).
+
+| Flow | How to exercise it (mock) |
+|------|---------------------------|
+| Appointment reminder over WhatsApp | Book an appointment with reminders on; the reminder + Confirm/Cancel buttons appear in the inbox. `POST /dev/inbox/inbound/whatsapp {fromPhone, buttonPayload, replyToId}` simulates the reply; `POST /dev/inbox/messages/:id/delivery {state}` simulates delivered/read/failed. |
+| Reminder / OTP over SMS | Queue an `OutboundMessage` with channel `SMS` (or `POST /dev/inbox/send-test {channel:"sms", to}`); the worker sends it through the SMS port into the inbox. Delivery states persist on the row. |
+| Receipt / transactional email | `POST /dev/inbox/send-test {channel:"email", to}` or trigger any email template; bounce via the delivery endpoint. |
+| Payment link / checkout success, failure | Open a Kiorly invoice, then `POST /dev/inbox/psp/callback {provider:"paymob"|"fawry", outcome:"succeeded"|"failed", tenantId, invoiceId, amount}`. |
+| Refund | `POST /dev/inbox/psp/refund {paymentId, amount?}` (Paymob refunds immediately, Fawry settles through the signed refund callback); the payment becomes REFUNDED and the invoice reopens. |
+
+Dummy data: use the demo clinics' patients (all phones are fake `+2010...` numbers) and the seeded Kiorly invoices; nothing leaves the machine in mock mode.
+
+### Provider go-live checklist
+
+See [Docs/PROVIDER_INTEGRATION.md](Docs/PROVIDER_INTEGRATION.md) ("Provider go-live checklist") and [Docs/PROVIDER_INFRA_NOTE.md](Docs/PROVIDER_INFRA_NOTE.md). Short form: set `KIORLY_PROVIDER_MODE_<KIND>=real` and the `SMS_*` / `EMAIL_*` / `WHATSAPP_*` / `PSP_*` variables (URL, key, sender/merchant id, webhook secret) in staging secrets, confirm the API boots (it fails fast otherwise), point vendor webhooks at `/api/v1/webhooks/providers/*` and `/api/v1/webhooks/payments/*`, run `send-test` once per channel, pay and refund one small invoice, then disable the dev inbox.
