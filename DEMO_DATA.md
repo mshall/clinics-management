@@ -48,7 +48,7 @@ Password for every `@demo.kiorex.test` and `@nurse-demo.kiorly.test` account: **
 | `manager.na@` (Branch Manager Nile Care) | BRANCH_MANAGER | same set as the owner | `manager.df@`, `manager.ss@` |
 | `frontdesk1.na@`, `frontdesk2.na@` | RECEPTIONIST | appointments, encounters, patients, profile | front-desk board is under Appointments |
 | `nurse.na@` | NURSE | appointments, encounters, patients, profile | |
-| `accountant.na@` | FINANCE_OFFICER | same set as the owner (see section 7) | |
+| `accountant.na@` | FINANCE_OFFICER | expenses, operations, profile, reports, revenue (no Admin, Clinics, Patients, Encounters) | billing/money only |
 | `callcenter.na@` | CALL_CENTER | appointments, customer_support, patients, profile | |
 | `nadia.na@` Dr Nadia Fouad (paediatrics, also HOME visits) | PHYSICIAN | appointments, encounters, patients, profile, reports | |
 | `walid.na@` dermatology, `tamer.na@` cardiology, `rania.na@` ob-gyn, `khaled.na@` dentistry, `hossam.na@` orthopaedics, `ingy.na@` ENT, `sherif.na@` internal medicine | PHYSICIAN | as Nadia | 8 Nile Care doctors, all LIVE on Kiorex |
@@ -69,7 +69,7 @@ Password for every `@demo.kiorex.test` and `@nurse-demo.kiorly.test` account: **
 |---|---|---|---|---|
 | `mona@nurse-demo.kiorly.test` (Mona Adel; Passport `+201000003001`) | Demo Home Nursing (Mona), SOLO | PHYSICIAN (nurse profession) | admin, appointments, customer_support, dashboard, encounters, patients, profile, reports, revenue | solo, MoH + syndicate VERIFIED, covers nasr-city / heliopolis / new-cairo, 12 open safety alerts |
 | `owner@nurse-demo.kiorly.test` (Agency Owner; Passport `…3002`) | Demo Care Agency | CLINIC_ADMIN | admin, appointments, customer_support, dashboard, encounters, hr, patients, profile, reports, revenue | care-plan requests inbox |
-| `dispatch@nurse-demo.kiorly.test` (Dina Dispatcher; `…3003`) | agency | RECEPTIONIST (dispatcher) | appointments, encounters, patients, profile | dispatch queue and guard |
+| `dispatch@nurse-demo.kiorly.test` (Dina Dispatcher; `…3003`) | agency | RECEPTIONIST (dispatcher) | appointments, encounters, patients, profile | dispatch queue and guard; Kiorly Work: schedule, patients, home visits + org home-visit safety alerts (can acknowledge) |
 | `nurse1@` Heba (`…3004`) | agency | PHYSICIAN | appointments, encounters, patients, profile, reports | VERIFIED; the demo nurse for the day route |
 | `nurse2@` Salma (`…3005`) | agency | | | VERIFIED, MoH licence **expires in 18 days** |
 | `nurse3@` Nadine (`…3007`) | agency | | | verification **REJECTED** (dispatch refuses) |
@@ -138,14 +138,14 @@ Patients: the first 12 of `na` are the Passport personas (`+201000001001..1012`,
 | Role | Should see | Should NOT see / do |
 |---|---|---|
 | Group admin (owner.*) | all clinics' data, Admin (users, plan, credits), Kiorex tab, Revenue, Expenses, Reports | other organisations; the Platform tab (only `superadmin@`) |
-| Branch manager | same tab set as the owner for the tenant (API) | other tenants |
+| Branch manager | same tab set as the owner for the tenant (API), incl. branch Admin | other tenants |
 | Receptionist / front desk | Appointments, front desk board, patients, check-in, queue | Revenue, Expenses, Admin, signing prescriptions |
 | Call centre | Appointments, patients, Customer support | encounters, Revenue |
 | Physician | own appointments and encounters, patients, own Reports | other doctors' encounters, Revenue, Admin |
 | Nurse (Clinic edition) | appointments, encounters (vitals), patients | signing prescriptions (profession NURSE cannot), Revenue |
 | Finance officer | Revenue, Expenses, Reports | clinical notes (compare section 7) |
 | Nurse edition: solo / agency nurse | own route and visits, MAR, own safety alerts | addresses of visits not assigned to them; Revenue (agency nurses) |
-| Dispatcher | dispatch queue, assignment | clinical records, Revenue |
+| Dispatcher | dispatch queue, assignment, Kiorly Work home visits + home-visit safety alerts (read/ack) | clinical records, prescriptions, Revenue |
 | Basic (Lite) | appointments, patients, encounters, Revenue snapshot | Clinics, Expenses, Reports, mobile app modules (upgrade screen) |
 | Home-visit address | assignee and admins within 24 h of the visit | everyone after 24 h (masked) |
 
@@ -153,6 +153,6 @@ Patients: the first 12 of `na` are the Passport personas (`+201000001001..1012`,
 
 * Providers are mocked: WhatsApp/e-mail go to the dev inbox, PSP is `sandbox-fake`, video is `mock`. Entitlement gates and feature flags decide visibility, not hidden UI alone.
 * **Mona's tenant has 42 extra home-visit rows** (cuid ids, created 20 Nov by integration/e2e runs) on top of the 10 seeded `demo_hv_*`: 52 rows, with 22 cancelled and 8 arrived, so her "today" route is noisier than the seed intends. `--reset` removes demo tenants and recreates them.
-* The API returns the same tab list for FINANCE_OFFICER (`accountant.na@`) and BRANCH_MANAGER as for the group admin (includes Admin, Clinics, Encounters, Patients), whereas `Docs/Test_Data_Users.md` says finance officers have "no Admin". Confirm intent before relying on the checklist row above.
+* BRANCH_MANAGER keeps the full branch admin tab set; FINANCE_OFFICER (`accountant.na@`) now gets billing tabs only (expenses, operations, revenue, reports, profile), matching `Docs/Test_Data_Users.md` ("no Admin").
 * Patient count of `df` is 40 (older docs say 39); Smile & Skin is LITE base on a CLINIC trial.
 * The `5174` web is a Vite dev server: start it by hand (not part of `up.sh`).

@@ -8,7 +8,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
 import { HomeVisitBookingService, type FrontDeskHomeBookingInput } from "./home-visit-booking.service";
-import { HomeVisitConfigService, isHomeVisitManager, type HomeSettingsInput, type HomeTypeInput } from "./home-visit-config.service";
+import { HomeVisitConfigService, isHomeVisitDispatcher, isHomeVisitManager, type HomeSettingsInput, type HomeTypeInput } from "./home-visit-config.service";
 import { HomeVisitExecService } from "./home-visit-exec.service";
 import { HomeVisitReportsService } from "./home-visit-reports.service";
 import { HomeVisitSafetyService } from "./home-visit-safety.service";
@@ -98,7 +98,7 @@ export class HomeVisitsController {
 
   @Get("safety-alerts")
   async alerts(@CurrentUser() u: JwtUser) {
-    if (!isHomeVisitManager(u)) throw new ForbiddenException("Managers only");
+    if (!isHomeVisitManager(u) && !isHomeVisitDispatcher(u)) throw new ForbiddenException("Managers only");
     return { items: await this.safety.listAlerts(requireTenantId(u)) };
   }
 

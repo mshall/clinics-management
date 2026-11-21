@@ -11,6 +11,9 @@ export const VITALS_ROLES = [R.PHYSICIAN, R.NURSE, R.CLINIC_ASSISTANT, R.BRANCH_
 export const REVENUE_ROLES = [R.GROUP_ADMIN, R.GROUP_SUPERVISOR, R.BRANCH_MANAGER, R.FINANCE_OFFICER, R.CLINIC_ADMIN] as const;
 export const ALERT_ROLES = [R.GROUP_ADMIN, R.GROUP_SUPERVISOR, R.BRANCH_MANAGER, R.CLINIC_ADMIN, R.PHYSICIAN, R.NURSE] as const;
 
+/** Nurse-edition agency dispatchers (front-desk roles): coordinate nurses, see home-visit safety alerts, no clinical-record or prescription access. */
+export const DISPATCHER_ROLES = [R.RECEPTIONIST, R.CALL_CENTER] as const;
+
 export const isOwner = (u: JwtUser) => Boolean(u.isTenantOwner);
 export const can = (u: JwtUser, roles: readonly UserRole[]) => isOwner(u) || hasAnyRole(u, roles);
 export { isHomeVisitManager, effectiveRoles };
@@ -34,7 +37,7 @@ export function modulesFor(u: JwtUser, edition: string, profession?: string | nu
   const roles = effectiveRoles(u);
   return MODULES.map((m) => {
     const byRole = u.isTenantOwner || roles.some((r) => m.allow.includes(r));
-    const byEdition = Boolean(m.nurseEdition) && edition === "NURSE" && roles.some((r) => ([R.NURSE, R.PHYSICIAN, R.BRANCH_MANAGER, R.GROUP_ADMIN, R.CLINIC_ADMIN, R.CLINIC_ASSISTANT] as UserRole[]).includes(r));
+    const byEdition = Boolean(m.nurseEdition) && edition === "NURSE" && roles.some((r) => ([R.NURSE, R.PHYSICIAN, R.BRANCH_MANAGER, R.GROUP_ADMIN, R.CLINIC_ADMIN, R.CLINIC_ASSISTANT, ...DISPATCHER_ROLES] as UserRole[]).includes(r));
     const enabled = m.key === "clinic.homevisits" ? byEdition || roles.includes(R.NURSE) : byRole;
     const blocked = Boolean(profession && NON_PRESCRIBING_PROFESSIONS.includes(profession)) && (m.key === "clinic.visits" || m.key === "clinic.prescriptions");
     const on = enabled && !blocked;

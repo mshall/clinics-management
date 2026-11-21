@@ -55,6 +55,12 @@ describe("Kiorly Work: modules per role", () => {
     assert.ok(m.includes("clinic.vitals") && m.includes("clinic.homevisits"));
     assert.ok(!m.includes("clinic.prescriptions") && !m.includes("clinic.visits"));
   });
+  it("Nurse-edition dispatcher (RECEPTIONIST / CALL_CENTER) gets home visits, still no clinical-record or prescription modules; clinic front desk unchanged", () => {
+    for (const r of [UserRole.RECEPTIONIST, UserRole.CALL_CENTER]) {
+      assert.deepEqual(on(r, "NURSE").sort(), ["clinic.homevisits", "clinic.patients", "clinic.schedule"]);
+      assert.deepEqual(on(r, "CLINIC").sort(), ["clinic.patients", "clinic.schedule"]);
+    }
+  });
   it("HR officer has no modules", () => assert.deepEqual(on(UserRole.HR_OFFICER), []));
 });
 

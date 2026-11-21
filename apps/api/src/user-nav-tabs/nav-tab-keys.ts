@@ -58,7 +58,8 @@ const ROLE_MAX: Record<UserRole, readonly string[]> = {
   [UserRole.GROUP_ADMIN]: FULL,
   [UserRole.GROUP_SUPERVISOR]: GROUP_SUPERVISOR_TABS,
   [UserRole.BRANCH_MANAGER]: FULL,
-  [UserRole.FINANCE_OFFICER]: FULL,
+  /** Billing / money only: no Admin, Clinics, HR or clinical tabs. */
+  [UserRole.FINANCE_OFFICER]: ["operations", "expenses", "revenue", "reports", "profile"],
   [UserRole.HR_OFFICER]: FULL,
   [UserRole.PHYSICIAN]: ["patients", "encounters", "appointments", "operations", "doctor_revenue", "profile", "reports"],
   [UserRole.NURSE]: ["patients", "appointments", "encounters", "profile"],
