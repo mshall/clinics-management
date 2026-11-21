@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { useAdminInsights360Query, useAdminStaffPerformanceQuery } from "@/lib/support-hooks";
 import type { StaffPerformanceDto } from "@/lib/support-types";
 import { formatUserRole } from "@/lib/locale-display";
@@ -104,7 +106,7 @@ export function OrgInsightsPanel() {
   const staff = useAdminStaffPerformanceQuery(rangeFrom, rangeTo);
 
   const vol = overview.data?.volumes;
-  const staffRows = staff.data?.staff ?? [];
+  const staffRows = useMemo(() => staff.data?.staff ?? [], [staff.data?.staff]);
 
   const scoreBounds = useMemo(() => {
     const scores = staffRows.map((r) => r.metrics.activityScore);

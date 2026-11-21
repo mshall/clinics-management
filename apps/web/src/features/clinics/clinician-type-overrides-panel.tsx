@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { useClinicPhysiciansQuery } from "@/lib/api-hooks";
 import { apiGet, apiPut } from "@/lib/http";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { physicianToPickListItem } from "@/lib/physician-display";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type AppointmentTypeRow = {
   id: string;
@@ -35,9 +36,9 @@ export function ClinicianTypeOverridesPanel({ clinicId, canEdit }: Props) {
   const { data: physicians = [] } = useClinicPhysiciansQuery(clinicId);
   const [clinicianId, setClinicianId] = useState("");
 
-  useEffect(() => {
+  useSyncOnChange([clinicianId, physicians[0]?.userId], () => {
     if (!clinicianId && physicians[0]?.userId) setClinicianId(physicians[0].userId);
-  }, [clinicianId, physicians]);
+  });
 
   const typesQuery = useQuery({
     queryKey: ["scheduling", "appointment-types", clinicId],
@@ -53,7 +54,7 @@ export function ClinicianTypeOverridesPanel({ clinicId, canEdit }: Props) {
 
   const [draft, setDraft] = useState<Record<string, { duration: string; fee: string }>>({});
 
-  useEffect(() => {
+  useSyncOnChange([typesQuery.data, overridesQuery.data, clinicianId], () => {
     const types = typesQuery.data ?? [];
     const overrides = overridesQuery.data ?? [];
     const byType = new Map(overrides.map((o) => [o.appointmentTypeId, o]));
@@ -66,7 +67,7 @@ export function ClinicianTypeOverridesPanel({ clinicId, canEdit }: Props) {
       };
     }
     setDraft(next);
-  }, [typesQuery.data, overridesQuery.data, clinicianId]);
+  });
 
   const saveMut = useMutation({
     mutationFn: () => {

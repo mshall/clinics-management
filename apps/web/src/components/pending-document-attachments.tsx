@@ -6,82 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-
-export type PatientDocumentCategory = "LAB_RESULTS" | "RADIOLOGY" | "PRESCRIPTION" | "OTHER";
-
-export const PATIENT_DOCUMENT_CATEGORIES: PatientDocumentCategory[] = [
-  "LAB_RESULTS",
-  "RADIOLOGY",
-  "PRESCRIPTION",
-  "OTHER",
-];
-
-export type PendingDocumentRow = {
-  id: string;
-  files: File[];
-  category: PatientDocumentCategory | "";
-  otherDetail: string;
-};
-
-export function emptyPendingDocumentRow(): PendingDocumentRow {
-  return { id: crypto.randomUUID(), files: [], category: "", otherDetail: "" };
-}
-
-export function patientDocumentCategoryLabel(
-  category: PatientDocumentCategory,
-  t: (key: string, fallback: string) => string,
-): string {
-  switch (category) {
-    case "LAB_RESULTS":
-      return t("patients.docCategoryLabResults", "Lab results");
-    case "RADIOLOGY":
-      return t("patients.docCategoryRadiology", "Radiology");
-    case "PRESCRIPTION":
-      return t("patients.docCategoryPrescription", "Prescription");
-    case "OTHER":
-      return t("patients.docCategoryOther", "Other");
-  }
-}
-
-export function pendingDocumentDescription(
-  row: PendingDocumentRow,
-  t: (key: string, fallback: string) => string,
-): string {
-  if (!row.category) return "";
-  if (row.category === "OTHER") return row.otherDetail.trim();
-  return patientDocumentCategoryLabel(row.category, t);
-}
-
-export function validatePendingDocuments(rows: PendingDocumentRow[]): string | null {
-  return collectPendingDocumentFieldErrors(rows).code;
-}
-
-export function collectPendingDocumentFieldErrors(rows: PendingDocumentRow[]): {
-  code: string | null;
-  invalidRowIds: Set<string>;
-} {
-  const invalidRowIds = new Set<string>();
-  for (const row of rows) {
-    const hasFiles = row.files.length > 0;
-    const hasCategory = Boolean(row.category);
-    const hasOther = row.category === "OTHER" ? Boolean(row.otherDetail.trim()) : true;
-    if (!hasFiles && !hasCategory && !row.otherDetail.trim()) continue;
-    if (hasFiles && !hasCategory) {
-      invalidRowIds.add(`${row.id}:category`);
-      invalidRowIds.add(`${row.id}:file`);
-      return { code: "doc_category_required", invalidRowIds };
-    }
-    if (hasCategory && row.category === "OTHER" && !hasOther) {
-      invalidRowIds.add(`${row.id}:other`);
-      return { code: "doc_other_required", invalidRowIds };
-    }
-    if (hasCategory && !hasFiles) {
-      invalidRowIds.add(`${row.id}:file`);
-      return { code: "doc_file_required", invalidRowIds };
-    }
-  }
-  return { code: null, invalidRowIds };
-}
+import { PATIENT_DOCUMENT_CATEGORIES, emptyPendingDocumentRow, patientDocumentCategoryLabel } from "@/components/pending-document-utils";
+import { type PatientDocumentCategory, type PendingDocumentRow } from "@/components/pending-document-utils";
 
 type PendingDocumentAttachmentsProps = {
   rows: PendingDocumentRow[];
@@ -276,20 +202,4 @@ export function PendingDocumentAttachments({
       />
     </div>
   );
-}
-
-export function pendingDocumentValidationMessage(
-  code: string | null,
-  t: (key: string, fallback: string) => string,
-): string | null {
-  if (code === "doc_category_required") {
-    return t("patients.errorDocCategoryRequired", "Each attached document needs a type.");
-  }
-  if (code === "doc_other_required") {
-    return t("patients.errorDocOtherRequired", "Explain what the document is when you choose Other.");
-  }
-  if (code === "doc_file_required") {
-    return t("patients.errorDocFileRequired", "Choose a file for each document description.");
-  }
-  return null;
 }

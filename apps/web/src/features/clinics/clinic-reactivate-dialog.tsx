@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatClinicNameFields } from "@/lib/locale-display";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type ClinicReactivateTarget = {
   nameEn: string;
@@ -29,9 +30,9 @@ export function ClinicReactivateDialog({
   const { t, i18n } = useTranslation();
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  useEffect(() => {
+  useSyncOnChange([open], () => {
     if (open) setStartDate(new Date().toISOString().slice(0, 10));
-  }, [open]);
+  });
 
   const canConfirm = Boolean(startDate.trim());
 

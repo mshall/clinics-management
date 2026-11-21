@@ -1,14 +1,7 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
-
-type TableMinWidth = "sm" | "md" | "lg" | "xl";
-
-export const tableMinWidthClass: Record<TableMinWidth, string> = {
-  sm: "min-w-[480px]",
-  md: "min-w-[640px]",
-  lg: "min-w-[720px]",
-  xl: "min-w-[960px]",
-};
+import { tableMinWidthClass } from "@/components/responsive-table-utils";
+import { type TableMinWidth } from "@/components/responsive-table-utils";
 
 export interface ResponsiveTableProps extends HTMLAttributes<HTMLDivElement> {
   /** Hint for consumers — apply the matching class on the nested `<table>`. */

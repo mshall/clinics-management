@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { CreateActionButton } from "@/components/create-action-button";
@@ -15,6 +15,7 @@ import { formatClinicName } from "@/lib/locale-display";
 import { clinicKindLabel } from "@/lib/clinic-kind";
 import { canMutateClinicsNav } from "@/lib/nav-tab-access-policy";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function ClinicsPage() {
   const { t, i18n } = useTranslation();
@@ -61,9 +62,9 @@ export function ClinicsPage() {
     });
   }, [viewRows, cfKind, cfName, cfCity, t]);
 
-  useEffect(() => {
+  useSyncOnChange([cfKind, cfName, cfCity, clinicView], () => {
     setPage(1);
-  }, [cfKind, cfName, cfCity, clinicView]);
+  }, { skipMount: true });
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));

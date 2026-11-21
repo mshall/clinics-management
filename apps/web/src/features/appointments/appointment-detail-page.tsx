@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { AppointmentStatusBadge, appointmentStatusClassName } from "@/components/appointment-status-badge";
+import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
+import { appointmentStatusClassName } from "@/components/appointment-status";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
 import { DepositBadge } from "@/components/deposit-badge";
 import { DepositPanel } from "./deposit-panel";
@@ -45,6 +46,8 @@ import {
   validateScheduledFeeCollection,
   type ScheduledFeeCollectionValue,
 } from "@/lib/visit-collection";
+import { useNowMs } from "@/lib/use-now";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 function toDatetimeLocalValue(iso: string): string {
   const d = new Date(iso);
@@ -95,7 +98,7 @@ export function AppointmentDetailPage() {
     pageSize: 150,
     enabled: Boolean(apt && !readOnly),
   });
-  const patients = patData?.items ?? [];
+  const patients = useMemo(() => patData?.items ?? [], [patData?.items]);
 
   const { data: physicians = [], isFetching: physiciansFetching } = useSchedulingPhysiciansQuery({
     clinicId: clinicId || undefined,
@@ -114,10 +117,11 @@ export function AppointmentDetailPage() {
   const [completeBlockedOpen, setCompleteBlockedOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const nowMs = useNowMs();
   const needsCancelReason =
     Boolean(apt) && status === "CANCELLED" && apt?.status !== "CANCELLED" && isKiorexPatientSource(apt?.bookingSource);
 
-  useEffect(() => {
+  useSyncOnChange([apt], () => {
     if (!apt) return;
     setClinicId(apt.clinicId);
     setPatientId(apt.patientId);
@@ -131,7 +135,7 @@ export function AppointmentDetailPage() {
       transferChannel: apt.scheduledTransferChannel ?? "",
     });
     setStatus(apt.status);
-  }, [apt]);
+  });
 
   const feeCurrency = resolveClinicCurrency(apt?.clinicId);
 
@@ -571,7 +575,7 @@ export function AppointmentDetailPage() {
 
       <DepositPanel
         appointmentId={apt.id}
-        upcoming={(apt.status === "SCHEDULED" || apt.status === "CONFIRMED") && new Date(apt.startsAt).getTime() > Date.now()}
+        upcoming={(apt.status === "SCHEDULED" || apt.status === "CONFIRMED") && new Date(apt.startsAt).getTime() > nowMs}
       />
 
       {formErr ? <p className="text-sm text-destructive">{formErr}</p> : null}

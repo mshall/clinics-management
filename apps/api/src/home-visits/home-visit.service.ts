@@ -243,6 +243,8 @@ export class HomeVisitService {
         : { id: v.patientId },
       enRouteAt: v.enRouteAt?.toISOString() ?? null,
       arrivedAt: v.arrivedAt?.toISOString() ?? null,
+      // BR: arrival distance / off-site flag are for the dispatcher/owner only; never patient-facing, never blocks the arrival.
+      ...(isHomeVisitDispatcher(user) && v.arrivedAt ? { arrivalDistanceM: v.arrivalDistanceM ?? null, arrivedOffSite: v.arrivedOffSite } : {}),
       finishedAt: v.finishedAt?.toISOString() ?? null,
       abortReason: v.abortReason ?? null,
       fee: v.appointment ? homeFeeBreakdown(Number(v.appointment.feeAmount), v.appointment.homeSurchargeAmount ? Number(v.appointment.homeSurchargeAmount) : null) : undefined,

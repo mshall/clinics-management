@@ -11,6 +11,7 @@ import { OUTBOX_EVENT_V23 } from "../messaging/outbox-event-types";
 import { PrismaService } from "../prisma/prisma.service";
 import { abortCategoryFrom, homeVisitAbortedUnsafeData, homeVisitEnRouteData } from "./home-visit-events";
 import { HomeVisitRuleException } from "./home-visit.errors";
+import { arrivalCheck } from "./home-visit-rules";
 import { HomeVisitSafetyService } from "./home-visit-safety.service";
 import { HomeVisitService } from "./home-visit.service";
 
@@ -50,6 +51,12 @@ export class HomeVisitExecService {
     throw new HomeVisitRuleException(code, `Home visit transition refused: ${code}`, TRANSITION_STATUS[code] ?? 422);
   }
 
+  /** Offline-queue replay: the visit is already in the target state for this (assigned) actor => 200 with the current visit, no event, no alert/push. */
+  private async replayed(tenantId: string, user: JwtUser, v: { id: string; state: HomeVisitState }, target: HomeVisitState) {
+    if (v.state !== target) return null;
+    return { ...(await this.homeVisits.get(tenantId, user, v.id)), replayed: true as const };
+  }
+
   private geoOf(g: Geo | undefined, district: string) {
     return g && g.lat != null && g.lng != null ? { lat: g.lat, lng: g.lng, districtId: district } : undefined;
   }
@@ -71,6 +78,8 @@ export class HomeVisitExecService {
 
   async depart(tenantId: string, user: JwtUser, id: string, body: Geo & { etaMinutes?: number }, now = new Date()) {
     const v = await this.load(tenantId, user, id);
+    const again = await this.replayed(tenantId, user, v, HomeVisitState.ON_MY_WAY);
+    if (again) return again;
     const next = this.plan(v, { type: "DEPART", geostamp: this.geoOf(body, v.districtId) }, now);
     await this.prisma.$transaction(async (tx) => {
       await tx.homeVisit.update({ where: { id: v.id }, data: { state: HomeVisitState.ON_MY_WAY, enRouteAt: now } });
@@ -95,21 +104,27 @@ export class HomeVisitExecService {
   /** HVEXE02 — "Arrived" IS check-in: the appointment moves to CHECKED_IN through the normal flow (attendance + commission as in clinic). */
   async arrive(tenantId: string, user: JwtUser, id: string, body: Geo, now = new Date()) {
     const v = await this.load(tenantId, user, id);
+    const again = await this.replayed(tenantId, user, v, HomeVisitState.ARRIVED);
+    if (again) return again;
     const next = this.plan(v, { type: "ARRIVE", geostamp: body.lat != null && body.lng != null ? { lat: body.lat, lng: body.lng, districtId: v.districtId } : (undefined as never) }, now);
     if (v.appointment.status !== AppointmentStatus.CHECKED_IN && v.appointment.status !== AppointmentStatus.COMPLETED) {
       await this.appointments.updateStatus(tenantId, v.appointmentId, AppointmentStatus.CHECKED_IN, user);
     }
+    // Non-blocking: poor GPS must never stop an arrival. The flag is for the dispatcher/owner only (no alert, nothing to the patient).
+    const check = arrivalCheck(body, this.homeVisits.decryptFor(v));
     await this.prisma.$transaction(async (tx) => {
-      await tx.homeVisit.update({ where: { id: v.id }, data: { state: HomeVisitState.ARRIVED, arrivedAt: now, safetyPromptSentAt: null, safetyAnsweredAt: null } });
+      await tx.homeVisit.update({ where: { id: v.id }, data: { state: HomeVisitState.ARRIVED, arrivedAt: now, safetyPromptSentAt: null, safetyAnsweredAt: null, arrivalDistanceM: check.arrivalDistanceM, arrivedOffSite: check.arrivedOffSite } });
       await tx.homeVisitGeostamp.create({ data: this.stampData(tenantId, v.id, "ARRIVED", next.history.at(-1), v.districtId, now) });
     });
-    await this.audit.recordEvent({ tenantId, actorId: user.userId, clinicId: v.clinicId, action: "home_visit.arrived", resource: "HomeVisit", resourceId: v.id });
+    await this.audit.recordEvent({ tenantId, actorId: user.userId, clinicId: v.clinicId, action: "home_visit.arrived", resource: "HomeVisit", resourceId: v.id, metadata: { arrivalDistanceM: check.arrivalDistanceM, arrivedOffSite: check.arrivedOffSite } });
     return this.homeVisits.get(tenantId, user, id);
   }
 
   /** HVEXE02 — "Finished" = complete. The usual completion guards apply (an open encounter must be finalized first). */
   async finish(tenantId: string, user: JwtUser, id: string, body: Geo, now = new Date()) {
     const v = await this.load(tenantId, user, id);
+    const again = await this.replayed(tenantId, user, v, HomeVisitState.FINISHED);
+    if (again) return again;
     const next = this.plan(v, { type: "FINISH", geostamp: this.geoOf(body, v.districtId) }, now);
     if (v.appointment.status !== AppointmentStatus.COMPLETED) {
       await this.appointments.updateStatus(tenantId, v.appointmentId, AppointmentStatus.COMPLETED, user);
@@ -128,6 +143,8 @@ export class HomeVisitExecService {
    */
   async abortUnsafe(tenantId: string, user: JwtUser, id: string, body: Geo & { reason: string; reasonCategory?: string }, now = new Date()) {
     const v = await this.load(tenantId, user, id);
+    const again = await this.replayed(tenantId, user, v, HomeVisitState.ABORTED_UNSAFE);
+    if (again) return again;
     const next = this.plan(v, { type: "ABORT_UNSAFE", reason: body.reason, geostamp: this.geoOf(body, v.districtId) }, now);
     const intents: Awaited<ReturnType<CommissionChargeService["onCancelOrNoShow"]>>[] = [];
     await this.prisma.$transaction(async (tx) => {

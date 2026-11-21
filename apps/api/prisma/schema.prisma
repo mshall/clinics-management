@@ -4665,6 +4665,10 @@ model HomeVisit {
   plannedEndsAt      DateTime
   enRouteAt          DateTime?
   arrivedAt          DateTime?
+  /// Distance (metres) between the arrival fix and the visit address coordinates; null when either has no coordinates. Never blocks the arrival.
+  arrivalDistanceM   Int?
+  /// Non-blocking dispatcher/owner flag: arrival fix farther than HOME_VISIT_ARRIVAL_THRESHOLD_M from the address. Never shown to the patient.
+  arrivedOffSite     Boolean             @default(false)
   finishedAt         DateTime?
   endedAt            DateTime?
   abortReason        String?

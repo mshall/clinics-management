@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { apiFetchBlob, apiGet, apiPost } from "@/lib/http";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export type PlatformVerificationRow = {
   id: string;
@@ -64,13 +65,13 @@ export function PlatformVerificationReviewDialog({ row, config, open, onOpenChan
   const [rejectNote, setRejectNote] = useState("");
   const [nationalId, setNationalId] = useState<string | null>(null);
 
-  useEffect(() => {
+  useSyncOnChange([open, row?.id, config?.rejectTemplates], () => {
     if (!open) return;
     setChecklist([]);
     setRejectNote("");
     setRejectCode(config?.rejectTemplates[0]?.code ?? "ILLEGIBLE_DOCUMENTS");
     setNationalId(null);
-  }, [open, row?.id, config?.rejectTemplates]);
+  });
 
   const decideMut = useMutation({
     mutationFn: (body: {

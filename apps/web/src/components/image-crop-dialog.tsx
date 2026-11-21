@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import ReactCrop, { centerCrop, makeAspectCrop, type Crop, type PixelCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { useTranslation } from "react-i18next";
@@ -6,6 +6,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cropMimeTypeForFileName, getCroppedImageFile } from "@/lib/crop-image";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type ImageCropDialogProps = {
   open: boolean;
@@ -40,13 +41,13 @@ export function ImageCropDialog({
   const [pixelCrop, setPixelCrop] = useState<PixelCrop | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  useEffect(() => {
+  useSyncOnChange([open, imageUrl], () => {
     if (!open) {
       setCrop(undefined);
       setPixelCrop(null);
       setConfirmOpen(false);
     }
-  }, [open, imageUrl]);
+  });
 
   const onImageLoad = () => {
     const img = imgRef.current;

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FileSignature } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type OperationContractZeroDialogProps = {
   open: boolean;
@@ -23,9 +24,9 @@ export function OperationContractZeroDialog({
   const { t } = useTranslation();
   const [markAsContract, setMarkAsContract] = useState(false);
 
-  useEffect(() => {
+  useSyncOnChange([open], () => {
     if (open) setMarkAsContract(false);
-  }, [open]);
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

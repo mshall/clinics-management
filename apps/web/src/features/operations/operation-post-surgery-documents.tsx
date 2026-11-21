@@ -2,12 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import {
-  PendingDocumentAttachments,
-  collectPendingDocumentFieldErrors,
-  pendingDocumentDescription,
-  type PendingDocumentRow,
-} from "@/components/pending-document-attachments";
+import { PendingDocumentAttachments } from "@/components/pending-document-attachments";
+import { type PendingDocumentRow } from "@/components/pending-document-utils";
+import { collectPendingDocumentFieldErrors, pendingDocumentDescription } from "@/components/pending-document-utils";
 import { Button } from "@/components/ui/button";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import type { OperationDocumentDto } from "@/lib/api-types";

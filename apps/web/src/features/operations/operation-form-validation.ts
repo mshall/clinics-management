@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { MedTab } from "@/components/medications-prescription-draft-panel";
+import type { MedTab } from "@/components/medications-prescription-draft";
 import type { PatientAcquisitionChannel } from "@/lib/patient-acquisition";
 
 export type OperationAcquisitionFormValues = {
@@ -31,11 +31,8 @@ function validatePatientAcquisitionDetails(
   }
   return null;
 }
-import {
-  collectPendingDocumentFieldErrors,
-  pendingDocumentValidationMessage,
-  type PendingDocumentRow,
-} from "@/components/pending-document-attachments";
+import { type PendingDocumentRow } from "@/components/pending-document-utils";
+import { collectPendingDocumentFieldErrors, pendingDocumentValidationMessage } from "@/components/pending-document-utils";
 
 export { errorToValidationIssues } from "@/lib/form-validation";
 

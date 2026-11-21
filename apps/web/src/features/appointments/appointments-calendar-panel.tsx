@@ -3,11 +3,8 @@ import { AppointmentTimeGrid } from "./appointments-time-grid";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import {
-  AppointmentStatusBadge,
-  appointmentCalendarEventChipClassName,
-  statusDotClass,
-} from "@/components/appointment-status-badge";
+import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
+import { appointmentCalendarEventChipClassName, statusDotClass } from "@/components/appointment-status";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
 import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/skeleton";
@@ -40,6 +37,7 @@ import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { canMutateAppointmentsNav } from "@/lib/nav-tab-access-policy";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const MAX_EVENTS_IN_CELL = 2;
 const MAX_EVENTS_IN_CELL_LG = 3;
@@ -125,10 +123,10 @@ export function AppointmentsCalendarPanel() {
   const [view, setView] = useState<"month" | "week" | "day">(() => { try { const v = localStorage.getItem("cms-cal-view"); return v === "week" || v === "day" ? v : "month"; } catch { return "month"; } });
   useEffect(() => { try { localStorage.setItem("cms-cal-view", view); } catch { /* ignore */ } }, [view]);
 
-  useEffect(() => {
+  useSyncOnChange([requiresClinicSelection, clinicId, clinics[0]?.id], () => {
     if (!requiresClinicSelection || clinicId || clinics.length === 0) return;
     setClinicId(clinics[0]!.id);
-  }, [requiresClinicSelection, clinicId, clinics]);
+  });
 
   const range = useMemo(() => visibleGridBounds(cursor.year, cursor.month), [cursor.year, cursor.month]);
   const canQuickBook = mode !== "physician" && canMutateAppointmentsNav(role, authUser?.navTabKeys, authUser?.navTabAccessModes);
@@ -145,7 +143,7 @@ export function AppointmentsCalendarPanel() {
     enabled: calendarEnabled,
   });
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
   const grid = useMemo(() => buildMonthGrid(cursor.year, cursor.month), [cursor.year, cursor.month]);
   const appointmentsByDay = useMemo(() => groupAppointmentsByDay(items), [items]);
   const selectedDay = parseLocalDateIso(selectedDayIso);

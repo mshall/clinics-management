@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPut } from "@/lib/http";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export type LegalConfig = {
   crossBorderTransfer?: {
@@ -52,11 +53,11 @@ export function PlatformLegalConfigDialog({ marketId, marketLabel, open, onOpenC
     enabled: open && Boolean(marketId),
   });
 
-  useEffect(() => {
+  useSyncOnChange([configQuery.data], () => {
     if (configQuery.data?.config) {
       setDraft(structuredClone(configQuery.data.config));
     }
-  }, [configQuery.data]);
+  });
 
   const saveMut = useMutation({
     mutationFn: (body: LegalConfig) =>

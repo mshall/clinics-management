@@ -1,6 +1,6 @@
 import { isFlagOn, useEffectiveFlags } from "@/features/flags/use-effective-flags";
 import { useTranslation } from "react-i18next";
-import { badgeVariants } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge-variants";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   noShowRiskChipClassName,

@@ -1,10 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  PatientAcquisitionFields,
-  type PatientAcquisitionFormValues,
-} from "@/components/patient-acquisition-fields";
+import { PatientAcquisitionFields } from "@/components/patient-acquisition-fields";
+import { type PatientAcquisitionFormValues } from "@/components/patient-acquisition-form";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientPhoneField } from "@/components/patient-phone-field";
 import { Button } from "@/components/ui/button";
@@ -28,6 +26,7 @@ import {
   type PatientPhoneConflictPatient,
 } from "@/lib/patient-phone-conflict";
 import { formatClinicName } from "@/lib/locale-display";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type PatientEditDialogProps = {
   patient: PatientDto;
@@ -44,12 +43,12 @@ export function PatientEditDialog({ patient, open, onOpenChange }: PatientEditDi
   const [values, setValues] = useState<PatientDemographicsFormValues>(() => patientToDemographicsForm(patient));
   const validation = useValidationIssuesDialog({ intent: "save" });
 
-  useEffect(() => {
+  useSyncOnChange([open, patient], () => {
     if (!open) return;
     setValues(patientToDemographicsForm(patient));
     setFormErr(null);
     setPhoneConflict(null);
-  }, [open, patient]);
+  });
 
   const needsProfileCompletion = patient.profileComplete === false;
 

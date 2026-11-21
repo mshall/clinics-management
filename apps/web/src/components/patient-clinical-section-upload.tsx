@@ -4,10 +4,8 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { DocumentCameraCaptureDialog } from "@/components/document-camera-capture-dialog";
-import {
-  patientDocumentCategoryLabel,
-  type PatientDocumentCategory,
-} from "@/components/pending-document-attachments";
+import { type PatientDocumentCategory } from "@/components/pending-document-utils";
+import { patientDocumentCategoryLabel } from "@/components/pending-document-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

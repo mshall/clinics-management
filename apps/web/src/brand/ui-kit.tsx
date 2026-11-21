@@ -3,20 +3,18 @@
  * Props carry already-translated strings, so this file has no i18n or routing dependency.
  */
 import { useId, useState, type HTMLAttributes, type ReactNode } from "react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
 import { useTranslation } from "react-i18next";
 import { KiorexLogo, PulseLine } from "./components";
 import { footSegments } from "./components/shared/foot-text";
-import { KxControlPair, KxLanguageToggle, KxThemeToggle, withThemeTransition, type KxLang } from "./components/web/KxControls";
+import { KxControlPair, KxLanguageToggle, KxThemeToggle, type KxLang } from "./components/web/KxControls";
+import { withThemeTransition } from "./components/web/theme-transition";
+import { kcn, readThemePref, applyThemePref, type KxThemePref, THEME_KEY } from "./ui-kit-utils";
 export { KxControlPair };
 
 /** Decorative pulse line (hidden from assistive tech) for loaders/empty states. */
 export function Pulse({ size = 14, loop = false }: { size?: number; loop?: boolean }) {
   return <span aria-hidden="true" className="inline-flex"><PulseLine size={size} loop={loop} label="" /></span>;
 }
-
-export const kcn = (...i: ClassValue[]) => twMerge(clsx(i));
 
 export type KTone = "neutral" | "good" | "warn" | "bad" | "info" | "brand";
 
@@ -173,25 +171,6 @@ export function KiorlyMark({ size = 28, nurse }: { size?: number; nurse?: boolea
   );
 }
 
-/* ---- Theme (light / dark / system) for apps without their own theme store ---- */
-export type KxThemePref = "light" | "dark" | "system";
-const THEME_KEY = "kx-theme";
-export function readThemePref(): KxThemePref {
-  try { const v = localStorage.getItem(THEME_KEY); if (v === "light" || v === "dark" || v === "system") return v; } catch { /* ignore */ }
-  return "system";
-}
-export function applyThemePref(pref: KxThemePref): void {
-  const dark = pref === "dark" || (pref === "system" && typeof matchMedia !== "undefined" && matchMedia("(prefers-color-scheme: dark)").matches);
-  const root = document.documentElement;
-  root.classList.toggle("dark", dark);
-  root.dataset.theme = dark ? "dark" : "light";
-  root.style.colorScheme = dark ? "dark" : "light";
-}
-/** Call once before React mounts (index.html also applies the saved theme inline, before first paint, so nothing flashes). */
-export function initTheme(): void {
-  applyThemePref(readThemePref());
-  if (typeof matchMedia !== "undefined") matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (readThemePref() === "system") withThemeTransition(() => applyThemePref("system")); });
-}
 /** Shared theme control (sun / moon / monitor, cross-fading). Persists to localStorage `kx-theme`; the colour change is animated (reduced-motion safe). */
 export function ThemeToggle({ labels, className }: { labels: { light: string; dark: string; system: string; theme: string }; className?: string }) {
   const [pref, setPref] = useState<KxThemePref>(readThemePref);

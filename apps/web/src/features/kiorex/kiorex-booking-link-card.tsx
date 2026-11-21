@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { apiGet, apiPut } from "@/lib/http";
 import i18n from "@/lib/i18n";
 import type { KiorexBookingLinkDto } from "./kiorex-types";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type PosterSize = "A4" | "A5";
 type PosterLang = "en" | "ar";
@@ -87,9 +88,9 @@ export function KiorexBookingLinkCard({ clinicId }: { clinicId: string }) {
   });
   const data = q.data;
 
-  useEffect(() => {
+  useSyncOnChange([data], () => {
     if (data) setSlugDraft(data.slug);
-  }, [data]);
+  });
 
   useEffect(() => {
     if (!data?.url || !canvasRef.current) return;

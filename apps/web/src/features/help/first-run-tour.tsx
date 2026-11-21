@@ -7,6 +7,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useHelpStore } from "@/stores/help-store";
 import { TOUR_STEPS, tourGroupForRole, tourStorageKey } from "./help-content";
 import { useSamplePatient } from "./use-sample-patient";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 function tourDone(userId: string): boolean {
   try {
@@ -32,9 +33,9 @@ export function FirstRunTour() {
     if (user?.id && group && pathname === "/onboarding" && !tourDone(user.id)) setOpen(true);
   }, [user?.id, group, pathname, setOpen]);
 
-  useEffect(() => {
+  useSyncOnChange([open], () => {
     if (open) setIndex(0);
-  }, [open]);
+  });
 
   if (!open || !group || !user) return null;
   const steps = TOUR_STEPS[group];

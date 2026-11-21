@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-API_PORT="${API_PORT:-3000}"
+API_PORT="${API_PORT:-3010}"
 READY_URL="http://127.0.0.1:${API_PORT}/api/v1/health/ready"
 LIVE_URL="http://127.0.0.1:${API_PORT}/api/v1/health/live"
 MAX_SEC="${1:-120}"

@@ -376,7 +376,7 @@ export function ReportsPage() {
   const money = (n: number, currency: string) => formatMoneyAmount(n, currency, loc);
 
   const performanceByCurrency = performance.data?.byCurrency ?? [];
-  const breakdownItems = clinicBreakdown.data?.items ?? [];
+  const breakdownItems = useMemo(() => clinicBreakdown.data?.items ?? [], [clinicBreakdown.data?.items]);
   const clinicBreakdownRows = useMemo(() => buildClinicBreakdownRows(breakdownItems), [breakdownItems]);
 
   const exportQuery = useMemo(() => {

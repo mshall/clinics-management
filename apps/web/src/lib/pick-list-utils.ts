@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { PickListItem } from "@/components/searchable-pick-list";
 
 /** Resolve a pick-list label when the value may not be in the current search results. */
@@ -109,10 +109,8 @@ export function usePickListValueBinding(
     [items, setPinned, setValue],
   );
 
-  const selectedItem = useMemo(
-    () => resolvePickListSelectedItem(value, items, pinned, ...extraSelected),
-    [value, items, pinned, ...extraSelected],
-  );
+  // Cheap lookup that returns an existing item reference, so it is stable without memoisation.
+  const selectedItem = resolvePickListSelectedItem(value, items, pinned, ...extraSelected);
 
   return { onValueChange, selectedItem };
 }

@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiGet, apiPatch } from "@/lib/http";
-import { ManagedFlagsBanner, useFlagStatus } from "@/features/flags/managed-flags-banner";
+import { ManagedFlagsBanner } from "@/features/flags/managed-flags-banner";
+import { useFlagStatus } from "@/features/flags/use-flag-status";
 import { Badge } from "@/components/ui/badge";
 import { featureFlagLabel } from "@/lib/feature-flag-labels";
 

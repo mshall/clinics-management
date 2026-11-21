@@ -19,6 +19,7 @@ import {
 } from "@/lib/visit-collection";
 import { setPaymentFlowActive } from "@/lib/unsaved-work-registry";
 import { SplitPaymentDialog } from "./split-payment-dialog";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type Props = {
   encounterId: string;
@@ -51,7 +52,7 @@ export function CollectVisitBalanceCard({
   }));
   const [receipt, setReceipt] = useState<File | null>(null);
 
-  useEffect(() => {
+  useSyncOnChange([preferredTransferChannel], () => {
     if (preferredTransferChannel?.trim()) {
       setCollection((c) => ({
         ...c,
@@ -59,7 +60,7 @@ export function CollectVisitBalanceCard({
         transferChannel: preferredTransferChannel,
       }));
     }
-  }, [preferredTransferChannel]);
+  });
 
   const needsReceipt =
     requiresTransferReceipt || collection.mode === "MONEY_TRANSFER";

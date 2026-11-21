@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Phone } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -9,20 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiPost, apiPut } from "@/lib/http";
-import {
-  ErrorBlock,
-  errorCode,
-  Field,
-  fmtDateTime,
-  GateNotice,
-  isGateError,
-  LoadingBlock,
-  PageShell,
-  selectClass,
-  StatusPill,
-  useErrorText,
-  useNurseContext,
-} from "./nurse-shared";
+import { ErrorBlock, Field, GateNotice, LoadingBlock, PageShell, selectClass, StatusPill } from "./nurse-shared";
+import { errorCode, fmtDateTime, isGateError, useErrorText, useNurseContext } from "./nurse-shared-utils";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const VITALS = ["systolic", "diastolic", "pulse", "temperatureC", "spo2", "respiratoryRate", "glucoseMgDl", "painScore"] as const;
 type VitalKey = (typeof VITALS)[number];
@@ -65,14 +54,13 @@ export function VisitRecordPage() {
 
   const [draft, setDraft] = useState<{ checklist: ChecklistItem[]; assessment: string; intervention: string; evaluation: string; freeText: string; medicationFreeText: string } | null>(null);
   const [newTask, setNewTask] = useState("");
-  useEffect(() => {
+  useSyncOnChange([rec.data, draft, rec.isFetching], () => {
     if (rec.data && !draft && !rec.isFetching) setDraft({ checklist: rec.data.checklist ?? [], assessment: rec.data.assessment ?? "", intervention: rec.data.intervention ?? "", evaluation: rec.data.evaluation ?? "", freeText: rec.data.freeText ?? "", medicationFreeText: rec.data.medicationFreeText ?? "" });
-  }, [rec.data, draft, rec.isFetching]);
+  });
 
   // Autosave: field notes must survive leaving the page (e.g. to the MAR) and a dropped connection. Debounced; flushed on leave.
   const savedRef = useRef<string>("");
   const draftRef = useRef(draft);
-  draftRef.current = draft;
   const lockedRef = useRef(false);
   useEffect(() => {
     if (rec.data && savedRef.current === "") savedRef.current = JSON.stringify({ checklist: rec.data.checklist ?? [], assessment: rec.data.assessment ?? "", intervention: rec.data.intervention ?? "", evaluation: rec.data.evaluation ?? "", freeText: rec.data.freeText ?? "", medicationFreeText: rec.data.medicationFreeText ?? "" });
@@ -113,7 +101,10 @@ export function VisitRecordPage() {
 
   const r = rec.data;
   const locked = Boolean(r?.locked || r?.status === "SIGNED");
-  lockedRef.current = locked;
+  useLayoutEffect(() => {
+    draftRef.current = draft;
+    lockedRef.current = locked;
+  });
   const openCritical = r?.vitals.filter((v) => v.critical && !v.escalationAction) ?? [];
   const signBlockedByCritical = openCritical.length > 0 || errorCode(sign.error) === "CRITICAL_VALUE_NOT_ESCALATED";
   const lang = i18n.language.startsWith("ar") ? "ar" : "en";

@@ -16,7 +16,8 @@ export function ProfileMfaPanel() {
   const refreshSessionFromServer = useAuthStore((s) => s.refreshSessionFromServer);
   const [secret, setSecret] = useState<string | null>(null);
   const [otpauthUrl, setOtpauthUrl] = useState<string | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrImage, setQrDataUrl] = useState<string | null>(null);
+  const qrDataUrl = otpauthUrl ? qrImage : null;
   const [setupCode, setSetupCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
   const [disablePassword, setDisablePassword] = useState("");
@@ -24,10 +25,7 @@ export function ProfileMfaPanel() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!otpauthUrl) {
-      setQrDataUrl(null);
-      return;
-    }
+    if (!otpauthUrl) return;
     void QRCode.toDataURL(otpauthUrl, { margin: 2, width: 200 }).then(setQrDataUrl).catch(() => setQrDataUrl(null));
   }, [otpauthUrl]);
 

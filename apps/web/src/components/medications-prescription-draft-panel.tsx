@@ -9,19 +9,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { AddMedForm, ComposerEmpty, ComposerHint, ComposerModeTabs, ComposerPanel, GenerateBar, MedLine, RxDropzone, RxFileRow, RxPreview } from "@/features/prescriptions/composer-kit";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
-
-export type MedTab = "none" | "manual" | "prescription";
-
-export type PendingMedication = {
-  id: string;
-  drugName: string;
-  dosage: string;
-  frequency: string;
-};
-
-export function emptyPendingMedication(): PendingMedication {
-  return { id: crypto.randomUUID(), drugName: "", dosage: "", frequency: "" };
-}
+import { type PendingMedication, type MedTab } from "@/components/medications-prescription-draft";
 
 export type PrescriptionContext = {
   clinicId: string;
@@ -257,13 +245,4 @@ export function MedicationsPrescriptionDraftPanel({
       </Tabs>
     </div>
   );
-}
-
-export function resetMedicationsPrescriptionDraft() {
-  return {
-    medTab: "none" as MedTab,
-    medications: [] as PendingMedication[],
-    prescriptionFile: null as File | null,
-    generatedPrescriptionFile: null as File | null,
-  };
 }

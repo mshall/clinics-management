@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 import { ApiError, apiFetchBlob } from "@/lib/http";
 
 export function useAuthenticatedImage(path: string | null | undefined, enabled = true) {
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  useSyncOnChange([path, enabled], () => {
     if (!enabled || !path) {
       setUrl(null);
       setLoading(false);
-      return;
+    } else {
+      setLoading(true);
     }
+  });
+
+  useEffect(() => {
+    if (!enabled || !path) return;
 
     let cancelled = false;
     let objectUrl: string | null = null;
-    setLoading(true);
 
     void apiFetchBlob(path)
       .then(({ blob }) => {

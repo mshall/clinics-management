@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { PickListItem } from "@/components/searchable-pick-list";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
@@ -24,6 +24,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectClinicFormIssues } from "@/lib/create-form-validation";
 import { apiGet, apiPatch, apiPost } from "@/lib/http";
 import type { Paginated } from "@/lib/paginated";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type ClinicDetail = PlatformClinicRow & {
   tenantName?: string;
@@ -108,10 +109,10 @@ export function PlatformClinicsTab() {
     [orgClinicsQuery.data, editSelection],
   );
 
-  useEffect(() => {
+  useSyncOnChange([isEdit, clinicDetailQuery.data], () => {
     if (!isEdit || !clinicDetailQuery.data) return;
     setForm(clinicDetailToForm(clinicDetailQuery.data));
-  }, [isEdit, clinicDetailQuery.data]);
+  });
 
   const resetCreate = () => {
     setCreateTenantId("");

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -34,13 +34,15 @@ import { nativeSelectClassName } from "@/lib/form-control-styles";
 import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
 import { Label } from "@/components/ui/label";
-import { NavTabChecklist, NAV_TAB_I18N } from "@/features/admin/org-nav-tab-checklist";
+import { NavTabChecklist } from "@/features/admin/org-nav-tab-checklist";
+import { NAV_TAB_I18N } from "@/features/admin/org-nav-tab-i18n";
 import { orgUserRolesForEdit } from "@/features/platform/platform-shared";
 import {
   AdminOrgUserRoleChangeConfirmDialog,
   type OrgUserRoleChangeTarget,
 } from "@/features/admin/admin-org-user-role-change-confirm-dialog";
 import { mapApiRole } from "@/lib/roles";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type UserClinicHrAssignmentDto = {
   id: string;
@@ -106,13 +108,14 @@ export function OrgUserPermissionsEditor({
   });
   const [moneyErr, setMoneyErr] = useState<string | null>(null);
   const [moneySaveBanner, setMoneySaveBanner] = useState<"ok" | null>(null);
-  const moneyDraftSeedRef = useRef("");
-  const previewGrantFingerprintRef = useRef("");
+  const [moneyDraftSeed, setMoneyDraftSeed] = useState("");
+  const [previewGrantFingerprint, setPreviewGrantFingerprint] = useState("");
+  const [userDraftSeed, setUserDraftSeed] = useState("");
 
-  useEffect(() => {
+  useSyncOnChange([userRole, userId], () => {
     setRoleDraft(userRole);
-    previewGrantFingerprintRef.current = "";
-  }, [userRole, userId]);
+    setPreviewGrantFingerprint("");
+  });
 
   const userRoleGrantQ = useQuery({
     queryKey: ["tenant-role-nav-tabs", userRole],
@@ -146,10 +149,10 @@ export function OrgUserPermissionsEditor({
     enabled: Boolean(userId) && canManagePrivilegeGrants,
   });
   const [extraRolesDraft, setExtraRolesDraft] = useState<Set<DemoRole>>(new Set());
-  useEffect(() => {
+  useSyncOnChange([userDetailQ.data?.additionalRoles], () => {
     const extras = userDetailQ.data?.additionalRoles ?? [];
     setExtraRolesDraft(new Set(extras.map((r) => r.toLowerCase() as DemoRole)));
-  }, [userDetailQ.data?.additionalRoles]);
+  });
 
   const saveRolesMut = useMutation({
     mutationFn: () =>
@@ -178,8 +181,8 @@ export function OrgUserPermissionsEditor({
       appointments: "ROLE_DEFAULT",
     });
     setExtraRolesDraft(new Set());
-    userDraftSeedRef.current = `preview:${draftRole}`;
-    moneyDraftSeedRef.current = `preview:${draftRole}`;
+    setUserDraftSeed(`preview:${draftRole}`);
+    setMoneyDraftSeed(`preview:${draftRole}`);
     setUserErr(null);
     setMoneyErr(null);
     setMoneySaveBanner(null);
@@ -188,18 +191,18 @@ export function OrgUserPermissionsEditor({
   const onPrimaryRoleDraftChange = (roleApi: string) => {
     const demo = mapApiRole(roleApi);
     setRoleDraft(demo);
-    previewGrantFingerprintRef.current = "";
+    setPreviewGrantFingerprint("");
     applyDefaultsForRoleDraft(demo, null);
   };
 
-  useEffect(() => {
+  useSyncOnChange([rolePreviewActive, roleDraft, draftRoleGrantQ.isSuccess, draftRoleGrantQ.data?.tabKeys], () => {
     if (!rolePreviewActive) return;
     if (!draftRoleGrantQ.isSuccess) return;
     const fp = `${roleDraft}:${JSON.stringify(draftRoleGrantQ.data?.tabKeys ?? null)}`;
-    if (previewGrantFingerprintRef.current === fp) return;
-    previewGrantFingerprintRef.current = fp;
+    if (previewGrantFingerprint === fp) return;
+    setPreviewGrantFingerprint(fp);
     applyDefaultsForRoleDraft(roleDraft, draftRoleGrantQ.data?.tabKeys);
-  }, [rolePreviewActive, roleDraft, draftRoleGrantQ.isSuccess, draftRoleGrantQ.data?.tabKeys]);
+  });
 
   const applyPrimaryRoleMut = useMutation({
     mutationFn: () =>
@@ -215,8 +218,8 @@ export function OrgUserPermissionsEditor({
         qc.invalidateQueries({ queryKey: ["user-clinic-hr-assignments", userId] }),
         qc.invalidateQueries({ queryKey: ["admin", "org-users"] }),
       ]);
-      userDraftSeedRef.current = "";
-      moneyDraftSeedRef.current = "";
+      setUserDraftSeed("");
+      setMoneyDraftSeed("");
       setRoleConfirmOpen(false);
       toast.success(t("admin.orgUserRoleChangeSuccess", "Primary role updated."));
       if (userId === viewer?.id) await useAuthStore.getState().refreshSessionFromServer();
@@ -238,18 +241,18 @@ export function OrgUserPermissionsEditor({
   const savedRoleApi = userDetailQ.data?.role ?? apiRoleParam(userRole);
   const assignablePrimaryRoles = orgUserRolesForEdit(savedRoleApi);
 
-  useEffect(() => {
+  useSyncOnChange([canEditMoneyVisibility, userId, moneyVisQ.isSuccess, moneyVisQ.data, rolePreviewActive], () => {
     if (!canEditMoneyVisibility || !moneyVisQ.isSuccess) return;
     if (rolePreviewActive) return;
     const seed = `${userId}:${JSON.stringify(moneyVisQ.data)}`;
-    if (moneyDraftSeedRef.current === seed) return;
-    moneyDraftSeedRef.current = seed;
+    if (moneyDraftSeed === seed) return;
+    setMoneyDraftSeed(seed);
     setMoneyDraft({
       operations: normalizeMoneyAccessOverride(moneyVisQ.data.operations),
       encounters: normalizeMoneyAccessOverride(moneyVisQ.data.encounters),
       appointments: normalizeMoneyAccessOverride(moneyVisQ.data.appointments),
     });
-  }, [canEditMoneyVisibility, userId, moneyVisQ.isSuccess, moneyVisQ.data, rolePreviewActive]);
+  });
 
   const effectiveRoleForNav = roleDraft;
   const effectiveRoleGrantQ = rolePreviewActive ? draftRoleGrantQ : userRoleGrantQ;
@@ -262,12 +265,11 @@ export function OrgUserPermissionsEditor({
   }, [canCustomizeRoles, effectiveRoleForNav, effectiveRoleGrantQ.data?.tabKeys, userGrantQ.data?.roleTabKeys]);
 
   const userGrantFingerprint = userGrantQ.data ? JSON.stringify(userGrantQ.data.tabKeys ?? null) : "";
-  const userDraftSeedRef = useRef("");
 
-  useEffect(() => {
+  useSyncOnChange([userId, userRole, userGrantFingerprint, userGrantQ.isSuccess, userGrantQ.data?.tabKeys, canCustomizeRoles, userRoleGrantQ.isSuccess, userRoleGrantQ.data?.tabKeys, organizationTabSet, rolePreviewActive], () => {
     if (!userId) {
       setUserDraft(new Set());
-      userDraftSeedRef.current = "";
+      setUserDraftSeed("");
       return;
     }
     if (rolePreviewActive) return;
@@ -276,8 +278,8 @@ export function OrgUserPermissionsEditor({
     if (!canCustomizeRoles && !userGrantQ.isSuccess) return;
 
     const seedKey = `${userId}:${userRole}:${userGrantFingerprint}:${canCustomizeRoles ? JSON.stringify(userRoleGrantQ.data?.tabKeys ?? null) : JSON.stringify(userGrantQ.data?.roleTabKeys ?? null)}`;
-    if (userDraftSeedRef.current === seedKey) return;
-    userDraftSeedRef.current = seedKey;
+    if (userDraftSeed === seedKey) return;
+    setUserDraftSeed(seedKey);
 
     const roleEffective = canCustomizeRoles
       ? roleNavKeysForRole(userRole, userRoleGrantQ.data?.tabKeys)
@@ -294,18 +296,7 @@ export function OrgUserPermissionsEditor({
     next.add("profile");
     setUserDraft(next);
     setTabAccessModesDraft(userGrantQ.data?.tabAccessModes ?? {});
-  }, [
-    userId,
-    userRole,
-    userGrantFingerprint,
-    userGrantQ.isSuccess,
-    userGrantQ.data?.tabKeys,
-    canCustomizeRoles,
-    userRoleGrantQ.isSuccess,
-    userRoleGrantQ.data?.tabKeys,
-    organizationTabSet,
-    rolePreviewActive,
-  ]);
+  });
 
   const saveMoneyMut = useMutation({
     mutationFn: (body: MoneyVisibilityOverrides) =>
@@ -314,7 +305,7 @@ export function OrgUserPermissionsEditor({
       setMoneyErr(null);
       setMoneySaveBanner("ok");
       setMoneyDraft(data);
-      moneyDraftSeedRef.current = `${userId}:${JSON.stringify(data)}`;
+      setMoneyDraftSeed(`${userId}:${JSON.stringify(data)}`);
       qc.setQueryData(["user-money-visibility", userId], data);
       toast.success(t("admin.moneyVisibilitySaveSuccess", "Money visibility saved."));
       await qc.invalidateQueries({ queryKey: ["user-money-visibility", userId] });

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 export type Shortcut = {
   /** `KeyboardEvent.key`, compared case-insensitively. */
@@ -28,7 +28,9 @@ export function matchesShortcut(e: Pick<KeyboardEvent, "key" | "altKey" | "ctrlK
 /** Desktop keyboard shortcuts; ignored while typing unless `allowInInputs`. */
 export function useKeyboardShortcuts(shortcuts: Shortcut[], enabled = true): void {
   const ref = useRef(shortcuts);
-  ref.current = shortcuts;
+  useLayoutEffect(() => {
+    ref.current = shortcuts;
+  });
   useEffect(() => {
     if (!enabled) return;
     const onKey = (e: KeyboardEvent) => {

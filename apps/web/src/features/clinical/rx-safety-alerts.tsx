@@ -1,15 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-
-export type RxSafetyAlert = {
-  kind: string;
-  severity: string;
-  messageEn: string;
-  messageAr: string;
-  requiresOverride?: boolean;
-  itemIndex?: number;
-  relatedItemIndex?: number;
-};
+import { type RxSafetyAlert } from "@/features/clinical/rx-safety-utils";
 
 function severityClass(severity: string): string {
   switch (severity) {
@@ -55,8 +46,4 @@ export function RxSafetyAlerts({ alerts, className }: Props) {
       ))}
     </ul>
   );
-}
-
-export function hasBlockingRxAlerts(alerts: RxSafetyAlert[] | undefined): boolean {
-  return Boolean(alerts?.some((a) => a.requiresOverride));
 }

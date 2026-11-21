@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { CLINICAL_SPECIALTY_VALUES } from "@/lib/clinical-specialties";
 import { apiGet, apiPut } from "@/lib/http";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type Editor = {
   listingId: string;
@@ -40,7 +41,7 @@ export function MarketplaceListingProfilePage() {
   const [yearsExperience, setYearsExperience] = useState("");
   const [languages, setLanguages] = useState("ar, en");
 
-  useEffect(() => {
+  useSyncOnChange([q.data], () => {
     const p = q.data?.profile;
     if (!p) return;
     setDisplayNameEn(String(p.displayNameEn ?? ""));
@@ -50,7 +51,7 @@ export function MarketplaceListingProfilePage() {
     setBioAr(String(p.bioAr ?? ""));
     setYearsExperience(p.yearsExperience != null ? String(p.yearsExperience) : "");
     setLanguages(Array.isArray(p.languages) ? (p.languages as string[]).join(", ") : "ar, en");
-  }, [q.data]);
+  });
 
   const saveMut = useMutation({
     mutationFn: () =>

@@ -1,18 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { apiGet } from "@/lib/http";
-
-export type FlagStatus = {
-  managed: boolean;
-  snapshot: { ageSeconds: number | null; stale: boolean; version: number | null } | null;
-};
-
-export function useFlagStatus() {
-  return useQuery({
-    queryKey: ["platform", "feature-flags-status"],
-    queryFn: () => apiGet<FlagStatus>("/api/v1/admin/platform/feature-flags-status"),
-  });
-}
+import { useFlagStatus } from "@/features/flags/use-flag-status";
 
 /** FF05 — platform/market flag pages are read-only mirrors when Kiorex is the authority. */
 export function ManagedFlagsBanner() {

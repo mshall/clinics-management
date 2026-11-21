@@ -7,14 +7,12 @@ import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientAllergiesField } from "@/components/patient-allergies-field";
-import {
-  emptyPatientAcquisitionFormValues,
-  PatientAcquisitionFields,
-  patientAcquisitionFormToBody,
-  patientAcquisitionFormValuesFromPatient,
-  type PatientAcquisitionFormValues,
-} from "@/components/patient-acquisition-fields";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { PatientAcquisitionFields } from "@/components/patient-acquisition-fields";
+import { type PatientAcquisitionFormValues } from "@/components/patient-acquisition-form";
+import { emptyPatientAcquisitionFormValues, patientAcquisitionFormToBody, patientAcquisitionFormValuesFromPatient } from "@/components/patient-acquisition-form";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +35,7 @@ import {
   useSchedulingPhysiciansQuery,
 } from "@/lib/api-hooks";
 import type { AppointmentDto, EncounterDetailDto } from "@/lib/api-types";
-import { appointmentStatusLabel } from "@/components/appointment-status-badge";
+import { appointmentStatusLabel } from "@/components/appointment-status";
 import { ApiError, apiDelete, apiPost } from "@/lib/http";
 import { canDeleteEncounter } from "@/lib/encounter-delete-policy";
 import { EncounterDeleteConfirmDialog, type EncounterDeleteTarget } from "@/features/encounters/encounter-delete-confirm-dialog";
@@ -63,6 +61,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectEncounterCreateIssues } from "@/lib/create-form-validation";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function EncountersListPage() {
   const { t, i18n } = useTranslation();
@@ -124,7 +123,7 @@ export function EncountersListPage() {
   );
   const { data: clinics = [] } = useClinicsQuery();
   const resolveClinicCurrency = useClinicCurrencyResolver();
-  const data = encData?.items ?? [];
+  const data = useMemo(() => encData?.items ?? [], [encData?.items]);
   const total = encData?.total ?? 0;
   const totalPages = encData?.totalPages ?? 1;
   const [efEncStatus, setEfEncStatus] = useState("");
@@ -189,7 +188,7 @@ export function EncountersListPage() {
     emptyPatientAcquisitionFormValues(),
   );
   const { data: selectedPatient } = usePatientQuery(createOpen && createPatientId ? createPatientId : undefined);
-  useEffect(() => {
+  useSyncOnChange([createOpen, createPatientId, selectedPatient], () => {
     if (!createOpen) return;
     if (!createPatientId) {
       setAcquisitionValues(emptyPatientAcquisitionFormValues());
@@ -198,7 +197,7 @@ export function EncountersListPage() {
     if (selectedPatient) {
       setAcquisitionValues(patientAcquisitionFormValuesFromPatient(selectedPatient));
     }
-  }, [createOpen, createPatientId, selectedPatient]);
+  });
 
   const aptPickerEnabled =
     createOpen && (Boolean(createPatientId.trim()) || aptPickSearch.debounced.trim().length >= 2);
@@ -225,7 +224,7 @@ export function EncountersListPage() {
     [usersForDoctors, i18n.language],
   );
 
-  const aptPickerRows = aptPickerData?.items ?? [];
+  const aptPickerRows = useMemo(() => aptPickerData?.items ?? [], [aptPickerData?.items]);
   const aptPickerItems: PickListItem[] = useMemo(
     () =>
       aptPickerRows.map((a: AppointmentDto) => {
@@ -245,15 +244,15 @@ export function EncountersListPage() {
             .join(" · "),
         };
       }),
-    [aptPickerRows, i18n.language]
+    [aptPickerRows, i18n.language, t]
   );
 
   const adminOv = useAdminOverviewQuery();
-  useEffect(() => {
+  useSyncOnChange([createOpen, adminOv.data?.currentTenant?.defaultVisitFee], () => {
     if (!createOpen) return;
     const d = adminOv.data?.currentTenant?.defaultVisitFee;
     if (d != null && Number.isFinite(Number(d))) setCreateVisitFee(String(d));
-  }, [createOpen, adminOv.data?.currentTenant?.defaultVisitFee]);
+  });
 
   const openCreateDialog = () => {
     patientPickSearch.resetSearch();

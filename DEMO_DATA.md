@@ -16,11 +16,11 @@ cd clinics-management/apps/api
 npm run db:seed                                  # base seed, once (plans, market EG, kx_dev_client, the older `demo` tenants)
 npm run db:seed:demo                             # idempotent demo dataset (prisma/demo/seed-demo.ts, includes the Rev 2.3 part)
 npm run db:seed:demo -- --reset                  # deletes ONLY demo tenants (demo_t_* incl. the two Nurse ones) and re-creates them, dates re-anchored to today
-npm run db:seed:mobile                           # Kiorly Work add-on: Basic clinic + mobile alerts (see ../kiorly-work/DEMO_DATA.md)
+npm run db:seed:mobile                           # Kiorly Work add-on: Basic clinic + mobile alerts (idempotent; scripts/seed-all.sh runs it right after db:seed:demo; see ../kiorly-work/DEMO_DATA.md)
 ../../scripts/seed-all.sh [--reset]              # all products in order (needed once for the Kiorex mirror and the Lab hand-off)
 ```
 
-* Start only the web with `npm run dev -w web` (the API is already running from `up.sh`). Do not use the repo-level `npm run dev`: its `scripts/free-dev-ports.sh` kills whatever listens on 3000, 5173, 5174, 5175 and 4175, which includes the founder's other checkout (3000/5173/5175) that must never be touched.
+* `npm run dev` at the repo root (API + web + docs, with `scripts/wait-api-and-dev-web.sh`) is safe next to the founder's other checkout since 21 Nov 2026: `scripts/free-dev-ports.sh` only frees this checkout's own ports (API 3010, web 5174, docs 5176; overridable with `API_PORT` / `WEB_PORT` / `DOCS_PORT`) and refuses to free 3000 / 5173 / 5175 / 4175. When the stack from `up.sh` already runs the API on :3010, `npm run dev` would stop it (it is on an own port); to only add the web use `npm run dev -w web` (:5174). The docs portal moved from 5175 to 5176 for the same reason.
 * Live home visits (en route / arrived / just aborted) are anchored to the seed instant; the 15 s safety scheduler prompts/escalates an *arrived* visit nobody answers after about 40 min. Re-run with `--reset` for fresh ones.
 * First login of any staff user shows the legal-terms acceptance banner (real UI behaviour).
 
@@ -36,8 +36,8 @@ Password for every `@demo.kiorex.test` and `@nurse-demo.kiorly.test` account: **
 | `demo_t_df` | Delta Family Clinics (DEMO), Mansoura | CLINIC / **PRO** active (+ Kiorex commission on invoice) | 11 | 40 | 398 appts |
 | `demo_t_ss` | Smile & Skin Studio (DEMO) | CLINIC / **LITE base, TRIALING** (14-day trial, CLINIC trial entitlements) | 9 | 24 | 270 appts |
 | `demo_t_bs` | Corner Family Clinic (DEMO Basic) | CLINIC / **LITE (Basic)** active | 3 | 1 | none |
-| `demo_t_nsolo` | Demo Home Nursing (Mona) | **NURSE** (SOLO) / NURSE_PRO | 1 | 4 | 52 home-visit rows (see section 7: 42 are test leftovers) |
-| `demo_t_nagy` | Demo Care Agency | **NURSE** (AGENCY) / NURSE_AGENCY | 8 | 9 | 22 home-visit rows |
+| `demo_t_nsolo` | Demo Home Nursing (Mona) | **NURSE** (SOLO) / NURSE_PRO | 1 | 4 | 10 seeded `demo_hv_*` home visits (66 rows live on 21 Nov: 56 are test leftovers, see section 7) |
+| `demo_t_nagy` | Demo Care Agency | **NURSE** (AGENCY) / NURSE_AGENCY | 8 | 9 | 22 seeded home visits (45 rows live, 23 test leftovers) |
 | `cmwnwj13x0009s3kz2z8r6df0` | Kiorly Clinic Group (Demo) | CLINIC / ENTERPRISE | 23 | 300 | pre-existing demo (`demo` password) |
 
 ### 3.2 Nile Care (`na`), Delta (`df`), Smile & Skin (`ss`)
@@ -152,7 +152,10 @@ Patients: the first 12 of `na` are the Passport personas (`+201000001001..1012`,
 ## 7. Known limitations and inconsistencies found
 
 * Providers are mocked: WhatsApp/e-mail go to the dev inbox, PSP is `sandbox-fake`, video is `mock`. Entitlement gates and feature flags decide visibility, not hidden UI alone.
-* **Mona's tenant has 42 extra home-visit rows** (cuid ids, created 20 Nov by integration/e2e runs) on top of the 10 seeded `demo_hv_*`: 52 rows, with 22 cancelled and 8 arrived, so her "today" route is noisier than the seed intends. `--reset` removes demo tenants and recreates them.
+* **Mona's tenant has extra home-visit rows** (cuid ids from integration/e2e runs) on top of the 10 seeded `demo_hv_*`: 66 rows on 21 Nov (56 extra; 22 cancelled, 9 arrived, 15 finished, 8 aborted-unsafe, 9 confirmed), so her "today" route is noisier than the seed intends; the agency tenant has 45 rows (22 seeded + 23 extra). The extra count keeps growing with every e2e run. `--reset` removes demo tenants and recreates them.
 * BRANCH_MANAGER keeps the full branch admin tab set; FINANCE_OFFICER (`accountant.na@`) now gets billing tabs only (expenses, operations, revenue, reports, profile), matching `Docs/Test_Data_Users.md` ("no Admin").
-* Patient count of `df` is 40 (older docs say 39); Smile & Skin is LITE base on a CLINIC trial.
+* Patient counts: `na` 70 seeded (+2 e2e), `df` **40** (older docs said 39, fixed), `ss` 24; Smile & Skin is LITE base on a CLINIC trial.
 * The `5174` web is a Vite dev server: start it by hand (not part of `up.sh`).
+
+---
+Verified: 2026-11-21 (seed scripts, `kiorly` database via SELECT, `free-dev-ports.sh` guard check).

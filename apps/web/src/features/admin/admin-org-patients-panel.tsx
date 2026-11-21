@@ -1,16 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
-import {
-  emptyPatientAcquisitionFormValues,
-  PatientAcquisitionFields,
-  patientAcquisitionFormToBody,
-  patientAcquisitionFormValuesFromPatient,
-  type PatientAcquisitionFormValues,
-} from "@/components/patient-acquisition-fields";
+import { PatientAcquisitionFields } from "@/components/patient-acquisition-fields";
+import { type PatientAcquisitionFormValues } from "@/components/patient-acquisition-form";
+import { emptyPatientAcquisitionFormValues, patientAcquisitionFormToBody, patientAcquisitionFormValuesFromPatient } from "@/components/patient-acquisition-form";
 import { PatientAllergiesField } from "@/components/patient-allergies-field";
 import { PatientPhoneField } from "@/components/patient-phone-field";
 import { allergiesFormToApi, type PatientAllergyFormItem } from "@/lib/patient-allergies";
@@ -36,6 +32,7 @@ import {
   phoneConflictMessage,
   type PatientPhoneConflictPatient,
 } from "@/lib/patient-phone-conflict";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type DialogMode = null | "create" | { edit: string };
 
@@ -119,7 +116,7 @@ export function AdminOrgPatientsPanel() {
     setPhoneConflict(null);
   };
 
-  useEffect(() => {
+  useSyncOnChange([isEdit, patientDetailQuery.data], () => {
     if (!isEdit || !patientDetailQuery.data) return;
     const p = patientDetailQuery.data;
     setFirstNameEn(p.firstNameEn);
@@ -134,7 +131,7 @@ export function AdminOrgPatientsPanel() {
     setNationalId(p.nationalId ?? "");
     setHomeBranchId(p.homeBranchId ?? "");
     setAcquisition(patientAcquisitionFormValuesFromPatient(p));
-  }, [isEdit, patientDetailQuery.data]);
+  });
 
   const buildDemographicsValues = () => ({
     firstNameEn,
@@ -293,7 +290,7 @@ export function AdminOrgPatientsPanel() {
     [clinics, i18n.language, t],
   );
 
-  const rows = patientsQuery.data?.items ?? [];
+  const rows = useMemo(() => patientsQuery.data?.items ?? [], [patientsQuery.data?.items]);
   const total = patientsQuery.data?.total ?? 0;
   const totalPages = patientsQuery.data?.totalPages ?? 1;
 
@@ -329,10 +326,10 @@ export function AdminOrgPatientsPanel() {
     }
   };
 
-  useEffect(() => {
+  useSyncOnChange([page, pageSize, search], () => {
     setSelectAllMatching(false);
     setSelectedIds(new Set());
-  }, [page, pageSize, search]);
+  }, { skipMount: true });
 
   return (
     <div className="space-y-6">

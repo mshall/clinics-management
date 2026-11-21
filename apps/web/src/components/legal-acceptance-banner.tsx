@@ -8,18 +8,19 @@ import { useAuthStore } from "@/stores/auth-store";
 export function LegalAcceptanceBanner() {
   const { t, i18n } = useTranslation();
   const token = useAuthStore((s) => s.accessToken);
-  const [status, setStatus] = useState<LegalStatus | null>(null);
+  const [fetched, setFetched] = useState<{ token: string; value: LegalStatus | null } | null>(null);
+  const status = token && fetched?.token === token ? fetched.value : null;
+  const setStatus = (value: LegalStatus | null) => {
+    if (token) setFetched({ token, value });
+  };
   const [busy, setBusy] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setStatus(null);
-      return;
-    }
+    if (!token) return;
     void fetchLegalStatus()
-      .then(setStatus)
-      .catch(() => setStatus(null));
+      .then((value) => setFetched({ token, value }))
+      .catch(() => setFetched({ token, value: null }));
   }, [token]);
 
   if (!status || status.satisfied) return null;

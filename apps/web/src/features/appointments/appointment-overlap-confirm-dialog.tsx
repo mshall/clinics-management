@@ -1,5 +1,5 @@
 import { CalendarClock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { formatAppointmentTimeRange } from "@/lib/appointment-scheduling";
 import type { AppointmentDto } from "@/lib/api-types";
 import { localeForLanguage } from "@/lib/locale-display";
 import { resolvePatientListLabel } from "@/lib/patient-display";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type AppointmentOverlapConfirmDialogProps = {
   open: boolean;
@@ -56,9 +57,9 @@ export function AppointmentOverlapConfirmDialog({
   const locale = localeForLanguage(i18n.language);
   const [visibleCount, setVisibleCount] = useState(1);
 
-  useEffect(() => {
+  useSyncOnChange([open, conflicts], () => {
     if (open) setVisibleCount(1);
-  }, [open, conflicts]);
+  });
 
   const visibleConflicts = conflicts.slice(0, visibleCount);
   const hiddenCount = Math.max(0, conflicts.length - visibleCount);

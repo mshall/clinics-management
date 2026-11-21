@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { ApiError, apiPatch } from "@/lib/http";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type Props = {
   clinicId: string;
@@ -30,11 +31,11 @@ export function ClinicContactSettingsPanel({
   const [emailVal, setEmailVal] = useState(email);
   const [lang, setLang] = useState(defaultLanguage);
 
-  useEffect(() => {
+  useSyncOnChange([phone, email, defaultLanguage], () => {
     setPhoneVal(phone);
     setEmailVal(email);
     setLang(defaultLanguage);
-  }, [phone, email, defaultLanguage]);
+  }, { skipMount: true });
 
   const saveMut = useMutation({
     mutationFn: () =>

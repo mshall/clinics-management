@@ -1,6 +1,6 @@
 import { CompensationFields } from "@/features/hr/compensation-kit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CreateActionButton } from "@/components/create-action-button";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
@@ -17,6 +17,7 @@ import { formatClinicName, formatEmploymentType } from "@/lib/locale-display";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectEmployeeCreateIssues } from "@/lib/create-form-validation";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
 
@@ -37,9 +38,9 @@ export function AdminCreateEmployeePanel() {
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
 
   const [empClinic, setEmpClinic] = useState("");
-  useEffect(() => {
+  useSyncOnChange([singleManagedClinic?.id], () => {
     if (singleManagedClinic) setEmpClinic(singleManagedClinic.id);
-  }, [singleManagedClinic?.id]);
+  });
   const [empFn, setEmpFn] = useState("");
   const [empLn, setEmpLn] = useState("");
   const [empFnAr, setEmpFnAr] = useState("");
@@ -50,9 +51,9 @@ export function AdminCreateEmployeePanel() {
   const [empType, setEmpType] = useState("FULL_TIME");
   const [empSalary, setEmpSalary] = useState("9000");
   const [empSalaryCurrency, setEmpSalaryCurrency] = useState<string>(orgBaseCurrency);
-  useEffect(() => {
+  useSyncOnChange([orgBaseCurrency], () => {
     setEmpSalaryCurrency(orgBaseCurrency);
-  }, [orgBaseCurrency]);
+  }, { skipMount: true });
   const validation = useValidationIssuesDialog({ intent: "create" });
   const [empIdDocFile, setEmpIdDocFile] = useState<File | null>(null);
 

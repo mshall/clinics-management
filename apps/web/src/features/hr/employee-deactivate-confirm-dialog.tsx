@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -10,6 +10,7 @@ import { formatMoneyAmount, resolveEmployeeSalaryCurrency } from "@/lib/money-di
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import type { EmployeeDeleteTarget } from "@/features/hr/employee-delete-confirm-dialog";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type EmployeeDeactivateConfirmDialogProps = {
   open: boolean;
@@ -32,11 +33,11 @@ export function EmployeeDeactivateConfirmDialog({
   const orgBaseCurrency = useOrgBaseCurrency();
   const [resignationDate, setResignationDate] = useState("");
 
-  useEffect(() => {
+  useSyncOnChange([open, employee?.id], () => {
     if (open) {
       setResignationDate(new Date().toISOString().slice(0, 10));
     }
-  }, [open, employee?.id]);
+  });
 
   const clinicLabel =
     employee?.clinicLabel ??

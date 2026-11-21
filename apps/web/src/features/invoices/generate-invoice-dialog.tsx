@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Plus, Printer, Trash2 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
@@ -11,7 +11,9 @@ import { Label } from "@/components/ui/label";
 import type { InvoiceDto } from "@/lib/api-types";
 import { clinicInvoiceLogoUrl, useCreateInvoiceMutation } from "@/lib/invoice-hooks";
 import { useAuthenticatedImage } from "@/lib/use-authenticated-image";
-import { InvoiceDocumentPreview, printInvoiceElement } from "@/features/invoices/invoice-document-preview";
+import { InvoiceDocumentPreview } from "@/features/invoices/invoice-document-preview";
+import { printInvoiceElement } from "@/features/invoices/invoice-print";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type InvoiceLineDraft = { purpose: string; amountPaid: string };
 
@@ -46,12 +48,12 @@ export function GenerateInvoiceDialog({
   const [generated, setGenerated] = useState<InvoiceDto | null>(null);
   const [invoiceCurrency, setInvoiceCurrency] = useState(defaultCurrency);
 
-  useEffect(() => {
+  useSyncOnChange([open, defaultPurpose, defaultAmount, defaultCurrency], () => {
     if (!open) return;
     setGenerated(null);
     setInvoiceCurrency(defaultCurrency);
     setLines([{ purpose: defaultPurpose, amountPaid: defaultAmount != null ? String(defaultAmount) : "" }]);
-  }, [open, defaultPurpose, defaultAmount, defaultCurrency]);
+  });
 
   const addLine = () => setLines((prev) => [...prev, { purpose: "", amountPaid: "" }]);
   const removeLine = (idx: number) => setLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)));

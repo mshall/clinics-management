@@ -72,3 +72,27 @@ export function withinHomeHours(hours: HomeHours | null, start: Date, end: Date,
 
 /** HVCFG01 — default travel buffers for a HOME visit type when none are set (KX-05: 30 / 30 minutes). */
 export const DEFAULT_HOME_TRAVEL_BUFFER_MIN = 30;
+
+/** Great-circle distance in metres between two WGS84 points (haversine). */
+export function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * 6_371_000 * Math.asin(Math.min(1, Math.sqrt(h))));
+}
+
+export const DEFAULT_ARRIVAL_THRESHOLD_M = 500;
+
+/** Off-site arrival threshold in metres (env HOME_VISIT_ARRIVAL_THRESHOLD_M, default 500; invalid/<=0 falls back to the default). */
+export function arrivalThresholdM(env: NodeJS.ProcessEnv = process.env): number {
+  const n = Number(env.HOME_VISIT_ARRIVAL_THRESHOLD_M);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_ARRIVAL_THRESHOLD_M;
+}
+
+/** Non-blocking arrival check: distance (null when either side has no coordinates) and the off-site flag. */
+export function arrivalCheck(fix: { lat?: number; lng?: number } | undefined, address: { lat?: number; lng?: number } | null | undefined, thresholdM = arrivalThresholdM()) {
+  if (fix?.lat == null || fix?.lng == null || address?.lat == null || address?.lng == null) return { arrivalDistanceM: null as number | null, arrivedOffSite: false };
+  const d = distanceMeters({ lat: fix.lat, lng: fix.lng }, { lat: address.lat, lng: address.lng });
+  return { arrivalDistanceM: d as number | null, arrivedOffSite: d > thresholdM };
+}

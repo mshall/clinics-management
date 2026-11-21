@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { captureStillPhoto, openCameraStream } from "@/lib/camera-capture";
 import { enhanceCameraCaptureFile } from "@/lib/enhance-image";
 import { shouldUseNativeCameraPicker } from "@/lib/platform";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type DocumentCameraCaptureDialogProps = {
   open: boolean;
@@ -23,14 +24,18 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
   const [ready, setReady] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  const stopStream = useCallback(() => {
+  const releaseStream = useCallback(() => {
     for (const track of streamRef.current?.getTracks() ?? []) {
       track.stop();
     }
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
-    setReady(false);
   }, []);
+
+  const stopStream = useCallback(() => {
+    releaseStream();
+    setReady(false);
+  }, [releaseStream]);
 
   const finishCapture = useCallback(
     async (file: File) => {
@@ -48,18 +53,26 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
     [onCapture, onOpenChange, t],
   );
 
-  useEffect(() => {
+  useSyncOnChange([open, t, useNativeCamera], () => {
     if (!open) {
-      stopStream();
+      setReady(false);
       setCameraError(null);
       setProcessing(false);
+    } else if (useNativeCamera) {
+      setReady(false);
+      setCameraError(null);
+      setReady(true);
+    }
+  });
+
+  useEffect(() => {
+    if (!open) {
+      releaseStream();
       return;
     }
 
     if (useNativeCamera) {
-      stopStream();
-      setCameraError(null);
-      setReady(true);
+      releaseStream();
       const timer = window.setTimeout(() => fileInputRef.current?.click(), 150);
       return () => window.clearTimeout(timer);
     }
@@ -97,7 +110,7 @@ export function DocumentCameraCaptureDialog({ open, onOpenChange, onCapture }: D
       cancelled = true;
       stopStream();
     };
-  }, [open, stopStream, t, useNativeCamera]);
+  }, [open, releaseStream, stopStream, t, useNativeCamera]);
 
   const capture = async () => {
     const video = videoRef.current;

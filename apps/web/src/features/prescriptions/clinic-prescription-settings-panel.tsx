@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ClinicDetailDto } from "@/lib/api-types";
 import { clinicPrescriptionLogoUrl, usePatchClinicPrescriptionSettingsMutation, useUploadClinicPrescriptionLogoMutation } from "@/lib/prescription-hooks";
 import { useAuthenticatedImage } from "@/lib/use-authenticated-image";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type ClinicPrescriptionSettingsPanelProps = {
   clinicId: string;
@@ -31,10 +32,10 @@ export function ClinicPrescriptionSettingsPanel({
     detail.hasPrescriptionLogo,
   );
 
-  useEffect(() => {
+  useSyncOnChange([detail.prescriptionHeaderDescriptionEn, detail.prescriptionHeaderDescriptionAr, clinicId], () => {
     setDescriptionEn(detail.prescriptionHeaderDescriptionEn ?? "");
     setDescriptionAr(detail.prescriptionHeaderDescriptionAr ?? "");
-  }, [detail.prescriptionHeaderDescriptionEn, detail.prescriptionHeaderDescriptionAr, clinicId]);
+  }, { skipMount: true });
 
   const saveSettings = async () => {
     try {

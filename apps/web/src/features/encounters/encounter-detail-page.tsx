@@ -73,6 +73,7 @@ import { AddMedForm, ComposerEmpty, ComposerHint, ComposerModeTabs, ComposerPane
 import { encountersBackPath } from "@/lib/nav-policy";
 import { registerUnsavedWork } from "@/lib/unsaved-work-registry";
 import { CollectVisitBalanceCard } from "@/features/front-desk/collect-visit-balance-card";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 function apiErrorMessage(e: unknown): string {
   if (e instanceof ApiError && e.body && typeof e.body === "object" && "message" in e.body) {
@@ -166,7 +167,7 @@ export function EncounterDetailPage() {
   const [followUpWeeks, setFollowUpWeeks] = useState("");
   const [followUpNote, setFollowUpNote] = useState("");
 
-  useEffect(() => {
+  useSyncOnChange([enc?.id, enc?.noMedications, enc?.visitFeeAmount, enc?.visitFeeCurrency, clinicDefaultCurrency], () => {
     if (!enc) return;
     setVisitType(enc.visitType);
     setChief(enc.chiefComplaint ?? "");
@@ -189,25 +190,26 @@ export function EncounterDetailPage() {
     setSpecialtyFormResponses(enc.specialtyFormResponses ?? {});
     setFollowUpWeeks(enc.followUpWeeks != null ? String(enc.followUpWeeks) : "");
     setFollowUpNote(enc.followUpNote ?? "");
-  }, [enc?.id, enc?.noMedications, enc?.visitFeeAmount, enc?.visitFeeCurrency, clinicDefaultCurrency]);
+  });
 
+  const encId = enc?.id;
+  const encStatus = enc?.status;
   useEffect(() => {
-    if (!enc) return;
-    if (enc.status !== "DRAFT" && enc.status !== "AMENDED") return;
+    if (!encId) return;
+    if (encStatus !== "DRAFT" && encStatus !== "AMENDED") return;
     return registerUnsavedWork();
-  }, [enc?.id, enc?.status]);
+  }, [encId, encStatus]);
 
+  const medicationsKey = enc?.medications
+    ?.map((m) => `${m.id}|${m.drugName}|${m.dosage ?? ""}|${m.frequency ?? ""}`)
+    .join(";");
+  useSyncOnChange([medicationsKey], () => setGeneratedRxPreview(null), { skipMount: true });
   useEffect(() => {
     if (generatedRxUrlRef.current) {
       URL.revokeObjectURL(generatedRxUrlRef.current);
       generatedRxUrlRef.current = null;
     }
-    setGeneratedRxPreview(null);
-  }, [
-    enc?.medications
-      ?.map((m) => `${m.id}|${m.drugName}|${m.dosage ?? ""}|${m.frequency ?? ""}`)
-      .join(";"),
-  ]);
+  }, [medicationsKey]);
 
   useEffect(() => {
     return () => {

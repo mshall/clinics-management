@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/clinic-hours";
 import { localeForLanguage } from "@/lib/locale-display";
 import { ApiError, apiPatch } from "@/lib/http";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type ClinicHoursSettingsPanelProps = {
   clinicId: string;
@@ -36,10 +37,10 @@ export function ClinicHoursSettingsPanel({
   const [open, setOpen] = useState(resolvedOpen);
   const [close, setClose] = useState(resolvedClose);
 
-  useEffect(() => {
+  useSyncOnChange([openingTime, closingTime], () => {
     setOpen(resolveClinicOpeningTime(openingTime));
     setClose(resolveClinicClosingTime(closingTime));
-  }, [openingTime, closingTime]);
+  }, { skipMount: true });
 
   const saveMut = useMutation({
     mutationFn: () => apiPatch(`/api/v1/clinics/${clinicId}`, { openingTime: open, closingTime: close }),

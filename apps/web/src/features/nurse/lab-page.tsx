@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, apiGet, apiPost } from "@/lib/http";
-import { EmptyBlock, ErrorBlock, errorBody, errorCode, Field, fmtDate, fmtDateTime, GateNotice, isGateError, LoadingBlock, PageShell, selectClass, StatusPill, todayIso, useNurseContext } from "./nurse-shared";
+import { EmptyBlock, ErrorBlock, Field, GateNotice, LoadingBlock, PageShell, selectClass, StatusPill } from "./nurse-shared";
+import { errorBody, errorCode, fmtDate, fmtDateTime, isGateError, todayIso, useNurseContext } from "./nurse-shared-utils";
 
 type LabItem = { id: string; code: string | null; nameEn: string; nameAr: string };
 type Tube = { label: string; specimenType: string; container?: string | null };

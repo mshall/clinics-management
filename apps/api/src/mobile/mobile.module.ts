@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { APP_INTERCEPTOR } from "@nestjs/core";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { EncountersModule } from "../encounters/encounters.module";
 import { EntitlementsModule } from "../entitlements/entitlements.module";
 import { NurseModule } from "../nurse/nurse.module";
@@ -10,6 +10,7 @@ import { MobilePushModule } from "./mobile-push.module";
 import { MobilePushService } from "./mobile-push.service";
 import { MobileUpgradeService } from "./mobile-upgrade.service";
 import { MobileController } from "./mobile.controller";
+import { MobilePlanGuard } from "./mobile-plan.guard";
 import { MobileInterceptor } from "./mobile.interceptor";
 import { MobileService } from "./mobile.service";
 
@@ -17,7 +18,7 @@ import { MobileService } from "./mobile.service";
 @Module({
   imports: [MobilePushModule, EncountersModule, EntitlementsModule, NurseModule, RevenueModule],
   controllers: [MobileController],
-  providers: [MobileService, MobileUpgradeService, MobileAlertsService, MobileEntitlementService, { provide: APP_INTERCEPTOR, useClass: MobileInterceptor }],
+  providers: [MobileService, MobileUpgradeService, MobileAlertsService, MobileEntitlementService, { provide: APP_GUARD, useClass: MobilePlanGuard }, { provide: APP_INTERCEPTOR, useClass: MobileInterceptor }],
   exports: [MobileEntitlementService, MobileAlertsService],
 })
 export class MobileModule {}

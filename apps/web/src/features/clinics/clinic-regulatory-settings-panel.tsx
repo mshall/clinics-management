@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import type { ClinicDetailDto } from "@/lib/api-types";
 import { ApiError, apiPatch } from "@/lib/http";
 import { usePatchClinicInvoiceSettingsMutation } from "@/lib/invoice-hooks";
 import { pickMarketTaxLabel } from "@/lib/market-tax-labels";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type Props = {
   clinicId: string;
@@ -36,7 +37,7 @@ export function ClinicRegulatorySettingsPanel({ clinicId, detail, canEdit }: Pro
   const [vatPercent, setVatPercent] = useState(String(detail.invoiceVatPercent ?? 0));
   const [vatOverride, setVatOverride] = useState(!detail.invoiceVatPercentUsesMarketDefault);
 
-  useEffect(() => {
+  useSyncOnChange([detail.licenseNumber, detail.taxRegistrationNumber, detail.invoiceVatPercent, detail.invoiceVatPercentUsesMarketDefault, detail.marketInvoiceVatPercent], () => {
     setLicense(detail.licenseNumber);
     setTaxReg(detail.taxRegistrationNumber ?? "");
     setVatOverride(!detail.invoiceVatPercentUsesMarketDefault);
@@ -44,13 +45,7 @@ export function ClinicRegulatorySettingsPanel({ clinicId, detail, canEdit }: Pro
       ? (detail.marketInvoiceVatPercent ?? detail.invoiceVatPercent)
       : detail.invoiceVatPercent;
     setVatPercent(String(v ?? 0));
-  }, [
-    detail.licenseNumber,
-    detail.taxRegistrationNumber,
-    detail.invoiceVatPercent,
-    detail.invoiceVatPercentUsesMarketDefault,
-    detail.marketInvoiceVatPercent,
-  ]);
+  });
 
   const saveMut = useMutation({
     mutationFn: async () => {

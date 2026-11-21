@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { apiGet } from "@/lib/http";
 import type { PatientDto } from "@/lib/api-schema";
 import { resolvePatientListLabel } from "@/lib/patient-display";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type SearchResult = { items: PatientDto[] };
 
@@ -29,13 +30,15 @@ export function GlobalPatientSearch() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const termTooShort = q.trim().length < 2;
+  useSyncOnChange([open, termTooShort], () => {
+    if (open && termTooShort) setItems([]);
+  });
+
   useEffect(() => {
     if (!open) return;
     const term = q.trim();
-    if (term.length < 2) {
-      setItems([]);
-      return;
-    }
+    if (term.length < 2) return;
     const handle = window.setTimeout(() => {
       void apiGet<SearchResult>(`/api/v1/front-desk/patients/search?q=${encodeURIComponent(term)}`).then((r) =>
         setItems(r.items ?? []),

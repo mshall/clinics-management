@@ -30,14 +30,15 @@ export function AdminGovernancePanel() {
   const total = audit.data?.total ?? 0;
   const totalPages = audit.data?.totalPages ?? 1;
 
+  const detailMetadata = detail?.metadata;
   const metaStr = useMemo(() => {
-    if (!detail?.metadata) return "";
+    if (!detailMetadata) return "";
     try {
-      return JSON.stringify(detail.metadata, null, 2);
+      return JSON.stringify(detailMetadata, null, 2);
     } catch {
-      return String(detail.metadata);
+      return String(detailMetadata);
     }
-  }, [detail?.metadata]);
+  }, [detailMetadata]);
 
   return (
     <div className="space-y-4">

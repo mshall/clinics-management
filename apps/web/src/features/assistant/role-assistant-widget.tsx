@@ -12,9 +12,10 @@ import { useAssistantChatMutation, useAssistantContextQuery } from "@/lib/assist
 import { useEntitlement } from "@/hooks/use-entitlement";
 import { useAuthStore } from "@/stores/auth-store";
 import { isAssistantEnabledForRole } from "@/lib/assistant-policy";
-import { useNurseContext } from "@/features/nurse/nurse-shared";
+import { useNurseContext } from "@/features/nurse/nurse-shared-utils";
 import { AssistantMessageBody } from "@/features/assistant/assistant-message-body";
 import { Badge } from "@/components/ui/badge";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type ChatLine = { role: "user" | "assistant"; text: string; actions?: AssistantChatAction[] };
 
@@ -37,11 +38,11 @@ export function RoleAssistantWidget() {
   const contextQ = useAssistantContextQuery(roleOk && entitled, locale);
   const chatMut = useAssistantChatMutation();
 
-  useEffect(() => {
+  useSyncOnChange([open, contextQ.data?.greeting, lines.length], () => {
     if (open && contextQ.data?.greeting && lines.length === 0) {
       setLines([{ role: "assistant", text: contextQ.data.greeting }]);
     }
-  }, [open, contextQ.data?.greeting, lines.length]);
+  });
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });

@@ -72,7 +72,7 @@ export function PlatformKiorexRatesTab() {
     queryFn: () => apiGet<MarketRow[]>("/api/v1/admin/platform/markets/operable"),
   });
 
-  const markets = marketsQuery.data ?? [];
+  const markets = useMemo(() => marketsQuery.data ?? [], [marketsQuery.data]);
   const rates = ratesQuery.data ?? [];
 
   const selectedMarket = useMemo(

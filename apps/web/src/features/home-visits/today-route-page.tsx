@@ -24,6 +24,9 @@ type Visit = {
   fee?: { baseFee: number; surcharge: number; total: number };
   navigationUrl?: string | null;
   travelMinutesFromPrevious?: number | null;
+  /** Dispatcher/owner only (server omits it for the clinician): arrival fix was farther than the threshold from the address. Informational, never blocks. */
+  arrivedOffSite?: boolean;
+  arrivalDistanceM?: number | null;
 };
 type RouteResponse = { date: string; view: "LIST" | "ROUTE"; items: Visit[] };
 type SosResult = { show: { ambulance: string; police: string }; delivered: boolean };
@@ -151,6 +154,9 @@ export function TodayRoutePage() {
                   {v.fee ? <span>{t("homeVisits.fee", { base: v.fee.baseFee, surcharge: v.fee.surcharge })}</span> : null}
                   {v.travelMinutesFromPrevious != null ? <span>{t("homeVisits.travel", { minutes: v.travelMinutesFromPrevious })}</span> : null}
                 </p>
+              ) : null}
+              {v.arrivedOffSite ? (
+                <p data-testid="arrived-off-site" role="status" className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900"><ShieldAlert className="size-4 shrink-0" aria-hidden />{t("homeVisits.arrivedOffSite", { meters: v.arrivalDistanceM ?? 0 })}</p>
               ) : null}
               {primary(v)}
               <div className="flex flex-wrap gap-2">

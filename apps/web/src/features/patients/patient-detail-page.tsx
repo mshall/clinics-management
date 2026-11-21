@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { PatientMoneySection } from "@/features/patients/patient-money-section";
 import { canUsePatientMoney } from "@/lib/patient-money-policy";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,7 @@ import { canEditPatientDetails } from "@/lib/patient-edit-policy";
 import { canMutateNavTab } from "@/lib/nav-tab-access-policy";
 import { canEditOperationStage2 } from "@/lib/operation-stage-policy";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function PatientDetailPage() {
   const { t, i18n } = useTranslation();
@@ -107,7 +108,7 @@ export function PatientDetailPage() {
     sortOrder: "desc",
     enabled: Boolean(id) && canViewEncounters,
   });
-  const vitalsRowsRaw = vitalsData?.items ?? [];
+  const vitalsRowsRaw = useMemo(() => vitalsData?.items ?? [], [vitalsData?.items]);
   const vitalsRows = useMemo(
     () =>
       vitalsRowsRaw.filter(
@@ -167,11 +168,11 @@ export function PatientDetailPage() {
     createEncounter.mutate();
   };
 
-  useEffect(() => {
+  useSyncOnChange([avatarKey], () => {
     if (!avatarKey) return;
     const saved = window.localStorage.getItem(avatarKey);
     setAvatarDataUrl(saved || null);
-  }, [avatarKey]);
+  });
 
   const onAvatarChange = async (file: File | null) => {
     if (!avatarKey) return;

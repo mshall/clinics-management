@@ -10,31 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPost } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
-import {
-  AddressFields,
-  addressPayload,
-  EmptyBlock,
-  emptyAddress,
-  ErrorBlock,
-  Field,
-  fmtDate,
-  GateNotice,
-  isGateError,
-  LoadingBlock,
-  PageShell,
-  PatientPicker,
-  selectClass,
-  StatusPill,
-  todayIso,
-  useClinics,
-  useHomeServices,
-  useIsAgency,
-  useNurseContext,
-  useServiceName,
-  type AddressDraft,
-  type PatientLite,
-  type RosterItem,
-} from "./nurse-shared";
+import { AddressFields, EmptyBlock, ErrorBlock, Field, GateNotice, LoadingBlock, PageShell, PatientPicker, selectClass, StatusPill, type PatientLite, type RosterItem } from "./nurse-shared";
+import { type AddressDraft } from "./nurse-shared-utils";
+import { addressPayload, emptyAddress, fmtDate, isGateError, todayIso, useClinics, useHomeServices, useIsAgency, useNurseContext, useServiceName } from "./nurse-shared-utils";
 
 export type CarePlanView = {
   id: string;

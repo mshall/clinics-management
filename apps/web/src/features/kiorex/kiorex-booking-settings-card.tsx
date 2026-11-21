@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { apiPut } from "@/lib/http";
 import type { KiorexSettingsDto } from "./kiorex-types";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type DoctorDraft = { listed: boolean; dailyCap: string };
 type TypeDraft = { marketplaceBookable: boolean; minNoticeHours: string; maxDaysAhead: string; deposit: string };
@@ -42,9 +43,9 @@ export function KiorexBookingSettingsCard({ clinicId, settings }: { clinicId: st
   const isAr = i18n.language.startsWith("ar");
   const [draft, setDraft] = useState(() => draftsFrom(settings));
 
-  useEffect(() => {
+  useSyncOnChange([settings], () => {
     setDraft(draftsFrom(settings));
-  }, [settings]);
+  }, { skipMount: true });
 
   const save = useMutation({
     mutationFn: () =>

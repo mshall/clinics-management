@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { mapApiRole } from "@/lib/roles";
 import { formatUserRole } from "@/lib/locale-display";
 import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const NAV_I18N: Record<NavItemKey, string> = {
   platform: "nav.platformOverview",
@@ -67,11 +68,11 @@ export function ClinicNavTabsPanel() {
 
   const grantFingerprint = grantQ.data ? JSON.stringify(grantQ.data.tabKeys ?? null) : "";
 
-  useEffect(() => {
+  useSyncOnChange([targetId], () => {
     setDraft(new Set());
-  }, [targetId]);
+  }, { skipMount: true });
 
-  useEffect(() => {
+  useSyncOnChange([targetId, targetRole, grantFingerprint, grantQ.isSuccess], () => {
     if (!targetId || !targetRole) return;
     if (!grantQ.isSuccess) return;
     const base = navKeysForRole(targetRole);
@@ -86,7 +87,7 @@ export function ClinicNavTabsPanel() {
     }
     next.add("profile");
     setDraft(next);
-  }, [targetId, targetRole, grantFingerprint, grantQ.isSuccess]);
+  });
 
   const saveMut = useMutation({
     mutationFn: (tabKeys: string[]) => apiPut<{ tabKeys: string[] | null }>(`/api/v1/user-nav-tabs/${targetId}`, { tabKeys }),

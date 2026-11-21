@@ -15,7 +15,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { SearchInput } from "@/components/search-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import type { PatientDto } from "@/lib/api-schema";
@@ -27,12 +29,10 @@ import { formatClinicName } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
 import { canManagePatientsInList } from "@/lib/patient-edit-policy";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
-import {
-  PendingDocumentAttachments,
-  pendingDocumentDescription,
-  type PendingDocumentRow,
-} from "@/components/pending-document-attachments";
-import { patientAcquisitionFormToBody } from "@/components/patient-acquisition-fields";
+import { PendingDocumentAttachments } from "@/components/pending-document-attachments";
+import { type PendingDocumentRow } from "@/components/pending-document-utils";
+import { pendingDocumentDescription } from "@/components/pending-document-utils";
+import { patientAcquisitionFormToBody } from "@/components/patient-acquisition-form";
 import {
   PATIENT_ACQUISITION_CHANNELS,
   patientAcquisitionLabel,
@@ -47,6 +47,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { PatientAllergiesField } from "@/components/patient-allergies-field";
 import { collectPatientRegisterValidationIssues } from "@/lib/create-form-validation";
 import { allergiesFormToApi, type PatientAllergyFormItem } from "@/lib/patient-allergies";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function PatientsPage() {
   const { t, i18n } = useTranslation();
@@ -89,7 +90,7 @@ export function PatientsPage() {
   };
 
   const { data, isFetching, isError, error } = usePatientsQuery(query);
-  const items: PatientDto[] = data?.items ?? [];
+  const items: PatientDto[] = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
@@ -113,9 +114,9 @@ export function PatientsPage() {
     });
   }, [items, pfMrn, pfName, pfGender, pfDob, pfEmail, pfBranch]);
 
-  useEffect(() => {
+  useSyncOnChange([debouncedQuick, debouncedPfId], () => {
     setPage(1);
-  }, [debouncedQuick, debouncedPfId]);
+  }, { skipMount: true });
 
   const { data: clinics = [] } = useClinicsQuery();
   const authRole = useAuthStore((s) => s.user?.role);
@@ -167,11 +168,11 @@ export function PatientsPage() {
     setDocInvalidRowIds(new Set());
   };
 
-  useEffect(() => {
+  useSyncOnChange([open, defaultHomeBranchId], () => {
     if (open && defaultHomeBranchId) {
       setHomeBranchId(defaultHomeBranchId);
     }
-  }, [open, defaultHomeBranchId]);
+  });
 
   const showFormError = (issues: string[], invalidDocRowIds = new Set<string>()) => {
     setDocInvalidRowIds(invalidDocRowIds);
@@ -783,13 +784,14 @@ export function PatientsPage() {
 
 function useDebouncedValue<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);
+  const immediate = typeof value === "string" && value.trim() === "";
+  useSyncOnChange([immediate, value], () => {
+    if (immediate) setV(value);
+  });
   useEffect(() => {
-    if (typeof value === "string" && value.trim() === "") {
-      setV(value);
-      return;
-    }
+    if (immediate) return;
     const id = window.setTimeout(() => setV(value), ms);
     return () => window.clearTimeout(id);
-  }, [value, ms]);
+  }, [immediate, value, ms]);
   return v;
 }

@@ -11,10 +11,13 @@ import { AppointmentDeleteConfirmDialog, type AppointmentDeleteTarget } from "@/
 import { AppointmentOverlapConfirmDialog } from "@/features/appointments/appointment-overlap-confirm-dialog";
 import { AppointmentsCalendarPanel } from "@/features/appointments/appointments-calendar-panel";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
-import { AppointmentStatusBadge, appointmentStatusLabel } from "@/components/appointment-status-badge";
+import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
+import { appointmentStatusLabel } from "@/components/appointment-status";
 import { PageHeader } from "@/brand/ui-kit";
 import { TableSkeleton } from "@/components/skeleton";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
@@ -69,6 +72,7 @@ import {
   type ScheduledFeeCollectionValue,
 } from "@/lib/visit-collection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 function toAppointmentIso(localDatetime: string): string {
   const d = new Date(localDatetime);
@@ -106,15 +110,6 @@ export function AppointmentsPage() {
   const [fltClinicId, setFltClinicId] = useState("");
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showBookPanel, setShowBookPanel] = useState(false);
-  // Quick-book from the calendar time grid: /appointments?book=1&start=YYYY-MM-DDTHH:mm opens the booking panel pre-filled.
-  useEffect(() => {
-    if (searchParams.get("book") !== "1" || !canBookAppointments) return;
-    const startParam = searchParams.get("start");
-    setShowBookPanel(true);
-    if (startParam && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startParam)) setStart(startParam);
-    setSearchParams({}, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, canBookAppointments]);
   // Power-user shortcut: N opens/closes the quick-book panel (desktop, when no field has focus).
   useEffect(() => {
     if (isPhysician || !canBookAppointments) return;
@@ -133,11 +128,11 @@ export function AppointmentsPage() {
   const [afPatient, setAfPatient] = useState("");
   const [afStatus, setAfStatus] = useState("");
 
-  useEffect(() => {
+  useSyncOnChange([isPhysician], () => {
     if (!isPhysician) return;
     setSortOrder("asc");
     setFltFrom((prev) => prev || new Date().toISOString().slice(0, 10));
-  }, [isPhysician]);
+  });
 
   const listParams = useMemo(
     () => ({
@@ -162,7 +157,7 @@ export function AppointmentsPage() {
     setSortOrder(next.sortOrder);
     setPage(1);
   };
-  const rows = aptData?.items ?? [];
+  const rows = useMemo(() => aptData?.items ?? [], [aptData?.items]);
   const aptTotal = aptData?.total ?? 0;
   const aptTotalPages = aptData?.totalPages ?? 1;
   const { data: clinics = [] } = useClinicsQuery();
@@ -174,7 +169,7 @@ export function AppointmentsPage() {
     return m;
   }, [clinics]);
   const { data: patData } = usePatientsQuery({ page: 1, pageSize: 200 });
-  const patients = patData?.items ?? [];
+  const patients = useMemo(() => patData?.items ?? [], [patData?.items]);
   const patientLabel = useMemo(() => {
     const m = new Map<string, string>();
     for (const p of patients) m.set(p.id, `${p.mrn} — ${p.firstNameEn} ${p.lastNameEn}`);
@@ -223,10 +218,21 @@ export function AppointmentsPage() {
     useState<PatientPhoneConflictPatient | null>(null);
   const [clinicianId, setClinicianId] = useState("");
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
-  useEffect(() => {
+  useSyncOnChange([authUser?.role, authUser?.id], () => {
     if (authUser?.role === "physician" && authUser.id) setClinicianId(authUser.id);
-  }, [authUser?.role, authUser?.id]);
+  });
   const [start, setStart] = useState("");
+  // Quick-book from the calendar time grid: /appointments?book=1&start=YYYY-MM-DDTHH:mm opens the booking panel pre-filled.
+  useSyncOnChange([searchParams, canBookAppointments], () => {
+    if (searchParams.get("book") !== "1" || !canBookAppointments) return;
+    const startParam = searchParams.get("start");
+    setShowBookPanel(true);
+    if (startParam && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startParam)) setStart(startParam);
+  });
+  useEffect(() => {
+    if (searchParams.get("book") !== "1" || !canBookAppointments) return;
+    setSearchParams({}, { replace: true });
+  }, [searchParams, canBookAppointments, setSearchParams]);
   const [end, setEnd] = useState("");
   const bookingAfterClosing = Boolean(
     isCallCenter && clinicId.trim() && start.trim() && isStartAfterClosing(start, clinicClosingTime),
@@ -246,7 +252,7 @@ export function AppointmentsPage() {
     pageSize: 100,
     enabled: showBookPanel,
   });
-  const bookPatients = bookPatData?.items ?? [];
+  const bookPatients = useMemo(() => bookPatData?.items ?? [], [bookPatData?.items]);
   const selectedBookPatient = useMemo(
     () => bookPatients.find((p) => p.id === patientId),
     [bookPatients, patientId],
@@ -299,11 +305,11 @@ export function AppointmentsPage() {
     return null;
   }, [clinicianId, pinnedPhysicianItem, physicianItems, selectedPhysician, i18n.language]);
 
-  useEffect(() => {
+  useSyncOnChange([showBookPanel, adminOv.data?.currentTenant?.defaultVisitFee], () => {
     if (!showBookPanel) return;
     const d = adminOv.data?.currentTenant?.defaultVisitFee;
     if (d != null && Number.isFinite(Number(d))) setBookFee(String(d));
-  }, [showBookPanel, adminOv.data?.currentTenant?.defaultVisitFee]);
+  });
 
   const bookDateIso = start.trim() ? start.split("T")[0]! : new Date().toISOString().slice(0, 10);
   const { data: bookTypes } = useQuery({
@@ -335,7 +341,7 @@ export function AppointmentsPage() {
     enabled: showBookPanel && Boolean(clinicianId.trim()),
   });
 
-  useEffect(() => {
+  useSyncOnChange([showBookPanel, clinicianId, bookDateIso, bookDayData?.items, clinicOpeningTime, engineSlots?.slots], () => {
     if (!showBookPanel || !clinicianId.trim()) return;
     const engineFirst = engineSlots?.slots[0]?.startsAt;
     const suggested =
@@ -353,23 +359,23 @@ export function AppointmentsPage() {
       if (prevDate !== bookDateIso) return suggested;
       return prev;
     });
-  }, [showBookPanel, clinicianId, bookDateIso, bookDayData?.items, clinicOpeningTime, engineSlots?.slots]);
+  });
 
-  useEffect(() => {
+  useSyncOnChange([showBookPanel, start, clinicOpeningTime], () => {
     if (showBookPanel && !start.trim()) {
       const today = new Date().toISOString().slice(0, 10);
       setStart(formatDatetimeLocal(new Date(`${today}T${clinicOpeningTime}`)));
     }
-  }, [showBookPanel, start, clinicOpeningTime]);
+  });
 
-  useEffect(() => {
+  useSyncOnChange([showBookPanel, start], () => {
     if (!showBookPanel) return;
     if (!start.trim()) {
       setEnd("");
       return;
     }
     setEnd(defaultEndFromStart(start));
-  }, [showBookPanel, start]);
+  });
 
   const appointmentCreateInput = {
     clinicId,

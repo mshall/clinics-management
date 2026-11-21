@@ -80,3 +80,35 @@ describe("Kiorly Work: gating contract", () => {
     }
   });
 });
+
+import { isMobilePlanGated } from "./mobile.interceptor";
+describe("plan gate classification (MobilePlanGuard + interceptor share it)", () => {
+  it("gates /mobile/* and app-identified requests except the exempt routes", () => {
+    assert.equal(isMobilePlanGated("GET", "/mobile/summary", undefined), true);
+    assert.equal(isMobilePlanGated("GET", "/patients", "kiorly-work/1.2"), true);
+    assert.equal(isMobilePlanGated("GET", "/patients", undefined), false);
+    assert.equal(isMobilePlanGated("GET", "/mobile/alerts", undefined), false);
+    assert.equal(isMobilePlanGated("GET", "/mobile/bootstrap", "kiorly-work/1"), false);
+  });
+});
+
+import { JwtService } from "@nestjs/jwt";
+import { MobilePlanGuard } from "./mobile-plan.guard";
+describe("MobilePlanGuard: FEATURE_DISABLED before any controller guard (role/scope/plan 403)", () => {
+  const secret = "unit-test-secret-unit-test-secret-1234";
+  const tok = new JwtService({ secret }).sign({ sub: "u1", tenantId: "t1" });
+  const mkGuard = (enabled: boolean) => new MobilePlanGuard({ getOrThrow: () => secret } as never, { evaluate: async () => ({ enabled, reason: enabled ? null : "PLAN_BELOW_PRO" }) } as never);
+  const ctx = (url: string, headers: Record<string, string>, method = "GET") => ({ getType: () => "http", switchToHttp: () => ({ getRequest: () => ({ method, originalUrl: url, headers }) }) }) as never;
+  it("a non-entitled org gets FEATURE_DISABLED on /mobile/* and app-flagged routes", async () => {
+    for (const [url, h] of [["/api/v1/mobile/prescriptions", {}], ["/api/v1/appointments", { "x-kiorly-client": "kiorly-work/1" }]] as const) {
+      await assert.rejects(() => mkGuard(false).canActivate(ctx(url, { authorization: `Bearer ${tok}`, ...h })), (e: { getResponse(): { code: string; key: string } }) => e.getResponse().code === "FEATURE_DISABLED" && e.getResponse().key === "mobile_staff_app");
+    }
+  });
+  it("passes entitled orgs, exempt routes, plain web traffic, and bad/missing tokens (JwtAuthGuard answers 401)", async () => {
+    assert.equal(await mkGuard(true).canActivate(ctx("/api/v1/mobile/summary", { authorization: `Bearer ${tok}` })), true);
+    assert.equal(await mkGuard(false).canActivate(ctx("/api/v1/mobile/alerts", { authorization: `Bearer ${tok}` })), true);
+    assert.equal(await mkGuard(false).canActivate(ctx("/api/v1/patients", { authorization: `Bearer ${tok}` })), true);
+    assert.equal(await mkGuard(false).canActivate(ctx("/api/v1/mobile/summary", { authorization: "Bearer garbage" })), true);
+    assert.equal(await mkGuard(false).canActivate(ctx("/api/v1/mobile/summary", {})), true);
+  });
+});

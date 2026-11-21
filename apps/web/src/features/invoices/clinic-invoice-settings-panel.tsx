@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
 } from "@/lib/invoice-hooks";
 import { useAuthenticatedImage } from "@/lib/use-authenticated-image";
 import { cn } from "@/lib/utils";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type ClinicInvoiceSettingsPanelProps = {
   clinicId: string;
@@ -37,10 +38,10 @@ export function ClinicInvoiceSettingsPanel({ clinicId, detail, disabled }: Clini
     detail.hasInvoiceLogo,
   );
 
-  useEffect(() => {
+  useSyncOnChange([detail.invoiceBackgroundColor, detail.invoiceSections, clinicId], () => {
     setBackgroundColor(detail.invoiceBackgroundColor || "white");
     setSections(detail.invoiceSections ?? DEFAULT_INVOICE_SECTIONS);
-  }, [detail.invoiceBackgroundColor, detail.invoiceSections, clinicId]);
+  }, { skipMount: true });
 
   const toggleSection = (key: string) => {
     setSections((prev) => {

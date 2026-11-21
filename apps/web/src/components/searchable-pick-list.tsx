@@ -68,10 +68,7 @@ function usePortalPanelStyle(open: boolean, anchorRef: React.RefObject<HTMLEleme
   }, [anchorRef]);
 
   useLayoutEffect(() => {
-    if (!open) {
-      setStyle(null);
-      return;
-    }
+    if (!open) return;
     update();
     const onScroll = (e: Event) => {
       // Scrolling inside the portal list must not reposition the panel (breaks mobile swipe).
@@ -87,7 +84,7 @@ function usePortalPanelStyle(open: boolean, anchorRef: React.RefObject<HTMLEleme
     };
   }, [open, update]);
 
-  return style;
+  return open ? style : null;
 }
 
 function scheduleMobileFocus(el: HTMLInputElement | null | undefined): void {
@@ -141,11 +138,11 @@ export function SearchablePickList({
   const pickingRef = useRef(false);
   const pickingUntilRef = useRef(0);
   const lastPickRef = useRef<{ value: string; at: number } | null>(null);
-  const committedLabelRef = useRef<string | null>(null);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [closedText, setClosedText] = useState("");
   const [pinnedItem, setPinnedItem] = useState<PickListItem | null>(null);
+  const [committedLabel, setCommittedLabel] = useState<string | null>(null);
 
   const markPicking = useCallback(() => {
     pickingRef.current = true;
@@ -155,25 +152,22 @@ export function SearchablePickList({
     }, 0);
   }, []);
 
-  useEffect(() => {
-    if (!value.trim()) {
-      setPinnedItem(null);
-      committedLabelRef.current = null;
-      if (!open) setClosedText("");
-      return;
+  // Keep the pinned row / committed label in step with `value` (adjusted during render, not in an effect).
+  if (!value.trim()) {
+    if (pinnedItem !== null) setPinnedItem(null);
+    if (committedLabel !== null) setCommittedLabel(null);
+    if (!open && closedText !== "") setClosedText("");
+  } else {
+    const resolved =
+      items.find((i) => i.value === value) ??
+      (selectedItem?.value === value ? selectedItem : null) ??
+      (pinnedItem?.value === value ? pinnedItem : null);
+    if (resolved) {
+      if (committedLabel !== resolved.label) setCommittedLabel(resolved.label);
+      if (!open && closedText !== resolved.label) setClosedText(resolved.label);
+      if (pinnedItem?.value !== resolved.value || pinnedItem.label !== resolved.label) setPinnedItem(resolved);
     }
-    setPinnedItem((prev) => {
-      const resolved =
-        items.find((i) => i.value === value) ??
-        (selectedItem?.value === value ? selectedItem : null) ??
-        (prev?.value === value ? prev : null);
-      if (resolved) {
-        committedLabelRef.current = resolved.label;
-        if (!open) setClosedText(resolved.label);
-      }
-      return resolved ?? prev;
-    });
-  }, [value, items, selectedItem, open]);
+  }
 
   const filtered = useMemo(() => {
     const base = !localFilter
@@ -184,7 +178,7 @@ export function SearchablePickList({
     return localFilter ? filterPickListItems(base, q) : base;
   }, [items, q, localFilter, selectedItem, value]);
 
-  const displayText = resolveItemLabel(value, items, selectedItem, pinnedItem, committedLabelRef.current);
+  const displayText = resolveItemLabel(value, items, selectedItem, pinnedItem, committedLabel);
   const trimmedQ = q.trim();
   const isSearching = trimmedQ.length > 0;
   const meetsMinSearch = trimmedQ.length >= minSearchLength;
@@ -218,7 +212,7 @@ export function SearchablePickList({
         (selectedItem?.value === next ? selectedItem : null);
       const label = resolved?.label ?? "";
       if (resolved) {
-        committedLabelRef.current = label;
+        setCommittedLabel(label);
         setPinnedItem(resolved);
       }
       markPicking();
@@ -276,7 +270,7 @@ export function SearchablePickList({
       onSearchQueryChange?.(next);
       if (value && displayText && next.trim() !== displayText.trim()) {
         onValueChange("", undefined);
-        committedLabelRef.current = null;
+        setCommittedLabel(null);
         setPinnedItem(null);
         setClosedText("");
       }

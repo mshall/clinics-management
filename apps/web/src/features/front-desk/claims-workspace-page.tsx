@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -16,6 +16,7 @@ import { localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
 import { canUsePatientMoney } from "@/lib/patient-money-policy";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type Payer = { id: string; nameEn: string; nameAr: string; contractRef: string | null };
 type BatchListItem = {
@@ -83,7 +84,7 @@ export function ClaimsWorkspacePage() {
     retry: false,
   });
 
-  useEffect(() => {
+  useSyncOnChange([detail.data], () => {
     if (!detail.data?.lines?.length) return;
     const hint = JSON.stringify(
       detail.data.lines
@@ -93,7 +94,7 @@ export function ClaimsWorkspacePage() {
       2,
     );
     setRemitJson(hint);
-  }, [detail.data]);
+  });
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["claims"] });

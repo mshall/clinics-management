@@ -47,7 +47,7 @@ export function EncounterProfileDocuments({ encounterId, status, canUpload }: Pr
 
   if (!canUpload || (!isDraftLike && !isFinalized)) return null;
 
-  const bindPick = (kind: DocKind, ref: React.RefObject<HTMLInputElement | null>) => () => {
+  const pickFiles = (kind: DocKind, ref: React.RefObject<HTMLInputElement | null>) => {
     const input = ref.current;
     if (!input) return;
     input.onchange = () => {
@@ -75,16 +75,16 @@ export function EncounterProfileDocuments({ encounterId, status, canUpload }: Pr
         <input ref={labRef} type="file" className="hidden" accept="image/*,application/pdf" multiple />
         <input ref={radRef} type="file" className="hidden" accept="image/*,application/pdf" multiple />
         {isDraftLike ? <input ref={rxRef} type="file" className="hidden" accept="image/*,application/pdf" /> : null}
-        <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={bindPick("LAB", labRef)}>
+        <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={() => pickFiles("LAB", labRef)}>
           <FlaskConical className="me-1.5 h-3.5 w-3.5 text-kx-ocean-700" aria-hidden />
           {t("encounters.uploadLab", "Lab")}
         </Button>
-        <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={bindPick("RADIOLOGY", radRef)}>
+        <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={() => pickFiles("RADIOLOGY", radRef)}>
           <ScanLine className="me-1.5 h-3.5 w-3.5 text-kx-indigo-700" aria-hidden />
           {t("encounters.uploadRadiology", "Radiology")}
         </Button>
         {isDraftLike ? (
-          <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={bindPick("PRESCRIPTION", rxRef)}>
+          <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={() => pickFiles("PRESCRIPTION", rxRef)}>
             <Pill className="me-1.5 h-3.5 w-3.5 text-[hsl(var(--success))]" aria-hidden />
             {t("encounters.uploadPrescription", "Prescription")}
           </Button>

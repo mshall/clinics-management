@@ -1,9 +1,5 @@
-import {
-  patientAcquisitionFormToBody,
-  patientAcquisitionFormValuesFromPatient,
-  validatePatientAcquisitionRequired,
-  type PatientAcquisitionFormValues,
-} from "@/components/patient-acquisition-fields";
+import { type PatientAcquisitionFormValues } from "@/components/patient-acquisition-form";
+import { patientAcquisitionFormToBody, patientAcquisitionFormValuesFromPatient, validatePatientAcquisitionRequired } from "@/components/patient-acquisition-form";
 import type { PatientDto } from "@/lib/api-schema";
 
 export type PatientDemographicsFormValues = {

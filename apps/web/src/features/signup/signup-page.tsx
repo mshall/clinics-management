@@ -17,6 +17,7 @@ import {
 } from "@/lib/legal-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { CLINICAL_SPECIALTY_KEYS } from "@/lib/clinical-specialties";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const STEPS = 5;
 
@@ -56,7 +57,7 @@ export function SignupPage() {
       .catch(() => setError(t("legal.errors.load")));
   }, [t]);
 
-  useEffect(() => {
+  useSyncOnChange([requiredLegalIds], () => {
     setLegalChecked((prev) => {
       const next: Record<string, boolean> = {};
       for (const id of requiredLegalIds) {
@@ -64,7 +65,7 @@ export function SignupPage() {
       }
       return next;
     });
-  }, [requiredLegalIds]);
+  });
 
   useEffect(() => {
     void fetchSignupMarkets()

@@ -7,6 +7,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { hasRole } from "../common/effective-roles";
 import { formatLocalYmd } from "../common/reporting-range";
 import { EncountersService } from "../encounters/encounters.service";
+import { isHomeVisitDispatcher } from "../home-visits/home-visit-config.service";
 import { VisitRecordService } from "../nurse/visit-record.service";
 import type { VitalsInput } from "../nurse/vitals";
 import { PrismaService } from "../prisma/prisma.service";
@@ -153,9 +154,15 @@ export class MobileService {
       where: this.scheduleWhere(u, date, q.clinicId), orderBy: { startsAt: "asc" }, take: 300,
       include: { patient: { select: { id: true, mrn: true, firstNameEn: true, lastNameEn: true, firstNameAr: true, lastNameAr: true, gender: true, dob: true } }, clinician: { select: { id: true, displayName: true } }, appointmentType: { select: { nameEn: true, nameAr: true } }, clinic: { select: { id: true, nameEn: true, nameAr: true } } },
     });
-    const homeIds = new Set((await this.prisma.homeVisit.findMany({ where: { appointmentId: { in: rows.map((r) => r.id) } }, select: { appointmentId: true } })).map((h) => h.appointmentId));
+    const homeRows = await this.prisma.homeVisit.findMany({ where: { appointmentId: { in: rows.map((r) => r.id) } }, select: { appointmentId: true, state: true, arrivedOffSite: true, arrivalDistanceM: true } });
+    const homeIds = new Set(homeRows.map((h) => h.appointmentId));
+    const homeBy = new Map(homeRows.map((h) => [h.appointmentId, h]));
+    const dispatcher = isHomeVisitDispatcher(u);
+    // Off-site arrival flag (non-blocking, dispatcher/owner only; never patient-facing).
+    const offSite = (id: string) => { const h = homeBy.get(id); return dispatcher && h && h.arrivalDistanceM != null ? { arrivedOffSite: h.arrivedOffSite, arrivalDistanceM: h.arrivalDistanceM } : {}; };
     const items = rows.map((a) => ({
       id: a.id, startsAt: a.startsAt, endsAt: a.endsAt, status: a.status, queueStage: a.queueStage, queueTicketNumber: a.queueTicketNumber, roomLabel: a.roomLabel, checkedInAt: a.checkedInAt, isHomeVisit: homeIds.has(a.id), notes: a.notes,
+      ...offSite(a.id),
       patient: { id: a.patient.id, mrn: a.patient.mrn, name: name(a.patient).en, nameAr: name(a.patient).ar, gender: a.patient.gender, age: age(a.patient.dob) },
       clinician: { id: a.clinician.id, name: a.clinician.displayName }, clinic: { id: a.clinic.id, name: a.clinic.nameEn, nameAr: a.clinic.nameAr },
       type: a.appointmentType ? { name: a.appointmentType.nameEn, nameAr: a.appointmentType.nameAr } : null,
