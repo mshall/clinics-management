@@ -60,8 +60,8 @@ describe("Kiorly Work: modules per role", () => {
 
 describe("Kiorly Work: gating contract", () => {
   it("alerts, bootstrap, auth and remote sign-out stay open on every plan", () => {
-    for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/hv_1/ack"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/refresh"]] as const) assert.ok(isMobileExempt(m, p), `${m} ${p}`);
-    for (const [m, p] of [["GET", "/mobile/inbox"], ["POST", "/mobile/devices"], ["GET", "/mobile/schedule"], ["GET", "/patients"]] as const) assert.ok(!isMobileExempt(m, p), `${m} ${p}`);
+    for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/hv_1/ack"], ["POST", "/mobile/upgrade-request"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/refresh"]] as const) assert.ok(isMobileExempt(m, p), `${m} ${p}`);
+    for (const [m, p] of [["GET", "/mobile/inbox"], ["GET", "/mobile/upgrade-request"], ["POST", "/mobile/devices"], ["GET", "/mobile/schedule"], ["GET", "/patients"]] as const) assert.ok(!isMobileExempt(m, p), `${m} ${p}`);
   });
   it("alerts service never references the commercial entitlement (ADR-025)", () => {
     const src = readFileSync(join(process.cwd(), "src/mobile/mobile-alerts.service.ts"), "utf8");

@@ -11,6 +11,7 @@ import { MobileAlertsService } from "./mobile-alerts.service";
 import { MobileEntitlementService } from "./mobile-entitlement.service";
 import { MobilePushService } from "./mobile-push.service";
 import { MobileInterceptor } from "./mobile.interceptor";
+import { MobileUpgradeService } from "./mobile-upgrade.service";
 import { MobileService } from "./mobile.service";
 import { createPrismaClient } from "../prisma/create-prisma-client";
 
@@ -22,7 +23,7 @@ const snaps = new KiorexFlagSnapshotService(p, {} as never);
 const ent = new MobileEntitlementService(p, new EntitlementsService(p), snaps);
 const push = new MobilePushService(p);
 const alerts = new MobileAlertsService(p, audit);
-const svc = new MobileService(p, audit, ent, push, alerts, {} as never, {} as never, {} as never);
+const svc = new MobileService(p, audit, ent, push, alerts, {} as never, {} as never, {} as never, new MobileUpgradeService(p, audit, ent, push));
 const interceptor = new MobileInterceptor(p, ent);
 
 const J = (userId: string, tenantId: string, role: UserRole, owner = false): JwtUser => ({ userId, tenantId, email: `${userId}@x`, role, isTenantOwner: owner });
@@ -201,7 +202,7 @@ describe("Kiorly Work backend (real DB)", () => {
   it("prescriptions: pending list; only a physician signs; sign delegates to the encounter finalize rules; vitals need a clinical role and notify on critical", async () => {
     const finalized: string[] = [];
     const recorded: unknown[] = [];
-    const stub = new MobileService(p, audit, ent, push, alerts, { finalize: async (_t: string, _u: unknown, id: string) => { finalized.push(id); return { status: "FINALIZED" }; } } as never, { recordVitals: async (_t: string, _u: unknown, pid: string, _a: unknown, v: unknown) => { recorded.push([pid, v]); return { id: "vit_stub", flags: { systolic: "CRITICAL_HIGH" }, critical: true }; } } as never, {} as never);
+    const stub = new MobileService(p, audit, ent, push, alerts, { finalize: async (_t: string, _u: unknown, id: string) => { finalized.push(id); return { status: "FINALIZED" }; } } as never, { recordVitals: async (_t: string, _u: unknown, pid: string, _a: unknown, v: unknown) => { recorded.push([pid, v]); return { id: "vit_stub", flags: { systolic: "CRITICAL_HIGH" }, critical: true }; } } as never, {} as never, new MobileUpgradeService(p, audit, ent, push));
     const doc = PRO();
     const pending = await stub.prescriptions(doc, "pending");
     const rx = pending.items.find((i) => i.encounterId === "demo_enc_mobile_rx");

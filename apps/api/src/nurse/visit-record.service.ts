@@ -85,7 +85,7 @@ export class VisitRecordService {
   }
 
   /** KNREC02/KNESC01 — record vitals, flag out-of-range values, and require an escalation entry for critical ones. */
-  async recordVitals(tenantId: string, user: JwtUser, patientId: string, appointmentId: string | null, input: VitalsInput) {
+  async recordVitals(tenantId: string, user: JwtUser, patientId: string, appointmentId: string | null, input: VitalsInput, opts: { id?: string } = {}) {
     const err = validateVitalsInput(input);
     if (err) throw new BadRequestException(err);
     const patient = await this.prisma.patient.findFirst({ where: { id: patientId, tenantId, deletedAt: null }, select: { id: true, tenant: { select: { market: { select: { clinicalConfig: true } } } } } });
@@ -100,8 +100,16 @@ export class VisitRecordService {
         visitRecordId = rec.id;
       }
     }
+    // Idempotent replay (offline queue / retry after a lost response): the caller derives a stable row id from its Idempotency-Key, so the same
+    // reading is stored once and the same answer is returned (replayed: true lets callers skip side effects such as push).
+    const answer = (id: string, replayed: boolean) => ({ id, flags: ev.flags, critical: ev.critical, escalation: ev.escalation, thresholdsVersion: thresholds.version, thresholdsCmoSigned: thresholds.cmoSignOff != null, replayed });
+    if (opts.id) {
+      const dup = await this.prisma.vitalsObservation.findFirst({ where: { id: opts.id, tenantId, recordedById: user.userId } });
+      if (dup) return answer(dup.id, true);
+    }
     const row = await this.prisma.vitalsObservation.create({
       data: {
+        ...(opts.id ? { id: opts.id } : {}),
         tenantId,
         patientId,
         visitRecordId,
@@ -117,11 +125,12 @@ export class VisitRecordService {
         flagsJson: ev.flags as unknown as Prisma.InputJsonValue,
         critical: ev.critical,
       },
-    });
+    }).catch((e: unknown) => { if (opts.id && (e as { code?: string })?.code === "P2002") return null; throw e; });
+    if (!row) return answer(opts.id!, true);
     if (ev.critical) {
       await this.audit.recordEvent({ tenantId, actorId: user.userId, clinicId: null, action: "vitals.critical_recorded", resource: "VitalsObservation", resourceId: row.id, metadata: { flagged: Object.keys(ev.flags) } });
     }
-    return { id: row.id, flags: ev.flags, critical: ev.critical, escalation: ev.escalation, thresholdsVersion: thresholds.version, thresholdsCmoSigned: thresholds.cmoSignOff != null };
+    return answer(row.id, false);
   }
 
   /** KNESC01 — log the action taken after a critical value. Required before the visit record can be signed. */

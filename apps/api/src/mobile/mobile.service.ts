@@ -5,6 +5,7 @@ import { AuditService } from "../audit/audit.service";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { hasRole } from "../common/effective-roles";
+import { formatLocalYmd } from "../common/reporting-range";
 import { EncountersService } from "../encounters/encounters.service";
 import { VisitRecordService } from "../nurse/visit-record.service";
 import type { VitalsInput } from "../nurse/vitals";
@@ -12,6 +13,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { RevenueService } from "../revenue/revenue.service";
 import { MobileAlertsService } from "./mobile-alerts.service";
 import { MOBILE_ENTITLEMENT_KEY, MobileEntitlementService } from "./mobile-entitlement.service";
+import { MobileUpgradeService } from "./mobile-upgrade.service";
 import { MobilePushService } from "./mobile-push.service";
 import { NON_PRESCRIBING_PROFESSIONS, REVENUE_ROLES, SIGNING_ROLES, VITALS_ROLES, can, effectiveRoles, isOwner, modulesFor } from "./mobile-roles";
 
@@ -31,6 +33,7 @@ export class MobileService {
     private readonly encounters: EncountersService,
     private readonly visits: VisitRecordService,
     private readonly revenue: RevenueService,
+    private readonly upgrade: MobileUpgradeService,
   ) {}
 
   // ------------------------------------------------------------------ bootstrap
@@ -41,6 +44,7 @@ export class MobileService {
       this.prisma.user.findUniqueOrThrow({ where: { id: u.userId }, select: { id: true, displayName: true, email: true, role: true, additionalRoles: true, profession: true } }),
       this.ent.evaluate(tenantId),
     ]);
+    const roleModules = modulesFor(u, tenant.edition, user.profession);
     const dev = deviceHeader ? await this.prisma.mobileDevice.findFirst({ where: { tenantId, userId: u.userId, OR: [{ id: deviceHeader }, { deviceId: deviceHeader }] } }) : null;
     return {
       apiVersion: 1 as const,
@@ -50,7 +54,9 @@ export class MobileService {
       org: { id: tenant.id, name: tenant.name, nameAr: tenant.nameAr, plan: e.plan, rawPlan: e.rawPlan, edition: tenant.edition, marketCode: tenant.market?.code ?? null },
       entitlement: { key: MOBILE_ENTITLEMENT_KEY, enabled: e.enabled, requiredPlan: e.requiredPlan, reason: e.reason },
       safetyAlertsOnly: !e.enabled,
-      modules: e.enabled ? modulesFor(u, tenant.edition, user.profession) : [],
+      modules: e.enabled ? roleModules : [],
+      /** Basic orgs only: what this role would get on PRO (locked tiles), my latest upgrade request, and open requests for owner/admin. */
+      upgrade: e.enabled ? null : await this.upgrade.bootstrapBlock(u, roleModules.filter((m) => m.enabled).map((m) => m.key), isOwner(u) || can(u, [UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN])),
       device: dev ? { id: dev.id, status: dev.status } : null,
     };
   }
@@ -121,6 +127,12 @@ export class MobileService {
     return { id: m.id, provider: m.provider, status: m.status, devices };
   }
 
+  /** Endpoint-level role scoping: the same module keys as bootstrap, so an endpoint is never wider than the tile the role gets (403 MODULE_NOT_ALLOWED). */
+  private async requireModule(u: JwtUser, key: string) {
+    const [tn, me] = await Promise.all([this.prisma.tenant.findUniqueOrThrow({ where: { id: requireTenantId(u) }, select: { edition: true } }), this.prisma.user.findUnique({ where: { id: u.userId }, select: { profession: true } })]);
+    if (!modulesFor(u, tn.edition, me?.profession).some((m) => m.key === key && m.enabled)) throw new ForbiddenException({ code: "MODULE_NOT_ALLOWED", key, message: "Your role does not include this part of the app" });
+  }
+
   // ------------------------------------------------------------------- schedule
   private scheduleWhere(u: JwtUser, date: Date, clinicId?: string) {
     const { s, e } = dayRange(date);
@@ -130,6 +142,11 @@ export class MobileService {
 
   /** Today's schedule + live queue (checked-in patients ordered by ticket). Clinicians see their own; staff/managers see the clinic. */
   async schedule(u: JwtUser, q: { date?: string; clinicId?: string }) {
+    await this.requireModule(u, "clinic.schedule");
+    return this.scheduleData(u, q);
+  }
+
+  private async scheduleData(u: JwtUser, q: { date?: string; clinicId?: string }) {
     const date = q.date ? new Date(q.date) : new Date();
     if (Number.isNaN(date.getTime())) throw new BadRequestException("Invalid date");
     const rows = await this.prisma.appointment.findMany({
@@ -150,7 +167,7 @@ export class MobileService {
   // -------------------------------------------------------------------- summary
   async summary(u: JwtUser) {
     const tenantId = requireTenantId(u);
-    const sched = await this.schedule(u, {});
+    const sched = await this.scheduleData(u, {});
     const [tn, me] = await Promise.all([this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { edition: true } }), this.prisma.user.findUnique({ where: { id: u.userId }, select: { profession: true } })]);
     const mods = new Set(modulesFor(u, tn.edition, me?.profession).filter((m) => m.enabled).map((m) => m.key));
     const isDoc = can(u, SIGNING_ROLES);
@@ -175,6 +192,7 @@ export class MobileService {
   // --------------------------------------------------------------------- search
   async search(u: JwtUser, qRaw: string) {
     const tenantId = requireTenantId(u);
+    await this.requireModule(u, "clinic.patients");
     const q = qRaw.trim();
     if (q.length < 2) return { query: q, patients: [], appointmentsToday: [] };
     const patients = await this.prisma.patient.findMany({
@@ -189,6 +207,7 @@ export class MobileService {
   // -------------------------------------------------------------- prescriptions
   async prescriptions(u: JwtUser, status: "pending" | "signed" = "pending") {
     const tenantId = requireTenantId(u);
+    await this.requireModule(u, "clinic.prescriptions");
     const own = hasRole(u, UserRole.PHYSICIAN) && !isOwner(u);
     const rows = await this.prisma.encounter.findMany({
       where: { tenantId, ...(own ? { clinicianId: u.userId } : {}), ...(status === "pending" ? { status: "DRAFT", OR: [{ medications: { some: {} } }, { documents: { some: { kind: "PRESCRIPTION" } } }] } : { status: { in: ["FINALIZED", "AMENDED"] }, finalizedAt: { gte: new Date(Date.now() - 7 * 86_400_000) } }) },
@@ -217,6 +236,7 @@ export class MobileService {
   // ----------------------------------------------------------------- lab results
   async labResults(u: JwtUser, status: "pending" | "reviewed" = "pending") {
     const tenantId = requireTenantId(u);
+    await this.requireModule(u, "clinic.labs");
     const own = hasRole(u, UserRole.PHYSICIAN) && !isOwner(u);
     const base = { tenantId, kind: "LAB" as const, status: "RESULTS_READY" as const, ...(own ? { OR: [{ encounter: { clinicianId: u.userId } }, { createdByUserId: u.userId }] } : {}) };
     const rows = await this.prisma.clinicalOrder.findMany({ where: base, include: { items: { orderBy: { sortOrder: "asc" } }, patient: { select: { id: true, mrn: true, firstNameEn: true, lastNameEn: true, firstNameAr: true, lastNameAr: true } } }, orderBy: { resultsReadyAt: "desc" }, take: 100 });
@@ -243,13 +263,15 @@ export class MobileService {
   }
 
   // --------------------------------------------------------------------- vitals
-  async recordVitals(u: JwtUser, b: { patientId: string; appointmentId?: string } & VitalsInput) {
+  async recordVitals(u: JwtUser, b: { patientId: string; appointmentId?: string } & VitalsInput, idempotencyKey?: string) {
     const tenantId = requireTenantId(u);
     if (!can(u, VITALS_ROLES)) throw new ForbiddenException({ code: "FORBIDDEN", message: "Your role cannot record vitals" });
     const { patientId, appointmentId, ...v } = b;
     if (!patientId) throw new BadRequestException("patientId is required");
-    const r = await this.visits.recordVitals(tenantId, u, patientId, appointmentId ?? null, v);
-    if (r.critical) {
+    // Offline replay: the same Idempotency-Key from the same staff member stores one reading and notifies once.
+    const key = idempotencyKey?.trim().slice(0, 200);
+    const r = await this.visits.recordVitals(tenantId, u, patientId, appointmentId ?? null, v, key ? { id: `vit_idem_${sha256(`${tenantId}|${u.userId}|${key}`).slice(0, 32)}` } : {});
+    if (r.critical && !r.replayed) {
       const mgr = await this.prisma.user.findMany({ where: { tenantId, role: { in: [UserRole.BRANCH_MANAGER, UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN] }, deletedAt: null }, select: { id: true } });
       await this.push.notifyUsers(tenantId, [u.userId, ...mgr.map((m) => m.id)], "CRITICAL_VITALS", { vitalsId: r.id, alertKey: `vit_${r.id}` });
     }
@@ -261,7 +283,8 @@ export class MobileService {
   async revenueSnapshot(u: JwtUser) {
     const tenantId = requireTenantId(u);
     if (!can(u, REVENUE_ROLES)) throw new ForbiddenException({ code: "FORBIDDEN", message: "Revenue is limited to owners, managers and finance" });
-    const day = (d: Date) => d.toISOString().slice(0, 10);
+    // Same calendar the web ledger uses (resolveReportingRange = server-local days): a UTC date string here made "today" differ from /revenue/totals near midnight.
+    const day = formatLocalYmd;
     const today = new Date();
     const range = async (from: Date, to: Date) => this.revenue.totals(tenantId, day(from), day(to), undefined, undefined, u);
     const daily: { date: string; net: number; gross: number }[] = [];
@@ -272,7 +295,7 @@ export class MobileService {
     }
     const d30 = await range(new Date(today.getTime() - 29 * 86_400_000), today);
     const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { baseCurrency: true } });
-    const [s, e] = [dayRange(today).s, dayRange(today).e];
+    const s = new Date(today.getFullYear(), today.getMonth(), today.getDate()), e = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
     const collected = await this.prisma.appointment.count({ where: { tenantId, startsAt: { gte: s, lt: e }, status: "COMPLETED" } });
     return { currency: tenant.baseCurrency, today: daily[6], last7: { net: daily.reduce((a, b) => a + b.net, 0), gross: daily.reduce((a, b) => a + b.gross, 0) }, last30: { net: Number(d30.netTotal), gross: Number(d30.grossTotal) }, daily, completedVisitsToday: collected };
   }
