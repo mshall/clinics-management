@@ -46,7 +46,7 @@ export const ROLE_OPERATION_HINTS: Record<AssistantRoleSlug, { en: string; ar: s
     ar: "تسجيل، حجز، زيارات، عمليات.",
   },
   call_center: {
-    en: "Remote booking: patient lookup, appointments, support tickets.",
-    ar: "حجز عن بعد: بحث مريض، مواعيد، تذاكر دعم.",
+    en: "Remote booking: patient lookup, appointments, encounters (amounts hidden by default), support tickets.",
+    ar: "حجز عن بعد: بحث مريض، مواعيد، زيارات (المبالغ مخفية افتراضياً)، تذاكر دعم.",
   },
 };

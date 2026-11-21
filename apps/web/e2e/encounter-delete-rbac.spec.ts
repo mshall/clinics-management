@@ -32,16 +32,10 @@ test.describe("Encounter delete by organization role", () => {
     await expectEncounterDeleteVisible(page);
   });
 
-  // CALL_CENTER's role ceiling (nav-tab-keys ROLE_MAX) has no "encounters" tab, so the list API is forbidden outright (no delete to see).
-  test("call center has no encounters access", async ({ page }) => {
+  // Call center has encounters CRUD (incl. delete) but money amounts stay hidden by role-default visibility.
+  test("call center can list encounters and sees delete", async ({ page }) => {
     await login(page, "callcenter@drahmedshall.com");
-    await page.goto("/patients");
-    const status = await page.evaluate(async () => {
-      const token = (JSON.parse(localStorage.getItem("cms-auth") ?? "{}") as { state?: { accessToken?: string } }).state?.accessToken ?? "";
-      return (await fetch("/api/v1/encounters?page=1&pageSize=1", { headers: { Authorization: `Bearer ${token}` } })).status;
-    });
-    expect(status).toBe(403);
-    await expect(page.getByRole("link", { name: /^encounters$/i })).toHaveCount(0);
+    await expectEncounterDeleteVisible(page);
   });
 
   test("physician does not see delete on encounters list", async ({ page }) => {

@@ -606,7 +606,7 @@ Typical flows:
 
 - **Tickets** across product modules with status workflow and timeline.
 - **Log tracking:** searchable audit trail with **resolution hints**; open a ticket from any log row.
-- Roles: group admin, group supervisor, branch/clinic admin, call center (sidebar **Customer support**).
+- Roles: group admin, group supervisor, branch/clinic admin, call center (sidebar **Customer support** + **Encounters**; fees hidden by default).
 
 ### Profile & HR
 

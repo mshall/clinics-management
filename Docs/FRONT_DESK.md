@@ -39,6 +39,8 @@ Goal: move appointment → **CHECKED_IN** with arrival time, queue ticket, **`qu
 
 Staff with **Appointments** nav access can use check-in and the board (receptionist, nurse, call center, clinic roles).
 
+**Call center** also has **Encounters** (create / read / update / delete). Visit fee and balance amounts are **hidden by role default**; a group admin can grant money visibility per user under Admin → user money visibility.
+
 ---
 
 ## Visit payment collection

@@ -162,13 +162,13 @@ const BY_ROLE: Record<UserRole, { en: LocaleCopy; ar: LocaleCopy }> = {
   [UserRole.CALL_CENTER]: {
     en: {
       title: "Call center assistant",
-      greeting: "Hi — I help with patient lookup, appointments, and support tickets within your role.",
-      prompts: ["Find a patient", "Schedule an appointment", "Open a support ticket", "Appointment statuses"],
+      greeting: "Hi — I help with patients, appointments, encounters, and support tickets within your role.",
+      prompts: ["Find a patient", "Schedule an appointment", "Open an encounter", "Open a support ticket"],
     },
     ar: {
       title: "مساعد مركز الاتصال",
-      greeting: "مرحباً — أساعدك في المرضى والمواعيد وتذاكر الدعم ضمن صلاحياتك.",
-      prompts: ["البحث عن مريض", "حجز موعد", "فتح تذكرة دعم", "حالات المواعيد"],
+      greeting: "مرحباً — أساعدك في المرضى والمواعيد والزيارات وتذاكر الدعم ضمن صلاحياتك.",
+      prompts: ["البحث عن مريض", "حجز موعد", "فتح زيارة", "فتح تذكرة دعم"],
     },
   },
 };

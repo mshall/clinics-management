@@ -63,7 +63,8 @@ const ROLE_MAX: Record<UserRole, readonly string[]> = {
   [UserRole.PHYSICIAN]: ["patients", "encounters", "appointments", "operations", "doctor_revenue", "profile", "reports"],
   [UserRole.NURSE]: ["patients", "appointments", "encounters", "profile"],
   [UserRole.RECEPTIONIST]: ["patients", "appointments", "encounters", "operations", "profile"],
-  [UserRole.CALL_CENTER]: ["patients", "appointments", "operations", "customer_support", "profile"],
+  // Encounters CRUD; money amounts stay hidden by role-default money visibility unless an admin override shows them.
+  [UserRole.CALL_CENTER]: ["patients", "appointments", "encounters", "operations", "customer_support", "profile"],
   [UserRole.CLINIC_ADMIN]: [
     "dashboard",
     "patients",
