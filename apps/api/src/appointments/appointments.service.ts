@@ -29,6 +29,7 @@ import {
 import { resolveTenantTransferCollectionContext } from "../common/market-transfer-context";
 import { assertNoOpenEncounterForAppointmentComplete } from "./appointment-completion.guard";
 import { assertScheduledTransferFeeCollected } from "./appointment-transfer-fee.guard";
+import { resolveAppointmentFeeUpdateIntent } from "./appointment-fee-update-gate";
 import {
   buildRevertCheckInPatch,
   deleteDraftEncountersOnCheckInRevert,
@@ -964,22 +965,16 @@ export class AppointmentsService {
       if (!clinic || !patient || !clinician) throw new BadRequestException("Invalid clinic, patient, or clinician");
     }
 
-    const feeProvided = dto.feeAmount !== undefined && dto.feeAmount !== null;
+    const moneyVis = viewer ? await this.moneyOverrides(tenantId, viewer) : DEFAULT_MONEY_VISIBILITY_OVERRIDES;
+    const canSetFees = !viewer || canEditAppointmentFeesForViewer(viewer, clinicianId, moneyVis);
+    // Non-fee roles (e.g. call center) get redacted feeAmount: 0 in GET responses; ignore their
+    // fee payload on PATCH so check-in / status saves do not forbid or wipe scheduled fees.
+    const { applyFeeAmount: feeProvided, applyScheduled } = resolveAppointmentFeeUpdateIntent(canSetFees, dto);
     if (feeProvided) {
       const newFee = Number(dto.feeAmount);
       if (!Number.isFinite(newFee) || newFee < 0) {
         throw new BadRequestException("feeAmount must be a non-negative number");
       }
-    }
-
-    const moneyVis = viewer ? await this.moneyOverrides(tenantId, viewer) : DEFAULT_MONEY_VISIBILITY_OVERRIDES;
-    const touchesFees = feeProvided || dto.scheduledFeeCollection !== undefined;
-    if (
-      viewer &&
-      touchesFees &&
-      !canEditAppointmentFeesForViewer(viewer, clinicianId, moneyVis)
-    ) {
-      throw new ForbiddenException("You do not have permission to edit appointment fees");
     }
 
     const nextStatus = dto.status !== undefined ? dto.status : undefined;
@@ -1000,14 +995,14 @@ export class AppointmentsService {
       scheduledCollectionMode?: VisitCollectionMode | null;
       scheduledTransferChannel?: string | null;
     } = {};
-    if (dto.scheduledFeeCollection !== undefined) {
+    if (applyScheduled) {
       const nextFee = feeProvided
         ? Number(dto.feeAmount)
         : Number(existing.feeAmount);
       if (dto.scheduledFeeCollection === null) {
         scheduledPatch = { scheduledCollectionMode: null, scheduledTransferChannel: null };
       } else {
-        const plan = parseScheduledFeeCollection(nextFee, dto.scheduledFeeCollection, {
+        const plan = parseScheduledFeeCollection(nextFee, dto.scheduledFeeCollection!, {
           allowedTransferChannels: transferCtx.allowedTransferChannels,
         });
         scheduledPatch = {
