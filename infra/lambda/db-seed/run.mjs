@@ -42,7 +42,7 @@ function runSql(label, sql) {
   console.log(`[db-seed] ${label} …`);
   const result = spawnSync(
     "npx",
-    ["prisma", "db", "execute", "--stdin", "--schema", "prisma/schema.prisma"],
+    ["prisma", "db", "execute", "--stdin", "--config", "prisma.config.ts"],
     {
       encoding: "utf8",
       input: sql,
