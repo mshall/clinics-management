@@ -19,7 +19,7 @@ Master checklist for **procedures, billing, messaging, reports, setup, and clini
 | Requirement | Status | Notes |
 |-------------|--------|--------|
 | Status pipeline booked → pre-op → in progress → recovery → discharged | **Shipped** | `OperationStatus` extended; legacy `SCHEDULED`/`COMPLETED` map to booked/discharged; `PATCH /operations/:id/status` one step at a time |
-| “How did they find us?” on operation create (updates patient profile) | **Shipped** | Mandatory on `POST /operations`; same acquisition fields as patient/encounter create |
+| “How did they find us?” on operation create (updates patient profile) | **Shipped** | Same acquisition fields as patient/encounter create (incl. **Another Patient** under doctor referral); org setting can make ops acquisition mandatory |
 | Pre-op checklist (tablet) | **Foundation** | `GET /operations/:id/pre-op-checklist`, `POST .../:itemId/complete`; default EN/AR items |
 | Consent on tablet | **Foundation** | Upload `CONSENT` via existing operation documents API; checklist includes consent line |
 | Operation note template | **Foundation** | `PATCH /operations/:id/operation-note` JSON; pair with clinical templates in UI |

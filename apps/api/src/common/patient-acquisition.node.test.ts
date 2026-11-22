@@ -17,3 +17,20 @@ test("requirePatientAcquisition accepts channel with referral detail", () => {
     acquisitionChannel: PatientAcquisitionChannel.SOCIAL_FACEBOOK,
   });
 });
+
+test("requirePatientAcquisition accepts another-patient referral with name", () => {
+  requirePatientAcquisition({
+    acquisitionChannel: PatientAcquisitionChannel.ANOTHER_PATIENT,
+    acquisitionReferralName: "Sara Hassan",
+  });
+});
+
+test("validatePatientAcquisition rejects another-patient without name", () => {
+  assert.throws(
+    () =>
+      validatePatientAcquisition({
+        acquisitionChannel: PatientAcquisitionChannel.ANOTHER_PATIENT,
+      }),
+    BadRequestException,
+  );
+});

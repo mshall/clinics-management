@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { usePatientClinicalDocumentsQuery } from "@/lib/api-hooks";
 import type { PatientClinicalDocumentItem } from "@/lib/patient-document-category";
 import { clinicalDocumentDisplayDescription } from "@/lib/patient-document-category";
+import { documentViewActionLabel } from "@/lib/document-view-label";
 import { apiDelete, apiFetchBlob, apiPostFormData } from "@/lib/http";
 import { isImageViewerContent, resolveViewerContentType } from "@/lib/image-mime";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
@@ -468,7 +469,7 @@ function DocumentList({
           <div className="flex shrink-0 flex-wrap gap-1">
             <Button type="button" variant="outline" size="sm" onClick={() => onView(doc)}>
               <Eye className="h-4 w-4" />
-              <span className="ms-1">{t("encounters.viewDoc", "View")}</span>
+              <span className="ms-1">{documentViewActionLabel(doc.originalFileName, doc.mimeType, t)}</span>
             </Button>
             {showDownload ? (
               <Button type="button" variant="outline" size="sm" onClick={() => onDownload(doc)}>

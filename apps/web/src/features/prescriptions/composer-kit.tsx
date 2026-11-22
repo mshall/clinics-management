@@ -76,7 +76,12 @@ export function RxFileRow({ name, onView, onReplace, onRemove, viewLabel, replac
       <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"><FileText className="h-4 w-4" /></span>
       <span className="min-w-0 flex-1 truncate text-sm font-medium" dir="auto">{name}</span>
       <div className="flex shrink-0 gap-1">
-        {onView ? <Button type="button" variant="ghost" size="sm" onClick={onView} aria-label={`${viewLabel}: ${name}`}><Eye className="h-4 w-4" aria-hidden /></Button> : null}
+        {onView ? (
+          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={onView} aria-label={`${viewLabel}: ${name}`}>
+            <Eye className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">{viewLabel}</span>
+          </Button>
+        ) : null}
         {onReplace ? <Button type="button" variant="ghost" size="sm" onClick={onReplace} aria-label={`${replaceLabel}: ${name}`}><Upload className="h-4 w-4" aria-hidden /></Button> : null}
         {onRemove ? <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={onRemove} disabled={busy} aria-label={`${removeLabel}: ${name}`}><Trash2 className="h-4 w-4" aria-hidden /></Button> : null}
       </div>

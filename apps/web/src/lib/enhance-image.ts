@@ -11,21 +11,21 @@ type ProfileLimits = {
 };
 
 const PROFILES: Record<ImageEnhanceProfile, ProfileLimits> = {
-  /** Clinical uploads — downscale only; never upscale (keeps AWS uploads fast). */
-  document: { maxLongEdge: 2400, unsharpAmount: 90, unsharpRadius: 0.6 },
-  camera: { maxLongEdge: 3200, unsharpAmount: 120, unsharpRadius: 0.7 },
+  /** Clinical uploads — aggressive downscale for snappy multi-file uploads. */
+  document: { maxLongEdge: 1600, unsharpAmount: 60, unsharpRadius: 0.5 },
+  camera: { maxLongEdge: 2400, unsharpAmount: 90, unsharpRadius: 0.6 },
   avatar: { maxLongEdge: 1280, unsharpAmount: 100, unsharpRadius: 0.6 },
-  general: { maxLongEdge: 2400, unsharpAmount: 100, unsharpRadius: 0.65 },
+  general: { maxLongEdge: 1800, unsharpAmount: 70, unsharpRadius: 0.55 },
 };
 
-const JPEG_QUALITY = 0.88;
+const JPEG_QUALITY = 0.8;
 
 /** Skip client-side resize when the file is already small (speeds uploads). */
 const FAST_SKIP_MAX_BYTES: Record<ImageEnhanceProfile, number> = {
-  document: 1_200_000,
-  camera: 1_600_000,
+  document: 2_000_000,
+  camera: 2_400_000,
   avatar: 600_000,
-  general: 1_200_000,
+  general: 1_800_000,
 };
 
 export function isEnhanceableImage(file: File): boolean {
@@ -129,8 +129,8 @@ export async function enhanceImageFile(
     const mime = preservePng ? "image/png" : file.type === "image/webp" ? "image/webp" : "image/jpeg";
     const quality = mime === "image/jpeg" ? JPEG_QUALITY : mime === "image/webp" ? 0.88 : 1;
 
-    // Moderate downscale: canvas is much faster than pica on mobile / remote hosts.
-    if (scale >= 0.55) {
+    // Prefer canvas over pica for most clinical downscales (much faster on multi-upload).
+    if (scale >= 0.35 || profile === "document") {
       const canvas = drawToCanvas(img, width, height, profile);
       return await canvasToFile(canvas, outputName(file.name, mime), mime, quality);
     }

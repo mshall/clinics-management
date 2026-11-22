@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FileSpreadsheet, Globe2, HelpCircle, Stethoscope, Store } from "lucide-react";
+import { FileSpreadsheet, Globe2, HelpCircle, Stethoscope, Store, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { patientAcquisitionLabel, type PatientAcquisitionChannel } from "@/lib/patient-acquisition";
 
@@ -86,6 +86,11 @@ const CHANNEL_META: Record<
     icon: ({ className }) => <Stethoscope className={cn("size-4 text-sky-600 dark:text-sky-400", className)} aria-hidden />,
     textClass: "text-sky-700 dark:text-sky-400",
     iconWrap: "bg-sky-500/10",
+  },
+  ANOTHER_PATIENT: {
+    icon: ({ className }) => <Users className={cn("size-4 text-indigo-600 dark:text-indigo-400", className)} aria-hidden />,
+    textClass: "text-indigo-700 dark:text-indigo-400",
+    iconWrap: "bg-indigo-500/10",
   },
   KIOREX: {
     icon: ({ className }) => <Store className={cn("size-4 text-violet-600 dark:text-violet-400", className)} aria-hidden />,

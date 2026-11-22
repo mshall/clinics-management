@@ -373,6 +373,8 @@ export class AppointmentsService {
               { phone: { contains: broad, mode: "insensitive" } },
               { firstNameEn: { contains: broad, mode: "insensitive" } },
               { lastNameEn: { contains: broad, mode: "insensitive" } },
+              { firstNameAr: { contains: broad, mode: "insensitive" } },
+              { lastNameAr: { contains: broad, mode: "insensitive" } },
             ],
           },
         },
@@ -381,9 +383,14 @@ export class AppointmentsService {
 
     const bookableOnly = bookableOnlyStr?.trim().toLowerCase() === "true" || bookableOnlyStr === "1";
     if (bookableOnly) {
+      // Include CHECKED_IN: front desk / call center often opens an encounter after check-in.
       and.push({
         status: {
-          in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED],
+          in: [
+            AppointmentStatus.SCHEDULED,
+            AppointmentStatus.CONFIRMED,
+            AppointmentStatus.CHECKED_IN,
+          ],
         },
       });
       and.push({

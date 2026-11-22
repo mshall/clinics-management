@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UploadProgressBar } from "@/components/upload-progress-bar";
 import { apiErrorMessage } from "@/features/platform/platform-shared";
 import { apiPostFormData } from "@/lib/http";
 import { uploadFilesWithConcurrency } from "@/lib/upload-files-sequentially";
@@ -44,6 +45,7 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
   const [files, setFiles] = useState<File[]>([]);
   const [otherDescription, setOtherDescription] = useState("");
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
 
   const description =
     category === "OTHER"
@@ -74,14 +76,21 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
             : t("patients.errorDocCategoryRequired", "Each attached document needs a type."),
         );
       }
-      await uploadFilesWithConcurrency(uploadFiles, async (uploadFile) => {
-        const fd = new FormData();
-        fd.append("file", uploadFile);
-        fd.append("description", description);
-        return apiPostFormData(`/api/v1/patients/${patientId}/documents`, fd);
-      });
+      setUploadPercent(0);
+      await uploadFilesWithConcurrency(
+        uploadFiles,
+        async (uploadFile) => {
+          const fd = new FormData();
+          fd.append("file", uploadFile);
+          fd.append("description", description);
+          return apiPostFormData(`/api/v1/patients/${patientId}/documents`, fd);
+        },
+        4,
+        (done, total) => setUploadPercent(total > 0 ? Math.round((done / total) * 100) : 100),
+      );
     },
     onSuccess: async (_data, uploaded) => {
+      setUploadPercent(null);
       resetForm();
       setOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["patient", patientId, "clinical-documents"] });
@@ -92,6 +101,7 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
       );
     },
     onError: (error: unknown) => {
+      setUploadPercent(null);
       toast.error(apiErrorMessage(error));
     },
   });
@@ -203,6 +213,9 @@ export function PatientClinicalSectionUpload({ patientId, category }: PatientCli
               </li>
             ))}
           </ul>
+          {uploadMutation.isPending && uploadPercent != null ? (
+            <UploadProgressBar percent={uploadPercent} label={t("encounters.uploadProgress", "Uploading documents…")} compact />
+          ) : null}
           <Button type="button" size="sm" className="w-full gap-1" disabled={!canUpload} onClick={submit}>
             <Upload className="h-4 w-4" />
             {uploadMutation.isPending

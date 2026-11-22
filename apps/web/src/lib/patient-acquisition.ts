@@ -4,6 +4,7 @@ export const PATIENT_ACQUISITION_CHANNELS = [
   "SOCIAL_TIKTOK",
   "WEBSITE_GOOGLE",
   "DOCTOR_REFERRAL",
+  "ANOTHER_PATIENT",
   "KIOREX",
   "OTHER",
 ] as const;
@@ -18,6 +19,7 @@ export function patientAcquisitionLabel(channel: PatientAcquisitionChannel, t: (
     SOCIAL_TIKTOK: "patients.acquisitionSocialTiktok",
     WEBSITE_GOOGLE: "patients.acquisitionWebsiteGoogle",
     DOCTOR_REFERRAL: "patients.acquisitionDoctorReferral",
+    ANOTHER_PATIENT: "patients.acquisitionAnotherPatient",
     KIOREX: "patients.acquisitionKiorex",
     OTHER: "patients.acquisitionOther",
     IMPORT: "patients.acquisitionImport",
@@ -28,6 +30,7 @@ export function patientAcquisitionLabel(channel: PatientAcquisitionChannel, t: (
     SOCIAL_TIKTOK: "Social Media — TikTok",
     WEBSITE_GOOGLE: "Website — Google",
     DOCTOR_REFERRAL: "Doctor Referral",
+    ANOTHER_PATIENT: "Another Patient",
     KIOREX: "Kiorex",
     OTHER: "Other",
     IMPORT: "Imported",
@@ -43,7 +46,7 @@ export function patientAcquisitionDisplay(
 ): string {
   if (!channel) return "—";
   const base = patientAcquisitionLabel(channel, t);
-  if (channel === "DOCTOR_REFERRAL" && referralName?.trim()) {
+  if ((channel === "DOCTOR_REFERRAL" || channel === "ANOTHER_PATIENT") && referralName?.trim()) {
     return `${base}: ${referralName.trim()}`;
   }
   if (channel === "OTHER" && otherDetail?.trim()) {

@@ -9,8 +9,14 @@ export class PatientAcquisitionFieldsDto {
   @IsEnum(PatientAcquisitionChannel)
   acquisitionChannel?: PatientAcquisitionChannel;
 
-  @ApiPropertyOptional({ description: "Referring doctor name when acquisitionChannel is DOCTOR_REFERRAL" })
-  @ValidateIf((o) => o.acquisitionChannel === PatientAcquisitionChannel.DOCTOR_REFERRAL)
+  @ApiPropertyOptional({
+    description: "Referring doctor or patient name when acquisitionChannel is DOCTOR_REFERRAL or ANOTHER_PATIENT",
+  })
+  @ValidateIf(
+    (o) =>
+      o.acquisitionChannel === PatientAcquisitionChannel.DOCTOR_REFERRAL ||
+      o.acquisitionChannel === PatientAcquisitionChannel.ANOTHER_PATIENT,
+  )
   @IsOptional()
   @IsString()
   @MaxLength(200)

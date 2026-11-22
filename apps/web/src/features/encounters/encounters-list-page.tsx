@@ -212,7 +212,7 @@ export function EncountersListPage() {
     patientId: createPatientId.trim() || undefined,
     bookableOnly: true,
     page: 1,
-    pageSize: 30,
+    pageSize: 50,
     enabled: aptPickerEnabled,
   });
   const { data: usersForDoctors, isFetching: doctorsFetching } = useSchedulingPhysiciansQuery({

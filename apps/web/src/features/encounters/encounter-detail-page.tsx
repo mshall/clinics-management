@@ -24,7 +24,9 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
+import { UploadProgressBar } from "@/components/upload-progress-bar";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { VisitCollectionFields } from "@/components/visit-collection-fields";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +38,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { EncounterDeleteConfirmDialog } from "@/features/encounters/encounter-delete-confirm-dialog";
+import { documentViewActionLabel } from "@/lib/document-view-label";
 import { GenerateInvoiceDialog } from "@/features/invoices/generate-invoice-dialog";
 import { LinkedInvoicesSection } from "@/features/invoices/linked-invoices-section";
 import { resolvePatientListLabel } from "@/lib/patient-display";
@@ -155,6 +158,8 @@ export function EncounterDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [viewer, setViewer] = useState<{ doc: EncounterDocumentDto; url: string; contentType: string } | null>(null);
+  const [docToDelete, setDocToDelete] = useState<EncounterDocumentDto | null>(null);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const viewerUrlRef = useRef<string | null>(null);
   const replaceFileRef = useRef<HTMLInputElement>(null);
   const prescriptionFileRef = useRef<HTMLInputElement>(null);
@@ -368,14 +373,21 @@ export function EncounterDetailPage() {
 
   const uploadMutation = useMutation({
     mutationFn: async ({ files, kind }: { files: File[]; kind: DocKind }) => {
-      await uploadFilesWithConcurrency(files, async (file) => {
-        const fd = new FormData();
-        fd.set("file", file);
-        fd.set("kind", kind);
-        return apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${id}/documents`, fd);
-      });
+      setUploadPercent(0);
+      await uploadFilesWithConcurrency(
+        files,
+        async (file) => {
+          const fd = new FormData();
+          fd.set("file", file);
+          fd.set("kind", kind);
+          return apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${id}/documents`, fd);
+        },
+        4,
+        (done, total) => setUploadPercent(total > 0 ? Math.round((done / total) * 100) : 100),
+      );
     },
     onSuccess: (_data, variables) => {
+      setUploadPercent(null);
       if (variables.kind === "PRESCRIPTION") {
         setNoMedications(false);
         const first = variables.files[0];
@@ -391,6 +403,7 @@ export function EncounterDetailPage() {
       invalidate();
     },
     onError: (e: unknown) => {
+      setUploadPercent(null);
       toast.error(apiErrorMessage(e));
     },
   });
@@ -450,7 +463,11 @@ export function EncounterDetailPage() {
 
   const removeDocMutation = useMutation({
     mutationFn: (docId: string) => apiDelete(`/api/v1/encounters/${id}/documents/${docId}`),
-    onSuccess: () => invalidate(),
+    onSuccess: () => {
+      setDocToDelete(null);
+      toast.success(t("encounters.docDeleted", "Document deleted."));
+      invalidate();
+    },
     onError: (e: unknown) => toast.error(apiErrorMessage(e)),
   });
 
@@ -1012,14 +1029,17 @@ export function EncounterDetailPage() {
                   />
                 </label>
               ) : null}
+              {uploadMutation.isPending && uploadPercent != null ? (
+                <UploadProgressBar percent={uploadPercent} label={t("encounters.uploadProgress", "Uploading documents…")} compact />
+              ) : null}
               <ul className="space-y-2 text-sm">
                 {labs.map((d) => (
                   <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-2 py-1.5">
                     <span className="truncate font-medium">{d.originalFileName}</span>
                     <div className="flex gap-1">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => void openDocument(d)}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => void openDocument(d)}>
                         <Eye className="h-4 w-4" />
-                        <span className="sr-only">{t("encounters.viewDoc")}</span>
+                        <span className="ms-1">{documentViewActionLabel(d.originalFileName, d.mimeType, t)}</span>
                       </Button>
                       {draft ? (
                         <>
@@ -1032,7 +1052,7 @@ export function EncounterDetailPage() {
                             variant="ghost"
                             size="sm"
                             className="text-destructive"
-                            onClick={() => removeDocMutation.mutate(d.id)}
+                            onClick={() => setDocToDelete(d)}
                             disabled={removeDocMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1078,8 +1098,9 @@ export function EncounterDetailPage() {
                   <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-2 py-1.5">
                     <span className="truncate font-medium">{d.originalFileName}</span>
                     <div className="flex gap-1">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => void openDocument(d)}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => void openDocument(d)}>
                         <Eye className="h-4 w-4" />
+                        <span className="ms-1">{documentViewActionLabel(d.originalFileName, d.mimeType, t)}</span>
                       </Button>
                       {draft ? (
                         <>
@@ -1092,7 +1113,7 @@ export function EncounterDetailPage() {
                             variant="ghost"
                             size="sm"
                             className="text-destructive"
-                            onClick={() => removeDocMutation.mutate(d.id)}
+                            onClick={() => setDocToDelete(d)}
                             disabled={removeDocMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1224,12 +1245,13 @@ export function EncounterDetailPage() {
                         <input
                           ref={prescriptionFileRef}
                           type="file"
+                          multiple
                           accept="application/pdf,image/*,text/plain"
                           className="hidden"
                           onChange={(e) => {
-                            const f = e.target.files?.[0];
+                            const picked = [...(e.target.files ?? [])];
                             e.target.value = "";
-                            if (f) uploadMutation.mutate({ files: [f], kind: "PRESCRIPTION" });
+                            if (picked.length) uploadMutation.mutate({ files: picked, kind: "PRESCRIPTION" });
                           }}
                         />
                         <RxDropzone
@@ -1238,6 +1260,12 @@ export function EncounterDetailPage() {
                           title={t("encounters.uploadPrescription", "Upload prescription")}
                           hint={t("encounters.prescriptionUploadHint")}
                         />
+                        {uploadMutation.isPending && uploadPercent != null ? (
+                          <UploadProgressBar
+                            percent={uploadPercent}
+                            label={t("encounters.uploadProgress", "Uploading documents…")}
+                          />
+                        ) : null}
                       </>
                     ) : null}
                     {prescriptions.length > 0 ? (
@@ -1246,13 +1274,13 @@ export function EncounterDetailPage() {
                           <RxFileRow
                             key={d.id}
                             name={d.originalFileName}
-                            viewLabel={t("encounters.viewDoc")}
+                            viewLabel={documentViewActionLabel(d.originalFileName, d.mimeType, t)}
                             replaceLabel={t("encounters.replaceDoc", "Replace")}
                             removeLabel={t("common.remove")}
                             busy={removeDocMutation.isPending}
                             onView={() => void openDocument(d)}
                             onReplace={draft && medsPanelActive ? () => startReplace(d.id, "PRESCRIPTION") : undefined}
-                            onRemove={draft && medsPanelActive ? () => removeDocMutation.mutate(d.id) : undefined}
+                            onRemove={draft && medsPanelActive ? () => setDocToDelete(d) : undefined}
                           />
                         ))}
                       </ul>
@@ -1273,8 +1301,41 @@ export function EncounterDetailPage() {
           url={viewer.url}
           contentType={viewer.contentType}
           onClose={closeViewer}
+          headerActions={
+            draft ? (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  setDocToDelete(viewer.doc);
+                }}
+                disabled={removeDocMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="ms-1">{t("patients.deleteDocument", "Delete")}</span>
+              </Button>
+            ) : undefined
+          }
         />
       ) : null}
+
+      <ConfirmDialog
+        open={docToDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !removeDocMutation.isPending) setDocToDelete(null);
+        }}
+        title={t("encounters.deleteDocTitle", "Delete document?")}
+        description={t("encounters.deleteDocBody", 'Delete "{{name}}"? This cannot be undone.', {
+          name: docToDelete?.originalFileName ?? "",
+        })}
+        confirmLabel={t("encounters.deleteDocAction", "Delete document")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={removeDocMutation.isPending}
+        onConfirm={() => {
+          if (docToDelete) removeDocMutation.mutate(docToDelete.id);
+        }}
+      />
 
       {enc && canInvoice && enc.financialsVisible !== false ? (
         <GenerateInvoiceDialog

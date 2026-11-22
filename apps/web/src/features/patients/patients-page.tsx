@@ -504,7 +504,7 @@ export function PatientsPage() {
                   onChange={(e) => {
                     const v = e.target.value as PatientAcquisitionChannel | "";
                     setAcquisitionChannel(v);
-                    if (v !== "DOCTOR_REFERRAL") setAcquisitionReferralName("");
+                    if (v !== "DOCTOR_REFERRAL" && v !== "ANOTHER_PATIENT") setAcquisitionReferralName("");
                     if (v !== "OTHER") setAcquisitionOtherDetail("");
                   }}
                 >
@@ -516,13 +516,17 @@ export function PatientsPage() {
                   ))}
                 </select>
               </div>
-              {acquisitionChannel === "DOCTOR_REFERRAL" ? (
+              {acquisitionChannel === "DOCTOR_REFERRAL" || acquisitionChannel === "ANOTHER_PATIENT" ? (
                 <div className="space-y-2">
                   <Label required>{t("patients.explainMore", "Explain more")}</Label>
                   <Input
                     value={acquisitionReferralName}
                     onChange={(e) => setAcquisitionReferralName(e.target.value)}
-                    placeholder={t("patients.explainMorePh", "Add details…")}
+                    placeholder={
+                      acquisitionChannel === "ANOTHER_PATIENT"
+                        ? t("patients.anotherPatientPh", "Name of the patient who referred them…")
+                        : t("patients.explainMorePh", "Add details…")
+                    }
                   />
                 </div>
               ) : null}
