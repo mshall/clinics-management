@@ -67,6 +67,17 @@ export class AdminDataExplorerController {
     return this.patient360.listDoubleLinkedPatients(assertExplorerTenant(user));
   }
 
+  @Post("merge-safe-duplicate-patients")
+  @ApiOperation({
+    summary:
+      "Merge safe duplicate patient charts (same phone+compatible name, national ID, or name+DOB). Keeps the richer chart; moves documents/visits; fills empty demographics.",
+  })
+  @ApiOkResponse()
+  mergeSafeDuplicatePatients(@CurrentUser() user: JwtUser) {
+    assertDataExplorerAccess(user);
+    return this.patient360.mergeSafeDuplicatePatients(assertExplorerTenant(user), user);
+  }
+
   @Post("export/jobs")
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
   @ApiOperation({ summary: "Start async organization export (SQL, documents ZIP, or full backup ZIP)" })

@@ -614,7 +614,7 @@
     "relation": "Relation",
     "addFamilyLink": "Link member",
     "mergeWizard": "Merge duplicate patient",
-    "mergeHint": "Moves visits, appointments, and documents from the duplicate into this chart, then retires the duplicate record.",
+    "mergeHint": "Moves visits, appointments, and documents from the duplicate into this chart, fills any empty demographics from the duplicate, then retires the duplicate record.",
     "mergeSourceId": "Duplicate patient ID",
     "mergeConfirm": "I understand this cannot be undone easily",
     "mergeRun": "Merge into this patient",

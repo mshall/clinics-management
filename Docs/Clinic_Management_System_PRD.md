@@ -701,7 +701,7 @@ Improvements that extend **already shipped** areas without waiting for a major n
 | N.10 | **Admin users** | SSO group → role mapping; forced MFA for `GROUP_ADMIN` | P0 |
 | N.11 | **Operations** | Pre-op / post-op status checklist templates | P2 |
 | N.12 | **Expenses** | Approval workflow (submit → approve → post) with delegation | P1 |
-| N.13 | **Patients** | Duplicate patient merge wizard (MRN consolidation) | P1 |
+| N.13 | **Patients** | Duplicate patient merge (wizard + safe auto-merge: fill empty fields, move docs/visits; ignore placeholder phones) | **Shipped** |
 | N.14 | **Mobile web** | PWA install prompt + offline read cache for today’s schedule | P2 |
 
 #### 12.3.8 Analytics, reporting & intelligence

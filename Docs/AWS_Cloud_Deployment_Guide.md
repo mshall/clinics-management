@@ -6,6 +6,8 @@ This document describes how the **Clinics Management** monorepo is deployed to *
 
 **Scope:** The **checked-in CDK stack** (`infra/`) — not a generic ECS tutorial. For PHI/PII and regional regulations, perform your own compliance review.
 
+**Live tenant caution (Dr Ahmed Shall Group):** Deploys from `main` must not wipe RDS rows or empty the **uploads S3** bucket. Post-deploy seed is **incremental ensure-only**. See `.cursor/rules/aws-deploy-data-safety.mdc`.
+
 ---
 
 ## 1. What you are deploying

@@ -34,7 +34,12 @@ export function PatientMergeWizard({
 
   const body = (
     <div className="space-y-3 text-sm">
-        <p className="text-muted-foreground">{t("patients.mergeHint", "Moves visits, appointments, and documents from the duplicate into this chart, then retires the duplicate record.")}</p>
+        <p className="text-muted-foreground">
+          {t(
+            "patients.mergeHint",
+            "Moves visits, appointments, and documents from the duplicate into this chart, fills any empty demographics from the duplicate, then retires the duplicate record.",
+          )}
+        </p>
         <div className="space-y-1">
           <Label>{t("patients.mergeSourceId", "Duplicate patient ID")}</Label>
           <Input value={sourceId} onChange={(e) => setSourceId(e.target.value)} />
