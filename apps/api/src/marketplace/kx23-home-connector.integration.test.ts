@@ -132,8 +132,21 @@ describe("KX-09 v2.3 connector: HOME visits", () => {
 
   it("provider sync (GET /providers) adds profession, edition, serviceLocations[], coverageDistricts[], verification.register; HOME appears only while effective, fees carry serviceLocation + separate homeSurcharge", async () => {
     const listing = await prisma.marketplaceListing.findFirstOrThrow({ where: { tenantId: w.tenantId } });
-    const page = await stack.profiles.listProvidersForKiorex({});
-    const item = page.items.find((i) => i.listingId === listing.id)!;
+    const findPublished = async (
+      profiles: ReturnType<typeof build>["profiles"],
+    ) => {
+      // Demo seed may have many LIVE listings; walk pages instead of assuming page 1.
+      let pageNum = 1;
+      for (;;) {
+        const page = await profiles.listProvidersForKiorex({ page: pageNum, pageSize: 100 });
+        const hit = page.items.find((i) => i.listingId === listing.id);
+        if (hit) return hit;
+        if (pageNum * 100 >= page.total) return undefined;
+        pageNum += 1;
+      }
+    };
+    const item = await findPublished(stack.profiles);
+    assert.ok(item, "expected marketplace listing to appear in provider sync");
     assert.equal(item.profession, "PHYSICIAN");
     assert.equal(item.edition, "CLINIC");
     assert.deepEqual(item.serviceLocations, ["HOME"], "only HOME types exist in this org");
@@ -146,7 +159,8 @@ describe("KX-09 v2.3 connector: HOME visits", () => {
     assert.equal(item.assignsClinician, undefined);
 
     const off = build(await buildKit(prisma, snapshotFor({ gates: { "clinic.home_visits": false } })));
-    const hidden = (await off.profiles.listProvidersForKiorex({})).items.find((i) => i.listingId === listing.id)!;
+    const hidden = await findPublished(off.profiles);
+    assert.ok(hidden, "expected marketplace listing while home_visits gate is off");
     assert.ok(!hidden.serviceLocations?.includes("HOME"), "Home visit types hidden for new bookings while the flag is not effective");
     assert.deepEqual(hidden.coverageDistricts, []);
     assert.equal(hidden.provider.fees.find((f) => f.appointmentTypeId === w.homeType.id), undefined);

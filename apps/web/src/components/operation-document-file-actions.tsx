@@ -6,6 +6,7 @@ import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { Button } from "@/components/ui/button";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import type { OperationDocumentDto } from "@/lib/api-types";
+import { documentViewActionLabel } from "@/lib/document-view-label";
 import { apiFetchBlob } from "@/lib/http";
 import { resolveViewerContentType } from "@/lib/image-mime";
 
@@ -91,7 +92,9 @@ export function OperationDocumentFileActions({ operationId, doc, className }: Pr
       <div className={className ?? "flex shrink-0 flex-wrap gap-1"}>
         <Button type="button" size="sm" variant="outline" disabled={busy != null} onClick={() => void onView()}>
           <Eye className="h-4 w-4" />
-          <span className="ms-1">{t("encounters.viewDoc", "View")}</span>
+          <span className="ms-1">
+            {documentViewActionLabel(doc.originalFileName || "document", doc.mimeType, t)}
+          </span>
         </Button>
         <Button type="button" size="sm" variant="outline" disabled={busy != null} onClick={() => void onDownload()}>
           <Download className="h-4 w-4" />

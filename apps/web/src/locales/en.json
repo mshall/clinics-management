@@ -810,7 +810,9 @@
     "newAppointmentHint": "Schedule a visit",
     "newEncounterDialogHint": "Start a clinical visit for this patient. Choose the attending doctor and visit type.",
     "newOperation": "New operation",
-    "newOperationHint": "Schedule surgery"
+    "newOperationHint": "Schedule surgery",
+    "acquisitionAnotherPatient": "Another Patient",
+    "anotherPatientPh": "Name of the patient who referred them…"
   },
   "encounters": {
     "title": "Encounter",
@@ -899,7 +901,7 @@
     "confirmNoMedsMedsCount": "{{count}} manual medication(s) will be removed.",
     "confirmNoMedsRxCount": "{{count}} uploaded prescription(s) will be removed.",
     "confirmNoMedsAction": "Yes, remove all",
-    "prescriptionUploadHint": "Upload a scanned or digital prescription (PDF or image).",
+    "prescriptionUploadHint": "Select one or more prescription photos or PDFs — all selected files will upload.",
     "uploadPrescription": "Upload prescription",
     "noPrescriptionYet": "No prescription uploaded yet.",
     "noMedsCheck": "No medications prescribed for this visit",
@@ -1007,7 +1009,12 @@
     "visitFeeEditableHint": "Adjust the visit fee while this encounter is open.",
     "vitalsBpSys": "BP sys",
     "vitalsHeight": "Height cm",
-    "vitalsWeight": "Weight kg"
+    "vitalsWeight": "Weight kg",
+    "deleteDocTitle": "Delete document?",
+    "deleteDocBody": "Delete \"{{name}}\"? This cannot be undone.",
+    "deleteDocAction": "Delete document",
+    "uploadProgress": "Uploading documents…",
+    "docDeleted": "Document deleted."
   },
   "appointments": {
     "title": "Appointments",
@@ -3569,7 +3576,10 @@
     "select": "Select…",
     "send": "Send",
     "upload": "Upload",
-    "view": "View"
+    "view": "View",
+    "uploading": "Uploading…",
+    "viewPicture": "View picture",
+    "viewPdf": "View PDF"
   },
   "patientConsent": {
     "header": "Consent status",

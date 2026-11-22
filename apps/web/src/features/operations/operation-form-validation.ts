@@ -23,7 +23,10 @@ function validatePatientAcquisitionDetails(
   values: OperationAcquisitionFormValues,
   t: TFunction,
 ): string | null {
-  if (values.channel === "DOCTOR_REFERRAL" && !values.referralName.trim()) {
+  if (
+    (values.channel === "DOCTOR_REFERRAL" || values.channel === "ANOTHER_PATIENT") &&
+    !values.referralName.trim()
+  ) {
     return t("patients.errorExplainMoreRequired", "Explain more is required.");
   }
   if (values.channel === "OTHER" && !values.otherDetail.trim()) {

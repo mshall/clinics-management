@@ -810,7 +810,9 @@
     "newAppointmentHint": "جدولة زيارة",
     "newEncounterDialogHint": "ابدأ زيارة سريرية لهذا المريض. اختر الطبيب المعالج ونوع الزيارة.",
     "newOperation": "عملية جديدة",
-    "newOperationHint": "جدولة عملية"
+    "newOperationHint": "جدولة عملية",
+    "acquisitionAnotherPatient": "مريض آخر",
+    "anotherPatientPh": "اسم المريض الذي أحالهم…"
   },
   "encounters": {
     "title": "زيارة",
@@ -899,7 +901,7 @@
     "confirmNoMedsMedsCount": "سيتم حذف {{count}} دواء/أدوية يدوية.",
     "confirmNoMedsRxCount": "سيتم حذف {{count}} وصفة/وصفات مرفوعة.",
     "confirmNoMedsAction": "نعم، احذف الكل",
-    "prescriptionUploadHint": "ارفع وصفة طبية ممسوحة أو رقمية (PDF أو صورة).",
+    "prescriptionUploadHint": "اختر صورة أو أكثر للوصفة أو ملفات PDF — سيتم رفع جميع الملفات المحددة.",
     "uploadPrescription": "رفع وصفة طبية",
     "noPrescriptionYet": "لم تُرفع وصفة بعد.",
     "noMedsCheck": "لا أدوية موصوفة لهذه الزيارة",
@@ -1007,7 +1009,12 @@
     "visitFeeEditableHint": "عدّل رسوم الزيارة ما دامت هذه الزيارة مفتوحة.",
     "vitalsBpSys": "ضغط انقباضي",
     "vitalsHeight": "الطول (سم)",
-    "vitalsWeight": "الوزن (كجم)"
+    "vitalsWeight": "الوزن (كجم)",
+    "deleteDocTitle": "حذف المستند؟",
+    "deleteDocBody": "حذف \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+    "deleteDocAction": "حذف المستند",
+    "uploadProgress": "جارٍ رفع المستندات…",
+    "docDeleted": "تم حذف المستند."
   },
   "appointments": {
     "title": "المواعيد",
@@ -3569,7 +3576,10 @@
     "select": "اختر…",
     "send": "إرسال",
     "upload": "رفع",
-    "view": "عرض"
+    "view": "عرض",
+    "uploading": "جارٍ الرفع…",
+    "viewPicture": "عرض الصورة",
+    "viewPdf": "عرض PDF"
   },
   "patientConsent": {
     "header": "حالة الموافقة",

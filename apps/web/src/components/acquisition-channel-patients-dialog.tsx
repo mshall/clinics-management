@@ -26,7 +26,11 @@ type AcquisitionChannelPatientsDialogProps = {
 };
 
 function acquisitionDetail(patient: ReportsPatientAcquisitionPatientDto): string {
-  if (patient.acquisitionChannel === "DOCTOR_REFERRAL" && patient.acquisitionReferralName?.trim()) {
+  if (
+    (patient.acquisitionChannel === "DOCTOR_REFERRAL" ||
+      patient.acquisitionChannel === "ANOTHER_PATIENT") &&
+    patient.acquisitionReferralName?.trim()
+  ) {
     return patient.acquisitionReferralName.trim();
   }
   if (patient.acquisitionChannel === "OTHER" && patient.acquisitionOtherDetail?.trim()) {
