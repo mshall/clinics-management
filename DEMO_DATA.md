@@ -7,6 +7,9 @@
 
 Three Clinic-edition organisations (Pro, Pro, trial) and two Nurse-edition organisations (solo and agency), plus a Basic (Lite) clinic, so that every role, plan gate, appointment status, billing state, Kiorex marketplace state and Rev 2.3 home-care state can be seen on `http://localhost:5174` without creating data. The same people also exist in Kiorex (patients) and Passport, so cross-product flows (booking from Kiorex, nurse sample to Lab) run end to end.
 
+## All 36 specialties (added 22 Nov 2026)
+Every Kiorex specialty (36 codes) now has 2 LIVE verified doctors, with bookable slots, 3 demo bookings in varied states, 14 home-visit doctors and 11 video bookings: new Kiorly tenant `demo_t_sp` (72 doctors, staff logins `<key>.sp@demo.kiorex.test` / `Demo@12345`, owner `owner.sp@`), provider-synced into Kiorex, bookings for the demo patients `+201000001001`..`1012` (OTP `000000`). The full specialty -> doctor -> login/slug -> booking table is in [Docs/TEST_DATA.md](Docs/TEST_DATA.md) (section "All 36 specialties"). Seed order is unchanged (`scripts/seed-all.sh`).
+
 ## 2. Start and seed
 
 ```bash

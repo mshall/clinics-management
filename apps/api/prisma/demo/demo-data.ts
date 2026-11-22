@@ -1,10 +1,15 @@
 /** Static demo content for the Kiorly Clinic demo seed (all fictional). */
+import { SP_TENANT } from "./demo-specialties";
 export type DocSpec = {
   key: string; nameEn: string; nameAr: string; titleEn: string; titleAr: string; spec: string; clinic: string; fee: number; years: number;
   bioEn: string; bioAr: string; listing: "LIVE" | "PAUSED" | "PENDING_VERIFICATION" | "DRAFT"; gender?: string; offDays?: number[];
+  /** specialties tenant: languages shown on the profile, and whether the doctor also takes home visits */
+  languages?: string[]; home?: boolean;
 };
-export type ClinicSpec = { key: string; nameEn: string; nameAr: string; city: string; addrEn: string; addrAr: string; lat: number; lng: number; phone: string };
-export type TenantSpec = { key: string; name: string; nameAr: string; short: string; ownerEn: string; plan: "LITE" | "PRO" | "CLINIC"; trial?: boolean; patients: number; clinics: ClinicSpec[]; docs: DocSpec[] };
+export type ClinicSpec = { key: string; nameEn: string; nameAr: string; city: string; addrEn: string; addrAr: string; lat: number; lng: number; phone: string; governorate?: string; area?: string };
+export type TenantSpec = { key: string; name: string; nameAr: string; short: string; ownerEn: string; plan: "LITE" | "PRO" | "CLINIC"; trial?: boolean; patients: number; clinics: ClinicSpec[]; docs: DocSpec[];
+  /** lean: organic appointments only for the next 14 days and the last 7 (keeps the 72-doctor tenant small); perDocFees: each doctor publishes his own fee */
+  lean?: boolean; perDocFees?: boolean };
 
 export const FIRST_M: [string, string][] = [["Ahmed", "أحمد"], ["Mohamed", "محمد"], ["Mahmoud", "محمود"], ["Mostafa", "مصطفى"], ["Karim", "كريم"], ["Omar", "عمر"], ["Youssef", "يوسف"], ["Tarek", "طارق"], ["Hossam", "حسام"], ["Amr", "عمرو"], ["Khaled", "خالد"], ["Ali", "علي"], ["Hany", "هاني"], ["Walid", "وليد"], ["Sherif", "شريف"]];
 export const FIRST_F: [string, string][] = [["Fatma", "فاطمة"], ["Mariam", "مريم"], ["Nour", "نور"], ["Salma", "سلمى"], ["Heba", "هبة"], ["Dalia", "داليا"], ["Rana", "رنا"], ["Aya", "آية"], ["Mona", "منى"], ["Hoda", "هدى"], ["Sara", "سارة"], ["Nermine", "نرمين"], ["Yasmin", "ياسمين"], ["Reem", "ريم"], ["Dina", "دينا"]];
@@ -59,4 +64,5 @@ export const TENANTS: TenantSpec[] = [
       doc("adham", "Dr Adham Tawfik", "د. أدهم توفيق", "DENTISTRY", "Cosmetic Dentist", "طبيب أسنان تجميلي", "zayed", 550, 7, "PENDING_VERIFICATION"),
     ],
   },
+  SP_TENANT, // 36 specialties x 2 LIVE doctors (demo-specialties.ts)
 ];

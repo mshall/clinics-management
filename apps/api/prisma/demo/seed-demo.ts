@@ -16,6 +16,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { assertDemoSeedAllowed } from "../../src/common/demo-seed-guard";
 import { FIRST_F, FIRST_M, LAST, PERSONAS, TENANTS, type DocSpec } from "./demo-data";
+import { SP_COVERAGE, SPECIALTIES } from "./demo-specialties";
 import { NURSE_DEMO_TENANT_NAMES } from "../nurse-demo.seed";
 import { seedRev23 } from "./seed-rev23";
 import { createPrismaClient } from "../../src/prisma/create-prisma-client";
@@ -117,6 +118,11 @@ async function main() {
       const base = T.docs.find((d) => d.clinic === c.key)?.fee ?? 400;
       typeRows.push({ id: `demo_ty_${tk}_${c.key}_${i}`, tenantId: tid, clinicId: `demo_c_${tk}_${c.key}`, nameEn: t, nameAr: (typeRows.length, ["كشف", "متابعة", "إجراء"][["consult", "follow", "proc"].indexOf(i)]), durationMinutes: i === "proc" ? 45 : i === "follow" ? 15 : 30, feeAmount: Math.round(base * (i === "proc" ? 1.6 : i === "follow" ? 0.6 : 1)), marketplaceBookable: i !== "proc", isActive: true, colorHex: i === "consult" ? "#3b82f6" : i === "follow" ? "#10b981" : "#f59e0b" });
     }
+    // specialties tenant: one marketplace-bookable HOME visit type per clinic that has home-visit doctors (only published for doctors who accept home visits)
+    for (const c of T.clinics) if (T.docs.some((d) => d.home && d.clinic === c.key)) {
+      const base = T.docs.find((d) => d.clinic === c.key)?.fee ?? 400;
+      typeRows.push({ id: `demo_ty_${tk}_${c.key}_home`, tenantId: tid, clinicId: `demo_c_${tk}_${c.key}`, nameEn: "Home visit", nameAr: "زيارة منزلية", durationMinutes: 45, feeAmount: Math.round(base * 1.2), marketplaceBookable: true, isActive: true, serviceLocation: "HOME", bufferBeforeMin: 30, bufferAfterMin: 30, homeSurchargeAmount: 150, depositAmount: 200, minNoticeMinutes: 0, colorHex: "#e11d48" });
+    }
     await many("appointmentType", typeRows);
 
     // ---- users: admin + staff + doctors ----------------------------------------------------------------------------
@@ -136,20 +142,25 @@ async function main() {
     addUser(U("nurse"), email("nurse"), `Nurse ${T.short}`, "NURSE"); addEmp(U("nurse"), c0, `Nurse ${T.short}`, "Nurse", 12000);
     addUser(U("accountant"), email("accountant"), `Accountant ${T.short}`, "FINANCE_OFFICER"); addEmp(U("accountant"), c0, `Accountant ${T.short}`, "Accountant", 15000);
     addUser(U("callcenter"), email("callcenter"), `Call Center ${T.short}`, "CALL_CENTER");
-    for (const d of T.docs) { addUser(U(d.key), email(d.key), d.nameEn, "PHYSICIAN"); addEmp(U(d.key), d.clinic, d.nameEn, d.titleEn, 45000, d.spec); }
+    for (const d of T.docs) { addUser(U(d.key), email(d.key), d.nameEn, "PHYSICIAN"); addEmp(U(d.key), d.clinic, d.nameEn, d.titleEn, 45000, empSpecialty(d.spec)); }
     await many("user", userRows); await many("employee", empRows);
 
     // ---- doctors: verification, availability, Kiorex listing -------------------------------------------------------
     const verRows: any[] = []; const availRows: any[] = []; const listRows: any[] = [];
     for (const d of T.docs) {
       const clinicId = `demo_c_${tk}_${d.clinic}`;
-      verRows.push({ id: `demo_v_${tk}_${d.key}`, userId: U(d.key), tenantId: tid, status: d.listing === "PENDING_VERIFICATION" ? "PENDING" : "VERIFIED", specialty: d.spec, verifiedSpecialty: d.listing === "PENDING_VERIFICATION" ? undefined : d.spec, syndicateNumber: `DEMO-SYN-${tk}-${d.key}`.toUpperCase(), titleEn: d.titleEn, titleAr: d.titleAr, documentKeys: [], reviewedAt: d.listing === "PENDING_VERIFICATION" ? undefined : at(-60, 10) });
+      verRows.push({ id: `demo_v_${tk}_${d.key}`, userId: U(d.key), tenantId: tid, status: d.listing === "PENDING_VERIFICATION" ? "PENDING" : "VERIFIED", specialty: empSpecialty(d.spec), verifiedSpecialty: d.listing === "PENDING_VERIFICATION" ? undefined : empSpecialty(d.spec), syndicateNumber: `DEMO-SYN-${tk}-${d.key}`.toUpperCase(), titleEn: d.titleEn, titleAr: d.titleAr, documentKeys: [], reviewedAt: d.listing === "PENDING_VERIFICATION" ? undefined : at(-60, 10) });
       const days = d.offDays ?? [5];
       availRows.push({ id: `demo_av_${tk}_${d.key}`, tenantId: tid, clinicId, clinicianId: U(d.key), blockedJson: [], weekJson: { version: 1, timezone: "Africa/Cairo", days: [0, 1, 2, 3, 4, 5, 6].map((w) => ({ weekday: w, slots: days.includes(w) ? [] : [{ start: "09:00", end: "13:00" }, { start: "16:00", end: "20:00" }] })) } });
-      const types = typeRows.filter((t) => t.clinicId === clinicId && t.marketplaceBookable);
-      listRows.push({ id: `demo_l_${tk}_${d.key}`, tenantId: tid, clinicId, clinicianId: U(d.key), status: d.listing, pausedReason: d.listing === "PAUSED" ? "owner" : null, listedAt: d.listing === "LIVE" || d.listing === "PAUSED" ? at(-50, 9) : null, bookingSlug: `demo-${tk}-${d.key}`, profileJson: { displayNameEn: d.nameEn, displayNameAr: d.nameAr, titleEn: d.titleEn, titleAr: d.titleAr, specialty: d.spec, gender: d.gender ?? "UNSPECIFIED", languages: ["ar", "en"], bioEn: d.bioEn, bioAr: d.bioAr, education: [{ degreeEn: "MBBCh, Ain Shams University (demo)", degreeAr: "بكالوريوس الطب والجراحة، جامعة عين شمس (تجريبي)" }], yearsExperience: d.years, feesByAppointmentTypeId: Object.fromEntries(types.map((t) => [t.id, Number(t.feeAmount)])), amenities: ["wifi", "ac"], parking: true, wheelchairAccess: true } });
+      const types = typeRows.filter((t) => t.clinicId === clinicId && t.marketplaceBookable && (t.serviceLocation !== "HOME" || d.home));
+      const clinicBase = T.docs.find((x) => x.clinic === d.clinic)?.fee ?? d.fee; const clinicSpec = T.clinics.find((c) => c.key === d.clinic)!;
+      listRows.push({ id: `demo_l_${tk}_${d.key}`, tenantId: tid, clinicId, clinicianId: U(d.key), status: d.listing, pausedReason: d.listing === "PAUSED" ? "owner" : null, listedAt: d.listing === "LIVE" || d.listing === "PAUSED" ? at(-50, 9) : null, bookingSlug: `demo-${tk}-${d.key}`, profileJson: { displayNameEn: d.nameEn, displayNameAr: d.nameAr, titleEn: d.titleEn, titleAr: d.titleAr, specialty: d.spec, gender: d.gender ?? "UNSPECIFIED", languages: d.languages ?? ["ar", "en"], ...(clinicSpec.governorate ? { governorate: clinicSpec.governorate, area: clinicSpec.area } : {}), bioEn: d.bioEn, bioAr: d.bioAr, education: [{ degreeEn: "MBBCh, Ain Shams University (demo)", degreeAr: "بكالوريوس الطب والجراحة، جامعة عين شمس (تجريبي)" }], yearsExperience: d.years, feesByAppointmentTypeId: Object.fromEntries(types.map((t) => [t.id, T.perDocFees ? Math.round((Number(t.feeAmount) * d.fee) / clinicBase) : Number(t.feeAmount)])), amenities: ["wifi", "ac"], parking: true, wheelchairAccess: true } });
     }
     await many("clinicianVerification", verRows); await many("clinicianAvailabilityTemplate", availRows); await many("marketplaceListing", listRows);
+    // home-visit doctors (specialties tenant): they accept home visits and cover their clinic's districts
+    for (const d of T.docs.filter((x) => x.home)) {
+      await prisma.clinicianHomeSettings.upsert({ where: { tenantId_clinicianId: { tenantId: tid, clinicianId: U(d.key) } }, create: { tenantId: tid, clinicianId: U(d.key), acceptsHomeVisits: true, coverageDistrictIds: SP_COVERAGE[d.clinic] ?? [], dailyVisitCap: 4, maxTravelMinutes: 45 }, update: { acceptsHomeVisits: true, coverageDistrictIds: SP_COVERAGE[d.clinic] ?? [] } });
+    }
 
     // ---- patients -------------------------------------------------------------------------------------------------
     const patRows: any[] = []; const patInfo: { id: string; clinic: string; name: string }[] = [];
@@ -199,7 +210,7 @@ async function main() {
     };
 
     const doEncounter = (aptRow: any, d: DocSpec) => {
-      const sp = SPEC_CLIN[d.spec] ?? SPEC_CLIN.GENERAL_MEDICINE;
+      const sp = clinFor(d.spec);
       const k = Math.floor(rnd() * sp.cases.length); const cs = sp.cases[k];
       const encId = `demo_en_${aptRow.id.slice(9)}`;
       const age = true;
@@ -235,7 +246,7 @@ async function main() {
       const pn = (b.patientPhone.slice(-4) | 0) - 1000; const pid = tk === "na" ? `demo_p_na_${pn}` : `demo_p_${tk}_mk${pn}`;
       if (!patRows.find((p) => p.id === pid)) {
         // personas live in the first tenant; other tenants get a same-phone patient row so the booking resolves
-        patRows.push({ id: pid, tenantId: tid, mrn: `${tk.toUpperCase()}-M${b.patientPhone.slice(-4)}`, firstNameEn: "Kiorex", lastNameEn: `Patient ${b.patientPhone.slice(-4)}`, gender: "F", phone: b.patientPhone, dob: new Date(Date.UTC(1990, 1, 1)), homeBranchId: `demo_c_${tk}_${d.clinic}`, isSample: true });
+        patRows.push({ id: pid, tenantId: tid, mrn: `${tk.toUpperCase()}-M${b.patientPhone.slice(-4)}`, firstNameEn: T.lean ? PERSONAS[pn - 1].first[0] : "Kiorex", lastNameEn: T.lean ? PERSONAS[pn - 1].last[0] : `Patient ${b.patientPhone.slice(-4)}`, ...(T.lean ? { firstNameAr: PERSONAS[pn - 1].first[1], lastNameAr: PERSONAS[pn - 1].last[1] } : {}), gender: T.lean ? (PERSONAS[pn - 1].male ? "M" : "F") : "F", phone: b.patientPhone, dob: new Date(Date.UTC(1990, 1, 1)), homeBranchId: `demo_c_${tk}_${d.clinic}`, isSample: true });
         await many("patient", [patRows[patRows.length - 1]]);
       }
       const start = at(b.dayOffset, b.hourUtc);
@@ -251,9 +262,9 @@ async function main() {
     // organic schedule: -45 .. +14 days
     for (const d of T.docs) {
       const offs = d.offDays ?? [5];
-      for (let off = -45; off <= 14; off++) {
+      for (let off = T.lean ? -7 : -45; off <= 14; off++) {
         const dt = at(off, 0); if (offs.includes(dt.getUTCDay())) continue;
-        const nSlots = off < 0 ? 2 + Math.floor(rnd() * 3) : off === 0 ? 7 : 1 + Math.floor(rnd() * 3);
+        const nSlots = off < 0 ? (T.lean ? 1 + Math.floor(rnd() * 2) : 2 + Math.floor(rnd() * 3)) : off === 0 ? (T.lean ? 2 : 7) : 1 + Math.floor(rnd() * 3);
         for (let s = 0; s < nSlots; s++) {
           const hour = 7 + Math.floor(rnd() * 11) / 1 + (rnd() > 0.5 ? 0.5 : 0); // 07:00-17:30 UTC (09:00-19:30 Cairo)
           const start = at(off, Math.floor(hour), hour % 1 ? 30 : 0);
@@ -337,7 +348,7 @@ async function main() {
   }
   // Rev 2.3: Nurse edition tenants, physio, registrations, home visits, care plans, MAR (needs the three tenants above)
   summary.push("Rev 2.3: " + (await seedRev23(prisma, { at, reset: RESET })));
-  console.log("Kiorly demo seed OK\n  " + summary.join("\n  ") + `\n  logins: <role>.<na|df|ss>@demo.kiorex.test / ${DEMO_PASSWORD} (DEV ONLY) — see /TEST_DATA.md`);
+  console.log("Kiorly demo seed OK\n  " + summary.join("\n  ") + `\n  logins: <role>.<na|df|ss|sp>@demo.kiorex.test (sp doctors: <key>.sp@) / ${DEMO_PASSWORD} (DEV ONLY) — see /TEST_DATA.md`);
 }
 
 type Case = { cc: string; s: string; o: string; a: string; p: string; icd: string; dx: string; dxAr: string; meds: string[][]; lab?: [string, string[][]]; proc?: string };
@@ -384,5 +395,23 @@ const SPEC_CLIN: Record<string, { cases: Case[] }> = {
     { cc: "General check-up", s: "No complaints.", o: "Normal examination.", a: "Healthy adult", p: "Routine labs, review in 1 year.", icd: "Z00.0", dx: "General medical examination", dxAr: "فحص طبي عام", meds: [] },
   ] },
 };
+
+/** Employee.clinicalSpecialty is a Prisma enum with 20 values: map the Kiorex specialty codes onto it (CUSTOM when there is no counterpart). */
+const EMP_SPEC_ALIAS: Record<string, string> = { paediatrics: "PEDIATRICS", orthopaedics: "ORTHOPEDICS", obgyn: "OBSTETRICS_GYNECOLOGY", physiotherapy: "PHYSIO_THERAPY" };
+const EMP_SPEC_ENUM = new Set(["GENERAL_MEDICINE", "PAIN_MANAGEMENT", "ORTHOPEDICS", "PEDIATRICS", "DERMATOLOGY", "DENTISTRY", "PHYSIO_THERAPY", "CARDIOLOGY", "OBSTETRICS_GYNECOLOGY", "ENT", "OPHTHALMOLOGY", "PSYCHIATRY", "RADIOLOGY", "INTERNAL_MEDICINE", "FAMILY_MEDICINE", "UROLOGY"]);
+function empSpecialty(spec: string): string { const k = EMP_SPEC_ALIAS[spec] ?? spec.toUpperCase(); return EMP_SPEC_ENUM.has(k) ? k : "CUSTOM"; }
+
+/** Clinical case content: curated for the original specialties, a generic specialty-labelled case for the rest (Kiorex lowercase codes map onto the Kiorly keys). */
+const SPEC_ALIAS: Record<string, string> = { paediatrics: "PEDIATRICS", obgyn: "OBSTETRICS_GYNECOLOGY", orthopaedics: "ORTHOPEDICS" };
+function clinFor(spec: string): { cases: Case[] } {
+  const k = SPEC_ALIAS[spec] ?? spec.toUpperCase();
+  if (SPEC_CLIN[k]) return SPEC_CLIN[k];
+  const s = SPECIALTIES.find((x) => x[0] === spec);
+  if (!s) return SPEC_CLIN.GENERAL_MEDICINE;
+  return (SPEC_CLIN[k] = { cases: [
+    { cc: `${s[1]} consultation`, s: `New referral for ${s[1].toLowerCase()} assessment (demo).`, o: "Examination unremarkable apart from the presenting complaint (demo).", a: `${s[1]} assessment, stable`, p: "Investigations as discussed, follow-up in 4 weeks.", icd: "Z00.8", dx: `${s[1]} consultation (demo)`, dxAr: `استشارة ${s[2]} (تجريبي)`, meds: [] },
+    { cc: `${s[1]} follow-up`, s: "Follow-up of an established problem, improving.", o: "Stable, no new findings (demo).", a: "Improving on current plan", p: "Continue plan, review in 3 months.", icd: "Z09", dx: `${s[1]} follow-up (demo)`, dxAr: `متابعة ${s[2]} (تجريبي)`, meds: [["Vitamin D3 1000 IU", "1 cap", "daily", "30 days"]] },
+  ] });
+}
 
 main().then(() => prisma.$disconnect()).catch(async (e) => { console.error(e); await prisma.$disconnect(); process.exit(1); });
