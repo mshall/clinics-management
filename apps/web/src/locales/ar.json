@@ -752,6 +752,8 @@
     "acquisitionOther": "أخرى",
     "errorDocDescriptionRequired": "كل مستند مرفق يحتاج وصفاً.",
     "errorDocCategoryRequired": "كل مستند مرفق يحتاج نوعاً.",
+    "errorDocCategoryDuplicate": "يمكن إضافة كل نوع مستند مرة واحدة فقط. اختر نوعاً مختلفاً أو أضف ملفات إضافية إلى الصف الموجود.",
+    "docCategoryAlreadyUsed": "مضاف مسبقاً",
     "errorDocOtherRequired": "اشرح المستند عند اختيار «أخرى».",
     "errorDocFileRequired": "اختر ملفاً لكل وصف مستند.",
     "errorReferralNameRequired": "أدخل اسم الطبيب المحوّل.",

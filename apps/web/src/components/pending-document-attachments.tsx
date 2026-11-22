@@ -24,6 +24,10 @@ type PendingDocumentAttachmentsProps = {
   categories?: readonly DocumentCategoryOption[];
   categoryLabel?: (category: string, t: (key: string, fallback: string) => string) => string;
   optionalHint?: string;
+  /** Disallow selecting the same document type more than once. */
+  uniqueCategories?: boolean;
+  /** Categories already used by saved documents. */
+  reservedCategories?: readonly string[];
 };
 
 export function PendingDocumentAttachments({
@@ -34,10 +38,29 @@ export function PendingDocumentAttachments({
   categories = PATIENT_DOCUMENT_CATEGORIES,
   categoryLabel,
   optionalHint,
+  uniqueCategories = false,
+  reservedCategories = [],
 }: PendingDocumentAttachmentsProps) {
   const { t } = useTranslation();
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraRowId, setCameraRowId] = useState<string | null>(null);
+
+  const reserved = new Set(reservedCategories.filter(Boolean));
+  const selectedByOthers = (rowId: string) => {
+    const taken = new Set(reserved);
+    for (const row of rows) {
+      if (row.id === rowId || !row.category) continue;
+      taken.add(row.category);
+    }
+    return taken;
+  };
+  const allTaken = (() => {
+    const taken = new Set(reserved);
+    for (const row of rows) {
+      if (row.category) taken.add(row.category);
+    }
+    return categories.every((cat) => taken.has(cat));
+  })();
 
   const labelFor = (category: string) => {
     if (categoryLabel) return categoryLabel(category, t);
@@ -85,6 +108,7 @@ export function PendingDocumentAttachments({
           variant="outline"
           size="sm"
           className="gap-1 text-[hsl(var(--success))] hover:text-[hsl(var(--success))] "
+          disabled={uniqueCategories && allTaken}
           onClick={() => onChange((prev) => [...prev, emptyPendingDocumentRow()])}
         >
           <Plus className="h-4 w-4 text-[hsl(var(--success))]" />
@@ -98,7 +122,9 @@ export function PendingDocumentAttachments({
         </p>
       ) : (
         <div className="mt-3 space-y-3">
-          {rows.map((row, index) => (
+          {rows.map((row, index) => {
+            const taken = uniqueCategories ? selectedByOthers(row.id) : new Set<string>();
+            return (
             <div key={row.id} className="space-y-2 rounded-md border border-border p-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-medium text-muted-foreground">
@@ -139,8 +165,11 @@ export function PendingDocumentAttachments({
                 >
                   <option value="">{t("patients.docCategorySelect", "Select type…")}</option>
                   {categories.map((cat) => (
-                    <option key={cat} value={cat}>
+                    <option key={cat} value={cat} disabled={taken.has(cat)}>
                       {labelFor(cat)}
+                      {taken.has(cat)
+                        ? ` — ${t("patients.docCategoryAlreadyUsed", "already added")}`
+                        : ""}
                     </option>
                   ))}
                 </select>
@@ -217,7 +246,8 @@ export function PendingDocumentAttachments({
                 ) : null}
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
 

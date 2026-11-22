@@ -3,18 +3,24 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { PendingDocumentAttachments } from "@/components/pending-document-attachments";
-import { type PendingDocumentRow } from "@/components/pending-document-utils";
-import { collectPendingDocumentFieldErrors, pendingDocumentDescription } from "@/components/pending-document-utils";
+import { OperationDocumentFileActions } from "@/components/operation-document-file-actions";
+import {
+  collectPendingDocumentFieldErrors,
+  pendingDocumentDescription,
+  pendingDocumentValidationMessage,
+  type PendingDocumentRow,
+} from "@/components/pending-document-utils";
 import { Button } from "@/components/ui/button";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import type { OperationDocumentDto } from "@/lib/api-types";
-import { apiFetchBlob, apiPostFormData } from "@/lib/http";
+import { apiPostFormData } from "@/lib/http";
 import { localeForLanguage } from "@/lib/locale-display";
 import {
   OPERATION_DOCUMENT_CATEGORIES,
   appendOperationDocumentFormData,
   operationDocumentCategoryLabel,
   operationDocumentKindLabel,
+  reservedOperationDocumentCategories,
   type OperationDocumentCategory,
 } from "@/lib/operation-document-categories";
 
@@ -31,15 +37,23 @@ export function OperationPostSurgeryDocumentsSection({ operationId, documents, c
     () => documents.filter((d) => d.kind === "POST_SURGERY"),
     [documents],
   );
+  const reservedCategories = useMemo(
+    () => reservedOperationDocumentCategories(documents, t),
+    [documents, t],
+  );
   const [rows, setRows] = useState<PendingDocumentRow[]>([]);
   const [invalidRowIds, setInvalidRowIds] = useState<Set<string>>(new Set());
 
   const uploadMut = useMutation({
     mutationFn: async () => {
-      const fieldErrors = collectPendingDocumentFieldErrors(rows);
+      const fieldErrors = collectPendingDocumentFieldErrors(rows, {
+        uniqueCategories: true,
+        reservedCategories,
+      });
       if (fieldErrors.code) {
         setInvalidRowIds(fieldErrors.invalidRowIds);
-        throw new Error(fieldErrors.code);
+        const msg = pendingDocumentValidationMessage(fieldErrors.code, t);
+        throw new Error(msg ?? fieldErrors.code);
       }
       const pending = rows.filter((r) => r.files.length > 0 && r.category);
       if (pending.length === 0) {
@@ -72,22 +86,9 @@ export function OperationPostSurgeryDocumentsSection({ operationId, documents, c
         toast.error(t("operations.postSurgeryNothingToUpload", "Add at least one document to upload."));
         return;
       }
-      toast.error(apiErrorMessage(e));
+      toast.error(e instanceof Error && e.message ? e.message : apiErrorMessage(e));
     },
   });
-
-  const openDoc = async (doc: OperationDocumentDto) => {
-    const { blob } = await apiFetchBlob(`/api/v1/operations/${operationId}/documents/${doc.id}/file`);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = doc.originalFileName || "document";
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  };
 
   return (
     <section className="space-y-3 rounded-lg border border-border bg-card p-4">
@@ -107,9 +108,7 @@ export function OperationPostSurgeryDocumentsSection({ operationId, documents, c
                   {new Date(doc.createdAt).toLocaleString(localeForLanguage(i18n.language))}
                 </p>
               </div>
-              <Button type="button" size="sm" variant="outline" onClick={() => void openDoc(doc)}>
-                {t("common.view", "View")}
-              </Button>
+              <OperationDocumentFileActions operationId={operationId} doc={doc} />
             </li>
           ))}
         </ul>
@@ -129,6 +128,8 @@ export function OperationPostSurgeryDocumentsSection({ operationId, documents, c
             invalidRowIds={invalidRowIds.size > 0 ? invalidRowIds : undefined}
             categories={OPERATION_DOCUMENT_CATEGORIES}
             categoryLabel={operationDocumentCategoryLabel}
+            uniqueCategories
+            reservedCategories={reservedCategories}
             optionalHint={t(
               "operations.postSurgeryDocumentsHint",
               "Optional — attach consent, operation report, labs, imaging, or other post-surgery files.",
