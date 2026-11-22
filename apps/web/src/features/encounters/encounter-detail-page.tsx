@@ -729,7 +729,7 @@ export function EncounterDetailPage() {
           {canInvoice && enc.financialsVisible !== false ? (
             <Button type="button" variant="outline" size="sm" onClick={() => setInvoiceDialogOpen(true)}>
               <FileText className="me-2 h-4 w-4" />
-              {t("invoices.generateShort", "Invoice")}
+              {t("invoices.generate", "Generate invoice")}
             </Button>
           ) : null}
           <Button asChild variant="outline">

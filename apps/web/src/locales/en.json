@@ -808,7 +808,9 @@
     "viewAllOperations": "View all operations",
     "newAppointment": "New appointment",
     "newAppointmentHint": "Schedule a visit",
-    "newEncounterDialogHint": "Start a clinical visit for this patient. Choose the attending doctor and visit type."
+    "newEncounterDialogHint": "Start a clinical visit for this patient. Choose the attending doctor and visit type.",
+    "newOperation": "New operation",
+    "newOperationHint": "Schedule surgery"
   },
   "encounters": {
     "title": "Encounter",
@@ -5388,7 +5390,7 @@
     "currency": "Currency",
     "currencyHint": "Defaults to the clinic or linked record currency ({{currency}}).",
     "generate": "Generate invoice",
-    "generateShort": "Invoice",
+    "generateShort": "Generate invoice",
     "generateTitle": "Generate invoice",
     "generated": "Invoice generated",
     "lineItems": "Line items",

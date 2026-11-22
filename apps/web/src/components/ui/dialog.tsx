@@ -54,8 +54,18 @@ const DialogContent = React.forwardRef<
     >
       <span aria-hidden className="mx-auto -mt-2 hidden h-1 w-10 rounded-full bg-border max-sm:block" />
       {children}
-      <DialogPrimitive.Close className="absolute inset-e-3 top-3 flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground ring-offset-background transition-colors hover:bg-muted hover:text-foreground focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none touch-manipulation">
-        <X className="h-4 w-4" />
+      <DialogPrimitive.Close
+        data-testid="dialog-close"
+        className={cn(
+          "absolute inset-e-3 top-3 z-20 flex size-10 items-center justify-center rounded-full",
+          "border border-border/80 bg-background/95 text-muted-foreground shadow-kx-1 backdrop-blur-sm",
+          "ring-offset-background transition-[background-color,color,box-shadow,transform] duration-150",
+          "hover:border-destructive/35 hover:bg-destructive/10 hover:text-destructive hover:shadow-kx-2",
+          "active:translate-y-px focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "disabled:pointer-events-none disabled:opacity-50 touch-manipulation",
+        )}
+      >
+        <X className="size-4" strokeWidth={2.25} aria-hidden />
         <DialogCloseLabel />
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
@@ -64,7 +74,7 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 pe-10 text-start", className)} {...props} />
+  <div className={cn("flex flex-col space-y-1.5 pe-12 text-start sm:pe-14", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
