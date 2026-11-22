@@ -23,6 +23,7 @@ import { useAppointmentQuery, useClinicQuery, useClinicsQuery, usePatientQuery, 
 import type { AppointmentDto } from "@/lib/api-types";
 import { ApiError, apiDelete, apiPatch } from "@/lib/http";
 import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
+import { canEditAppointmentFees } from "@/lib/appointment-encounter-money-policy";
 import { patientToPickListItem } from "@/lib/patient-display";
 import { resolvePickListSelectedItem } from "@/lib/pick-list-utils";
 import { formatClinicianDisplayName } from "@/lib/employee-display";
@@ -77,6 +78,10 @@ export function AppointmentDetailPage() {
   const navigate = useNavigate();
   const authUser = useAuthStore((s) => s.user);
   const canDelete = canDeleteAppointment(authUser?.role);
+  const canSetAppointmentFees = canEditAppointmentFees(
+    authUser?.role,
+    authUser?.moneyVisibilityOverrides,
+  );
   const { id } = useParams();
   const qc = useQueryClient();
   const { data: apt, isPending, isError, error } = useAppointmentQuery(id);
@@ -362,20 +367,29 @@ export function AppointmentDetailPage() {
       toast.error(msg);
       return;
     }
-    const trimmedFee = feeAmount.trim();
-    const parsedFee = trimmedFee === "" ? undefined : Number.parseFloat(trimmedFee);
-    if (parsedFee !== undefined && (!Number.isFinite(parsedFee) || parsedFee < 0)) {
-      const msg = t("appointments.invalidFee", "Enter a valid non-negative scheduled fee.");
-      setFormErr(msg);
-      toast.error(msg);
-      return;
-    }
-    const feeForPlan = parsedFee ?? (Number.parseFloat(feeAmount) || 0);
-    const planErr = feeForPlan > 0 ? validateScheduledFeeCollection(feeForPlan, feeCollection, t) : null;
-    if (planErr) {
-      setFormErr(planErr);
-      toast.error(planErr);
-      return;
+    let feePatch: { feeAmount?: number; scheduledFeeCollection?: ReturnType<typeof scheduledFeeCollectionToApi> } =
+      {};
+    if (canSetAppointmentFees) {
+      const trimmedFee = feeAmount.trim();
+      const parsedFee = trimmedFee === "" ? undefined : Number.parseFloat(trimmedFee);
+      if (parsedFee !== undefined && (!Number.isFinite(parsedFee) || parsedFee < 0)) {
+        const msg = t("appointments.invalidFee", "Enter a valid non-negative scheduled fee.");
+        setFormErr(msg);
+        toast.error(msg);
+        return;
+      }
+      const feeForPlan = parsedFee ?? (Number.parseFloat(feeAmount) || 0);
+      const planErr = feeForPlan > 0 ? validateScheduledFeeCollection(feeForPlan, feeCollection, t) : null;
+      if (planErr) {
+        setFormErr(planErr);
+        toast.error(planErr);
+        return;
+      }
+      feePatch = {
+        ...(parsedFee !== undefined ? { feeAmount: parsedFee } : {}),
+        scheduledFeeCollection:
+          scheduledFeeCollectionToApi(feeForPlan, feeCollection) ?? { mode: "CASH_ON_VISIT" },
+      };
     }
     if (needsCancelReason && cancelReason.trim().length < 3) {
       const msg = t("appointments.cancelReasonRequired", "Enter a reason — the Kiorex patient will see it.");
@@ -383,7 +397,7 @@ export function AppointmentDetailPage() {
       toast.error(msg);
       return;
     }
-  saveMut.mutate({
+    saveMut.mutate({
       ...(needsCancelReason ? { cancellationReason: cancelReason.trim() } : {}),
       clinicId,
       patientId,
@@ -392,8 +406,7 @@ export function AppointmentDetailPage() {
       endsAt: end ? end.toISOString() : null,
       notes: notes.trim() === "" ? "" : notes,
       status,
-      ...(parsedFee !== undefined ? { feeAmount: parsedFee } : {}),
-      scheduledFeeCollection: scheduledFeeCollectionToApi(feeForPlan, feeCollection) ?? { mode: "CASH_ON_VISIT" },
+      ...feePatch,
     });
   };
 
@@ -691,7 +704,7 @@ export function AppointmentDetailPage() {
           ) : (
           <div className="space-y-2">
             <Label>{t("appointments.scheduledFee", "Scheduled fee ({{currency}})", { currency: feeCurrency })}</Label>
-            {readOnly ? (
+            {readOnly || !canSetAppointmentFees ? (
               <p className="flex min-h-11 items-center rounded-md border border-input bg-muted/40 px-3 py-2 text-sm ltr-nums">
                 {formatMoneyAmount(Number(feeAmount) || 0, feeCurrency, localeForLanguage(i18n.language))}
               </p>

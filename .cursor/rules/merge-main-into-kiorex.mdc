@@ -1,11 +1,28 @@
-# Merge main → kiorex (then push)
+---
+description: Push a specific fix/feature into kiorex, then switch back to main
+alwaysApply: true
+---
 
-When the user asks to **merge `main` into `kiorex`** (any similar phrasing):
+# Push this fix into kiorex (then back to main)
 
-1. Checkout `kiorex`, integrate `origin/kiorex` if needed, merge `main` (resolve conflicts).
-2. **Push `kiorex` to GitHub** automatically after a successful merge (`git push origin HEAD`). Treat “merge into kiorex” as authorization to push that branch — do not wait for a separate “push kiorex” ask.
-3. Run the usual pre-push `ci:test` gate (unless `SKIP_CI_TEST=1`).
-4. **Switch back to `main`** and leave the working tree on `main`.
-5. Restart local `npm run dev` on `main` when shell access is available so the stack matches `main`.
+When the user asks to **push this fix / feature into `kiorex`** (or merge “this” change into `kiorex`):
 
-If push fails, fix and retry until `kiorex` is on the remote (or report the blocker). Do not leave unpushed merge commits on local `kiorex` after this flow unless the user cancels.
+1. **Ship only the work from this task** — commit and push the relevant change to `main` first (with `ci:test` / pre-push gate). Do **not** fold in unrelated local WIP, other branches’ commits you did not make in this task, or drive-by diffs.
+2. On `kiorex`: integrate `origin/kiorex`, then bring **only that change** across:
+   - Prefer **`git cherry-pick <commit(s)>`** of the task’s commit(s) from `main`.
+   - Use `git merge origin/main` only when the user explicitly wants full main→kiorex sync, or when cherry-pick is impractical (huge dependent stack) — still avoid adding unrelated uncommitted work.
+3. **Push `kiorex`** (`git push origin kiorex`). Treat “into kiorex” as authorization to push that branch.
+4. **Checkout `main` again** and leave the working tree on `main`.
+5. Restart local `npm run dev` on `main` when shell access is available.
+
+If push fails, fix and retry. Do not leave unpushed kiorex commits after this flow unless the user cancels.
+
+## Phrasing that triggers this
+
+- “push this fix into kiorex”
+- “push into kiorex branch”
+- “merge this into kiorex”
+- “push to main and kiorex”
+- Similar: ship **this** change to both branches, then return to **main**
+
+When the user says only “push into kiorex” **for the current fix**, still: commit/push the fix on `main` if needed → cherry-pick onto `kiorex` → push `kiorex` → checkout `main`.

@@ -177,7 +177,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 - **Optional end time:** `endsAt` is optional on create; when a linked encounter is **finalized**, the appointment `endsAt` is set from the encounter finalize timestamp.
 - **Clinic working hours:** Each clinic stores **`openingTime`** and **`closingTime`** (HH:mm; default **09:00 → 00:00** midnight/end-of-day). Group admin and clinic admin configure these on create/edit and under **Clinic detail → Settings → Working hours**. Appointments **after closing** remain bookable; **call center** users see an **after-hours warning** (booking is not blocked).
 - **Calendar:** Appointments list and **Calendar** tab show time ranges (e.g. 9:00–9:15), highlight **shared slots** when multiple patients overlap, and group day-agenda entries accordingly.
-- **Scheduled fee:** Appointments store a **scheduled visit fee** (`feeAmount`; defaults to tenant default visit fee). Syncs to open encounter visit fee when updated.
+- **Scheduled fee:** Appointments store a **scheduled visit fee** (`feeAmount`; defaults to tenant default visit fee). Syncs to open encounter visit fee when updated. Roles without appointment fee edit (e.g. **call center**) never send fee fields on save; the API ignores fee payloads from those roles so **check-in / status** updates do not require fee permission and cannot wipe redacted amounts.
 - **Encounter link:** An optional booked appointment (same patient) may be attached when creating an encounter; linking sets the appointment to **Confirmed**; **finalizing** the encounter sets it to **Completed** and sets `endsAt` when not already set.
 - **Visit fee** is also set on **encounter** creation (tenant default in administration; **display and revenue use the clinic’s `defaultCurrency`**); amounts greater than zero create a `VISIT_FEE` revenue ledger line.
 - **Physician experience:** The web app exposes **Appointments** in the main navigation for physicians. List and detail APIs return only appointments where the JWT user is the **attending clinician**; physicians may only **book** appointments as themselves. The appointments ledger table highlights **clinic** (localized name) for at-a-glance branch context.
@@ -188,7 +188,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 **Registration (Patients → New patient)**
 - Required: English/Arabic names (Arabic first and last required), gender, phone. **Date of birth is optional.**
-- **Phone uniqueness:** Each phone number may belong to only one active patient per organization. While typing, the form checks for conflicts, highlights the phone field, shows the existing patient’s name/MRN, and links to their profile; **Create patient** stays disabled until resolved.
+- **Phone uniqueness:** Each phone number may belong to only one active patient per organization (digit-normalized; create is serialized with a DB advisory lock so double-submit cannot create a male+female pair). While typing, the form checks for conflicts, highlights the phone field, shows the existing patient’s name/MRN, and links to their profile; **Create patient** stays disabled until resolved. Demo AES patients each get a unique phone (not the clinic line).
 - Optional: email, national ID, national ID scan (PDF/image), home branch, **how did they find us?** (social, website, doctor referral with name, other with free text).
 - Optional **attached documents** at registration: type **Lab results**, **Radiology**, **Prescription**, or **Other** (custom description); multiple photos/files per row; **camera capture** — on mobile/touch devices the app opens the **native OS camera** (`capture="environment"`) for a lighter UX; desktop uses in-browser preview where supported.
 
@@ -231,7 +231,7 @@ See [`Test_Data_Users.md`](./Test_Data_Users.md) for demo logins and QA scenario
 - Schedule **operations** (procedures) per clinic with patient, clinician, date, cost, down payment, and balance.
 - **`feeCurrency`** per operation (EGP, USD, OMR, SAR, AED) — defaults to the clinic’s **`defaultCurrency`**; revenue posts in the operation currency.
 - Status workflow posts or voids linked **revenue** when completed or cancelled; completion dialog collects remaining balance in the operation currency.
-- Attach documents and medications per operation (same patterns as encounters).
+- Attach documents and medications per operation (same patterns as encounters), including **Consent** and **Operation Report** on create and post-surgery.
 - **Scheduled edit parity:** edit dialog matches create layout (fieldset sections, two-column grids on desktop, responsive scroll on mobile); `GET /operations/:id` loads clinical detail; `POST /operations/:id/reset-clinical` replaces meds/docs on save.
 - **Completed operation correction:** group/clinic admins may edit fees, patient, clinician, and comments; linked revenue updates automatically.
 - Physicians see only operations where they are the assigned clinician; clinic-scoped roles see assigned clinics.

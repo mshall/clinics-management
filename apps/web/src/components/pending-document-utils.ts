@@ -1,3 +1,14 @@
+export type PatientDocumentCategory = "LAB_RESULTS" | "RADIOLOGY" | "PRESCRIPTION" | "OTHER";
+
+/** Categories used by patients + operations (operations may pass a wider list). */
+export type DocumentCategoryOption = string;
+
+export type PendingDocumentRow = {
+  id: string;
+  files: File[];
+  category: DocumentCategoryOption | "";
+  otherDetail: string;
+};
 
 export const PATIENT_DOCUMENT_CATEGORIES: PatientDocumentCategory[] = [
   "LAB_RESULTS",
@@ -29,21 +40,38 @@ export function patientDocumentCategoryLabel(
 export function pendingDocumentDescription(
   row: PendingDocumentRow,
   t: (key: string, fallback: string) => string,
+  categoryLabel?: (category: string, t: (key: string, fallback: string) => string) => string,
 ): string {
   if (!row.category) return "";
   if (row.category === "OTHER") return row.otherDetail.trim();
-  return patientDocumentCategoryLabel(row.category, t);
+  if (categoryLabel) return categoryLabel(row.category, t);
+  if (
+    row.category === "LAB_RESULTS" ||
+    row.category === "RADIOLOGY" ||
+    row.category === "PRESCRIPTION" ||
+    row.category === "OTHER"
+  ) {
+    return patientDocumentCategoryLabel(row.category, t);
+  }
+  return row.category;
 }
 
-export function validatePendingDocuments(rows: PendingDocumentRow[]): string | null {
-  return collectPendingDocumentFieldErrors(rows).code;
-}
+export type PendingDocumentValidationOptions = {
+  uniqueCategories?: boolean;
+  reservedCategories?: readonly string[];
+};
 
-export function collectPendingDocumentFieldErrors(rows: PendingDocumentRow[]): {
+export function collectPendingDocumentFieldErrors(
+  rows: PendingDocumentRow[],
+  opts?: PendingDocumentValidationOptions,
+): {
   code: string | null;
   invalidRowIds: Set<string>;
 } {
   const invalidRowIds = new Set<string>();
+  const reserved = new Set((opts?.reservedCategories ?? []).filter(Boolean));
+  const seen = new Set<string>();
+
   for (const row of rows) {
     const hasFiles = row.files.length > 0;
     const hasCategory = Boolean(row.category);
@@ -62,8 +90,19 @@ export function collectPendingDocumentFieldErrors(rows: PendingDocumentRow[]): {
       invalidRowIds.add(`${row.id}:file`);
       return { code: "doc_file_required", invalidRowIds };
     }
+    if (opts?.uniqueCategories && row.category) {
+      if (reserved.has(row.category) || seen.has(row.category)) {
+        invalidRowIds.add(`${row.id}:category`);
+        return { code: "doc_category_duplicate", invalidRowIds };
+      }
+      seen.add(row.category);
+    }
   }
   return { code: null, invalidRowIds };
+}
+
+export function validatePendingDocuments(rows: PendingDocumentRow[]): string | null {
+  return collectPendingDocumentFieldErrors(rows).code;
 }
 
 export function pendingDocumentValidationMessage(
@@ -79,14 +118,11 @@ export function pendingDocumentValidationMessage(
   if (code === "doc_file_required") {
     return t("patients.errorDocFileRequired", "Choose a file for each document description.");
   }
+  if (code === "doc_category_duplicate") {
+    return t(
+      "patients.errorDocCategoryDuplicate",
+      "Each document type can only be added once. Choose a different type or add more files to the existing row.",
+    );
+  }
   return null;
 }
-
-export type PatientDocumentCategory = "LAB_RESULTS" | "RADIOLOGY" | "PRESCRIPTION" | "OTHER";
-
-export type PendingDocumentRow = {
-  id: string;
-  files: File[];
-  category: PatientDocumentCategory | "";
-  otherDetail: string;
-};
