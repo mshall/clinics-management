@@ -14,7 +14,7 @@ test.describe("CL-04 specialty templates", () => {
     };
     const encRes = await request.post(`${API_BASE}/encounters`, {
       headers: h,
-      data: { clinicId: clinic.id, patientId: patients.items[0]!.id, visitType: "Office visit" },
+      data: { clinicId: clinic.id, patientId: patients.items[0]!.id, visitType: "Check-up" },
     });
     expect(encRes.ok(), await encRes.text()).toBeTruthy();
     const enc = (await encRes.json()) as { id: string };

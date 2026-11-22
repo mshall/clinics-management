@@ -805,7 +805,10 @@
     "pairShort": "مجموعة",
     "partialPhotoPair": "أضف صورتي قبل وبعد لتفعيل شريط المقارنة.",
     "photoUnavailable": "الصورة غير متاحة",
-    "viewAllOperations": "عرض جميع العمليات"
+    "viewAllOperations": "عرض جميع العمليات",
+    "newAppointment": "موعد جديد",
+    "newAppointmentHint": "جدولة زيارة",
+    "newEncounterDialogHint": "ابدأ زيارة سريرية لهذا المريض. اختر الطبيب المعالج ونوع الزيارة."
   },
   "encounters": {
     "title": "زيارة",
@@ -985,7 +988,10 @@
       "telehealth": "عن بُعد",
       "annual_physical": "فحص سنوي",
       "urgent_care": "رعاية عاجلة",
-      "procedure": "إجراء"
+      "procedure": "إجراء",
+      "check_up": "فحص",
+      "follow_up_encounter": "متابعة — زيارة",
+      "follow_up_operation": "متابعة — عملية"
     },
     "balanceDue": "الرصيد المستحق",
     "documents": "المستندات",
@@ -1155,7 +1161,22 @@
     "scheduledFeeHint": "إن وُجدت زيارة مفتوحة مرتبطة، فالحفظ يحدّث أيضاً رسوم تلك الزيارة.",
     "scheduledFeePaymentHint": "اختر كيف سيدفع المريض الرسوم المجدولة. حجوزات التحويل يجب تحصيلها (مع إيصال) قبل إكمال الزيارة.",
     "startClinicHoursHint": "ساعات العيادة: {{hours}}. كل فترة {{minutes}} دقيقة ما لم تضبط وقت نهاية مخصصاً.",
-    "startMinHint": "اختر عيادة لتطبيق ساعات فتحها. كل فترة {{minutes}} دقيقة ما لم تضبط وقت نهاية مخصصاً."
+    "startMinHint": "اختر عيادة لتطبيق ساعات فتحها. كل فترة {{minutes}} دقيقة ما لم تضبط وقت نهاية مخصصاً.",
+    "wizardTitle": "موعد جديد",
+    "wizardSubtitle": "احجز زيارة عبر خطوات موجّهة. الحقول المطلوبة معلّمة.",
+    "wizardAria": "خطوات حجز الموعد",
+    "wizardStepLabel": "الخطوة {{n}}",
+    "wizardStepPeople": "الأشخاص والعيادة",
+    "wizardStepPeopleHint": "المريض والعيادة والطبيب المعالج",
+    "wizardStepSchedule": "الجدول والنوع",
+    "wizardStepScheduleHint": "التاريخ والوقت ونوع الزيارة",
+    "wizardStepConfirm": "الرسوم والتأكيد",
+    "wizardStepConfirmHint": "راجع الرسوم وأنشئ الحجز",
+    "wizardBack": "رجوع",
+    "wizardNext": "متابعة",
+    "wizardReview": "ملخص الحجز",
+    "wizardSelfClinician": "أنت الطبيب المعالج لهذا الحجز.",
+    "wizardSelfClinicianShort": "أنت"
   },
   "scheduling": {
     "appointmentTypesTitle": "أنواع المواعيد",

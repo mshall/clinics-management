@@ -228,7 +228,7 @@ Scheduled operations keep edit parity with create (wizard stages, two-column des
 | User ↔ employee cascade | `apps/api/src/common/user-employee-cascade.ts` |
 | Clinic disable / operating periods | `apps/api/src/clinics/clinics.service.ts` |
 | Clinic working hours | `apps/api/src/common/clinic-hours.ts`, `apps/web/src/lib/clinic-hours.ts`, `ClinicHoursSettingsPanel` |
-| Appointment scheduling & overlap | `apps/api/src/common/appointment-scheduling.ts`, `apps/web/src/features/appointments/` |
+| Appointment scheduling & overlap | `apps/api/src/common/appointment-scheduling.ts`, `apps/web/src/features/appointments/` (3-step create wizard; patient-profile New appointment; shared visit types with encounters) |
 | Document camera (mobile native) | `apps/web/src/components/document-camera-capture-dialog.tsx`, `apps/web/src/lib/platform.ts` |
 | Web clinics directory | `apps/web/src/features/clinics/clinics-page.tsx` |
 | Reports (date-range charts) | `apps/api/src/reports/reports.service.ts`, `apps/web/src/features/reports/reports-page.tsx` |

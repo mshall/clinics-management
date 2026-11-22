@@ -171,7 +171,7 @@ export function EncountersListPage() {
 
   const [createPatientId, setCreatePatientId] = useState("");
   const [createClinicId, setCreateClinicId] = useState("");
-  const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
+  const [createVisitType, setCreateVisitType] = useState<string>(ENCOUNTER_VISIT_TYPES[0] ?? "Check-up");
   const [createVisitFee, setCreateVisitFee] = useState("");
   const [createVisitCollection, setCreateVisitCollection] = useState<VisitCollectionValue>(emptyVisitCollection);
   const createVisitFeeCurrency = resolveClinicCurrency(createClinicId || clinics[0]?.id);
@@ -260,7 +260,7 @@ export function EncountersListPage() {
     setCreatePatientId("");
     setPinnedPatientItem(null);
     setCreateClinicId(clinics[0]?.id ?? "");
-    setCreateVisitType(ENCOUNTER_VISIT_TYPES[0] ?? "Office visit");
+    setCreateVisitType(ENCOUNTER_VISIT_TYPES[0] ?? "Check-up");
     const d = adminOv.data?.currentTenant?.defaultVisitFee;
     setCreateVisitFee(d != null && Number.isFinite(Number(d)) ? String(d) : "");
     validation.clear();

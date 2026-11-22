@@ -46,6 +46,7 @@ import {
   validateScheduledFeeCollection,
   type ScheduledFeeCollectionValue,
 } from "@/lib/visit-collection";
+import { ENCOUNTER_VISIT_TYPES, formatVisitType } from "@/lib/visit-types";
 
 function toDatetimeLocalValue(iso: string): string {
   const d = new Date(iso);
@@ -879,13 +880,41 @@ export function AppointmentDetailPage() {
             ) : null}
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label>{t("appointments.notes", "Notes")}</Label>
-            <textarea
-              className="flex min-h-[100px] w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
-              value={notes}
+            <Label>{t("encounters.visitType")}</Label>
+            <select
+              className={nativeSelectClassName}
+              value={
+                (ENCOUNTER_VISIT_TYPES as readonly string[]).includes(notes.trim())
+                  ? notes.trim()
+                  : notes.trim() &&
+                      ["Office visit", "Follow-up", "Consultation"].includes(notes.trim())
+                    ? notes.trim()
+                    : ""
+              }
               disabled={readOnly}
               onChange={(e) => setNotes(e.target.value)}
-            />
+            >
+              <option value="">{t("encounters.selectVisitType", "Select visit type")}</option>
+              {ENCOUNTER_VISIT_TYPES.map((vt) => (
+                <option key={vt} value={vt}>
+                  {formatVisitType(vt, t)}
+                </option>
+              ))}
+              {notes.trim() &&
+              !(ENCOUNTER_VISIT_TYPES as readonly string[]).includes(notes.trim()) ? (
+                <option value={notes.trim()}>{formatVisitType(notes.trim(), t)}</option>
+              ) : null}
+            </select>
+            {notes.trim() && !(ENCOUNTER_VISIT_TYPES as readonly string[]).includes(notes.trim()) &&
+            !["Office visit", "Follow-up", "Consultation"].includes(notes.trim()) ? (
+              <textarea
+                className="mt-2 flex min-h-[80px] w-full touch-manipulation rounded-md border border-input bg-background px-3 py-2 text-base disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+                value={notes}
+                disabled={readOnly}
+                onChange={(e) => setNotes(e.target.value)}
+                aria-label={t("appointments.notes", "Notes")}
+              />
+            ) : null}
           </div>
           {!readOnly ? (
             <div className="flex flex-wrap gap-2 sm:col-span-2">
