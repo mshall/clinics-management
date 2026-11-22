@@ -29,9 +29,16 @@ export function assertOperationAcquisition(
 }
 
 export function validatePatientAcquisition(dto: PatientAcquisitionInput): void {
-  if (dto.acquisitionChannel === PatientAcquisitionChannel.DOCTOR_REFERRAL) {
+  if (
+    dto.acquisitionChannel === PatientAcquisitionChannel.DOCTOR_REFERRAL ||
+    dto.acquisitionChannel === PatientAcquisitionChannel.ANOTHER_PATIENT
+  ) {
     if (!dto.acquisitionReferralName?.trim()) {
-      throw new BadRequestException("Referring doctor name is required for doctor referral");
+      throw new BadRequestException(
+        dto.acquisitionChannel === PatientAcquisitionChannel.ANOTHER_PATIENT
+          ? "Referring patient name is required for another-patient referral"
+          : "Referring doctor name is required for doctor referral",
+      );
     }
   }
   if (dto.acquisitionChannel === PatientAcquisitionChannel.OTHER) {
@@ -43,10 +50,12 @@ export function validatePatientAcquisition(dto: PatientAcquisitionInput): void {
 
 export function patientAcquisitionUpdateData(dto: PatientAcquisitionInput) {
   const channel = dto.acquisitionChannel ?? null;
+  const needsReferral =
+    channel === PatientAcquisitionChannel.DOCTOR_REFERRAL ||
+    channel === PatientAcquisitionChannel.ANOTHER_PATIENT;
   return {
     acquisitionChannel: channel,
-    acquisitionReferralName:
-      channel === PatientAcquisitionChannel.DOCTOR_REFERRAL ? dto.acquisitionReferralName?.trim() ?? null : null,
+    acquisitionReferralName: needsReferral ? dto.acquisitionReferralName?.trim() ?? null : null,
     acquisitionOtherDetail:
       channel === PatientAcquisitionChannel.OTHER ? dto.acquisitionOtherDetail?.trim() ?? null : null,
   };

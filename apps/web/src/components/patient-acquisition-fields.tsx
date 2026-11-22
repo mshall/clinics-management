@@ -30,7 +30,8 @@ export function PatientAcquisitionFields({ values, onChange, className, required
             const v = e.target.value as PatientAcquisitionChannel | "";
             onChange({
               channel: v,
-              referralName: v === "DOCTOR_REFERRAL" ? values.referralName : "",
+              referralName:
+                v === "DOCTOR_REFERRAL" || v === "ANOTHER_PATIENT" ? values.referralName : "",
               otherDetail: v === "OTHER" ? values.otherDetail : "",
             });
           }}
@@ -47,13 +48,17 @@ export function PatientAcquisitionFields({ values, onChange, className, required
           ))}
         </select>
       </div>
-      {values.channel === "DOCTOR_REFERRAL" ? (
+      {values.channel === "DOCTOR_REFERRAL" || values.channel === "ANOTHER_PATIENT" ? (
         <div className="mt-3 space-y-2">
           <Label required>{t("patients.explainMore", "Explain more")}</Label>
           <Input
             value={values.referralName}
             onChange={(e) => onChange({ ...values, referralName: e.target.value })}
-            placeholder={t("patients.explainMorePh", "Add details…")}
+            placeholder={
+              values.channel === "ANOTHER_PATIENT"
+                ? t("patients.anotherPatientPh", "Name of the patient who referred them…")
+                : t("patients.explainMorePh", "Add details…")
+            }
           />
         </div>
       ) : null}

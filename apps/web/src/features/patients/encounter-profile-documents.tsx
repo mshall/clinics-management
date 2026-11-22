@@ -1,12 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileUp, FlaskConical, Pill, ScanLine } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { UploadProgressBar } from "@/components/upload-progress-bar";
 import { Button } from "@/components/ui/button";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import type { EncounterDocumentDto } from "@/lib/api-types";
 import { apiPostFormData } from "@/lib/http";
+import { uploadFilesWithConcurrency } from "@/lib/upload-files-sequentially";
 
 type DocKind = "LAB" | "RADIOLOGY" | "PRESCRIPTION";
 
@@ -22,27 +24,37 @@ export function EncounterProfileDocuments({ encounterId, status, canUpload }: Pr
   const labRef = useRef<HTMLInputElement>(null);
   const radRef = useRef<HTMLInputElement>(null);
   const rxRef = useRef<HTMLInputElement>(null);
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const isFinalized = status === "FINALIZED";
   const isDraftLike = status === "DRAFT" || status === "AMENDED";
 
   const uploadMut = useMutation({
-    mutationFn: async ({ files, kind }: { files: FileList | File[]; kind: DocKind }) => {
-      const list = Array.from(files);
-      for (const file of list) {
-        const fd = new FormData();
-        fd.set("file", file);
-        fd.set("kind", kind);
-        await apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${encounterId}/documents`, fd);
-      }
+    mutationFn: async ({ files, kind }: { files: File[]; kind: DocKind }) => {
+      setUploadPercent(0);
+      await uploadFilesWithConcurrency(
+        files,
+        async (file) => {
+          const fd = new FormData();
+          fd.set("file", file);
+          fd.set("kind", kind);
+          return apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${encounterId}/documents`, fd);
+        },
+        4,
+        (done, total) => setUploadPercent(total > 0 ? Math.round((done / total) * 100) : 100),
+      );
     },
     onSuccess: async (_d, vars) => {
+      setUploadPercent(null);
       await qc.invalidateQueries({ queryKey: ["encounter", encounterId] });
       await qc.invalidateQueries({ queryKey: ["encounters"] });
       toast.success(
         t("patients.encounterDocsUploaded", "{{count}} document(s) uploaded.", { count: vars.files.length }),
       );
     },
-    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+    onError: (e: unknown) => {
+      setUploadPercent(null);
+      toast.error(apiErrorMessage(e));
+    },
   });
 
   if (!canUpload || (!isDraftLike && !isFinalized)) return null;
@@ -51,8 +63,8 @@ export function EncounterProfileDocuments({ encounterId, status, canUpload }: Pr
     const input = ref.current;
     if (!input) return;
     input.onchange = () => {
-      const files = input.files;
-      if (!files?.length) return;
+      const files = [...(input.files ?? [])];
+      if (!files.length) return;
       uploadMut.mutate({ files, kind });
       input.value = "";
     };
@@ -74,7 +86,9 @@ export function EncounterProfileDocuments({ encounterId, status, canUpload }: Pr
       <div className="flex flex-wrap gap-2">
         <input ref={labRef} type="file" className="hidden" accept="image/*,application/pdf" multiple />
         <input ref={radRef} type="file" className="hidden" accept="image/*,application/pdf" multiple />
-        {isDraftLike ? <input ref={rxRef} type="file" className="hidden" accept="image/*,application/pdf" /> : null}
+        {isDraftLike ? (
+          <input ref={rxRef} type="file" className="hidden" accept="image/*,application/pdf" multiple />
+        ) : null}
         <Button type="button" size="sm" variant="secondary" disabled={uploadMut.isPending} onClick={() => pickFiles("LAB", labRef)}>
           <FlaskConical className="me-1.5 h-3.5 w-3.5 text-kx-ocean-700" aria-hidden />
           {t("encounters.uploadLab", "Lab")}
@@ -96,6 +110,9 @@ export function EncounterProfileDocuments({ encounterId, status, canUpload }: Pr
           </span>
         ) : null}
       </div>
+      {uploadMut.isPending && uploadPercent != null ? (
+        <UploadProgressBar percent={uploadPercent} label={t("encounters.uploadProgress", "Uploading documents…")} compact />
+      ) : null}
     </section>
   );
 }

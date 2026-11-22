@@ -32,7 +32,10 @@ export function validatePatientAcquisitionForm(
   values: PatientAcquisitionFormValues,
   t: (key: string, fallback: string) => string,
 ): string | null {
-  if (values.channel === "DOCTOR_REFERRAL" && !values.referralName.trim()) {
+  if (
+    (values.channel === "DOCTOR_REFERRAL" || values.channel === "ANOTHER_PATIENT") &&
+    !values.referralName.trim()
+  ) {
     return t("patients.errorExplainMoreRequired", "Explain more is required.");
   }
   if (values.channel === "OTHER" && !values.otherDetail.trim()) {
@@ -44,7 +47,7 @@ export function validatePatientAcquisitionForm(
 export function patientAcquisitionFormToBody(values: PatientAcquisitionFormValues): Record<string, string> {
   if (!values.channel) return {};
   const body: Record<string, string> = { acquisitionChannel: values.channel };
-  if (values.channel === "DOCTOR_REFERRAL") {
+  if (values.channel === "DOCTOR_REFERRAL" || values.channel === "ANOTHER_PATIENT") {
     body.acquisitionReferralName = values.referralName.trim();
   }
   if (values.channel === "OTHER") {

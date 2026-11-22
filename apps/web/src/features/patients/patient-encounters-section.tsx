@@ -1,20 +1,26 @@
-import { HeartPulse } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Eye, HeartPulse, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
+import { EncounterProfileDocuments } from "@/features/patients/encounter-profile-documents";
+import { apiErrorMessage } from "@/lib/api-error-message";
 import { useEncounterQuery, useEncountersQuery } from "@/lib/api-hooks";
 import type { EncounterDetailDto, EncounterDocumentDto } from "@/lib/api-types";
-import { apiFetchBlob } from "@/lib/http";
+import { documentViewActionLabel } from "@/lib/document-view-label";
+import { apiDelete, apiFetchBlob } from "@/lib/http";
 import { formatClinicNameFields, formatEncounterStatus, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
-import { EncounterProfileDocuments } from "@/features/patients/encounter-profile-documents";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -26,9 +32,18 @@ type Props = {
 export function PatientEncountersSection({ patientId, canUploadDocs = false }: Props) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
+  const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<{
+    encounterId: string;
+    doc: EncounterDocumentDto;
+    url: string;
+    contentType: string;
+  } | null>(null);
+  const [docToDelete, setDocToDelete] = useState<{ encounterId: string; doc: EncounterDocumentDto } | null>(null);
+  const viewerUrlRef = useRef<string | null>(null);
 
   const { data, isPending } = useEncountersQuery({
     patientId,
@@ -45,18 +60,39 @@ export function PatientEncountersSection({ patientId, canUploadDocs = false }: P
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
-  const openDoc = async (encounterId: string, doc: EncounterDocumentDto) => {
-    const { blob } = await apiFetchBlob(`/api/v1/encounters/${encounterId}/documents/${doc.id}/file`);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = doc.originalFileName || "document";
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  const closeViewer = () => {
+    if (viewerUrlRef.current) {
+      URL.revokeObjectURL(viewerUrlRef.current);
+      viewerUrlRef.current = null;
+    }
+    setViewer(null);
   };
+
+  const openDoc = async (encounterId: string, doc: EncounterDocumentDto) => {
+    try {
+      const { blob, contentType } = await apiFetchBlob(`/api/v1/encounters/${encounterId}/documents/${doc.id}/file`);
+      const url = URL.createObjectURL(blob);
+      if (viewerUrlRef.current) URL.revokeObjectURL(viewerUrlRef.current);
+      viewerUrlRef.current = url;
+      setViewer({ encounterId, doc, url, contentType });
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e));
+    }
+  };
+
+  const deleteMut = useMutation({
+    mutationFn: ({ encounterId, docId }: { encounterId: string; docId: string }) =>
+      apiDelete(`/api/v1/encounters/${encounterId}/documents/${docId}`),
+    onSuccess: async (_d, vars) => {
+      setDocToDelete(null);
+      if (viewer?.doc.id === vars.docId) closeViewer();
+      await qc.invalidateQueries({ queryKey: ["encounter", vars.encounterId] });
+      await qc.invalidateQueries({ queryKey: ["encounters"] });
+      await qc.invalidateQueries({ queryKey: ["patient", patientId, "clinical-documents"] });
+      toast.success(t("encounters.docDeleted", "Document deleted."));
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
 
   return (
     <>
@@ -122,12 +158,55 @@ export function PatientEncountersSection({ patientId, canUploadDocs = false }: P
             <EncounterDetailView
               detail={detail}
               locale={locale}
-              onOpenDoc={openDoc}
               canUploadDocs={canUploadDocs}
+              onOpenDoc={openDoc}
+              onDeleteDoc={(doc) => setDocToDelete({ encounterId: detail.id, doc })}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {viewer ? (
+        <DocumentViewerOverlay
+          fileName={viewer.doc.originalFileName}
+          url={viewer.url}
+          contentType={viewer.contentType}
+          onClose={closeViewer}
+          headerActions={
+            canUploadDocs && (detail?.status === "DRAFT" || detail?.status === "AMENDED") ? (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => setDocToDelete({ encounterId: viewer.encounterId, doc: viewer.doc })}
+                disabled={deleteMut.isPending}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="ms-1">{t("patients.deleteDocument", "Delete")}</span>
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : null}
+
+      <ConfirmDialog
+        open={docToDelete != null}
+        onOpenChange={(open) => {
+          if (!open && !deleteMut.isPending) setDocToDelete(null);
+        }}
+        title={t("encounters.deleteDocTitle", "Delete document?")}
+        description={t("encounters.deleteDocBody", 'Delete "{{name}}"? This cannot be undone.', {
+          name: docToDelete?.doc.originalFileName ?? "",
+        })}
+        confirmLabel={t("encounters.deleteDocAction", "Delete document")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={deleteMut.isPending}
+        onConfirm={() => {
+          if (docToDelete) {
+            deleteMut.mutate({ encounterId: docToDelete.encounterId, docId: docToDelete.doc.id });
+          }
+        }}
+      />
     </>
   );
 }
@@ -167,16 +246,19 @@ function EncounterRow({ enc, onSelect }: { enc: EncounterDetailDto; onSelect: ()
 function EncounterDetailView({
   detail,
   locale,
-  onOpenDoc,
   canUploadDocs,
+  onOpenDoc,
+  onDeleteDoc,
 }: {
   detail: EncounterDetailDto;
   locale: string;
-  onOpenDoc: (encounterId: string, doc: EncounterDocumentDto) => void;
   canUploadDocs: boolean;
+  onOpenDoc: (encounterId: string, doc: EncounterDocumentDto) => void;
+  onDeleteDoc: (doc: EncounterDocumentDto) => void;
 }) {
   const { t, i18n } = useTranslation();
   const money = (n: number, currency: string) => formatMoneyAmount(n, currency, locale);
+  const canDeleteDocs = canUploadDocs && (detail.status === "DRAFT" || detail.status === "AMENDED");
 
   const vitalsParts: string[] = [];
   if (detail.heartRate != null) vitalsParts.push(`${t("encounters.vitalsHr", "HR")} ${detail.heartRate}`);
@@ -294,9 +376,18 @@ function EncounterDetailView({
                     {doc.kind} · {new Date(doc.createdAt).toLocaleDateString(localeForLanguage(i18n.language))}
                   </p>
                 </div>
-                <Button type="button" size="sm" variant="outline" onClick={() => onOpenDoc(detail.id, doc)}>
-                  {t("common.view", "View")}
-                </Button>
+                <div className="flex flex-wrap gap-1">
+                  <Button type="button" size="sm" variant="outline" onClick={() => void onOpenDoc(detail.id, doc)}>
+                    <Eye className="h-4 w-4" />
+                    <span className="ms-1">{documentViewActionLabel(doc.originalFileName, doc.mimeType, t)}</span>
+                  </Button>
+                  {canDeleteDocs ? (
+                    <Button type="button" size="sm" variant="outline" onClick={() => onDeleteDoc(doc)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <span className="ms-1">{t("patients.deleteDocument", "Delete")}</span>
+                    </Button>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>
