@@ -751,6 +751,8 @@
     "acquisitionOther": "Other",
     "errorDocDescriptionRequired": "Each attached document needs a description.",
     "errorDocCategoryRequired": "Each attached document needs a type.",
+    "errorDocCategoryDuplicate": "Each document type can only be added once. Choose a different type or add more files to the existing row.",
+    "docCategoryAlreadyUsed": "already added",
     "errorDocOtherRequired": "Explain what the document is when you choose Other.",
     "errorDocFileRequired": "Choose a file for each document description.",
     "errorReferralNameRequired": "Enter the referring doctor's name.",

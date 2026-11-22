@@ -50,6 +50,8 @@ export type OperationCreateValidationInput = {
   /** Contract / تعاقد — required when fee editors set total to 0. */
   isContract?: boolean;
   docRows: PendingDocumentRow[];
+  /** Categories already present on the saved operation. */
+  reservedDocCategories?: readonly string[];
   medTab: MedTab;
   prescriptionFile: File | null;
   generatedPrescriptionFile: File | null;
@@ -132,7 +134,10 @@ export function collectOperationCreateValidationIssues(
     }
   }
 
-  const docValidation = collectPendingDocumentFieldErrors(input.docRows);
+  const docValidation = collectPendingDocumentFieldErrors(input.docRows, {
+    uniqueCategories: true,
+    reservedCategories: input.reservedDocCategories,
+  });
   const docMsg = pendingDocumentValidationMessage(docValidation.code, t);
   if (docMsg) {
     issues.push(docMsg);

@@ -91,3 +91,41 @@ export function isOperationClinicalDocumentKind(kind: string): boolean {
     kind === "PRESCRIPTION"
   );
 }
+
+/** Map stored API kind → UI category when unambiguous. */
+export function operationDocumentCategoryFromKind(kind: string): OperationDocumentCategory | null {
+  switch (kind) {
+    case "CONSENT":
+      return "CONSENT";
+    case "OPERATION_NOTE":
+      return "OPERATION_REPORT";
+    case "PRESCRIPTION":
+      return "PRESCRIPTION";
+    default:
+      return null;
+  }
+}
+
+/** Categories already used by saved operation documents (kind + description label match). */
+export function reservedOperationDocumentCategories(
+  documents: readonly { kind: string; description?: string | null }[],
+  t: (key: string, fallback: string) => string,
+): string[] {
+  const reserved = new Set<string>();
+  for (const doc of documents) {
+    const fromKind = operationDocumentCategoryFromKind(doc.kind);
+    if (fromKind) {
+      reserved.add(fromKind);
+      continue;
+    }
+    const desc = doc.description?.trim();
+    if (!desc) continue;
+    for (const cat of OPERATION_DOCUMENT_CATEGORIES) {
+      if (cat === "OTHER") continue;
+      if (operationDocumentCategoryLabel(cat, t) === desc) {
+        reserved.add(cat);
+      }
+    }
+  }
+  return [...reserved];
+}

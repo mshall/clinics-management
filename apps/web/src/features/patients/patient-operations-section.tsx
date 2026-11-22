@@ -11,7 +11,6 @@ import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useOperationQuery, useOperationsQuery } from "@/lib/api-hooks";
 import type { OperationDocumentDto, OperationDto } from "@/lib/api-types";
-import { apiFetchBlob } from "@/lib/http";
 import { formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
 import { showOperationMoneyColumns } from "@/lib/operation-money-policy";
@@ -21,7 +20,11 @@ import { filterFieldClassName, filterToolbarCompactClassName, nativeSelectClassN
 import { Label } from "@/components/ui/label";
 import { OperationPostSurgeryDocumentsSection } from "@/features/operations/operation-post-surgery-documents";
 import { OperationPreSurgeryProfileDocs } from "@/features/patients/operation-pre-surgery-profile-docs";
-import { operationDocumentKindLabel } from "@/lib/operation-document-categories";
+import { OperationDocumentFileActions } from "@/components/operation-document-file-actions";
+import {
+  operationDocumentKindLabel,
+  reservedOperationDocumentCategories,
+} from "@/lib/operation-document-categories";
 import { operationStatusIsEditable } from "@/lib/operation-status-policy";
 
 const PATIENT_OPS_PAGE_SIZE = 5;
@@ -68,19 +71,6 @@ export function PatientOperationsSection({ patientId, canUploadDocs = false }: P
   const rows = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
-
-  const openDoc = async (operationId: string, doc: OperationDocumentDto) => {
-    const { blob } = await apiFetchBlob(`/api/v1/operations/${operationId}/documents/${doc.id}/file`);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = doc.originalFileName || "document";
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  };
 
   return (
     <>
@@ -175,7 +165,6 @@ export function PatientOperationsSection({ patientId, canUploadDocs = false }: P
             <OperationDetailView
               detail={detail}
               locale={locale}
-              onOpenDoc={openDoc}
               canUploadDocs={canUploadDocs}
             />
           )}
@@ -233,13 +222,11 @@ function OperationDocumentsBlock({
   title,
   documents,
   operationId,
-  onOpenDoc,
   emptyLabel,
 }: {
   title: string;
   documents: OperationDocumentDto[];
   operationId: string;
-  onOpenDoc: (operationId: string, doc: OperationDocumentDto) => void;
   emptyLabel: string;
 }) {
   const { t, i18n } = useTranslation();
@@ -265,9 +252,7 @@ function OperationDocumentsBlock({
                   {new Date(doc.createdAt).toLocaleDateString(localeForLanguage(i18n.language))}
                 </p>
               </div>
-              <Button type="button" size="sm" variant="outline" onClick={() => onOpenDoc(operationId, doc)}>
-                {t("common.view", "View")}
-              </Button>
+              <OperationDocumentFileActions operationId={operationId} doc={doc} />
             </li>
           ))}
         </ul>
@@ -279,16 +264,15 @@ function OperationDocumentsBlock({
 function OperationDetailView({
   detail,
   locale,
-  onOpenDoc,
   canUploadDocs,
 }: {
   detail: NonNullable<ReturnType<typeof useOperationQuery>["data"]>;
   locale: string;
-  onOpenDoc: (operationId: string, doc: OperationDocumentDto) => void;
   canUploadDocs: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const money = (n: number) => formatMoneyAmount(n, detail.feeCurrency, locale);
+  const reservedCategories = reservedOperationDocumentCategories(detail.documents, t);
 
   return (
     <div className="space-y-4 text-sm">
@@ -338,14 +322,17 @@ function OperationDetailView({
       ) : null}
 
       {operationStatusIsEditable(detail.status) && canUploadDocs ? (
-        <OperationPreSurgeryProfileDocs operationId={detail.id} canUpload />
+        <OperationPreSurgeryProfileDocs
+          operationId={detail.id}
+          canUpload
+          reservedCategories={reservedCategories}
+        />
       ) : null}
 
       <OperationDocumentsBlock
         title={t("operations.preSurgeryDocuments", "Pre-surgery documents")}
         documents={detail.documents.filter((d) => d.kind !== "POST_SURGERY")}
         operationId={detail.id}
-        onOpenDoc={onOpenDoc}
         emptyLabel={t("patients.noDocuments", "No documents")}
       />
       {operationStatusIsDischarged(detail.status) ? (
@@ -354,7 +341,6 @@ function OperationDetailView({
             title={t("operations.postSurgeryTitle", "Post-surgery documents")}
             documents={detail.documents.filter((d) => d.kind === "POST_SURGERY")}
             operationId={detail.id}
-            onOpenDoc={onOpenDoc}
             emptyLabel={t("operations.postSurgeryEmpty", "No post-surgery documents yet.")}
           />
           <OperationPostSurgeryDocumentsSection

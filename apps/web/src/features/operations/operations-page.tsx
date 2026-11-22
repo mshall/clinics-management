@@ -24,6 +24,7 @@ import {
   isOperationClinicalDocumentKind,
   operationDocumentCategoryLabel,
   operationDocumentKindLabel,
+  reservedOperationDocumentCategories,
   type OperationDocumentCategory,
 } from "@/lib/operation-document-categories";
 import { OperationStatusBadge } from "@/components/operation-status-badge";
@@ -69,6 +70,7 @@ import {
   operationStatusIsDischarged,
   canMarkOperationCompleted,
 } from "@/lib/operation-status-policy";
+import { OperationDocumentFileActions } from "@/components/operation-document-file-actions";
 import { OperationPostSurgeryDocumentsSection } from "@/features/operations/operation-post-surgery-documents";
 import { operationNeedsPipelineSkip, skippedPipelineStageKeys } from "@/lib/operation-pipeline";
 import { canGenerateInvoice } from "@/lib/invoice-generate-policy";
@@ -602,6 +604,7 @@ export function OperationsPage() {
             feesOptional: true,
             isContract: true,
             docRows: editDocRows,
+            reservedDocCategories: reservedOperationDocumentCategories(editExistingAttachments, t),
             medTab: editMedTab,
             prescriptionFile: editPrescriptionFile,
             generatedPrescriptionFile: editGeneratedPrescriptionFile,
@@ -622,6 +625,7 @@ export function OperationsPage() {
           feesOptional: !canEditFees,
           isContract: editIsContract,
           docRows: editDocRows,
+          reservedDocCategories: reservedOperationDocumentCategories(editExistingAttachments, t),
           medTab: editMedTab,
           prescriptionFile: editPrescriptionFile,
           generatedPrescriptionFile: editGeneratedPrescriptionFile,
@@ -1748,13 +1752,19 @@ export function OperationsPage() {
                     {editExistingAttachments.length > 0 ? (
                       <div className="space-y-2 rounded-lg border border-border p-3 sm:p-4 lg:col-span-2">
                         <p className="text-sm font-medium">{t("operations.existingDocuments", "Saved documents")}</p>
-                        <ul className="space-y-1 text-sm text-muted-foreground">
+                        <ul className="space-y-2 text-sm text-muted-foreground">
                           {editExistingAttachments.map((doc) => (
-                            <li key={doc.id}>
-                              <span className="font-medium text-foreground">
-                                {operationDocumentKindLabel(doc.kind, t)}
-                              </span>
-                              {doc.description ? ` — ${doc.description}` : ` — ${doc.originalFileName}`}
+                            <li
+                              key={doc.id}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-medium text-foreground">
+                                  {operationDocumentKindLabel(doc.kind, t)}
+                                  {doc.description ? ` — ${doc.description}` : ` — ${doc.originalFileName}`}
+                                </p>
+                              </div>
+                              <OperationDocumentFileActions operationId={editOp.id} doc={doc} />
                             </li>
                           ))}
                         </ul>
@@ -1771,6 +1781,8 @@ export function OperationsPage() {
                         invalidRowIds={editDocInvalidRowIds.size > 0 ? editDocInvalidRowIds : undefined}
                         categories={OPERATION_DOCUMENT_CATEGORIES}
                         categoryLabel={operationDocumentCategoryLabel}
+                        uniqueCategories
+                        reservedCategories={reservedOperationDocumentCategories(editExistingAttachments, t)}
                         optionalHint={t(
                           "operations.documentsOptionalHint",
                           "Optional — attach consent, operation report, labs, imaging, or other files.",
@@ -2199,6 +2211,7 @@ export function OperationsPage() {
                   invalidRowIds={docInvalidRowIds.size > 0 ? docInvalidRowIds : undefined}
                   categories={OPERATION_DOCUMENT_CATEGORIES}
                   categoryLabel={operationDocumentCategoryLabel}
+                  uniqueCategories
                   optionalHint={t(
                     "operations.documentsOptionalHint",
                     "Optional — attach consent, operation report, labs, imaging, or other files.",
