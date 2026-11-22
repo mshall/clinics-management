@@ -1,0 +1,25 @@
+---
+description: Fix narrative — Dr Ahmed Shall duplicate patients + AWS deploy data safety (Nov 2026).
+alwaysApply: true
+---
+
+# Fix narrative (2026-11): Dr Ahmed Shall duplicates + deploy data safety
+
+## Problem
+
+1. **Deploy risk:** Shipping UI/API fixes to `main` deploys AWS. Operators feared losing **Dr Ahmed Shall Group** charts and **uploaded documents** (S3). Seed/deploy must never wipe live PHI.
+2. **Duplicate patients:** The live org had many double charts (same real phone / same name+DOB). The duplicate finder also **falsely clustered** placeholder phones (`000…`, `111…`) as one person — merging those would have destroyed unrelated patients. Some shared phones belonged to **different people** (must not auto-merge).
+
+## What we fixed
+
+1. **Cursor rule** `aws-deploy-data-safety.mdc` — always-on guardrails: incremental seed only, never empty S3 uploads, additive migrations, merge instead of hard-delete.
+2. **Duplicate detection** (`double-linked-patients.ts`): ignore placeholder phones; `isSafeAutoMergeCluster` requires compatible names on phone matches; skip intentional `AES-*` seed name+DOB clones across clinics.
+3. **Merge quality** (`patient-merge-fields.ts` + `mergePatients`): default **fill empty demographics** from the duplicate; **richness score** (filled fields + docs/visits) picks the survivor; all clinical rows and **patient documents** move to the survivor; source is soft-deleted.
+4. **Admin API** `POST /api/v1/admin/data-explorer/merge-safe-duplicate-patients` — group-admin one-shot safe merge for the current tenant.
+5. **Live cleanup (AWS Dr Ahmed Shall):** merged **11** safe duplicate charts into survivors (e.g. Mohammed Elnagar ×4, Safaa, Rania, Mostafa Hassan, Hesham, Asmaa, Mohsena Saleh, Badry/Badr) — documents/visits moved. Left alone: placeholder `000…`/`111…` phones, AES seed name+DOB clones, and shared-phone different people (Adam/El Amir, Safua/nagwa). Name matching was tightened so a lone shared first name (e.g. Mohammed) is not enough to auto-merge.
+
+## Do not regress
+
+- Do not auto-merge on phone alone without name checks.
+- Do not treat `000…` / `111…` as a real phone identity.
+- Do not delete S3 upload objects when retiring a merged patient row.

@@ -1,0 +1,30 @@
+---
+description: Protect Dr Ahmed Shall / AWS production data and uploads on every main deploy.
+alwaysApply: true
+---
+
+# AWS deploy data safety (Dr Ahmed Shall Group)
+
+## Problem this rule prevents
+
+Pushing product fixes to **`main`** triggers AWS deploy (App Runner + post-deploy **DbSeedFn**). A careless seed, migration, or “cleanup” script can wipe or orphan **live clinic data** for **Dr Ahmed Shall Group** (patients, appointments, encounters, operations) and especially **uploaded documents** (patient / encounter / operation blobs in **S3**). That org is used for real testing with production-like PHI.
+
+## What stays safe (do not weaken)
+
+1. **Post-deploy seed is incremental only** — `prisma/seed.ts` must **ensure** missing demo users/clinics; it must **never** `deleteMany` patients, appointments, encounters, operations, or document rows for existing tenants.
+2. **Uploads live in S3** (`UPLOAD_STORAGE=s3`, `S3_UPLOAD_BUCKET`) — App Runner image deploys and SPA S3 syncs do **not** empty the uploads bucket. Never add deploy steps that `aws s3 rm` the uploads bucket or rewrite document `storageKey` / `relativePath` without a migration plan.
+3. **Prisma migrations must be additive** for production — no drop-table / drop-column of patient or document storage without an explicit user-approved data migration and backup.
+4. **Do not** point local `db:seed:demo` / destructive demo resets at production `DATABASE_URL`.
+5. Prefer **soft-delete** and merge tools over hard deletes when cleaning duplicates.
+
+## Agent behavior (mandatory)
+
+1. Before shipping deployable changes that touch seed, Prisma schema, upload storage, org backup/import, or DbSeedFn/Dockerfile.seed: call out **Dr Ahmed Shall / AWS data impact** in the summary.
+2. Never “fix” production by truncating tenants, re-seeding patients, or deleting S3 keys “to clear duplicates”.
+3. Duplicate patient cleanup uses **`Patient360Service.mergePatients`** / **`mergeSafeDuplicatePatients`** (moves encounters, appointments, operations, **patient documents**, allergies, photos, invoices; soft-deletes source). Do not invent SQL that deletes document files.
+4. If the user asks to reset or wipe AWS/Dr Ahmed Shall data, **stop and confirm** unless they give an explicit one-time bypass in the same message.
+
+## Related
+
+- [`Docs/AWS_Cloud_Deployment_Guide.md`](../../Docs/AWS_Cloud_Deployment_Guide.md) — seed off boot, DbSeedFn, S3 uploads.
+- Pre-deploy pg_dump email backup is currently skipped; **RDS automated backups (7 days)** remain the restore path.

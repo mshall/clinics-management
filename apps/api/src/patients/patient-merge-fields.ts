@@ -47,17 +47,63 @@ export function isPatientMergeFieldKey(key: string): key is PatientMergeFieldKey
   return (PATIENT_MERGE_FIELD_KEYS as readonly string[]).includes(key);
 }
 
+function isEmptyMergeValue(key: PatientMergeFieldKey, value: unknown): boolean {
+  if (key === "isVip" || key === "needsChaperone" || key === "gender") return false;
+  if (value == null) return true;
+  if (typeof value === "string") return !value.trim();
+  return false;
+}
+
+/**
+ * Prefer source only when the target field is empty/missing and the source has a value.
+ * Used as the default merge policy so the richer chart stays and gaps are filled.
+ */
+export function patientMergeFillEmptyChoices(
+  target: PatientMergeSnapshot,
+  source: PatientMergeSnapshot,
+): PatientMergeFieldChoices {
+  const choices: PatientMergeFieldChoices = {};
+  for (const key of PATIENT_MERGE_FIELD_KEYS) {
+    if (key === "isVip" || key === "needsChaperone" || key === "gender") continue;
+    if (isEmptyMergeValue(key, target[key]) && !isEmptyMergeValue(key, source[key])) {
+      choices[key] = "source";
+    }
+  }
+  return choices;
+}
+
+/** Heuristic: more filled demographics + optional related-row counts → keep as merge target. */
+export function patientMergeRichnessScore(
+  patient: PatientMergeSnapshot,
+  relatedCounts?: { documents?: number; encounters?: number; appointments?: number; operations?: number },
+): number {
+  let score = 0;
+  for (const key of PATIENT_MERGE_FIELD_KEYS) {
+    if (key === "isVip" || key === "needsChaperone") {
+      if (patient[key]) score += 2;
+      continue;
+    }
+    if (key === "gender") continue;
+    if (!isEmptyMergeValue(key, patient[key])) score += key === "nationalId" || key === "dob" ? 3 : 1;
+  }
+  score += (relatedCounts?.documents ?? 0) * 5;
+  score += (relatedCounts?.encounters ?? 0) * 4;
+  score += (relatedCounts?.appointments ?? 0) * 3;
+  score += (relatedCounts?.operations ?? 0) * 4;
+  return score;
+}
+
 /** Build Prisma update data for target from field choices (source values when preferred). */
 export function patientMergeTargetUpdateData(
   target: PatientMergeSnapshot,
   source: PatientMergeSnapshot,
   choices: PatientMergeFieldChoices | undefined,
 ): Prisma.PatientUpdateInput {
-  if (!choices) return {};
+  const effective = choices && Object.keys(choices).length > 0 ? choices : patientMergeFillEmptyChoices(target, source);
+  if (!Object.keys(effective).length) return {};
   const data: Prisma.PatientUpdateInput = {};
   for (const key of PATIENT_MERGE_FIELD_KEYS) {
-    if (choices[key] !== "source") continue;
-    const value = source[key];
+    if (effective[key] !== "source") continue;
     switch (key) {
       case "firstNameEn":
         data.firstNameEn = source.firstNameEn;
@@ -109,10 +155,8 @@ export function patientMergeTargetUpdateData(
       default: {
         const _exhaustive: never = key;
         void _exhaustive;
-        void value;
       }
     }
   }
-  void target;
   return data;
 }

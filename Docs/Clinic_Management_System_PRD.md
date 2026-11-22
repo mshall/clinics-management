@@ -210,7 +210,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 ### 6.1c Encounters & clinical documents (current build)
 
-- Encounter editor: SOAP fields, structured vitals, ICD-10 diagnoses, medications, **lab / radiology / prescription** document uploads per visit, optional **generate prescription** image from manual meds, finalize workflow.
+- Encounter editor: SOAP fields, structured vitals, ICD-10 diagnoses, medications (aligned mode tabs + count badges), **lab / radiology / prescription** document uploads per visit, optional **generate prescription** image from manual meds, finalize workflow. **Create encounter** and **create appointment** use responsive multi-step wizards; visit type **Walk-In - No Appointment booked** (EN/AR).
 - **Mandatory attending doctor** validation and field highlighting on save when required data is missing.
 - Patient profile clinical sections roll up encounter documents by kind across all visits the user is allowed to see (respecting physician/clinic scope).
 
@@ -701,7 +701,7 @@ Improvements that extend **already shipped** areas without waiting for a major n
 | N.10 | **Admin users** | SSO group → role mapping; forced MFA for `GROUP_ADMIN` | P0 |
 | N.11 | **Operations** | Pre-op / post-op status checklist templates | P2 |
 | N.12 | **Expenses** | Approval workflow (submit → approve → post) with delegation | P1 |
-| N.13 | **Patients** | Duplicate patient merge wizard (MRN consolidation) | P1 |
+| N.13 | **Patients** | Duplicate patient merge (wizard + safe auto-merge: fill empty fields, move docs/visits; ignore placeholder phones) | **Shipped** |
 | N.14 | **Mobile web** | PWA install prompt + offline read cache for today’s schedule | P2 |
 
 #### 12.3.8 Analytics, reporting & intelligence
