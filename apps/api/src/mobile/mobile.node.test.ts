@@ -88,7 +88,6 @@ describe("plan gate classification (MobilePlanGuard + interceptor share it)", ()
   it("gates /mobile/* and app-identified requests except the exempt routes", () => {
     assert.equal(isMobilePlanGated("GET", "/mobile/summary", undefined), true);
     assert.equal(isMobilePlanGated("GET", "/patients", "kiorly-team/1.2"), true);
-    assert.equal(isMobilePlanGated("GET", "/patients", "kiorly-work/1.2"), true); // legacy client id (pre-rename builds)
     assert.equal(isMobilePlanGated("GET", "/patients", undefined), false);
     assert.equal(isMobilePlanGated("GET", "/mobile/alerts", undefined), false);
     assert.equal(isMobilePlanGated("GET", "/mobile/bootstrap", "kiorly-team/1"), false);

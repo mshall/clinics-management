@@ -17,9 +17,9 @@ export function isMobileExempt(method: string, p: string): boolean {
   return method === "DELETE" && /^\/mobile\/devices\/[^/]+$/.test(p);
 }
 
-/** True for every /mobile/* route and every request identifying as the app (X-Kiorly-Client: kiorly-team/...); legacy kiorly-work/... is still accepted, minus the plan-exempt routes. */
+/** True for every /mobile/* route and every request identifying as the app (X-Kiorly-Client: kiorly-team/...), minus the plan-exempt routes. */
 export function isMobilePlanGated(method: string, p: string, client: string | undefined): boolean {
-  return Boolean((client && /^kiorly-(team|work)(\/|$)/.test(client)) || p.startsWith("/mobile/")) && !isMobileExempt(method, p);
+  return Boolean((client && /^kiorly-team(\/|$)/.test(client)) || p.startsWith("/mobile/")) && !isMobileExempt(method, p);
 }
 
 /** Throws the 403 FEATURE_DISABLED body of the app's upgrade screen. */
