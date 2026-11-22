@@ -805,7 +805,10 @@
     "pairShort": "Set",
     "partialPhotoPair": "Add both BEFORE and AFTER photos to enable the comparison slider.",
     "photoUnavailable": "Image unavailable",
-    "viewAllOperations": "View all operations"
+    "viewAllOperations": "View all operations",
+    "newAppointment": "New appointment",
+    "newAppointmentHint": "Schedule a visit",
+    "newEncounterDialogHint": "Start a clinical visit for this patient. Choose the attending doctor and visit type."
   },
   "encounters": {
     "title": "Encounter",
@@ -985,7 +988,10 @@
       "telehealth": "Telehealth",
       "annual_physical": "Annual physical",
       "urgent_care": "Urgent care",
-      "procedure": "Procedure"
+      "procedure": "Procedure",
+      "check_up": "Check-up",
+      "follow_up_encounter": "Follow-up — Encounter",
+      "follow_up_operation": "Follow-up — Operation"
     },
     "balanceDue": "Balance due",
     "documents": "Documents",
@@ -1155,7 +1161,22 @@
     "scheduledFeeHint": "If an open encounter is linked, saving also updates that encounter visit fee.",
     "scheduledFeePaymentHint": "Choose how the patient will pay the scheduled fee. Transfer channel bookings must be collected (with receipt) before the visit is completed.",
     "startClinicHoursHint": "Clinic hours: {{hours}}. Each slot is {{minutes}} minutes unless you set a custom end time.",
-    "startMinHint": "Select a clinic to apply its opening hours. Each slot is {{minutes}} minutes unless you set a custom end time."
+    "startMinHint": "Select a clinic to apply its opening hours. Each slot is {{minutes}} minutes unless you set a custom end time.",
+    "wizardTitle": "New appointment",
+    "wizardSubtitle": "Book a visit in a few guided steps. Required fields are marked.",
+    "wizardAria": "Appointment booking steps",
+    "wizardStepLabel": "Step {{n}}",
+    "wizardStepPeople": "People & clinic",
+    "wizardStepPeopleHint": "Patient, clinic, and attending doctor",
+    "wizardStepSchedule": "Schedule & type",
+    "wizardStepScheduleHint": "Date, time, and visit type",
+    "wizardStepConfirm": "Fee & confirm",
+    "wizardStepConfirmHint": "Review fees and create the booking",
+    "wizardBack": "Back",
+    "wizardNext": "Continue",
+    "wizardReview": "Booking summary",
+    "wizardSelfClinician": "You are the attending doctor for this booking.",
+    "wizardSelfClinicianShort": "You"
   },
   "scheduling": {
     "appointmentTypesTitle": "Appointment types",

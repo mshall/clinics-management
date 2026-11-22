@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
+  CalendarPlus,
   Camera,
   FileStack,
   GitMerge,
@@ -14,15 +14,16 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { AppointmentCreateWizard } from "@/features/appointments/appointment-create-wizard";
+import { PatientEncounterCreateDialog } from "@/features/encounters/patient-encounter-create-dialog";
 import { PatientMoneySection } from "@/features/patients/patient-money-section";
 import { canUsePatientMoney } from "@/lib/patient-money-policy";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PatientEditDialog } from "@/components/patient-edit-dialog";
-import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PatientClinicalDocuments } from "@/components/patient-clinical-documents";
 import { PatientInvoicesSection } from "@/features/invoices/patient-invoices-section";
 import { OutboundMessageLog } from "@/features/messaging/outbound-message-log";
@@ -49,31 +50,34 @@ import { featureTabTriggerClassName, featureTabsListClassName } from "@/lib/feat
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useClinicsQuery, useEncountersQuery, usePatientQuery } from "@/lib/api-hooks";
-import type { EncounterDetailDto } from "@/lib/api-types";
-import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
-import { collectQuickEncounterIssues } from "@/lib/create-form-validation";
-import { apiFetchBlob, apiPost } from "@/lib/http";
+import { apiFetchBlob } from "@/lib/http";
 import { enhanceImageFile } from "@/lib/enhance-image";
 import { calculateAgeFromDob, formatPatientDob, localeForLanguage } from "@/lib/locale-display";
 import { patientAcquisitionDisplay, type PatientAcquisitionChannel } from "@/lib/patient-acquisition";
 import { showNavItem } from "@/lib/nav-policy";
 import { canEditPatientDetails } from "@/lib/patient-edit-policy";
-import { canMutateNavTab } from "@/lib/nav-tab-access-policy";
+import {
+  canMutateAppointmentsNav,
+  canMutateEncountersNav,
+  canMutateNavTab,
+} from "@/lib/nav-tab-access-policy";
 import { canEditOperationStage2 } from "@/lib/operation-stage-policy";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function PatientDetailPage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams();
-  const navigate = useNavigate();
-  const qc = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
   const authUser = useAuthStore((s) => s.user);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const navTabAccessModes = useAuthStore((s) => s.user?.navTabAccessModes);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
   const canViewEncounters = showNavItem(role, "encounters", navTabKeys, roleNavTabKeys);
+  const canViewAppointments = showNavItem(role, "appointments", navTabKeys, roleNavTabKeys);
+  const canCreateAppointment = canMutateAppointmentsNav(role, navTabKeys, navTabAccessModes);
+  const canCreateEncounter = canMutateEncountersNav(role, navTabKeys, navTabAccessModes);
   const canViewOperationsNav = showNavItem(role, "operations", navTabKeys, roleNavTabKeys);
   /** Patient chart: show operations beside encounters when either tab is granted. */
   const canViewPatientOperations = canViewOperationsNav || canViewEncounters;
@@ -95,6 +99,8 @@ export function PatientDetailPage() {
   const [familyOpen, setFamilyOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [photosOpen, setPhotosOpen] = useState(false);
+  const [appointmentWizardOpen, setAppointmentWizardOpen] = useState(false);
+  const [encounterCreateOpen, setEncounterCreateOpen] = useState(false);
   const { data: patient, isPending, isError, error } = usePatientQuery(id);
   const [vitalsPage, setVitalsPage] = useState(1);
   const [vitalsPageSize, setVitalsPageSize] = useState(10);
@@ -128,45 +134,6 @@ export function PatientDetailPage() {
   const { data: clinics = [] } = useClinicsQuery();
 
   const defaultClinicId = patient?.homeBranchId ?? clinics[0]?.id ?? "";
-  const encounterValidation = useValidationIssuesDialog({ intent: "create" });
-
-  const createEncounter = useMutation({
-    mutationFn: () =>
-      apiPost<EncounterDetailDto>("/api/v1/encounters", {
-        clinicId: defaultClinicId,
-        patientId: patient!.id,
-        visitType: "Office visit",
-        chiefComplaint: "",
-      }),
-    onSuccess: (enc) => {
-      void qc.invalidateQueries({ queryKey: ["encounters"] });
-      void qc.invalidateQueries({ queryKey: ["patient", id] });
-      void qc.invalidateQueries({ queryKey: ["appointments"] });
-      void qc.invalidateQueries({ queryKey: ["revenue"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
-      navigate(`/encounters/${enc.id}`);
-    },
-    onError: (e: unknown) => encounterValidation.showError(e),
-  });
-
-  const handleCreateEncounter = () => {
-    if (createEncounter.isPending) return;
-    if (patient?.profileComplete === false) {
-      encounterValidation.showIssues([
-        t(
-          "patients.errorProfileIncompleteForEncounter",
-          "Complete this patient profile before starting an encounter.",
-        ),
-      ]);
-      return;
-    }
-    const issues = collectQuickEncounterIssues({ clinicId: defaultClinicId }, t);
-    if (issues.length > 0) {
-      encounterValidation.showIssues(issues);
-      return;
-    }
-    createEncounter.mutate();
-  };
 
   useSyncOnChange([avatarKey], () => {
     if (!avatarKey) return;
@@ -296,12 +263,35 @@ export function PatientDetailPage() {
                     : t("patients.editPatient", "Edit patient")}
                 </Button>
               ) : null}
-              {canViewEncounters ? (
+              {canViewAppointments && canCreateAppointment ? (
                 <Button
                   type="button"
-                  disabled={createEncounter.isPending || patient.profileComplete === false}
-                  onClick={handleCreateEncounter}
+                  data-testid="patient-new-appointment"
+                  className={cn(
+                    "relative overflow-hidden border-0 bg-linear-to-br from-sky-600 via-sky-500 to-teal-500",
+                    "text-white shadow-kx-2 hover:from-sky-500 hover:via-sky-500 hover:to-teal-400",
+                    "hover:shadow-kx-3",
+                  )}
+                  onClick={() => setAppointmentWizardOpen(true)}
                 >
+                  <CalendarPlus className="size-4" aria-hidden />
+                  <span className="flex flex-col items-start leading-tight">
+                    <span className="text-sm font-semibold">{t("patients.newAppointment", "New appointment")}</span>
+                    <span className="text-[10px] font-normal text-white/85">
+                      {t("patients.newAppointmentHint", "Schedule a visit")}
+                    </span>
+                  </span>
+                </Button>
+              ) : null}
+              {canViewEncounters && canCreateEncounter ? (
+                <Button
+                  type="button"
+                  data-testid="patient-new-encounter"
+                  variant="create"
+                  disabled={patient.profileComplete === false}
+                  onClick={() => setEncounterCreateOpen(true)}
+                >
+                  <HeartPulse className="size-4" aria-hidden />
                   {t("patients.newEncounter")}
                 </Button>
               ) : null}
@@ -580,7 +570,25 @@ export function PatientDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <ValidationIssuesDialog {...encounterValidation.dialogProps} />
+      {canViewAppointments && canCreateAppointment ? (
+        <AppointmentCreateWizard
+          open={appointmentWizardOpen}
+          onOpenChange={setAppointmentWizardOpen}
+          lockedPatientId={patient.id}
+          lockedPatientLabel={name}
+        />
+      ) : null}
+
+      {canViewEncounters && canCreateEncounter ? (
+        <PatientEncounterCreateDialog
+          open={encounterCreateOpen}
+          onOpenChange={setEncounterCreateOpen}
+          patientId={patient.id}
+          patientLabel={name}
+          defaultClinicId={defaultClinicId}
+          profileComplete={patient.profileComplete !== false}
+        />
+      ) : null}
     </div>
   );
 }

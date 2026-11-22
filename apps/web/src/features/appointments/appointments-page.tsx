@@ -1,16 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
-import { PatientPhoneField } from "@/components/patient-phone-field";
-import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
+import { AppointmentCreateWizard } from "@/features/appointments/appointment-create-wizard";
 import { AppointmentDeleteConfirmDialog, type AppointmentDeleteTarget } from "@/features/appointments/appointment-delete-confirm-dialog";
-import { AppointmentOverlapConfirmDialog } from "@/features/appointments/appointment-overlap-confirm-dialog";
 import { AppointmentsCalendarPanel } from "@/features/appointments/appointments-calendar-panel";
-import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
+import { SearchablePickList } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh } from "@/components/sortable-th";
 import { type SortOrder } from "@/components/sort-utils";
 import { toggleSort } from "@/components/sort-utils";
@@ -28,57 +26,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAdminOverviewQuery, useAppointmentsQuery, useClinicsQuery, usePatientQuery, usePatientsQuery, useSchedulingPhysiciansQuery } from "@/lib/api-hooks";
-import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
+import { useAppointmentsQuery, useClinicsQuery, usePatientsQuery } from "@/lib/api-hooks";
 import { canDeleteAppointment } from "@/lib/appointment-delete-policy";
-import { ApiError, apiDelete, apiGet, apiPost } from "@/lib/http";
-import {
-  parsePhoneConflictFromError,
-  phoneConflictMessage,
-  type PatientPhoneConflictPatient,
-} from "@/lib/patient-phone-conflict";
-import { resolvePatientListLabel, patientToPickListItem } from "@/lib/patient-display";
-import { physicianToPickListItem } from "@/lib/physician-display";
+import { ApiError, apiDelete } from "@/lib/http";
+import { resolvePatientListLabel } from "@/lib/patient-display";
 import { formatClinicName, formatClinicNameFields, localeForLanguage } from "@/lib/locale-display";
 import { columnFilterIncludes } from "@/lib/utils";
-import { useDebouncedPickListSearch } from "@/lib/pick-list-utils";
-import { canEditAppointmentFees } from "@/lib/appointment-encounter-money-policy";
 import { canMutateAppointmentsNav } from "@/lib/nav-tab-access-policy";
 import { useAuthStore } from "@/stores/auth-store";
-import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
-import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
-import {
-  APPOINTMENT_SLOT_MINUTES,
-  defaultEndFromStart,
-  formatDatetimeLocal,
-  suggestNextAppointmentStart,
-} from "@/lib/appointment-scheduling";
-import { useSchedulingSlotsQuery } from "@/lib/scheduling-slots";
-import {
-  formatClinicHoursRange,
-  formatClinicTimeLabel,
-  isStartAfterClosing,
-  resolveClinicClosingTime,
-  resolveClinicOpeningTime,
-} from "@/lib/clinic-hours";
-import type { AppointmentDto } from "@/lib/api-types";
-import { DatetimeLocalField } from "@/components/datetime-local-field";
-import { ScheduledFeeCollectionFields } from "@/components/scheduled-fee-collection-fields";
 import { filterFieldClassName, filterToolbarClassName, nativeSelectClassName } from "@/lib/form-control-styles";
-import {
-  emptyScheduledFeeCollection,
-  scheduledFeeCollectionToApi,
-  validateScheduledFeeCollection,
-  type ScheduledFeeCollectionValue,
-} from "@/lib/visit-collection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSyncOnChange } from "@/lib/use-sync-on-change";
-
-function toAppointmentIso(localDatetime: string): string {
-  const d = new Date(localDatetime);
-  if (Number.isNaN(d.getTime())) throw new Error("Invalid date or time");
-  return d.toISOString();
-}
 
 export function AppointmentsPage() {
   const { t, i18n } = useTranslation();
@@ -98,7 +55,6 @@ export function AppointmentsPage() {
   );
   const isPhysician = authUser?.role === "physician";
   const canDelete = canDeleteAppointment(authUser?.role);
-  const canSetAppointmentFees = canEditAppointmentFees(authUser?.role, authUser?.moneyVisibilityOverrides);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState("startsAt");
@@ -110,7 +66,14 @@ export function AppointmentsPage() {
   const [fltClinicId, setFltClinicId] = useState("");
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showBookPanel, setShowBookPanel] = useState(false);
-  // Power-user shortcut: N opens/closes the quick-book panel (desktop, when no field has focus).
+  // Quick-book from the calendar time grid: /appointments?book=1&start=… opens the wizard.
+  useEffect(() => {
+    if (searchParams.get("book") !== "1" || !canBookAppointments) return;
+    setShowBookPanel(true);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, canBookAppointments]);
+  // Power-user shortcut: N opens/closes the booking wizard (desktop, when no field has focus).
   useEffect(() => {
     if (isPhysician || !canBookAppointments) return;
     const onKey = (e: KeyboardEvent) => {
@@ -128,11 +91,11 @@ export function AppointmentsPage() {
   const [afPatient, setAfPatient] = useState("");
   const [afStatus, setAfStatus] = useState("");
 
-  useSyncOnChange([isPhysician], () => {
+  useEffect(() => {
     if (!isPhysician) return;
     setSortOrder("asc");
     setFltFrom((prev) => prev || new Date().toISOString().slice(0, 10));
-  });
+  }, [isPhysician]);
 
   const listParams = useMemo(
     () => ({
@@ -157,19 +120,17 @@ export function AppointmentsPage() {
     setSortOrder(next.sortOrder);
     setPage(1);
   };
-  const rows = useMemo(() => aptData?.items ?? [], [aptData?.items]);
+  const rows = aptData?.items ?? [];
   const aptTotal = aptData?.total ?? 0;
   const aptTotalPages = aptData?.totalPages ?? 1;
   const { data: clinics = [] } = useClinicsQuery();
-  const resolveClinicCurrency = useClinicCurrencyResolver();
-  const adminOv = useAdminOverviewQuery();
   const clinicById = useMemo(() => {
     const m = new Map<string, { en: string; ar: string }>();
     for (const c of clinics) m.set(c.id, { en: c.nameEn, ar: c.nameAr });
     return m;
   }, [clinics]);
   const { data: patData } = usePatientsQuery({ page: 1, pageSize: 200 });
-  const patients = useMemo(() => patData?.items ?? [], [patData?.items]);
+  const patients = patData?.items ?? [];
   const patientLabel = useMemo(() => {
     const m = new Map<string, string>();
     for (const p of patients) m.set(p.id, `${p.mrn} — ${p.firstNameEn} ${p.lastNameEn}`);
@@ -202,339 +163,12 @@ export function AppointmentsPage() {
     });
   }, [rows, afClinic, afStarts, afPatient, afStatus, i18n.language, patientLabel, clinicById]);
 
-  const [clinicId, setClinicId] = useState("");
-  const bookFeeCurrency = resolveClinicCurrency(clinicId);
-  const selectedBookClinic = useMemo(() => clinics.find((c) => c.id === clinicId), [clinics, clinicId]);
-  const clinicOpeningTime = resolveClinicOpeningTime(selectedBookClinic?.openingTime);
-  const clinicClosingTime = resolveClinicClosingTime(selectedBookClinic?.closingTime);
-  const isCallCenter = authUser?.role === "call_center";
-  const bookHoursLocale = localeForLanguage(i18n.language);
-  const [patientId, setPatientId] = useState("");
-  const [bookPatientMode, setBookPatientMode] = useState<"existing" | "new">("existing");
-  const [provisionalFirstName, setProvisionalFirstName] = useState("");
-  const [provisionalLastName, setProvisionalLastName] = useState("");
-  const [provisionalPhone, setProvisionalPhone] = useState("");
-  const [provisionalPhoneConflict, setProvisionalPhoneConflict] =
-    useState<PatientPhoneConflictPatient | null>(null);
-  const [clinicianId, setClinicianId] = useState("");
-  const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
-  useSyncOnChange([authUser?.role, authUser?.id], () => {
-    if (authUser?.role === "physician" && authUser.id) setClinicianId(authUser.id);
-  });
-  const [start, setStart] = useState("");
-  // Quick-book from the calendar time grid: /appointments?book=1&start=YYYY-MM-DDTHH:mm opens the booking panel pre-filled.
-  useSyncOnChange([searchParams, canBookAppointments], () => {
-    if (searchParams.get("book") !== "1" || !canBookAppointments) return;
-    const startParam = searchParams.get("start");
-    setShowBookPanel(true);
-    if (startParam && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startParam)) setStart(startParam);
-  });
-  useEffect(() => {
-    if (searchParams.get("book") !== "1" || !canBookAppointments) return;
-    setSearchParams({}, { replace: true });
-  }, [searchParams, canBookAppointments, setSearchParams]);
-  const [end, setEnd] = useState("");
-  const bookingAfterClosing = Boolean(
-    isCallCenter && clinicId.trim() && start.trim() && isStartAfterClosing(start, clinicClosingTime),
-  );
-  const [bookFee, setBookFee] = useState("");
-  const [bookFeeCollection, setBookFeeCollection] = useState<ScheduledFeeCollectionValue>(emptyScheduledFeeCollection());
-  const [overlapConflicts, setOverlapConflicts] = useState<AppointmentDto[]>([]);
-  const [showOverlapConfirm, setShowOverlapConfirm] = useState(false);
-  const validation = useValidationIssuesDialog({ intent: "create" });
-  const [bookOk, setBookOk] = useState<string | null>(null);
-  const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentDeleteTarget | null>(null);
-
-  const bookPatientPickSearch = useDebouncedPickListSearch();
-  const { data: bookPatData, isPending: bookPatientsPending } = usePatientsQuery({
-    search: bookPatientPickSearch.debounced.trim() || undefined,
-    page: 1,
-    pageSize: 100,
-    enabled: showBookPanel,
-  });
-  const bookPatients = useMemo(() => bookPatData?.items ?? [], [bookPatData?.items]);
-  const selectedBookPatient = useMemo(
-    () => bookPatients.find((p) => p.id === patientId),
-    [bookPatients, patientId],
-  );
-  const [selectedBookPatientItem, setSelectedBookPatientItem] = useState<PickListItem | null>(null);
-  const bookDoctorPickSearch = useDebouncedPickListSearch();
-  const schedulingClinicId = clinicId || selectedBookPatient?.homeBranchId || "";
-  const { data: physicians = [], isFetching: physiciansFetching } = useSchedulingPhysiciansQuery({
-    clinicId: schedulingClinicId || undefined,
-    search: bookDoctorPickSearch.debounced.trim() || undefined,
-    enabled: showBookPanel && !isPhysician,
-  });
-  const bookPatientItems: PickListItem[] = useMemo(
-    () => bookPatients.map((p) => patientToPickListItem(p)),
-    [bookPatients]
-  );
-  const selectedBookPatientMissing = Boolean(
-    patientId && !bookPatientItems.some((p) => p.value === patientId),
-  );
-  const { data: selectedBookPatientDetail } = usePatientQuery(
-    showBookPanel && selectedBookPatientMissing ? patientId : undefined,
-  );
-  const bookPatientSelectedItem = useMemo((): PickListItem | null => {
-    if (!patientId) return null;
-    const fromList = bookPatientItems.find((p) => p.value === patientId);
-    if (fromList) return fromList;
-    if (selectedBookPatientItem?.value === patientId) return selectedBookPatientItem;
-    if (selectedBookPatientDetail) return patientToPickListItem(selectedBookPatientDetail);
-    return null;
-  }, [patientId, bookPatientItems, selectedBookPatientItem, selectedBookPatientDetail]);
-
-  const clinicItems: PickListItem[] = useMemo(
+  const clinicItems = useMemo(
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
     [clinics, i18n.language],
   );
-  const physicianItems: PickListItem[] = useMemo(
-    () => physicians.map((d) => physicianToPickListItem(d, i18n.language)),
-    [physicians, i18n.language],
-  );
-  const selectedPhysician = useMemo(
-    () => physicians.find((d) => d.userId === clinicianId),
-    [physicians, clinicianId],
-  );
-  const bookPhysicianSelectedItem = useMemo((): PickListItem | null => {
-    if (!clinicianId) return null;
-    if (pinnedPhysicianItem?.value === clinicianId) return pinnedPhysicianItem;
-    const fromList = physicianItems.find((d) => d.value === clinicianId);
-    if (fromList) return fromList;
-    if (selectedPhysician) return physicianToPickListItem(selectedPhysician, i18n.language);
-    return null;
-  }, [clinicianId, pinnedPhysicianItem, physicianItems, selectedPhysician, i18n.language]);
 
-  useSyncOnChange([showBookPanel, adminOv.data?.currentTenant?.defaultVisitFee], () => {
-    if (!showBookPanel) return;
-    const d = adminOv.data?.currentTenant?.defaultVisitFee;
-    if (d != null && Number.isFinite(Number(d))) setBookFee(String(d));
-  });
-
-  const bookDateIso = start.trim() ? start.split("T")[0]! : new Date().toISOString().slice(0, 10);
-  const { data: bookTypes } = useQuery({
-    queryKey: ["scheduling", "appointment-types", schedulingClinicId],
-    queryFn: () =>
-      apiGet<Array<{ id: string; isActive: boolean; durationMinutes: number }>>(
-        `/api/v1/scheduling/appointment-types?clinicId=${encodeURIComponent(schedulingClinicId)}`,
-      ),
-    enabled: showBookPanel && Boolean(schedulingClinicId.trim()),
-  });
-  const bookTypeId = bookTypes?.find((t) => t.isActive)?.id ?? "";
-  const slotWindowFrom = `${bookDateIso}T00:00:00.000Z`;
-  const slotWindowTo = new Date(new Date(slotWindowFrom).getTime() + 86_400_000).toISOString();
-  const { data: engineSlots } = useSchedulingSlotsQuery({
-    clinicId: schedulingClinicId,
-    clinicianId,
-    typeId: bookTypeId,
-    from: slotWindowFrom,
-    to: slotWindowTo,
-    enabled: showBookPanel && Boolean(schedulingClinicId && clinicianId && bookTypeId),
-  });
-  const { data: bookDayData } = useAppointmentsQuery({
-    page: 1,
-    pageSize: 200,
-    sortBy: "startsAt",
-    sortOrder: "asc",
-    from: bookDateIso,
-    to: bookDateIso,
-    enabled: showBookPanel && Boolean(clinicianId.trim()),
-  });
-
-  useSyncOnChange([showBookPanel, clinicianId, bookDateIso, bookDayData?.items, clinicOpeningTime, engineSlots?.slots], () => {
-    if (!showBookPanel || !clinicianId.trim()) return;
-    const engineFirst = engineSlots?.slots[0]?.startsAt;
-    const suggested =
-      engineFirst != null
-        ? formatDatetimeLocal(new Date(engineFirst))
-        : suggestNextAppointmentStart(
-            bookDayData?.items ?? [],
-            bookDateIso,
-            clinicianId,
-            clinicOpeningTime,
-          );
-    setStart((prev) => {
-      if (!prev.trim()) return suggested;
-      const prevDate = prev.split("T")[0];
-      if (prevDate !== bookDateIso) return suggested;
-      return prev;
-    });
-  });
-
-  useSyncOnChange([showBookPanel, start, clinicOpeningTime], () => {
-    if (showBookPanel && !start.trim()) {
-      const today = new Date().toISOString().slice(0, 10);
-      setStart(formatDatetimeLocal(new Date(`${today}T${clinicOpeningTime}`)));
-    }
-  });
-
-  useSyncOnChange([showBookPanel, start], () => {
-    if (!showBookPanel) return;
-    if (!start.trim()) {
-      setEnd("");
-      return;
-    }
-    setEnd(defaultEndFromStart(start));
-  });
-
-  const appointmentCreateInput = {
-    clinicId,
-    patientId,
-    clinicianId,
-    start,
-    end,
-    openingTime: clinicOpeningTime,
-    newPatientMode: bookPatientMode === "new",
-    provisionalFirstName,
-    provisionalLastName,
-    provisionalPhone,
-  };
-
-  const buildCreateBody = (confirmOverlap = false): Record<string, unknown> => {
-    const startsAt = toAppointmentIso(start);
-    const body: Record<string, unknown> = {
-      clinicId,
-      clinicianId,
-      startsAt,
-    };
-    if (bookPatientMode === "new") {
-      body.provisionalPatient = {
-        firstNameEn: provisionalFirstName.trim(),
-        lastNameEn: provisionalLastName.trim(),
-        phone: provisionalPhone.trim(),
-      };
-    } else {
-      body.patientId = patientId;
-    }
-    if (end.trim()) body.endsAt = toAppointmentIso(end);
-    if (confirmOverlap) body.confirmOverlap = true;
-    if (canSetAppointmentFees) {
-      const trimmedFee = bookFee.trim();
-      const fee = trimmedFee !== "" ? Number.parseFloat(trimmedFee) : NaN;
-      if (Number.isFinite(fee) && fee >= 0) {
-        body.feeAmount = fee;
-        const scheduled = scheduledFeeCollectionToApi(fee, bookFeeCollection);
-        if (scheduled) body.scheduledFeeCollection = scheduled;
-      }
-    }
-    return body;
-  };
-
-  const useExistingPatientFromPhoneConflict = (existing: PatientPhoneConflictPatient) => {
-    const item: PickListItem = {
-      value: existing.id,
-      label: `${existing.firstNameEn} ${existing.lastNameEn}`.trim(),
-      hint: existing.mrn,
-    };
-    setBookPatientMode("existing");
-    setPatientId(existing.id);
-    setSelectedBookPatientItem(item);
-    setProvisionalFirstName("");
-    setProvisionalLastName("");
-    setProvisionalPhone("");
-    setProvisionalPhoneConflict(null);
-    toast.success(
-      t(
-        "appointments.switchedToExistingPatient",
-        "Using existing patient {{name}} ({{mrn}}). Finish booking below.",
-        {
-          name: `${existing.firstNameEn} ${existing.lastNameEn}`.trim(),
-          mrn: existing.mrn,
-        },
-      ),
-    );
-  };
-
-  const handleCreateAppointment = async () => {
-    const issues = collectAppointmentCreateIssues(appointmentCreateInput, t);
-    if (bookPatientMode === "new" && provisionalPhoneConflict) {
-      issues.push(phoneConflictMessage(provisionalPhoneConflict, t, i18n.language));
-    }
-    if (issues.length > 0) {
-      validation.showIssues(issues);
-      return;
-    }
-    validation.clear();
-    setBookOk(null);
-
-    try {
-      const params = new URLSearchParams({
-        clinicianId,
-        startsAt: toAppointmentIso(start),
-      });
-      if (end.trim()) params.set("endsAt", toAppointmentIso(end));
-      const conflicts = await apiGet<AppointmentDto[]>(
-        `/api/v1/appointments/scheduling-conflicts?${params.toString()}`,
-      );
-      if (conflicts.length > 0) {
-        setOverlapConflicts(conflicts);
-        setShowOverlapConfirm(true);
-        return;
-      }
-      createMut.mutate(false);
-    } catch (e) {
-      const conflict = parsePhoneConflictFromError(e);
-      if (conflict) {
-        setProvisionalPhoneConflict(conflict);
-        validation.showIssues([phoneConflictMessage(conflict, t, i18n.language)]);
-        return;
-      }
-      validation.showError(e);
-    }
-  };
-
-  const createMut = useMutation({
-    mutationFn: (confirmOverlap: boolean) => {
-      const issues = collectAppointmentCreateIssues(appointmentCreateInput, t);
-      if (bookPatientMode === "new" && provisionalPhoneConflict) {
-        issues.push(phoneConflictMessage(provisionalPhoneConflict, t, i18n.language));
-      }
-      if (issues.length > 0) throw new Error(issues.join(" "));
-      if (canSetAppointmentFees) {
-        const trimmedFee = bookFee.trim();
-        const fee = trimmedFee !== "" ? Number.parseFloat(trimmedFee) : NaN;
-        const planErr = Number.isFinite(fee) && fee > 0 ? validateScheduledFeeCollection(fee, bookFeeCollection, t) : null;
-        if (planErr) throw new Error(planErr);
-      }
-      return apiPost("/api/v1/appointments", buildCreateBody(confirmOverlap));
-    },
-    onSuccess: () => {
-      validation.clear();
-      setShowOverlapConfirm(false);
-      setOverlapConflicts([]);
-      const message = t("appointments.bookedOk", "Appointment created.");
-      setBookOk(message);
-      toast.success(message);
-      setPatientId("");
-      setSelectedBookPatientItem(null);
-      setBookPatientMode("existing");
-      setProvisionalFirstName("");
-      setProvisionalLastName("");
-      setProvisionalPhone("");
-      setProvisionalPhoneConflict(null);
-      bookPatientPickSearch.resetSearch();
-      setClinicianId(authUser?.role === "physician" && authUser.id ? authUser.id : "");
-      setPinnedPhysicianItem(null);
-      bookDoctorPickSearch.resetSearch();
-      setStart("");
-      setEnd("");
-      const d = adminOv.data?.currentTenant?.defaultVisitFee;
-      setBookFee(d != null && Number.isFinite(Number(d)) ? String(d) : "");
-      setBookFeeCollection(emptyScheduledFeeCollection());
-      void qc.invalidateQueries({ queryKey: ["appointments"] });
-      void qc.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
-    },
-    onError: (e: unknown) => {
-      setBookOk(null);
-      const conflict = parsePhoneConflictFromError(e);
-      if (conflict) {
-        setProvisionalPhoneConflict(conflict);
-        validation.showIssues([phoneConflictMessage(conflict, t, i18n.language)]);
-        return;
-      }
-      validation.showError(e);
-    },
-  });
+  const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentDeleteTarget | null>(null);
 
   const deleteMut = useMutation({
     mutationFn: (appointmentId: string) => apiDelete(`/api/v1/appointments/${appointmentId}`),
@@ -559,7 +193,6 @@ export function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
-      <ValidationIssuesDialog {...validation.dialogProps} />
       <PageHeader
         title={isPhysician ? t("appointments.myTitle", "My appointments") : t("appointments.title")}
         description={
@@ -641,8 +274,8 @@ export function AppointmentsPage() {
             {showSearchPanel ? t("appointments.hideSearch", "Hide search") : t("appointments.showSearch", "Search appointments")}
           </Button>
           {canBookAppointments ? (
-          <CreateActionButton type="button" onClick={() => setShowBookPanel((s) => !s)}>
-            {showBookPanel ? t("appointments.hideBook", "Hide booking") : t("appointments.showBook", "Book an appointment")}
+          <CreateActionButton type="button" onClick={() => setShowBookPanel(true)}>
+            {t("appointments.showBook", "Book an appointment")}
           </CreateActionButton>
           ) : null}
         </div>
@@ -702,233 +335,8 @@ export function AppointmentsPage() {
         </Card>
       ) : null}
 
-      {!isPhysician && canBookAppointments && showBookPanel ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">{t("appointments.book")}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 overflow-visible sm:grid-cols-2">
-            {bookOk ? <p className="text-sm text-[hsl(var(--success))] sm:col-span-full ">{bookOk}</p> : null}
-            {validation.formErr ? <p className="text-sm text-destructive sm:col-span-full">{validation.formErr}</p> : null}
-            <div className="space-y-2 sm:col-span-2">
-              <Label required>{t("appointments.clinic")}</Label>
-              <SearchablePickList
-                items={clinicItems}
-                value={clinicId}
-                onValueChange={setClinicId}
-                searchPlaceholder={t("appointments.filterClinic", "Type clinic name…")}
-                placeholder={t("appointments.pick")}
-              />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label required>{t("appointments.patient")}</Label>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={bookPatientMode === "existing" ? "default" : "outline"}
-                  onClick={() => setBookPatientMode("existing")}
-                >
-                  {t("appointments.existingPatient", "Existing patient")}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={bookPatientMode === "new" ? "default" : "outline"}
-                  onClick={() => {
-                    setBookPatientMode("new");
-                    setPatientId("");
-                    setSelectedBookPatientItem(null);
-                  }}
-                >
-                  {t("appointments.newPatientBooking", "New patient (first visit)")}
-                </Button>
-              </div>
-              {bookPatientMode === "existing" ? (
-                <>
-                  <p className="text-xs text-muted-foreground">{t("encounters.selectPatientHint")}</p>
-                  <SearchablePickList
-                    items={bookPatientItems}
-                    value={patientId}
-                    selectedItem={bookPatientSelectedItem}
-                    onValueChange={(id, item) => {
-                      setPatientId(id);
-                      if (item) setSelectedBookPatientItem(item);
-                      else {
-                        const fromList = bookPatientItems.find((p) => p.value === id);
-                        if (fromList) setSelectedBookPatientItem(fromList);
-                      }
-                    }}
-                    onSearchQueryChange={bookPatientPickSearch.setSearch}
-                    onOpen={bookPatientPickSearch.handleOpen}
-                    searchPlaceholder={t("encounters.patientSearchPlaceholder")}
-                    placeholder={t("appointments.pick")}
-                    emptyMessage={
-                      bookPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")
-                    }
-                    localFilter={false}
-                    minSearchLength={1}
-                    idleMessage={t("encounters.patientSearchIdle", "Start typing to show matching patients.")}
-                  />
-                </>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <p className="text-xs text-muted-foreground sm:col-span-2">
-                    {t(
-                      "appointments.provisionalBookingHint",
-                      "Book with name and phone only. Finish the patient profile before check-in, starting an encounter, or marking the visit complete. No-shows never require a full chart.",
-                    )}
-                  </p>
-                  <div className="space-y-2">
-                    <Label required>{t("patients.firstNameEn")}</Label>
-                    <Input
-                      value={provisionalFirstName}
-                      onChange={(e) => setProvisionalFirstName(e.target.value)}
-                      autoComplete="given-name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label required>{t("patients.lastNameEn")}</Label>
-                    <Input
-                      value={provisionalLastName}
-                      onChange={(e) => setProvisionalLastName(e.target.value)}
-                      autoComplete="family-name"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <PatientPhoneField
-                      value={provisionalPhone}
-                      onChange={setProvisionalPhone}
-                      enabled={showBookPanel && bookPatientMode === "new"}
-                      externalConflict={provisionalPhoneConflict}
-                      onConflictChange={setProvisionalPhoneConflict}
-                      onUseExisting={useExistingPatientFromPhoneConflict}
-                      useExistingLabel={t(
-                        "appointments.phoneConflictBookExisting",
-                        "Book with this patient",
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label required>{t("appointments.clinician")}</Label>
-              <SearchablePickList
-                items={physicianItems}
-                value={clinicianId}
-                selectedItem={bookPhysicianSelectedItem}
-                onValueChange={(id, item) => {
-                  setClinicianId(id);
-                  if (item) setPinnedPhysicianItem(item);
-                  else {
-                    const fromList = physicianItems.find((d) => d.value === id);
-                    if (fromList) setPinnedPhysicianItem(fromList);
-                  }
-                }}
-                onSearchQueryChange={bookDoctorPickSearch.setSearch}
-                onOpen={bookDoctorPickSearch.handleOpen}
-                searchPlaceholder={t("appointments.filterPhysician", "Type physician name, Arabic name, or email…")}
-                placeholder={t("appointments.pickPhysician")}
-                emptyMessage={
-                  physiciansFetching && physicianItems.length === 0
-                    ? t("common.loading")
-                    : t("appointments.noPhysicians", "No physicians found.")
-                }
-                localFilter={false}
-                minSearchLength={0}
-                idleMessage={t("operations.doctorSearchIdle", "Type a name or pick from the list.")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label required>{t("appointments.starts")}</Label>
-              <DatetimeLocalField
-                value={start}
-                onChange={setStart}
-                minTime={clinicOpeningTime}
-                stepSeconds={APPOINTMENT_SLOT_MINUTES * 60}
-                defaultTime={clinicOpeningTime}
-              />
-              <p className="text-xs text-muted-foreground">
-                {clinicId.trim()
-                  ? t(
-                      "appointments.startClinicHoursHint",
-                      "Clinic hours: {{hours}}. Each slot is {{minutes}} minutes unless you set a custom end time.",
-                      {
-                        hours: formatClinicHoursRange(clinicOpeningTime, clinicClosingTime, bookHoursLocale),
-                        minutes: APPOINTMENT_SLOT_MINUTES,
-                      },
-                    )
-                  : t(
-                      "appointments.startMinHint",
-                      "Select a clinic to apply its opening hours. Each slot is {{minutes}} minutes unless you set a custom end time.",
-                      { minutes: APPOINTMENT_SLOT_MINUTES },
-                    )}
-              </p>
-              {bookingAfterClosing ? (
-                <div className="rounded-lg border border-[hsl(var(--warning)/0.5)] bg-amber-500/10 px-3 py-2.5 text-sm text-[hsl(var(--warning))] ">
-                  {t(
-                    "appointments.afterClosingWarning",
-                    "This appointment is after the clinic closing time ({{time}}). You can still book it, but please confirm this is intentional.",
-                    { time: formatClinicTimeLabel(clinicClosingTime, bookHoursLocale) },
-                  )}
-                </div>
-              ) : null}
-            </div>
-            <div className="space-y-2">
-              <Label>{t("appointments.ends")}</Label>
-              <DatetimeLocalField
-                value={end}
-                onChange={setEnd}
-                minTime={clinicOpeningTime}
-                stepSeconds={APPOINTMENT_SLOT_MINUTES * 60}
-                defaultTime={clinicOpeningTime}
-              />
-              <p className="text-xs text-muted-foreground">
-                {t(
-                  "appointments.endAutoHint",
-                  "Prefilled to {{minutes}} minutes after start — clear or change if the visit duration differs.",
-                  { minutes: APPOINTMENT_SLOT_MINUTES },
-                )}
-              </p>
-            </div>
-            {canSetAppointmentFees ? (
-            <div className="space-y-2 sm:col-span-2">
-              <Label>{t("appointments.scheduledFee", "Scheduled fee ({{currency}})", { currency: bookFeeCurrency })}</Label>
-              <Input
-                className="ltr-nums max-w-xs"
-                type="number"
-                min="0"
-                step="0.01"
-                value={bookFee}
-                onChange={(e) => setBookFee(e.target.value)}
-              />
-              <ScheduledFeeCollectionFields
-                className="max-w-lg"
-                feeAmount={Number.parseFloat(bookFee.trim()) > 0 ? Number.parseFloat(bookFee.trim()) : 0}
-                value={bookFeeCollection}
-                onChange={setBookFeeCollection}
-              />
-            </div>
-            ) : (
-              <p className="text-sm text-muted-foreground sm:col-span-2">
-                {t(
-                  "appointments.scheduledFeeHiddenRole",
-                  "Scheduled fees use organization defaults for your role. An administrator can enable fee fields per user.",
-                )}
-              </p>
-            )}
-            <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
-              <CreateActionButton
-                type="button"
-                disabled={createMut.isPending}
-                onClick={handleCreateAppointment}
-              >
-                {t("appointments.create")}
-              </CreateActionButton>
-            </div>
-          </CardContent>
-        </Card>
+      {canBookAppointments ? (
+        <AppointmentCreateWizard open={showBookPanel} onOpenChange={setShowBookPanel} />
       ) : null}
 
       <Card>
@@ -1138,19 +546,6 @@ export function AppointmentsPage() {
         onConfirm={() => {
           if (appointmentToDelete) deleteMut.mutate(appointmentToDelete.id);
         }}
-      />
-
-      <AppointmentOverlapConfirmDialog
-        open={showOverlapConfirm}
-        onOpenChange={(open) => {
-          if (!open && !createMut.isPending) {
-            setShowOverlapConfirm(false);
-            setOverlapConflicts([]);
-          }
-        }}
-        conflicts={overlapConflicts}
-        pending={createMut.isPending}
-        onConfirm={() => createMut.mutate(true)}
       />
     </div>
   );
