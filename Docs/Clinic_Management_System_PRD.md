@@ -210,7 +210,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 ### 6.1c Encounters & clinical documents (current build)
 
-- Encounter editor: SOAP fields, structured vitals, ICD-10 diagnoses, medications, **lab / radiology / prescription** document uploads per visit, optional **generate prescription** image from manual meds, finalize workflow.
+- Encounter editor: SOAP fields, structured vitals, ICD-10 diagnoses, medications (aligned mode tabs + count badges), **lab / radiology / prescription** document uploads per visit, optional **generate prescription** image from manual meds, finalize workflow. **Create encounter** and **create appointment** use responsive multi-step wizards; visit type **Walk-In - No Appointment booked** (EN/AR).
 - **Mandatory attending doctor** validation and field highlighting on save when required data is missing.
 - Patient profile clinical sections roll up encounter documents by kind across all visits the user is allowed to see (respecting physician/clinic scope).
 
