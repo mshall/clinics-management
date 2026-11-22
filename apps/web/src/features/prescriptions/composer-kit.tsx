@@ -5,6 +5,7 @@ import { StatusChip, Surface } from "@/brand/ui-kit";
 import { kcn } from "@/brand/ui-kit-utils";
 import { Button } from "@/components/ui/button";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 /**
  * Prescription composer building blocks (Kiorly by Kiorex redesign, Q11g). One look for the encounter composer and the
@@ -13,15 +14,62 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
  */
 export type ComposerMode = "none" | "manual" | "prescription";
 
+function ComposerCountBadge({ count, tone }: { count: number; tone: "manual" | "rx" }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className={cn(
+        "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums shadow-sm ring-2",
+        "group-data-[state=active]:bg-primary-foreground group-data-[state=active]:text-primary group-data-[state=active]:ring-primary-foreground/35",
+        tone === "manual" &&
+          "bg-sky-600 text-white ring-sky-200/90 dark:bg-sky-500 dark:ring-sky-400/35",
+        tone === "rx" &&
+          "bg-violet-600 text-white ring-violet-200/90 dark:bg-violet-500 dark:ring-violet-400/35",
+      )}
+      data-testid="composer-count"
+      aria-hidden
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 export function ComposerModeTabs({ medCount, rxCount }: { medCount: number; rxCount: number }) {
   const { t } = useTranslation();
-  const trigger = "min-h-11 flex-1 gap-1.5 rounded-lg px-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-kx-1";
-  const count = (n: number) => (n > 0 ? <span className="ms-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-background/90 px-1.5 text-[11px] font-semibold tabular-nums text-foreground" data-testid="composer-count">{n}</span> : null);
+  const trigger = cn(
+    "group flex min-h-14 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-2",
+    "text-center text-[10px] font-medium leading-snug sm:min-h-12 sm:flex-row sm:gap-1.5 sm:px-2.5 sm:text-xs md:gap-2 md:px-3 md:text-sm",
+    "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-kx-1",
+  );
   return (
     <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-muted/70 p-1" aria-label={t("encounters.medications")}>
-      <TabsTrigger value="none" className={trigger}><Ban className="h-4 w-4 shrink-0" aria-hidden /><span className="hidden sm:inline">{t("encounters.medModeNone")}</span><span className="sm:hidden">{t("encounters.medTabNoneShort", "None")}</span></TabsTrigger>
-      <TabsTrigger value="manual" className={trigger}><Pill className="h-4 w-4 shrink-0" aria-hidden /><span className="hidden sm:inline">{t("encounters.medModeManual")}</span><span className="sm:hidden">{t("encounters.medTabManualShort", "Manual")}</span>{count(medCount)}</TabsTrigger>
-      <TabsTrigger value="prescription" className={trigger}><FileUp className="h-4 w-4 shrink-0" aria-hidden /><span className="hidden sm:inline">{t("encounters.medModePrescription")}</span><span className="sm:hidden">{t("encounters.medTabRxShort", "Rx")}</span>{count(rxCount)}</TabsTrigger>
+      <TabsTrigger value="none" className={trigger} title={t("encounters.medModeNone")} aria-label={t("encounters.medModeNone")}>
+        <Ban className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="line-clamp-2 max-w-full sm:line-clamp-1">
+          <span className="md:hidden">{t("encounters.medTabNoneShort", "None")}</span>
+          <span className="hidden md:inline">{t("encounters.medModeNone")}</span>
+        </span>
+      </TabsTrigger>
+      <TabsTrigger value="manual" className={trigger} title={t("encounters.medModeManual")} aria-label={t("encounters.medModeManual")}>
+        <span className="flex items-center justify-center gap-1">
+          <Pill className="h-4 w-4 shrink-0" aria-hidden />
+          <ComposerCountBadge count={medCount} tone="manual" />
+        </span>
+        <span className="line-clamp-2 max-w-full sm:line-clamp-1">
+          <span className="md:hidden">{t("encounters.medTabManualShort", "Manual")}</span>
+          <span className="hidden md:inline">{t("encounters.medModeManual")}</span>
+        </span>
+      </TabsTrigger>
+      <TabsTrigger value="prescription" className={trigger} title={t("encounters.medModePrescription")} aria-label={t("encounters.medModePrescription")}>
+        <span className="flex items-center justify-center gap-1">
+          <FileUp className="h-4 w-4 shrink-0" aria-hidden />
+          <ComposerCountBadge count={rxCount} tone="rx" />
+        </span>
+        <span className="line-clamp-2 max-w-full sm:line-clamp-1">
+          <span className="md:hidden">{t("encounters.medTabRxShort", "Rx")}</span>
+          <span className="hidden md:inline">{t("encounters.medModePrescription")}</span>
+        </span>
+      </TabsTrigger>
     </TabsList>
   );
 }

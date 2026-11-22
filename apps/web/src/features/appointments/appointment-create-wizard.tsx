@@ -967,24 +967,48 @@ export function AppointmentCreateWizard({
             ) : null}
           </div>
 
-          <DialogFooter className="gap-2 border-t border-border bg-muted/10 px-6 py-4 sm:justify-between">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={createMut.isPending}>
+          <DialogFooter
+            className={cn(
+              // p-0 dialog: disable sticky negative margins that misalign Cancel/Continue.
+              "static m-0 shrink-0 w-full flex-col gap-3 border-t border-border bg-muted/10 p-4",
+              "sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-6",
+              "[&>button]:min-h-11 sm:[&>button]:min-h-10",
+            )}
+          >
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => onOpenChange(false)}
+              disabled={createMut.isPending}
+            >
               {t("common.cancel", "Cancel")}
             </Button>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
               {step > 1 ? (
-                <Button type="button" variant="outline" onClick={goBack} disabled={createMut.isPending}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={goBack}
+                  disabled={createMut.isPending}
+                >
                   <ChevronLeft className="size-4" aria-hidden />
                   {t("appointments.wizardBack", "Back")}
                 </Button>
               ) : null}
               {step < 3 ? (
-                <Button type="button" onClick={goNext}>
+                <Button type="button" className="w-full sm:w-auto" onClick={goNext}>
                   {t("appointments.wizardNext", "Continue")}
                   <ChevronRight className="size-4" aria-hidden />
                 </Button>
               ) : (
-                <CreateActionButton type="button" disabled={createMut.isPending} onClick={() => void handleSubmit()}>
+                <CreateActionButton
+                  type="button"
+                  className="w-full sm:w-auto"
+                  disabled={createMut.isPending}
+                  onClick={() => void handleSubmit()}
+                >
                   {t("appointments.create")}
                 </CreateActionButton>
               )}
