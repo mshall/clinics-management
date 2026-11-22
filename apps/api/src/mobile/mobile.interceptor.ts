@@ -17,9 +17,9 @@ export function isMobileExempt(method: string, p: string): boolean {
   return method === "DELETE" && /^\/mobile\/devices\/[^/]+$/.test(p);
 }
 
-/** True for every /mobile/* route and every request identifying as the app (X-Kiorly-Client: kiorly-work/...), minus the plan-exempt routes. */
+/** True for every /mobile/* route and every request identifying as the app (X-Kiorly-Client: kiorly-team/...); legacy kiorly-work/... is still accepted, minus the plan-exempt routes. */
 export function isMobilePlanGated(method: string, p: string, client: string | undefined): boolean {
-  return Boolean((client && client.startsWith("kiorly-work")) || p.startsWith("/mobile/")) && !isMobileExempt(method, p);
+  return Boolean((client && /^kiorly-(team|work)(\/|$)/.test(client)) || p.startsWith("/mobile/")) && !isMobileExempt(method, p);
 }
 
 /** Throws the 403 FEATURE_DISABLED body of the app's upgrade screen. */
@@ -30,7 +30,7 @@ export function mobileFeatureDisabled(e: { reason: string | null }): ForbiddenEx
 /**
  * Global interceptor (runs after the controller guards, so `req.user` is set; the plan gate itself runs earlier in MobilePlanGuard so FEATURE_DISABLED beats any role/scope/plan guard 403). 1) Device binding: X-Kiorly-Device + X-Kiorly-Device-Token must
  * match an ACTIVE device of the caller, else 401 DEVICE_REVOKED. 2) Entitlement `mobile_staff_app`: every /mobile/* route and every request that
- * identifies as the app (X-Kiorly-Client: kiorly-work/...) needs it, except the exempt routes. Both are no-ops for non-mobile traffic.
+ * identifies as the app (X-Kiorly-Client: kiorly-team/...) needs it, except the exempt routes. Both are no-ops for non-mobile traffic.
  */
 @Injectable()
 export class MobileInterceptor implements NestInterceptor {

@@ -19,7 +19,7 @@ cd clinics-management/apps/api
 npm run db:seed                                  # base seed, once (plans, market EG, kx_dev_client, the older `demo` tenants)
 npm run db:seed:demo                             # idempotent demo dataset (prisma/demo/seed-demo.ts, includes the Rev 2.3 part)
 npm run db:seed:demo -- --reset                  # deletes ONLY demo tenants (demo_t_* incl. the two Nurse ones) and re-creates them, dates re-anchored to today
-npm run db:seed:mobile                           # Kiorly Team add-on: Basic clinic + mobile alerts (idempotent; scripts/seed-all.sh runs it right after db:seed:demo; see ../kiorly-work/DEMO_DATA.md)
+npm run db:seed:mobile                           # Kiorly Team add-on: Basic clinic + mobile alerts (idempotent; scripts/seed-all.sh runs it right after db:seed:demo; see ../kiorly-team/DEMO_DATA.md)
 ../../scripts/seed-all.sh [--reset]              # all products in order (needed once for the Kiorex mirror and the Lab hand-off)
 ```
 

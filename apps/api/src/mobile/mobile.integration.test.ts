@@ -95,8 +95,8 @@ describe("Kiorly Team backend (real DB)", () => {
     assert.ok(owner.modules.find((m) => m.key === "clinic.revenue")?.enabled);
   });
 
-  it("client enforcement: kiorly-work client without the entitlement is 403 FEATURE_DISABLED, except alerts/bootstrap/auth/sign-out", async () => {
-    const h = { "x-kiorly-client": "kiorly-work/1.0.0" };
+  it("client enforcement: kiorly-team client without the entitlement is 403 FEATURE_DISABLED, except alerts/bootstrap/auth/sign-out", async () => {
+    const h = { "x-kiorly-client": "kiorly-team/1.0.0" };
     assert.equal(await code(() => run(BASIC_OWNER, "GET", "/patients", h)), "FEATURE_DISABLED");
     assert.equal(await code(() => run(BASIC_OWNER, "GET", "/mobile/inbox")), "FEATURE_DISABLED");
     assert.equal(await run(BASIC_OWNER, "GET", "/mobile/alerts", h), true);
