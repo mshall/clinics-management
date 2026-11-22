@@ -20,7 +20,7 @@ import { PatientMoneySection } from "@/features/patients/patient-money-section";
 import { canUsePatientMoney } from "@/lib/patient-money-policy";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PatientEditDialog } from "@/components/patient-edit-dialog";
@@ -61,6 +61,7 @@ import {
   canMutateEncountersNav,
   canMutateNavTab,
 } from "@/lib/nav-tab-access-policy";
+import { canCreateOperation } from "@/lib/operation-money-policy";
 import { canEditOperationStage2 } from "@/lib/operation-stage-policy";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -69,6 +70,7 @@ import { useSyncOnChange } from "@/lib/use-sync-on-change";
 export function PatientDetailPage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams();
+  const navigate = useNavigate();
   const role = useAuthStore((s) => s.user?.role);
   const authUser = useAuthStore((s) => s.user);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
@@ -79,6 +81,12 @@ export function PatientDetailPage() {
   const canCreateAppointment = canMutateAppointmentsNav(role, navTabKeys, navTabAccessModes);
   const canCreateEncounter = canMutateEncountersNav(role, navTabKeys, navTabAccessModes);
   const canViewOperationsNav = showNavItem(role, "operations", navTabKeys, roleNavTabKeys);
+  const canStartOperation = canCreateOperation(
+    role,
+    navTabKeys,
+    navTabAccessModes,
+    authUser?.additionalRoles,
+  );
   /** Patient chart: show operations beside encounters when either tab is granted. */
   const canViewPatientOperations = canViewOperationsNav || canViewEncounters;
   const canEditPatient = canEditPatientDetails(role, navTabKeys, navTabAccessModes);
@@ -293,6 +301,30 @@ export function PatientDetailPage() {
                 >
                   <HeartPulse className="size-4" aria-hidden />
                   {t("patients.newEncounter")}
+                </Button>
+              ) : null}
+              {canStartOperation ? (
+                <Button
+                  type="button"
+                  data-testid="patient-new-operation"
+                  className={cn(
+                    "relative overflow-hidden border-0 bg-linear-to-br from-amber-600 via-amber-500 to-orange-500",
+                    "text-white shadow-kx-2 hover:from-amber-500 hover:via-amber-500 hover:to-orange-400",
+                    "hover:shadow-kx-3",
+                  )}
+                  onClick={() =>
+                    navigate(`/operations?new=1&patientId=${encodeURIComponent(patient.id)}`)
+                  }
+                >
+                  <Scissors className="size-4" aria-hidden />
+                  <span className="flex flex-col items-start leading-tight">
+                    <span className="text-sm font-semibold">
+                      {t("patients.newOperation", "New operation")}
+                    </span>
+                    <span className="text-[10px] font-normal text-white/85">
+                      {t("patients.newOperationHint", "Schedule surgery")}
+                    </span>
+                  </span>
                 </Button>
               ) : null}
             </div>

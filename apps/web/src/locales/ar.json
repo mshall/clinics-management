@@ -808,7 +808,9 @@
     "viewAllOperations": "عرض جميع العمليات",
     "newAppointment": "موعد جديد",
     "newAppointmentHint": "جدولة زيارة",
-    "newEncounterDialogHint": "ابدأ زيارة سريرية لهذا المريض. اختر الطبيب المعالج ونوع الزيارة."
+    "newEncounterDialogHint": "ابدأ زيارة سريرية لهذا المريض. اختر الطبيب المعالج ونوع الزيارة.",
+    "newOperation": "عملية جديدة",
+    "newOperationHint": "جدولة عملية"
   },
   "encounters": {
     "title": "زيارة",
@@ -5393,7 +5395,7 @@
     "currency": "العملة",
     "currencyHint": "الافتراضي عملة العيادة أو السجل المرتبط ({{currency}}).",
     "generate": "إنشاء فاتورة",
-    "generateShort": "الفاتورة",
+    "generateShort": "إنشاء فاتورة",
     "generateTitle": "إنشاء فاتورة",
     "generated": "تم إنشاء الفاتورة",
     "lineItems": "بنود الفاتورة",

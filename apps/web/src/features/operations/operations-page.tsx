@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, FileText, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
@@ -139,6 +140,7 @@ function operationDetailToMedState(detail: OperationDetailDto): {
 export function OperationsPage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const authUser = useAuthStore((s) => s.user);
   const canCreate = canCreateOperation(
     authUser?.role,
@@ -216,6 +218,8 @@ export function OperationsPage() {
   }, [patients]);
 
   const [showCreatePanel, setShowCreatePanel] = useState(false);
+  /** When set (e.g. from patient profile), patient cannot be changed in the create wizard. */
+  const [lockedCreatePatientId, setLockedCreatePatientId] = useState<string | null>(null);
   const [clinicId, setClinicId] = useState("");
   const [patientId, setPatientId] = useState("");
   const [clinicianId, setClinicianId] = useState("");
@@ -332,8 +336,11 @@ export function OperationsPage() {
     [selectedClinic, schedulingClinicId, selectedPatient, selectedPhysician, authUser?.displayName, i18n.language],
   );
 
-  const resetCreateForm = () => {
-    setPatientId("");
+  const resetCreateForm = (opts?: { keepLockedPatient?: boolean }) => {
+    if (!opts?.keepLockedPatient) {
+      setLockedCreatePatientId(null);
+      setPatientId("");
+    }
     bookPatientPickSearch.resetSearch();
     setClinicianId("");
     setPinnedPhysicianItem(null);
@@ -358,6 +365,20 @@ export function OperationsPage() {
     setDuplicateDialogOpen(false);
     setDuplicateOps([]);
   };
+
+  // Patient profile → New operation: /operations?new=1&patientId=…
+  useEffect(() => {
+    if (searchParams.get("new") !== "1" || !canCreate) return;
+    const pid = (searchParams.get("patientId") ?? "").trim();
+    resetCreateForm();
+    setShowCreatePanel(true);
+    if (pid) {
+      setLockedCreatePatientId(pid);
+      setPatientId(pid);
+    }
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, canCreate]);
 
   const [efPatient, setEfPatient] = useState("");
   const [efDoctor, setEfDoctor] = useState("");
@@ -1370,40 +1391,39 @@ export function OperationsPage() {
           aria-describedby={undefined}
         >
           <DialogHeader className="shrink-0 space-y-3 border-b border-border px-4 py-4 pe-14 sm:px-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 space-y-1 text-start">
-                <DialogTitle>
-                  {editFormLocked
-                    ? t("operations.viewTitle", "Operation details")
-                    : editOp?.status === "COMPLETED"
-                      ? t("operations.editCompletedTitle", "Edit completed operation")
-                      : t("operations.editTitle", "Edit operation")}
-                </DialogTitle>
-                {editFormLocked ? (
-                  <p className="text-sm font-normal text-muted-foreground">
-                    {t("operations.viewHint", "Review details and generate invoices for this operation.")}
-                  </p>
-                ) : editOp?.status === "COMPLETED" ? (
-                  <p className="text-sm font-normal text-muted-foreground">
-                    {t(
-                      "operations.editCompletedHint",
-                      "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
-                    )}
-                  </p>
-                ) : null}
-              </div>
-              {editOp && canInvoice && editOp.financialsVisible ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full shrink-0 touch-manipulation sm:w-auto"
-                  onClick={() => openOperationInvoice(editOp)}
-                >
-                  <FileText className="me-2 h-4 w-4" />
-                  {t("invoices.generateShort", "Invoice")}
-                </Button>
+            <div className="min-w-0 space-y-1 text-start">
+              <DialogTitle>
+                {editFormLocked
+                  ? t("operations.viewTitle", "Operation details")
+                  : editOp?.status === "COMPLETED"
+                    ? t("operations.editCompletedTitle", "Edit completed operation")
+                    : t("operations.editTitle", "Edit operation")}
+              </DialogTitle>
+              {editFormLocked ? (
+                <p className="text-sm font-normal text-muted-foreground">
+                  {t("operations.viewHint", "Review details and generate invoices for this operation.")}
+                </p>
+              ) : editOp?.status === "COMPLETED" ? (
+                <p className="text-sm font-normal text-muted-foreground">
+                  {t(
+                    "operations.editCompletedHint",
+                    "Administrator correction — you can update details and re-assign the performing doctor. Linked revenue is updated automatically.",
+                  )}
+                </p>
               ) : null}
             </div>
+            {editOp && canInvoice && editOp.financialsVisible ? (
+              <Button
+                type="button"
+                variant="outline"
+                data-testid="operation-generate-invoice"
+                className="me-1 w-full max-w-full shrink-0 touch-manipulation justify-center sm:me-2 sm:w-auto sm:self-start"
+                onClick={() => openOperationInvoice(editOp)}
+              >
+                <FileText className="me-2 h-4 w-4" />
+                {t("invoices.generate", "Generate invoice")}
+              </Button>
+            ) : null}
           </DialogHeader>
           {editOp ? (
             <>
@@ -1963,7 +1983,18 @@ export function OperationsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-base">{t("operations.schedule", "Schedule operation")}</CardTitle>
-            <CreateActionButton type="button" onClick={() => setShowCreatePanel((v) => !v)}>
+            <CreateActionButton
+              type="button"
+              onClick={() => {
+                if (showCreatePanel) {
+                  setShowCreatePanel(false);
+                  resetCreateForm();
+                } else {
+                  resetCreateForm();
+                  setShowCreatePanel(true);
+                }
+              }}
+            >
               {showCreatePanel ? t("common.hide", "Hide") : t("operations.new", "New operation")}
             </CreateActionButton>
           </CardHeader>
@@ -2021,25 +2052,48 @@ export function OperationsPage() {
                 <div className="space-y-4">
                   <div className="space-y-1">
                     <Label required>{t("operations.patient", "Patient")}</Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t("encounters.selectPatientHint", "Search by name or MRN, then choose a row.")}
-                    </p>
-                    <SearchablePickList
-                      items={bookPatientItems}
-                      value={patientId}
-                      selectedItem={bookPatientSelectedItem}
-                      onValueChange={setPatientId}
-                      onSearchQueryChange={bookPatientPickSearch.setSearch}
-                      onOpen={bookPatientPickSearch.handleOpen}
-                      searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
-                      placeholder={t("operations.selectPatient", "Select patient")}
-                      emptyMessage={
-                        bookPatientsPending ? t("common.loading") : t("encounters.noPatientsMatch", "No patients match.")
-                      }
-                      localFilter={false}
-                      minSearchLength={1}
-                      idleMessage={t("encounters.patientSearchIdle", "Start typing to show matching patients.")}
-                    />
+                    {lockedCreatePatientId ? (
+                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm">
+                        <p className="font-medium text-foreground">
+                          {bookPatientSelectedItem?.label ??
+                            (createPatientDetail
+                              ? patientToPickListItem(createPatientDetail).label
+                              : lockedCreatePatientId)}
+                        </p>
+                        {bookPatientSelectedItem?.hint || createPatientDetail?.mrn ? (
+                          <p className="mt-0.5 font-mono text-xs text-muted-foreground ltr-nums">
+                            {bookPatientSelectedItem?.hint ?? createPatientDetail?.mrn}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          {t("encounters.selectPatientHint", "Search by name or MRN, then choose a row.")}
+                        </p>
+                        <SearchablePickList
+                          items={bookPatientItems}
+                          value={patientId}
+                          selectedItem={bookPatientSelectedItem}
+                          onValueChange={setPatientId}
+                          onSearchQueryChange={bookPatientPickSearch.setSearch}
+                          onOpen={bookPatientPickSearch.handleOpen}
+                          searchPlaceholder={t("encounters.patientSearchPlaceholder", "Type name or MRN to filter…")}
+                          placeholder={t("operations.selectPatient", "Select patient")}
+                          emptyMessage={
+                            bookPatientsPending
+                              ? t("common.loading")
+                              : t("encounters.noPatientsMatch", "No patients match.")
+                          }
+                          localFilter={false}
+                          minSearchLength={1}
+                          idleMessage={t(
+                            "encounters.patientSearchIdle",
+                            "Start typing to show matching patients.",
+                          )}
+                        />
+                      </>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label required>{t("operations.doctor", "Performing doctor")}</Label>
