@@ -70,4 +70,20 @@ describe("UX-03 Arabic RTL & locale parity", () => {
     assert.match(src, /ar-EG/);
     assert.doesNotMatch(src, /ar-AE/);
   });
+
+  it("deploy version banner keys exist in EN and AR", () => {
+    const enApp = (EN as { app: Record<string, string> }).app;
+    const arApp = (AR as { app: Record<string, string> }).app;
+    const enCommon = (EN as { common: Record<string, string> }).common;
+    const arCommon = (AR as { common: Record<string, string> }).common;
+    assert.equal(typeof enApp.newVersionAvailable, "string");
+    assert.equal(typeof arApp.newVersionAvailable, "string");
+    assert.match(arApp.newVersionAvailable, /[\u0600-\u06FF]/);
+    assert.equal(typeof enApp.reloadNow, "string");
+    assert.equal(typeof arApp.reloadNow, "string");
+    assert.match(arApp.reloadNow, /[\u0600-\u06FF]/);
+    assert.equal(typeof enCommon.later, "string");
+    assert.equal(typeof arCommon.later, "string");
+    assert.match(arCommon.later, /[\u0600-\u06FF]/);
+  });
 });
