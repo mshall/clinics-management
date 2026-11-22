@@ -82,7 +82,7 @@ export class HomeVisitSafetyService {
       data: { tenantId, visitId, kind, raisedAt: now, dueAt, status: "PENDING" },
     });
     emitSafetyLog({ event: "safety_alert.raised", alertId: row.id, kind });
-    // Kiorly Work inbox (mock push): managers, owners and the visit clinician. Safety control: never gated by plan.
+    // Kiorly Team inbox (mock push): managers, owners and the visit clinician. Safety control: never gated by plan.
     if (this.mobilePush) {
       const mgr = await this.prisma.user.findMany({ where: { tenantId, deletedAt: null, OR: [{ isTenantOwner: true }, { role: { in: ["GROUP_ADMIN", "BRANCH_MANAGER", "CLINIC_ADMIN"] } }] }, select: { id: true } });
       await this.mobilePush.notifyUsers(tenantId, [...mgr.map((m) => m.id), ...(loaded.v.clinicianId ? [loaded.v.clinicianId] : [])], "HOME_SAFETY_ALERT", { alertKey: `hv_${row.id}`, kind });

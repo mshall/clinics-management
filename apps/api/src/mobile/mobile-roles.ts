@@ -24,7 +24,7 @@ export const MODULES: ModuleDef[] = [
   { key: "clinic.patients", allow: [R.PHYSICIAN, R.NURSE, R.RECEPTIONIST, R.CALL_CENTER, R.CLINIC_ASSISTANT, R.BRANCH_MANAGER, R.GROUP_ADMIN, R.GROUP_SUPERVISOR, R.CLINIC_ADMIN], screens: ["search", "summary"] },
   { key: "clinic.visits", allow: [R.PHYSICIAN, R.GROUP_ADMIN, R.GROUP_SUPERVISOR], screens: ["start", "notes"] },
   { key: "clinic.prescriptions", allow: [R.PHYSICIAN, R.GROUP_ADMIN, R.GROUP_SUPERVISOR], screens: ["review", "sign"] },
-  { key: "clinic.labs", allow: [R.PHYSICIAN, R.NURSE, R.GROUP_ADMIN, R.GROUP_SUPERVISOR], screens: ["results", "approve"] },
+  { key: "clinic.labs", allow: [R.PHYSICIAN, R.GROUP_ADMIN, R.GROUP_SUPERVISOR], screens: ["results", "approve"] },
   { key: "clinic.vitals", allow: VITALS_ROLES, screens: ["entry", "trend"] },
   { key: "clinic.homevisits", allow: [R.NURSE, R.PHYSICIAN], screens: ["round", "checkin", "safety", "sample"], nurseEdition: true },
   { key: "clinic.revenue", allow: REVENUE_ROLES, screens: ["snapshot"] },
@@ -33,6 +33,14 @@ export const MODULES: ModuleDef[] = [
 /** Professions that never sign prescriptions or approve results (scope of practice, ADR-029): nurses and assistants. */
 export const NON_PRESCRIBING_PROFESSIONS = ["NURSE", "ASSISTANT"];
 
+/**
+ * Nurses (role NURSE, or the nurse edition's PHYSICIAN-role accounts with profession NURSE) get NO "Lab results" tile/endpoint on mobile.
+ * The tile is the physician's result-review queue (finished diagnostic values to read and approve); a nurse in the field needs rounds, vitals,
+ * the patient summary, home-visit safety and sample COLLECTION (clinic.homevisits "sample" screen, unchanged). Web is unchanged: nurses still see
+ * the orders of a patient they are charting via GET /clinical/orders (scoped to the encounter), which is a chart view, not a review queue.
+ */
+export const LAB_REVIEW_BLOCKED_PROFESSIONS = ["NURSE", "ASSISTANT"];
+
 export function modulesFor(u: JwtUser, edition: string, profession?: string | null) {
   const roles = effectiveRoles(u);
   return MODULES.map((m) => {
@@ -40,7 +48,8 @@ export function modulesFor(u: JwtUser, edition: string, profession?: string | nu
     const byEdition = Boolean(m.nurseEdition) && edition === "NURSE" && roles.some((r) => ([R.NURSE, R.PHYSICIAN, R.BRANCH_MANAGER, R.GROUP_ADMIN, R.CLINIC_ADMIN, R.CLINIC_ASSISTANT, ...DISPATCHER_ROLES] as UserRole[]).includes(r));
     const enabled = m.key === "clinic.homevisits" ? byEdition || roles.includes(R.NURSE) : byRole;
     const blocked = Boolean(profession && NON_PRESCRIBING_PROFESSIONS.includes(profession)) && (m.key === "clinic.visits" || m.key === "clinic.prescriptions");
-    const on = enabled && !blocked;
+    const labBlocked = Boolean(profession && LAB_REVIEW_BLOCKED_PROFESSIONS.includes(profession)) && m.key === "clinic.labs";
+    const on = enabled && !blocked && !labBlocked;
     return { key: m.key, enabled: on, screens: on ? m.screens : [] };
   });
 }

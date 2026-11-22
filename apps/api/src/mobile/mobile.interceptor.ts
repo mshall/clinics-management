@@ -24,7 +24,7 @@ export function isMobilePlanGated(method: string, p: string, client: string | un
 
 /** Throws the 403 FEATURE_DISABLED body of the app's upgrade screen. */
 export function mobileFeatureDisabled(e: { reason: string | null }): ForbiddenException {
-  return new ForbiddenException({ statusCode: 403, code: "FEATURE_DISABLED", key: MOBILE_ENTITLEMENT_KEY, scope: "org", reason: e.reason, message: "The Kiorly Work staff app is not included in this plan.", messageAr: "تطبيق Kiorly Work للموظفين غير متاح في هذه الباقة." });
+  return new ForbiddenException({ statusCode: 403, code: "FEATURE_DISABLED", key: MOBILE_ENTITLEMENT_KEY, scope: "org", reason: e.reason, message: "The Kiorly Team staff app is not included in this plan.", messageAr: "تطبيق Kiorly Team للموظفين غير متاح في هذه الباقة." });
 }
 
 /**

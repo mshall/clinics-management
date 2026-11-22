@@ -131,7 +131,7 @@ export class MobileAlertsService {
     } else if (prefix === "vit") {
       const v = await this.prisma.vitalsObservation.findFirst({ where: { id: rowId, tenantId, critical: true, ...(mine ? { recordedById: u.userId } : {}) } });
       if (!v) throw new NotFoundException({ code: "ALERT_NOT_FOUND" });
-      if (!v.escalatedAt) await this.prisma.vitalsObservation.update({ where: { id: v.id }, data: { escalatedAt: now, escalationAction: v.escalationAction ?? "OTHER", escalationNote: note?.slice(0, 1000) ?? "Acknowledged in Kiorly Work" } });
+      if (!v.escalatedAt) await this.prisma.vitalsObservation.update({ where: { id: v.id }, data: { escalatedAt: now, escalationAction: v.escalationAction ?? "OTHER", escalationNote: note?.slice(0, 1000) ?? "Acknowledged in Kiorly Team" } });
     } else if (prefix === "lab") {
       const o = await this.prisma.clinicalOrder.findFirst({ where: { id: rowId, tenantId, kind: "LAB" } });
       if (!o) throw new NotFoundException({ code: "ALERT_NOT_FOUND" });

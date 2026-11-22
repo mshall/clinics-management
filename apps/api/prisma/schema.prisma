@@ -5028,7 +5028,7 @@ enum MobileDeviceStatus {
   REVOKED
 }
 
-/// Kiorly Work staff app: one row per (user, device). The device-bound token is stored hashed (sha256), never in clear.
+/// Kiorly Team staff app: one row per (user, device). The device-bound token is stored hashed (sha256), never in clear.
 model MobileDevice {
   id           String             @id @default(cuid())
   tenantId     String
@@ -5088,7 +5088,7 @@ model MobileAlertAck {
   @@unique([tenantId, alertKey])
 }
 
-/// Kiorly Work: a staff member asked their org owner/admin to upgrade to a plan that includes `mobile_staff_app`. Allowed on Basic (not entitlement-gated).
+/// Kiorly Team: a staff member asked their org owner/admin to upgrade to a plan that includes `mobile_staff_app`. Allowed on Basic (not entitlement-gated).
 /// Repeat requests by the same user for the same feature within 24h are de-duplicated by the service.
 model MobileUpgradeRequest {
   id            String   @id @default(cuid())

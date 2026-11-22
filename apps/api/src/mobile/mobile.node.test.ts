@@ -12,7 +12,7 @@ import { join } from "node:path";
 const u = (role: UserRole, extra: Partial<{ isTenantOwner: boolean; additionalRoles: UserRole[] }> = {}) => ({ userId: "u", tenantId: "t", email: "e", role, ...extra });
 const on = (role: UserRole, edition = "CLINIC", extra = {}) => modulesFor(u(role, extra), edition).filter((m) => m.enabled).map((m) => m.key);
 
-describe("Kiorly Work: entitlement matrix", () => {
+describe("Kiorly Team: entitlement matrix", () => {
   it("mobile_staff_app is on for PRO and above only", () => {
     assert.ok((MODULE_ENTITLEMENT_KEYS as readonly string[]).includes("mobile_staff_app"));
     assert.equal(ENTITLEMENT_MIN_PLAN.mobile_staff_app, PlanKey.PRO);
@@ -28,17 +28,19 @@ describe("Kiorly Work: entitlement matrix", () => {
   });
 });
 
-describe("Kiorly Work: modules per role", () => {
+describe("Kiorly Team: modules per role", () => {
   it("physician: clinical modules, no revenue", () => {
     const m = on(UserRole.PHYSICIAN);
     for (const k of ["clinic.schedule", "clinic.patients", "clinic.visits", "clinic.prescriptions", "clinic.labs", "clinic.vitals"]) assert.ok(m.includes(k), k);
     assert.ok(!m.includes("clinic.revenue"));
     assert.ok(!m.includes("clinic.homevisits"));
   });
-  it("nurse: vitals + home visits, cannot sign prescriptions", () => {
+  it("nurse: vitals + home visits, cannot sign prescriptions, no lab-results review queue", () => {
     const m = on(UserRole.NURSE);
     assert.ok(m.includes("clinic.vitals") && m.includes("clinic.homevisits"));
-    assert.ok(!m.includes("clinic.prescriptions") && !m.includes("clinic.visits"));
+    assert.ok(!m.includes("clinic.prescriptions") && !m.includes("clinic.visits") && !m.includes("clinic.labs"));
+    // nurse-edition nurses carry role PHYSICIAN + profession NURSE: same rule
+    assert.ok(!modulesFor({ userId: "u", tenantId: "t", role: UserRole.PHYSICIAN } as never, "NURSE", "NURSE").find((x) => x.key === "clinic.labs")!.enabled);
   });
   it("owner/finance get the revenue snapshot; receptionist does not", () => {
     assert.ok(on(UserRole.GROUP_ADMIN, "CLINIC", { isTenantOwner: true }).includes("clinic.revenue"));
@@ -64,7 +66,7 @@ describe("Kiorly Work: modules per role", () => {
   it("HR officer has no modules", () => assert.deepEqual(on(UserRole.HR_OFFICER), []));
 });
 
-describe("Kiorly Work: gating contract", () => {
+describe("Kiorly Team: gating contract", () => {
   it("alerts, bootstrap, auth and remote sign-out stay open on every plan", () => {
     for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/hv_1/ack"], ["POST", "/mobile/upgrade-request"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/refresh"]] as const) assert.ok(isMobileExempt(m, p), `${m} ${p}`);
     for (const [m, p] of [["GET", "/mobile/inbox"], ["GET", "/mobile/upgrade-request"], ["POST", "/mobile/devices"], ["GET", "/mobile/schedule"], ["GET", "/patients"]] as const) assert.ok(!isMobileExempt(m, p), `${m} ${p}`);

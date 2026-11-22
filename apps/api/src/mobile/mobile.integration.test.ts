@@ -39,7 +39,7 @@ async function run(user: JwtUser | undefined, method: string, url: string, heade
 }
 const code = async (fn: () => Promise<unknown>) => { try { await fn(); return null; } catch (e) { const r = (e as { getResponse?: () => { code?: string } }).getResponse?.(); return r?.code ?? "ERR"; } };
 
-describe("Kiorly Work backend (real DB)", () => {
+describe("Kiorly Team backend (real DB)", () => {
   before(async () => {
     await prisma.$connect();
     snaps.setSnapshotForTests(null);
@@ -141,7 +141,7 @@ describe("Kiorly Work backend (real DB)", () => {
     assert.equal(r.provider, "mock");
     const inbox = await svc.inbox(doc, { limit: "5" });
     assert.equal(inbox.unread, before + 1);
-    assert.equal(inbox.items[0].title, "Kiorly Work test notification");
+    assert.equal(inbox.items[0].title, "Kiorly Team test notification");
     assert.ok(/[؀-ۿ]/.test(inbox.items[0].titleAr));
     await svc.markRead(doc, inbox.items[0].id);
     assert.equal((await svc.inbox(doc, {})).unread, before);

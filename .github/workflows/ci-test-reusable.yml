@@ -49,7 +49,7 @@ jobs:
       - name: Seed database
         run: npm run db:seed -w api
 
-      - name: Seed demo + mobile fixtures (Kiorly Work integration tests)
+      - name: Seed demo + mobile fixtures (Kiorly Team integration tests)
         run: |
           npm run db:seed:demo -w api
           npm run db:seed:mobile -w api

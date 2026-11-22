@@ -14,7 +14,7 @@ import { MobilePlanGuard } from "./mobile-plan.guard";
 import { MobileInterceptor } from "./mobile.interceptor";
 import { MobileService } from "./mobile.service";
 
-/** Kiorly Work (staff mobile app) backend: bootstrap, entitlement `mobile_staff_app`, device-bound tokens, mock push inbox, safety alerts, app aggregates. */
+/** Kiorly Team (staff mobile app) backend: bootstrap, entitlement `mobile_staff_app`, device-bound tokens, mock push inbox, safety alerts, app aggregates. */
 @Module({
   imports: [MobilePushModule, EncountersModule, EntitlementsModule, NurseModule, RevenueModule],
   controllers: [MobileController],

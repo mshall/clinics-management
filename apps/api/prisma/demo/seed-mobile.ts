@@ -1,5 +1,5 @@
 /**
- * Kiorly Work (staff mobile app) demo data, DEV ONLY. Idempotent (deterministic ids). Run after db:seed:demo:
+ * Kiorly Team (staff mobile app) demo data, DEV ONLY. Idempotent (deterministic ids). Run after db:seed:demo:
  *   npm run db:seed:mobile -w api
  * Adds: a BASIC (Lite) org to show the upgrade path (owner.basic@ / doctor.basic@ / nurse.basic@demo.kiorex.test) with an open critical-vitals safety alert,
  * and, in the PRO demo org (na), a critical lab result waiting for the doctor + a critical vitals observation, so the alert inbox and approve flows have data.
@@ -15,7 +15,7 @@ const prisma = createPrismaClient();
 const PASSWORD = "Demo@12345"; // DEV ONLY
 
 async function main() {
-  assertDemoSeedAllowed("Kiorly Work mobile demo (BASIC org + PRO alerts)");
+  assertDemoSeedAllowed("Kiorly Team mobile demo (BASIC org + PRO alerts)");
   await ensurePlanEntitlements(prisma);
   const market = await prisma.market.findFirst({ where: { code: "EG" } });
   if (!market) throw new Error("EG market missing: run `npm run db:seed -w api` first");
@@ -63,7 +63,7 @@ async function main() {
     if (p && doc) {
       await prisma.clinicalOrder.upsert({
         where: { id: "demo_co_mobile_crit" }, update: { status: "RESULTS_READY", resultsReadyAt: now },
-        create: { id: "demo_co_mobile_crit", tenantId: na.id, clinicId: "demo_c_na_maadi", patientId: p.id, kind: "LAB", status: "RESULTS_READY", orderedAt: new Date(now.getTime() - 6 * 36e5), resultsReadyAt: now, createdByUserId: doc.id, notes: "DEMO critical potassium for the Kiorly Work approve flow" },
+        create: { id: "demo_co_mobile_crit", tenantId: na.id, clinicId: "demo_c_na_maadi", patientId: p.id, kind: "LAB", status: "RESULTS_READY", orderedAt: new Date(now.getTime() - 6 * 36e5), resultsReadyAt: now, createdByUserId: doc.id, notes: "DEMO critical potassium for the Kiorly Team approve flow" },
       });
       await prisma.clinicalOrderItem.upsert({ where: { id: "demo_coi_mobile_k" }, update: {}, create: { id: "demo_coi_mobile_k", orderId: "demo_co_mobile_crit", code: "K", nameEn: "Potassium", nameAr: "البوتاسيوم", resultValue: "6.9", resultUnit: "mmol/L", resultFlag: "CRITICAL_HIGH", sortOrder: 0 } });
       await prisma.clinicalOrderItem.upsert({ where: { id: "demo_coi_mobile_na" }, update: {}, create: { id: "demo_coi_mobile_na", orderId: "demo_co_mobile_crit", code: "NA", nameEn: "Sodium", nameAr: "الصوديوم", resultValue: "139", resultUnit: "mmol/L", resultFlag: "N", sortOrder: 1 } });
@@ -83,7 +83,7 @@ async function main() {
     if (p && doc) {
       await prisma.encounter.upsert({
         where: { id: "demo_enc_mobile_rx" }, update: { status: "DRAFT", finalizedAt: null, signedAt: null },
-        create: { id: "demo_enc_mobile_rx", tenantId: na.id, clinicId: "demo_c_na_maadi", patientId: p.id, clinicianId: doc.id, status: "DRAFT", visitType: "Consultation", chiefComplaint: "Seasonal allergy (DEMO for Kiorly Work)", subjective: "Itchy eyes and sneezing for 3 days.", plan: "Antihistamine, review in 1 week." },
+        create: { id: "demo_enc_mobile_rx", tenantId: na.id, clinicId: "demo_c_na_maadi", patientId: p.id, clinicianId: doc.id, status: "DRAFT", visitType: "Consultation", chiefComplaint: "Seasonal allergy (DEMO for Kiorly Team)", subjective: "Itchy eyes and sneezing for 3 days.", plan: "Antihistamine, review in 1 week." },
       });
       await prisma.encounterMedication.upsert({ where: { id: "demo_em_mobile_1" }, update: {}, create: { id: "demo_em_mobile_1", tenantId: na.id, encounterId: "demo_enc_mobile_rx", drugName: "Cetirizine 10 mg", dosage: "10 mg", route: "PO", frequency: "Once daily", duration: "7 days" } });
     }
@@ -95,7 +95,7 @@ async function main() {
     // welcome pushes (mock inbox) for every demo staff login of the PRO org
     const staff = await prisma.user.findMany({ where: { tenantId: na.id, deletedAt: null, role: { in: ["GROUP_ADMIN", "PHYSICIAN", "NURSE", "BRANCH_MANAGER", "FINANCE_OFFICER"] } }, select: { id: true } });
     for (const s of staff) {
-      await prisma.mobilePush.upsert({ where: { id: `demo_mp_${s.id}` }, update: {}, create: { id: `demo_mp_${s.id}`, tenantId: na.id, userId: s.id, kind: "GENERAL", templateId: "TEST", title: "Welcome to Kiorly Work", titleAr: "مرحبًا بك في Kiorly Work", body: "Your clinic is on a plan that includes the staff app.", bodyAr: "باقة عيادتك تشمل تطبيق الموظفين.", provider: "mock", deliveredAt: now } });
+      await prisma.mobilePush.upsert({ where: { id: `demo_mp_${s.id}` }, update: {}, create: { id: `demo_mp_${s.id}`, tenantId: na.id, userId: s.id, kind: "GENERAL", templateId: "TEST", title: "Welcome to Kiorly Team", titleAr: "مرحبًا بك في Kiorly Team", body: "Your clinic is on a plan that includes the staff app.", bodyAr: "باقة عيادتك تشمل تطبيق الموظفين.", provider: "mock", deliveredAt: now } });
     }
   }
   console.log("mobile demo seed done: BASIC org demo_t_bs; PRO org na enriched");
