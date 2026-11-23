@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 /** Founder, 24 Nov 2026: exactly two sign-in methods, Kiorex Passport first and the default, Password behind a toggle on the same screen. */
 const KEY = "kiorly.signin.method";
 const offerPassport = (page: Page, enabled: boolean) =>
-  page.route("**/api/v1/auth/kiorex/config", (r) => r.fulfill({ json: { enabled, edition: "CLINIC", defaultSignIn: "KIOREX_PASSPORT" } }));
+  page.route("**/api/v1/auth/kiorex/config*", (r) => r.fulfill({ json: { enabled, edition: "CLINIC", defaultSignIn: "KIOREX_PASSPORT", passportAvailable: enabled, defaultMethod: enabled ? "PASSPORT" : "PASSWORD" } }));
 
 test.describe("Login: Passport default, password toggle, last-method memory", () => {
   test("a fresh browser lands on Kiorex Passport; Password is one click away; nothing is remembered until a sign-in succeeds", async ({ page }) => {

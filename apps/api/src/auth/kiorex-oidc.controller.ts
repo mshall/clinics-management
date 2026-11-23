@@ -5,8 +5,10 @@ import {
   Header,
   Headers,
   HttpCode,
+  HttpException,
   HttpStatus,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -20,19 +22,32 @@ import { KiorexBackchannelDto, KiorexCallbackDto, KiorexCompleteDto, KiorexPassw
 import { KiorexOidcService } from "./kiorex-oidc.service";
 import { loginMetaFromRequest } from "./request-client-meta";
 import { resolveEdition } from "../nurse/nurse-edition";
+import { PrismaService } from "../prisma/prisma.service";
+import { clinicDeploymentDefault, orgSignInFacts, resolvePublicSignInConfig } from "./sign-in-config";
+import { makeWindowLimiter } from "./sign-in-default";
+
+const configLimiter = makeWindowLimiter(300, 60_000);
 
 /** KCV-201 — "Sign in with Kiorex Passport" alongside existing login (opt-in via KIOREX_OIDC_ISSUER). */
 @ApiTags("auth")
 @Controller("auth/kiorex")
 export class KiorexOidcController {
-  constructor(private readonly oidc: KiorexOidcService) {}
+  constructor(
+    private readonly oidc: KiorexOidcService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get("config")
-  @ApiOperation({ summary: "Whether the Sign in with Kiorex Passport button should be shown (edition by Host: nurse.kiorly.com defaults to Passport)" })
-  async config(@Headers("x-forwarded-host") fwd?: string, @Headers("host") host?: string) {
+  @ApiOperation({ summary: "Login page config: is Passport offered, which method is preselected (per ?org=<organisation id> or the deployment/edition default), uniform for unknown orgs" })
+  async config(@Headers("x-forwarded-host") fwd?: string, @Headers("host") host?: string, @Query("org") org?: string, @Req() req?: Request) {
     const edition = resolveEdition({ host: fwd ?? host });
-    // KNED / ADR-031: the Nurse edition defaults to "Sign in with Kiorex Passport"; the password form stays available as a fallback.
-    return { enabled: await this.oidc.isEnabled(), edition, defaultSignIn: edition === "NURSE" ? "KIOREX_PASSPORT" : "PASSWORD" };
+    // Pre-auth and public: rate limited per client; an unknown or missing org gets the deployment default in the same shape (no org enumeration).
+    if (!configLimiter(req?.ip ?? "anon")) throw new HttpException({ message: "Too many requests", code: "RATE_LIMITED" }, HttpStatus.TOO_MANY_REQUESTS);
+    const enabled = await this.oidc.isEnabled();
+    const facts = org ? await orgSignInFacts(this.prisma, org) : null;
+    const pub = resolvePublicSignInConfig({ passportAvailable: enabled, org: facts, deployment: clinicDeploymentDefault(edition) });
+    // `defaultSignIn` is the legacy field (Nurse edition: KIOREX_PASSPORT); it now follows the resolved default.
+    return { enabled, edition, defaultSignIn: pub.defaultMethod === "PASSPORT" ? "KIOREX_PASSPORT" : "PASSWORD", ...pub };
   }
 
   @Post("start")

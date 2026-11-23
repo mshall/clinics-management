@@ -6,6 +6,10 @@ import { KiorexPassportButton, startKiorexPassportSignIn } from "@/features/auth
 import { rememberSignInMethod } from "@/lib/sign-in-method";
 import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
 import { useSignInMethod } from "@/components/use-sign-in-method";
+import { SwitchProductLink } from "@/components/switch-product-link";
+import { KiorexLogo } from "@/brand/components/web/KiorexLogo";
+import { Pulse } from "@/brand/ui-kit";
+import { useNurseEditionDom } from "@/lib/use-nurse-edition-dom";
 import { currentNavigationType, wantsPassportAutostart, readHandoff, withoutHandoff } from "@/lib/kiorly-home";
 import { toast } from "sonner";
 import { useKiorexConfig } from "@/features/auth/use-kiorex-config";
@@ -25,7 +29,8 @@ import { useAuthStore } from "@/stores/auth-store";
 const DevTestUsers = import.meta.env.DEV && import.meta.env.VITE_DEV_TEST_USERS !== "false" ? lazy(() => import("@/dev/dev-test-users")) : null;
 
 export function LoginPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const nurse = useNurseEditionDom();
   const navigate = useNavigate();
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
@@ -43,7 +48,7 @@ export function LoginPage() {
   // Two methods only: Kiorex Passport (default, on every edition) and Password; the last method that signed this browser in is preselected.
   // Passport availability comes from the API (`/auth/kiorex/config`); when it is not offered only the password form shows.
   const kx = useKiorexConfig();
-  const sim = useSignInMethod(kx.isPending ? undefined : kx.data?.enabled === true);
+  const sim = useSignInMethod(kx.isPending ? undefined : kx.data?.enabled === true, kx.data?.defaultMethod);
   // Kiorly Home sends `?sso=passport[&edition=NURSE]`: start "Sign in with Kiorex Passport" by itself (once per page load; the Passport SSO session makes it silent).
   const autostarted = useRef(false);
   // Kiorly Home password handoff: redeem the single-use code once, strip it from the address bar first, then adopt the normal session.
@@ -176,10 +181,25 @@ export function LoginPage() {
     }
   }
 
+  const hero = nurse ? "authHeroNurse" : "authHero";
+  const points = ["a", "b", "c"] as const;
   return (
-    <div className="flex min-h-screen flex-col bg-linear-to-b from-background to-muted/60">
+    <div className="grid min-h-screen lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]" data-testid="login-split">
+      <aside className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:sticky lg:top-0 lg:flex lg:h-screen" data-testid="login-brand-panel" style={{ background: "linear-gradient(145deg,#3730A3 0%,#2B2680 55%,#0A4F7A 100%)" }}>
+        <div aria-hidden className="pointer-events-none absolute -inset-e-24 -top-24 size-96 rounded-full bg-white/5" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-32 -inset-s-20 size-112 rounded-full bg-white/5" />
+        <div className="relative w-fit"><KiorexLogo variant="lockup" product={nurse ? "nurse" : "clinic"} lang={i18n.language} tone="inverse" height={48} /><p data-kx-tagline className="mt-1 text-xs text-white/70">{t("app.tagline")}</p></div>
+        <div className="relative max-w-md space-y-6">
+          <h2 className="text-balance text-3xl font-semibold leading-tight">{t(`auth.${hero}.headline`)}</h2>
+          <ul className="space-y-4">
+            {points.map((k) => <li key={k} className="flex items-start gap-3 text-sm text-white/90"><span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-(--kx-coral-500,#E8735E)" />{t(`auth.${hero}.${k}`)}</li>)}
+          </ul>
+        </div>
+        <div className="relative text-xs text-white/75"><Pulse size={16} loop /> <span className="ms-2">{t(`auth.${hero}.foot`)}</span></div>
+      </aside>
+      <main id="main" className="flex min-h-screen flex-col bg-linear-to-b from-background to-muted/60">
       <header className="flex items-center justify-between gap-3 px-4 py-4 md:px-8">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 lg:invisible">
           <BrandLockup height={40} />
         </div>
         <div className="flex items-center gap-2">
@@ -294,8 +314,10 @@ export function LoginPage() {
             ) : null}
           </CardContent>
         </Card>
+        <p className="mt-4 text-center"><SwitchProductLink /></p>
         {DevTestUsers ? <Suspense fallback={null}><DevTestUsers busy={submitting} onPick={(e, p) => { setEmail(e); setPassword(p); void signInWith(e, p, ""); }} /></Suspense> : null}
       </div>
+      </main>
     </div>
   );
 }

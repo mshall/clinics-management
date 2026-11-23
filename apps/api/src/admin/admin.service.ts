@@ -23,6 +23,8 @@ import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-b
 import type { JwtUser } from "../auth/jwt-user";
 import type { CreateTenantUserDto } from "./dto/create-tenant-user.dto";
 import type { PlatformPatchTenantUserDto } from "./dto/platform-patch-tenant-user.dto";
+import { tenantLinkedToKiorex } from "../auth/sign-in-config";
+import { effectiveOrgDefault, parseSignInMethod } from "../auth/sign-in-default";
 import type { PatchTenantSettingsDto } from "./dto/patch-tenant-settings.dto";
 import { isBaseCurrency } from "../common/base-currencies";
 import { syncInheritedClinicCurrencies } from "../common/sync-inherited-clinic-currencies";
@@ -859,6 +861,28 @@ export class AdminService {
       operationAcquisitionRequired: withMarket.operationAcquisitionRequired,
       ...mapTenantTaxSettingsApi(withMarket),
     };
+  }
+
+  /** Org default sign-in method: the stored choice (null = automatic), what is effective now, and whether the org is linked to Kiorex. */
+  async getSignInDefault(tenantId: string) {
+    const t = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, defaultSignInMethod: true } });
+    if (!t) throw new NotFoundException("Tenant not found");
+    const linkedToKiorex = await tenantLinkedToKiorex(this.prisma, t.id);
+    return { defaultSignInMethod: t.defaultSignInMethod, effectiveSignInMethod: effectiveOrgDefault({ stored: t.defaultSignInMethod, linkedToKiorex }), linkedToKiorex };
+  }
+
+  async setSignInDefault(tenantId: string, user: import("../auth/jwt-user").JwtUser, raw: unknown) {
+    const next = raw === null ? null : parseSignInMethod(raw);
+    if (raw !== null && next === null) throw new BadRequestException("defaultSignInMethod must be PASSWORD, PASSPORT or null");
+    const before = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { defaultSignInMethod: true } });
+    if (!before) throw new NotFoundException("Tenant not found");
+    if (before.defaultSignInMethod !== next) {
+      await this.prisma.tenant.update({ where: { id: tenantId }, data: { defaultSignInMethod: next } });
+      await this.prisma.auditLog.create({
+        data: { tenantId, actorId: user.userId, action: "TENANT_DEFAULT_SIGNIN_METHOD_UPDATED", resource: "tenant", resourceId: tenantId, metadata: { from: before.defaultSignInMethod, to: next } },
+      });
+    }
+    return this.getSignInDefault(tenantId);
   }
 
   async setFeatureFlag(key: string, enabled: boolean) {

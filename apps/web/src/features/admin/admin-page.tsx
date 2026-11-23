@@ -52,6 +52,7 @@ import { PageHeader } from "@/brand/ui-kit";
 import { SectionNav } from "@/components/section-nav";
 import { TenantFeatureFlagsPanel } from "./tenant-feature-flags-panel";
 import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
+import { OrgSignInDefaultCard } from "./org-sign-in-default-card";
 import { AdminOrgBillingPanel } from "./admin-org-billing-panel";
 import { AdminKiorlyInvoicesPanel } from "./admin-kiorly-invoices-panel";
 import { AdminKiorlyStatementsPanel } from "./admin-kiorly-statements-panel";
@@ -614,6 +615,8 @@ export function AdminPage() {
           ) : null}
 
           {isGroupAdmin ? <OrgWhatsAppRemindersCard /> : null}
+
+          {isGroupAdmin ? <OrgSignInDefaultCard /> : null}
 
           {isGroupAdmin ? <TenantPaymentChannelsPanel /> : null}
 

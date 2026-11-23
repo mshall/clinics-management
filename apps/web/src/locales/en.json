@@ -215,7 +215,27 @@
     "mfaRequired": "Enter the 6-digit code from your authenticator app.",
     "handoffBusy": "Signing you in…",
     "handoffFailed": "We could not complete the sign-in from Kiorly. Sign in below.",
-    "handoffReason": {"mfa": "Your account uses a second factor. Sign in here to enter the code.", "password_expired": "Your password has expired. Sign in here to set a new one.", "org": "Choose your organisation here to continue.", "other": "Sign in here to continue."}
+    "handoffReason": {
+      "mfa": "Your account uses a second factor. Sign in here to enter the code.",
+      "password_expired": "Your password has expired. Sign in here to set a new one.",
+      "org": "Choose your organisation here to continue.",
+      "other": "Sign in here to continue."
+    },
+    "switchProduct": "Switch product",
+    "authHero": {
+      "headline": "One calm place to run your whole clinic.",
+      "a": "Scheduling, encounters and billing in one flow.",
+      "b": "Role-based access with MFA and a full audit trail.",
+      "c": "Optional Kiorex marketplace bookings and Passport sign-in.",
+      "foot": "Kiorly Clinic by Kiorex"
+    },
+    "authHeroNurse": {
+      "headline": "Home visits and nursing practice, organised.",
+      "a": "Visit planning with safe, consented records.",
+      "b": "Solo nurse or agency: the same simple tools.",
+      "c": "Optional Kiorex bookings and Passport sign-in.",
+      "foot": "Kiorly Nurse by Kiorex"
+    }
   },
   "signup": {
     "title": "Start with Kiorly",
@@ -3383,7 +3403,18 @@
     "whatsappRemindersCardDesc": "Scheduled WhatsApp messages for confirmed appointments. Requires BSP credentials configured for the deployment.",
     "whatsappRemindersEnabled": "Send async WhatsApp reminders for confirmed appointments",
     "whatsappRemindersOffHint": "Reminders are off. Turn on to queue WhatsApp messages before each confirmed appointment.",
-    "whatsappRemindersSaved": "WhatsApp reminder settings saved."
+    "whatsappRemindersSaved": "WhatsApp reminder settings saved.",
+    "signinTitle": "Default sign-in method",
+    "signinHint": "Both methods stay available on the sign-in page. This only chooses which one is preselected for your team.",
+    "signinPassport": "Kiorex Passport",
+    "signinPassword": "Password",
+    "signinAuto": "Automatic",
+    "signinAutoHint": "Kiorex Passport when this organisation is linked to Kiorex, otherwise Password.",
+    "signinEffective": "Preselected now: {{method}}",
+    "signinLinked": "Linked to Kiorex",
+    "signinNotLinked": "Not linked to Kiorex",
+    "signinSaved": "Default sign-in method saved",
+    "signinOwnerOnly": "Only the organisation owner or an administrator can change this."
   },
   "pagination": {
     "showing": "{{from}}–{{to}} of {{total}}",

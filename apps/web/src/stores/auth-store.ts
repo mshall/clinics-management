@@ -6,6 +6,7 @@ import { sessionIdFromAccessToken } from "@/lib/session-id";
 import { mapApiRole } from "@/lib/roles";
 import type { MoneyVisibilityOverrides } from "@/lib/money-visibility-policy";
 import type { DemoRole } from "@/lib/roles";
+import { rememberSignInOrg } from "@/lib/sign-in-default";
 
 export type { DemoRole } from "@/lib/roles";
 
@@ -95,7 +96,9 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       user: null,
-      setSession: (accessToken, raw, refreshToken) =>
+      setSession: (accessToken, raw, refreshToken) => {
+        // the next visit to the login page asks the API for THIS organisation's default sign-in method
+        rememberSignInOrg(raw.tenantId);
         set({
           accessToken,
           refreshToken: refreshToken ?? null,
@@ -124,7 +127,8 @@ export const useAuthStore = create<AuthState>()(
             plan: raw.plan ?? undefined,
             entitlements: raw.entitlements ?? undefined,
           },
-        }),
+        });
+      },
       signOut: () => {
         revokeServerSession(get().accessToken);
         set({ accessToken: null, refreshToken: null, user: null });

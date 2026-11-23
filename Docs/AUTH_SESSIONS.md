@@ -53,3 +53,10 @@ Implemented with `openid-client` (auth code + PKCE S256, confidential client `ki
 - Transactional email for reset links in production
 - SMS fallback when WhatsApp fails
 - Short-lived access tokens (e.g. 15m) with automatic silent refresh in the web app
+
+## Default sign-in method per organisation (ADR-038 amendment, 24 Nov 2026)
+Both methods (Kiorex Passport and Password) are always offered when Passport is available; the organisation setting only chooses which one is **preselected**.
+- Column `Tenant.defaultSignInMethod` (`PASSWORD` | `PASSPORT` | null = automatic; migration `20261124150000_default_signin_method`). Automatic = `PASSPORT` when the org is linked to Kiorex (a user with a Kiorex identity link, or a marketplace listing), else `PASSWORD`. The owner's explicit choice always wins.
+- `GET /admin/sign-in-method` and `PUT /admin/sign-in-method` `{ "defaultSignInMethod": "PASSWORD" | "PASSPORT" | null }`: group admin (org owner) only, otherwise 403. Audit action `TENANT_DEFAULT_SIGNIN_METHOD_UPDATED` (from, to). UI: Admin > Organization & settings (and the Lite admin settings), AR/EN.
+- `GET /auth/kiorex/config?org=<organisation id>` (public, 300 requests/min/client) returns `{ enabled, edition, defaultSignIn (legacy), passportAvailable, defaultMethod }`. A missing or unknown org gets the deployment default in the same shape: `SIGNIN_DEFAULT_METHOD`, else `PASSPORT` on the Nurse host (nurse.kiorly.com, unchanged) and `PASSWORD` elsewhere.
+- The login page (pre-auth) resolves the preselected method: last method used on this browser (`kiorly.signin.method`) > the API default for the org identified by `?org=`, a tenant subdomain or the org remembered after the last sign-in (`kiorly.signin.org`) > the deployment default. A "Switch product" link opens Kiorly Home (`<home>/signin?switch=1`, from `VITE_KIORLY_HOME_URL`, hidden when not configured).
