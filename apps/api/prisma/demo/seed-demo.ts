@@ -173,7 +173,7 @@ async function main() {
       const clinic = T.clinics[i % T.clinics.length].key;
       const id = `demo_p_${tk}_${i}`;
       patInfo.push({ id, clinic, name: `${fi[0]} ${li[0]}` });
-      patRows.push({ id, tenantId: tid, mrn: `${tk.toUpperCase()}-${String(100000 + i)}`, firstNameEn: fi[0], lastNameEn: li[0], firstNameAr: fi[1], lastNameAr: li[1], gender: male ? "M" : "F", dob: new Date(Date.UTC(2026 - age, i % 12, 1 + (i % 27))), phone: persona ? `+20100000${persona}` : `+20100005${String(i + (tk === "df" ? 300 : tk === "ss" ? 600 : 0)).padStart(3, "0")}`, email: `patient${i}.${tk}@demo.kiorex.test`, homeBranchId: `demo_c_${tk}_${clinic}`, isVip: i % 17 === 0, noShowCount: i % 11 === 0 ? 2 : 0, acquisitionChannel: pick(["SOCIAL_FACEBOOK", "SOCIAL_INSTAGRAM", "WEBSITE_GOOGLE", "DOCTOR_REFERRAL", "KIOREX"] as const) , isSample: true, nationalId: null });
+      patRows.push({ id, tenantId: tid, mrn: `${tk.toUpperCase()}-${String(100000 + i)}`, firstNameEn: fi[0], lastNameEn: li[0], firstNameAr: fi[1], lastNameAr: li[1], gender: male ? "M" : "F", dob: new Date(Date.UTC(2026 - age, i % 12, 1 + (i % 27))), phone: persona ? `+20100000${persona}` : `+20100005${String(i + (tk === "df" ? 300 : tk === "ss" ? 600 : 0)).padStart(3, "0")}`, email: `patient${i}.${tk}@demo.kiorex.test`, homeBranchId: `demo_c_${tk}_${clinic}`, isVip: i % 17 === 0, noShowCount: i % 11 === 0 ? 2 : 0, acquisitionChannel: pick(["SOCIAL_FACEBOOK", "SOCIAL_INSTAGRAM", "WEBSITE_GOOGLE", "DOCTOR_REFERRAL", "KIOREX"] as const) , isSample: !persona /* Kiorex/Passport personas are real linked identities: sample patients never get records shared to Kiorex */, nationalId: null });
     }
     await many("patient", patRows);
     // families, allergies, problems
@@ -246,7 +246,7 @@ async function main() {
       const pn = (b.patientPhone.slice(-4) | 0) - 1000; const pid = tk === "na" ? `demo_p_na_${pn}` : `demo_p_${tk}_mk${pn}`;
       if (!patRows.find((p) => p.id === pid)) {
         // personas live in the first tenant; other tenants get a same-phone patient row so the booking resolves
-        patRows.push({ id: pid, tenantId: tid, mrn: `${tk.toUpperCase()}-M${b.patientPhone.slice(-4)}`, firstNameEn: T.lean ? PERSONAS[pn - 1].first[0] : "Kiorex", lastNameEn: T.lean ? PERSONAS[pn - 1].last[0] : `Patient ${b.patientPhone.slice(-4)}`, ...(T.lean ? { firstNameAr: PERSONAS[pn - 1].first[1], lastNameAr: PERSONAS[pn - 1].last[1] } : {}), gender: T.lean ? (PERSONAS[pn - 1].male ? "M" : "F") : "F", phone: b.patientPhone, dob: new Date(Date.UTC(1990, 1, 1)), homeBranchId: `demo_c_${tk}_${d.clinic}`, isSample: true });
+        patRows.push({ id: pid, tenantId: tid, mrn: `${tk.toUpperCase()}-M${b.patientPhone.slice(-4)}`, firstNameEn: T.lean ? PERSONAS[pn - 1].first[0] : "Kiorex", lastNameEn: T.lean ? PERSONAS[pn - 1].last[0] : `Patient ${b.patientPhone.slice(-4)}`, ...(T.lean ? { firstNameAr: PERSONAS[pn - 1].first[1], lastNameAr: PERSONAS[pn - 1].last[1] } : {}), gender: T.lean ? (PERSONAS[pn - 1].male ? "M" : "F") : "F", phone: b.patientPhone, dob: new Date(Date.UTC(1990, 1, 1)), homeBranchId: `demo_c_${tk}_${d.clinic}`, isSample: false });
         await many("patient", [patRows[patRows.length - 1]]);
       }
       const start = at(b.dayOffset, b.hourUtc);
