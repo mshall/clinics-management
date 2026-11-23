@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -16,12 +17,27 @@ import { useSyncOnChange } from "@/lib/use-sync-on-change";
 const ICON: Record<ConnectStepStatus, typeof CheckCircle2> = { done: CheckCircle2, action_needed: AlertCircle, waiting_kiorex: Clock, blocked: Lock };
 const TONE: Record<ConnectStepStatus, string> = { done: "text-emerald-600", action_needed: "text-amber-600", waiting_kiorex: "text-sky-600", blocked: "text-muted-foreground" };
 
-export const connectKey = (clinicId: string) => ["kiorex", "connect", clinicId] as const;
-export const useKiorexConnect = (clinicId: string) => useQuery({ queryKey: connectKey(clinicId), queryFn: () => apiGet<ConnectDto>(`/api/v1/kiorex/connect?clinicId=${encodeURIComponent(clinicId)}`), enabled: Boolean(clinicId), refetchInterval: (q) => (q.state.data?.status === "REQUESTED" ? 15_000 : false) });
+/** Keep non-component exports out of this module so `lazyNamed` can load the page. */
+const connectKey = (clinicId: string) => ["kiorex", "connect", clinicId] as const;
+function useKiorexConnect(clinicId: string) {
+  return useQuery({
+    queryKey: connectKey(clinicId),
+    queryFn: () => apiGet<ConnectDto>(`/api/v1/kiorex/connect?clinicId=${encodeURIComponent(clinicId)}`),
+    enabled: Boolean(clinicId),
+    refetchInterval: (q) => (q.state.data?.status === "REQUESTED" ? 15_000 : false),
+  });
+}
 
-function detailText(t: (k: string, o?: Record<string, unknown>) => string, s: ConnectStepDto): string {
+function detailText(t: TFunction, s: ConnectStepDto): string {
   const d = (s.detail ?? {}) as Record<string, number | string[]>;
-  if (s.key === "credentials") return [t("kiorexConnect.detail.verified", d), Number(d.pending) > 0 ? t("kiorexConnect.detail.pending", d) : ""].filter(Boolean).join(" · ");
+  if (s.key === "credentials") {
+    return [
+      t("kiorexConnect.detail.verified", d),
+      Number(d.pending) > 0 ? t("kiorexConnect.detail.pending", d) : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
   if (s.key === "appointment_types") return t("kiorexConnect.detail.bookable", { withFee: d.withFee });
   if (s.key === "availability" || s.key === "profile") return t("kiorexConnect.detail.doctors", d);
   if (s.key === "live") return t("kiorexConnect.detail.live", d);
