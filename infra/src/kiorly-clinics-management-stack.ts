@@ -80,7 +80,14 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     tagCellResources(webBucket);
 
     // Phase 1 storage hygiene (feat/storage-growth). Mirrors infra/tofu/modules/aws/object-storage
-    // for the still-live CDK uploads bucket. Clinical current versions are never expired here.
+    // for the still-live CDK uploads bucket.
+    //
+    // Dr Ahmed Shall / AWS data safety: this is an in-place Bucket UPDATE (versioning + lifecycle +
+    // metrics). RETAIN — never DESTROY / never autoDeleteObjects. Lifecycle must NOT ExpirationInDays
+    // on patients/|encounters/|operations/ current versions (only Intelligent-Tiering + noncurrent
+    // cleanup). Existing clinic blobs (including Dr Ahmed Shall Group) stay readable; deploy must not
+    // replace or empty this bucket.
+    //
     // PROPOSAL defaults: noncurrent 90d / keep 3; Intelligent-Tiering after 30d (≥128 KiB);
     // imports/ 30d; pending/ 1d. CORS origins empty until Phase 5 (no open CORS).
     const uploadsIntelligentTierAfter = cdk.Duration.days(30);
@@ -90,6 +97,7 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       versioned: true,
+      // Keep live tenant uploads (Dr Ahmed Shall Group PHI docs) across stack updates/deletes.
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       lifecycleRules: [
         {

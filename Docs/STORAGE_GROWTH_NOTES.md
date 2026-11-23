@@ -20,11 +20,21 @@ Branch: `feat/storage-growth` (from `kiorex`). No apply / no merge to `main`.
 - **Scheduler pattern**: `plans/price-indexation.scheduler.ts` for later worker jobs (Phases 3–7).
 - **e2e**: workspace `e2e/` for Phase 5+ cross-product scenario.
 
+## Dr Ahmed Shall / production uploads (mandatory)
+
+Phase 1 **does not delete** live clinic documents in S3:
+
+- CDK `ApiUploadsBucket`: `RemovalPolicy.RETAIN`, versioning enabled in place, **no** `autoDeleteObjects`.
+- Lifecycle never sets current-version expiry on `patients/`, `encounters/`, or `operations/` (only Intelligent-Tiering + noncurrent cleanup after 90d).
+- `imports/` / `pending/` expiry is staging-only prefixes — not patient charts.
+- App Runner / SPA deploy does not empty the uploads bucket; seed remains incremental-only.
+- Guardrail test: `infra/src/data-residency-infra.node.test.ts` (“ApiUploadsBucket retains live clinic blobs”).
+
 ## Phase status
 
 | Phase | Status |
 |-------|--------|
-| 1 S3 lifecycle / hygiene | Implemented (IaC only; not applied) |
+| 1 S3 lifecycle / hygiene | Implemented (IaC; ships with main CDK deploy as in-place bucket UPDATE) |
 | 2–7 | Not started |
 
 ## PROPOSAL defaults (configurable)
