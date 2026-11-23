@@ -1,3 +1,4 @@
+import { VideoVisitBadge } from "@/features/telehealth/telehealth-panel";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -467,6 +468,7 @@ export function AppointmentsPage() {
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <AppointmentStatusBadge status={a.status} />
+                          <VideoVisitBadge serviceLocation={a.serviceLocation} />
                           <NoShowRiskChip risk={a.noShowRisk} />
                           <DepositBadge deposit={a.deposit} />
                           <AppointmentSourceBadges

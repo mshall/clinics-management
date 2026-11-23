@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { appointmentStatusClassName } from "@/components/appointment-status";
 import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
+import { VideoVisitBadge } from "@/features/telehealth/telehealth-panel";
 import type { AppointmentDto } from "@/lib/api-types";
 import { effectiveAppointmentEnd } from "@/lib/appointment-scheduling";
 import { sameLocalDay, toLocalDateIso } from "@/lib/appointment-calendar-utils";
@@ -169,6 +170,7 @@ export function AppointmentTimeGrid({
                         <span className="mt-1 block">
                           {showClinic ? <span className="mb-1 block truncate text-[11px] text-muted-foreground">{formatClinicNameFields(p.a.clinicNameEn, p.a.clinicNameAr, language)}</span> : null}
                           <AppointmentStatusBadge status={p.a.status} className={cn("px-1.5 py-0 text-[10px]", appointmentStatusClassName(p.a.status))} />
+                          <VideoVisitBadge serviceLocation={p.a.serviceLocation} />
                         </span>
                       ) : null}
                     </button>

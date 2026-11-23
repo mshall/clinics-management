@@ -234,6 +234,10 @@ export interface AppointmentDto {
   financialsVisible?: boolean;
   whatsappConfirmedAt?: string | null;
   bookingSource?: string;
+  /** ADR-039 */
+  serviceLocation?: "IN_CLINIC" | "HOME" | "VIDEO";
+  visitType?: "IN_PERSON" | "HOME" | "TELEHEALTH";
+  telehealth?: { sessionId: string; status: string; mode: string; linkVersion: number; joinUrl?: string; opensAt: string; closesAt: string; needsStaffReview: boolean } | null;
   attributionJson?: Record<string, unknown> | null;
   isNewPatientAtBooking?: boolean | null;
   newPatientCheckedAt?: string | null;

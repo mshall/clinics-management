@@ -42,6 +42,11 @@ export class TelehealthController {
     return this.svc.getByAppointmentForStaff(u, appointmentId);
   }
 
+  @Get("offer/:clinicianId")
+  offer(@CurrentUser() u: JwtUser, @Param("clinicianId") clinicianId: string) {
+    return this.svc.offerFor(u, clinicianId);
+  }
+
   @Get("settings/:clinicianId")
   settings(@CurrentUser() u: JwtUser, @Param("clinicianId") clinicianId: string) {
     return this.svc.getSettings(u, clinicianId);

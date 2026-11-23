@@ -447,6 +447,15 @@ export class TelehealthService implements OnModuleInit, OnModuleDestroy {
     return { clinicianId, offersTelehealth: row?.offersTelehealth ?? false, windows: row?.windowsJson ?? null, enabled: await isTelehealthEnabled(this.flags, this.entitlements, actor.tenantId!) };
   }
 
+  /** Anyone with the appointments tab: may this doctor be booked for telehealth right now? (hides the visit-type option when not) */
+  async offerFor(actor: JwtUser, clinicianId: string) {
+    const tenantId = actor.tenantId;
+    if (!tenantId) throw new ForbiddenException();
+    const enabled = await isTelehealthEnabled(this.flags, this.entitlements, tenantId);
+    const row = enabled ? await this.prisma.clinicianTelehealthSetting.findFirst({ where: { tenantId, clinicianId }, select: { offersTelehealth: true } }) : null;
+    return { enabled, available: enabled && Boolean(row?.offersTelehealth) };
+  }
+
   async putSettings(actor: JwtUser, clinicianId: string, body: { offersTelehealth?: boolean; windows?: unknown }) {
     this.assertSettingsAccess(actor, clinicianId);
     const tenantId = actor.tenantId!;
