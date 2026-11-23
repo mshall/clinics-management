@@ -145,3 +145,6 @@ Password for every login: `Demo@12345`. The app signs in with `POST /api/v1/auth
 | **ENTERPRISE** (`ENTERPRISE`) | Kiorly Clinic Group (Demo) | `admin@kiorly.com` | all modules, device management |
 | **BASIC** (`LITE`) | Corner Family Clinic (DEMO Basic), `demo_t_bs` | owner `owner.basic@demo.kiorex.test` · doctor `doctor.basic@` · nurse `nurse.basic@` | **upgrade screen** (`PLAN_BELOW_PRO`), but the **safety-alert inbox still works** (one open critical-vitals alert, acknowledge it) |
 Entitlement `mobile_staff_app` is a `PlanEntitlement` row per plan (LITE/NURSE_LITE off; PRO/CLINIC/ENTERPRISE/NURSE_PRO/NURSE_AGENCY on), so it also follows the per-tenant override (`TenantEntitlementOverride`) and the Kiorex org-scope OFF. Re-running the seed re-opens the demo alerts; `src/mobile/mobile.integration.test.ts` leaves them open too.
+
+## Telehealth demo (ADR-039, `prisma/demo/seed-telehealth.ts`)
+`npm run db:seed:demo -w api` makes **Dr Nadia (`nadia.na@demo.kiorex.test`, `Demo@12345`)** a telehealth doctor ("Offers telehealth" on) and adds the service "Video consultation" (20 min, EGP 250). `npm run db:seed:telehealth -w api` creates one fresh video appointment for patient Salma Telehealth (`+201000007001`, MRN `DEMO-TH-001`) starting in 3 minutes (`TELEHEALTH_DEMO_START_IN_MIN`) and prints the doctor call URL and the patient link. DEV ONLY.

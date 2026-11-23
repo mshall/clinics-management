@@ -6,6 +6,7 @@ import { patientJoinUrl } from "./telehealth-token";
  * Outbox payloads for telehealth (ADR-039). Proposed contract schemas: Docs/contracts/telehealth-contract-change.md.
  * Carries ids only; the join URL is a bearer link, sent to Kiorex (the patient's own app) and INTERNAL consumers, never logged.
  */
+// TODO(contracts): replace these local types/builders with @kiorex/contracts once kiorex-contracts 1.9.0 (Docs/contracts/telehealth-contract-change.md) ships.
 export const TELEHEALTH_EVENT = {
   CREATED: "telehealth.session.created",
   STARTED: "telehealth.session.started",

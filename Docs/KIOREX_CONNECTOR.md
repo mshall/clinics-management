@@ -82,3 +82,6 @@ accept returns `UNAVAILABLE` and never double-books. Migration `20261120010000_k
 | `POST /lab-orders/:orderId/status` (contracts 1.6.0, KNLAB01) | Kiorex relays the lab status + sanitized custody (+ report id and secure link on release) of a Nurse-edition `LabOrderPlaced` hand-off; idempotent, headline status monotonic (stale push = 200 `applied:false`), no results, no PHI. `LabOrderPlaced` additionally carries the optional Nurse fields (`originEdition`, `prescriberName`, `identifiersChecked`, `patient`, `nurseCollection`) |
 
 Not implemented: `POST /care-plan-requests` (P3 draft). Docs: [HOME_VISITS.md](./HOME_VISITS.md), [NURSE_EDITION.md](./NURSE_EDITION.md).
+
+## Telehealth additions (ADR-039, proposed contract 1.9.0: `Docs/contracts/telehealth-contract-change.md`)
+`ServiceLocation` gains `VIDEO` (derived `visitType: TELEHEALTH`); booking responses and `APPOINTMENT_CONFIRMED` / `RESCHEDULED` / cancel / `CHECKED_IN` events carry an additive `telehealth` block (`sessionId`, `joinUrl`, `opensAt`, `closesAt`, `status`, `linkVersion`); new events `telehealth.session.created | started | ended | missed`. The join link is unchanged by reschedule; the join window is computed from the appointment's current time. Kiorex must show `joinUrl` for TELEHEALTH bookings and stop creating Daily rooms for them.
