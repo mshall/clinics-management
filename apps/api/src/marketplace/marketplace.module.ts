@@ -36,6 +36,9 @@ import { SlotCapacityService } from "./slot-capacity.service";
 import { MarketplaceWaitlistService } from "./marketplace-waitlist.service";
 import { KiorexImportController } from "./kiorex-import.controller";
 import { KiorexImportService } from "./kiorex-import.service";
+import { KiorexConnectController } from "./kiorex-connect.controller";
+import { KiorexConnectService } from "./kiorex-connect.service";
+import { KiorexConnectionController } from "./kiorex-connection.controller";
 
 @Module({
   imports: [
@@ -62,6 +65,8 @@ import { KiorexImportService } from "./kiorex-import.service";
     KiorexSettingsController,
     PublicBookingPageController,
     KiorexImportController,
+    KiorexConnectController,
+    KiorexConnectionController,
   ],
   providers: [
     KiorexSettingsService,
@@ -81,6 +86,7 @@ import { KiorexImportService } from "./kiorex-import.service";
     SlotCapacityService,
     MarketplaceWaitlistService,
     KiorexImportService,
+    KiorexConnectService,
   ],
   exports: [MarketplaceListingService, PlatformIntegrationClientService, MarketplaceProviderProfileService],
 })

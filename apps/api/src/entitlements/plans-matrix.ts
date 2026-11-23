@@ -137,6 +137,8 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "kiorex/kiorex-billing-charges.controller.ts": { kind: "open" },
   "marketplace/marketplace.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-import.controller.ts": { kind: "webhook" },
+  "marketplace/kiorex-connection.controller.ts": { kind: "webhook" },
+  "marketplace/kiorex-connect.controller.ts": { kind: "open" },
   "home-visits/home-visits.controller.ts": { kind: "open" },
   "home-visits/home-visit-internal.controller.ts": { kind: "webhook" },
   /** ADR-039: telehealth_video + telehealth.video are checked inside the service so already-scheduled visits stay reachable (flag OFF never hides data). */

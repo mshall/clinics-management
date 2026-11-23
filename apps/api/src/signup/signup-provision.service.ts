@@ -177,6 +177,8 @@ export class SignupProvisionService {
           defaultInvoiceVatPercent: packDefaults.defaultInvoiceVatPercent,
           defaultTaxRegistrationNumber: packDefaults.defaultTaxRegistrationNumber,
           salesRepCode: input.salesRepCode?.trim() || null,
+          // ADR-040: a self-serve organisation starts STANDALONE and joins the Kiorex marketplace only through the Connect to Kiorex wizard
+          providerSettings: { kiorexConnect: { status: "STANDALONE", startedAt: new Date().toISOString() } },
           ...(input.onBehalfOfSalesRepId
             ? { status: TenantStatus.PENDING_OWNER, createdBySalesRepId: input.onBehalfOfSalesRepId }
             : {}),

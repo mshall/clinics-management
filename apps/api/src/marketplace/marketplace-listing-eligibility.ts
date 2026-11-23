@@ -11,6 +11,8 @@ export const MARKETPLACE_BLOCKER = {
   QUALITY: "quality",
   /** KX-23 KNKX02 / ADR-032: a SOLO nurse lists only when nurse.individual_kiorex_listing is effective (launch-locked, gate GKN2) AND PRVER04 evidence was checked. */
   SOLO_NURSE: "solo_nurse_listing",
+  /** ADR-040: an organisation that started standalone lists only after it asked to connect and Kiorex ops approved it. */
+  CONNECTION: "connection",
 } as const;
 
 export type MarketplaceBlockerCode = (typeof MARKETPLACE_BLOCKER)[keyof typeof MARKETPLACE_BLOCKER];
@@ -30,6 +32,8 @@ export type MarketplaceListingEligibilityInput = {
    * so the ID selfie match and criminal-record certificate checklist applied. Agencies list under clinic.kiorex_listing instead.
    */
   soloNurse?: { flagEffective: boolean; prver04Checked: boolean };
+  /** ADR-040: undefined = legacy organisation, never gated. */
+  connection?: { required: boolean; requested: boolean; paused: boolean };
 };
 
 export type MarketplaceListingEligibility = {
@@ -72,6 +76,10 @@ export function evaluateMarketplaceListingEligibility(
   if (input.soloNurse && !(input.soloNurse.flagEffective && input.soloNurse.prver04Checked)) {
     blockers.push(MARKETPLACE_BLOCKER.SOLO_NURSE);
   }
+  // last on purpose: blockers[0] stays the first thing the owner can fix
+  if (input.connection?.required) {
+    blockers.push(MARKETPLACE_BLOCKER.CONNECTION);
+  }
 
   if (input.ownerPaused) {
     return { blockers, status: ListingStatus.PAUSED, pausedReason: MARKETPLACE_BLOCKER.OWNER };
@@ -83,12 +91,19 @@ export function evaluateMarketplaceListingEligibility(
   if (blockers.includes(MARKETPLACE_BLOCKER.BILLING)) {
     return { blockers, status: ListingStatus.PAUSED, pausedReason: MARKETPLACE_BLOCKER.BILLING };
   }
+  if (input.connection?.paused) {
+    return { blockers, status: ListingStatus.PAUSED, pausedReason: MARKETPLACE_BLOCKER.CONNECTION };
+  }
   if (blockers.includes(MARKETPLACE_BLOCKER.VERIFICATION)) {
     return {
       blockers,
       status: ListingStatus.PENDING_VERIFICATION,
       pausedReason: MARKETPLACE_BLOCKER.VERIFICATION,
     };
+  }
+  // Request to go live submitted and nothing else is missing: waiting for Kiorex ops.
+  if (input.connection?.requested && blockers.length === 1 && blockers[0] === MARKETPLACE_BLOCKER.CONNECTION) {
+    return { blockers, status: ListingStatus.PENDING_VERIFICATION, pausedReason: MARKETPLACE_BLOCKER.CONNECTION };
   }
   if (blockers.length > 0) {
     return {
