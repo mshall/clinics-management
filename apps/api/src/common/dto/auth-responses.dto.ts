@@ -74,6 +74,27 @@ export class AuthUserDto {
 
   @ApiPropertyOptional({
     type: String,
+    description: "Organization display name (English)",
+    nullable: true,
+  })
+  tenantName?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "Organization display name (Arabic)",
+    nullable: true,
+  })
+  tenantNameAr?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "Organization clinical specialty for top-bar identity (from clinics)",
+    nullable: true,
+  })
+  clinicalSpecialty?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
     description: "Organization base currency (tenant default for clinics that inherit org settings)",
     nullable: true,
   })

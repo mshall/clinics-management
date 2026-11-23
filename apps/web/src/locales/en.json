@@ -5,6 +5,8 @@
     "tagline": "Clinic Management",
     "orgPlan": "Plan",
     "orgPlanHint": "Your organization's current Kiorly plan",
+    "orgSpecialty": "Specialty",
+    "orgWorkspace": "Organization workspace",
     "newVersionAvailable": "A new version is available. Reload to get the latest fixes (save your work first).",
     "reloadNow": "Reload now"
   },
