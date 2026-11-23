@@ -186,11 +186,11 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 ### 6.1b Patient registry & profile (current build)
 
-**Registration (Patients → New patient)**
-- Required: English/Arabic names (Arabic first and last required), gender, phone. **Date of birth is optional.**
-- **Phone uniqueness:** Each phone number may belong to only one active patient per organization (digit-normalized; create is serialized with a DB advisory lock so double-submit cannot create a male+female pair). While typing, the form checks for conflicts, highlights the phone field, shows the existing patient’s name/MRN, and links to their profile; **Create patient** stays disabled until resolved. Demo AES patients each get a unique phone (not the clinic line).
-- Optional: email, national ID, national ID scan (PDF/image), home branch, **how did they find us?** (social, website, doctor referral with name, other with free text).
-- Optional **attached documents** at registration: type **Lab results**, **Radiology**, **Prescription**, or **Other** (custom description); multiple photos/files per row; **camera capture** — on mobile/touch devices the app opens the **native OS camera** (`capture="environment"`) for a lighter UX; desktop uses in-browser preview where supported.
+**Registration (Patients → Register patient)**
+- **3-step wizard** (same chrome as create encounter / appointment): **Identity** (EN/AR names, DOB, gender) → **Contact & clinic** (phone, national ID + scan, email, home branch) → **Context & confirm** (allergies, documents, acquisition) with step cards, mobile-safe footer, and per-step validation.
+- Required: English/Arabic names (Arabic first and last required), gender, phone, and **how did they find us?**. **Date of birth is optional.**
+- **Phone uniqueness:** Each phone number may belong to only one active patient per organization (digit-normalized; create is serialized with a DB advisory lock so double-submit cannot create a male+female pair). While typing, the form checks for conflicts, highlights the phone field, shows the existing patient’s name/MRN, and links to their profile; submit stays blocked until resolved. Demo AES patients each get a unique phone (not the clinic line).
+- Optional: email, national ID, national ID scan (PDF/image), home branch, allergies, attached documents (Lab / Radiology / Prescription / Other; camera capture on mobile).
 
 **Patient list & administration**
 - Search/filter by MRN, phone, name, national ID, gender; column filters; pagination and sort.
@@ -210,7 +210,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 
 ### 6.1c Encounters & clinical documents (current build)
 
-- Encounter editor: SOAP fields, structured vitals, ICD-10 diagnoses, medications (aligned mode tabs + count badges), **lab / radiology / prescription** document uploads per visit, optional **generate prescription** image from manual meds, finalize workflow. **Create encounter** and **create appointment** use responsive multi-step wizards; visit type **Walk-In - No Appointment booked** (EN/AR).
+- Encounter editor: SOAP fields, structured vitals, ICD-10 diagnoses, medications (aligned mode tabs + count badges), **lab / radiology / prescription** document uploads per visit, optional **generate prescription** image from manual meds, finalize workflow. **Create encounter**, **create appointment**, and **register patient** use responsive multi-step wizards; visit type **Walk-In - No Appointment booked** (EN/AR).
 - **Mandatory attending doctor** validation and field highlighting on save when required data is missing.
 - Patient profile clinical sections roll up encounter documents by kind across all visits the user is allowed to see (respecting physician/clinic scope).
 
@@ -470,7 +470,7 @@ Authorization model:
 |---|---|
 | Multi-tenant SaaS + platform super admin | Shipped |
 | Clinics (parent/branch), users, RBAC, nav tab grants | Shipped |
-| Patients (registry, phone uniqueness, age from DOB, clinical doc viewer/crop/delete, national ID in Other, soft delete) | Shipped |
+| Patients (registry, 3-step register wizard, phone uniqueness, age from DOB, clinical doc viewer/crop/delete, national ID in Other, soft delete) | Shipped |
 | Reports (monthly charts, acquisition channel drill-down) | Shipped |
 | Appointments, encounters (SOAP, vitals, ICD-10, meds, documents, Rx image) | Shipped |
 | Operations (schedule, balance, revenue linkage) | Shipped |

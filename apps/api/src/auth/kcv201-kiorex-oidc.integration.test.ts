@@ -153,7 +153,8 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
     const url = new URL((withHint as { endSessionUrl?: string }).endSessionUrl!);
     assert.equal(url.pathname, "/session/end");
     assert.equal(url.searchParams.get("id_token_hint"), "id.token.jwt");
-    assert.equal(url.searchParams.get("post_logout_redirect_uri"), "http://localhost:5174/");
+    const expectedPostLogout = new URL(process.env.APP_WEB_URL?.trim() || "http://localhost:5174/").href;
+    assert.equal(url.searchParams.get("post_logout_redirect_uri"), expectedPostLogout);
     // no ID token (should never happen against Passport) => no logout URL, sign-out stays local
     nextClaims = { sub: "kx-sub-1", sid: "sid-C" };
     const bare = await svc.handleCallback({ code: "c", state: await startAndState() }, {});

@@ -44,7 +44,8 @@ describe("KX-DEV local Kiorex integration seed", () => {
   it("marketplace client kx_dev_client / kx_dev_secret_change_me has MARKETPLACE scope", async () => {
     const row = await prisma.platformIntegrationClient.findUniqueOrThrow({ where: { clientKey: KX_DEV_CLIENT_KEY } });
     assert.ok(await bcrypt.compare(KX_DEV_CLIENT_SECRET, row.secretHash));
-    assert.deepEqual(row.scopes, ["MARKETPLACE"]);
+    assert.ok(row.scopes.includes("MARKETPLACE"));
+    assert.deepEqual([...row.scopes].sort(), ["MARKETPLACE", "ONBOARDING_IMPORT"].sort());
     assert.equal(row.deactivatedAt, null);
   });
 
