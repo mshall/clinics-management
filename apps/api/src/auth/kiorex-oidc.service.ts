@@ -260,6 +260,7 @@ export class KiorexOidcService {
         issuer: port.issuer,
         audience: port.clientId,
         algorithms: ["RS256"],
+        typ: "logout+jwt",
         clockTolerance: 5,
       }));
     } catch (e) {

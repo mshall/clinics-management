@@ -30,7 +30,7 @@ function svc(opts: { links?: Row[]; employees?: Row[]; user?: Row | null } = {})
       findUnique: async ({ where }: { where: { issuer_subject: { subject: string } } }) => links.find((l) => l.subject === where.issuer_subject.subject) ?? null,
       create: async ({ data }: { data: Row }) => { created.push(data); links.push(data); return data; },
     },
-    employee: { findMany: async ({ where }: { where: { phone: string } }) => (opts.employees ?? []).filter((e) => e.phone === where.phone) },
+    employee: { findMany: async ({ where }: { where: { phone: { in: string[] } } }) => (opts.employees ?? []).filter((e) => where.phone.in.includes(e.phone as string)) },
     user: { findFirst: async () => (opts.user === undefined ? { id: "u1", tenantId: "t1", email: "a@b.c", role: "RECEPTIONIST", additionalRoles: [], isTenantOwner: false, mfaEnabled: false } : opts.user) },
   };
   return { s: new KiorexBearerService(prisma as never, { recordEvent: async (e: unknown) => { audits.push(e); } } as never), audits, created };
@@ -64,6 +64,15 @@ describe("Passport bearer authentication", () => {
     assert.equal(created.length, 1); assert.equal(created[0]!.linkedVia, "PHONE_MATCH"); assert.equal(audits.length, 1);
     const hs = await new SignJWT({}).setProtectedHeader({ alg: "HS256" }).sign(new TextEncoder().encode("x".repeat(32)));
     assert.equal(s.accepts(hs), false);
+  });
+  it("matches an Employee.phone saved by the HR screen (digits only, no +) as well as the E.164 form", async () => {
+    on();
+    const digits = svc({ employees: [emp({ phone: "201000002001" })] });
+    await digits.s.authenticate(await sign({}));
+    assert.equal(digits.created.length, 1);
+    // another country's number with the same trailing digits must not match
+    const { s } = svc({ employees: [emp({ phone: "101000002001" })] });
+    await assert.rejects(s.authenticate(await sign({})), (e: { getResponse?: () => { errorCode?: string } }) => e.getResponse?.().errorCode === "PASSPORT_NOT_LINKED");
   });
   it("refuses unverified phones, ambiguous matches, unknown phones, other clients, audiences and issuers", async () => {
     on();

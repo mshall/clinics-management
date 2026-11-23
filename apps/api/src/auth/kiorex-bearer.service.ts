@@ -87,8 +87,9 @@ export class KiorexBearerService {
     if (link) return link.userId;
     const phone = claims.phone_number_verified === true ? normalizePhone(claims.phone_number) : null;
     if (cfg.phoneLink && phone) {
+      // the HR screens store Employee.phone as digits only (no "+"), seeds and imports may keep E.164: match both spellings of the same number
       const employees = await this.prisma.employee.findMany({
-        where: { phone, deletedAt: null, userId: { not: null }, user: { deletedAt: null, deactivatedAt: null, tenantId: { not: null }, kiorexIdentityLink: null } },
+        where: { phone: { in: [phone, phone.slice(1)] }, deletedAt: null, userId: { not: null }, user: { deletedAt: null, deactivatedAt: null, tenantId: { not: null }, kiorexIdentityLink: null } },
         select: { userId: true, user: { select: { tenantId: true } } },
         take: 2,
       });
