@@ -6102,12 +6102,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Clinical data cleared */
+            /** @description { ok: true } */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        ok: true;
+                    };
+                };
             };
         };
     };

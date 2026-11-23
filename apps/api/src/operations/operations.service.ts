@@ -44,13 +44,16 @@ import {
 import { assertMayApplyOperationUpdate } from "./operation-stage-roles";
 import { assertDownPaymentBeforeInProgress } from "./operation-status-money";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+import { DocumentProcessingService } from "../storage/processing/document-processing.service";
+import { adjustTenantStorageBytes } from "../storage/processing/storage-usage";
+import { MAX_UPLOAD_BYTES as SHARED_MAX_UPLOAD_BYTES } from "../common/upload-errors";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
 import type { CreateOperationDto } from "./dto/create-operation.dto";
 import type { OperationDto } from "./dto/operation.dto";
 import type { OperationDetailDto } from "./dto/operation-detail.dto";
 import type { UpdateOperationDto } from "./dto/update-operation.dto";
 
-const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = SHARED_MAX_UPLOAD_BYTES;
 const ALLOWED_MIME = new Set([
   "application/pdf",
   "image/jpeg",
@@ -78,6 +81,7 @@ export class OperationsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    private readonly documentProcessing: DocumentProcessingService,
   ) {}
 
   private ensureEditableStatus(status: OperationStatus): void {
@@ -335,7 +339,7 @@ export class OperationsService {
     operationId: string,
     viewer: JwtUser,
     opts?: { clearPrescription?: boolean },
-  ): Promise<void> {
+  ): Promise<{ ok: true }> {
     const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
     if (!op) throw new NotFoundException("Operation not found");
     await this.assertOperationAccess(viewer, op);
@@ -345,6 +349,8 @@ export class OperationsService {
     if (opts?.clearPrescription !== false) {
       await this.deletePrescriptionDocuments(tenantId, operationId);
     }
+    // Always return JSON — empty 200 bodies break web clients that call response.json().
+    return { ok: true as const };
   }
 
   async list(
@@ -1177,6 +1183,7 @@ export class OperationsService {
     description: string | undefined,
     file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
     viewer: JwtUser,
+    options?: { replaceDocumentId?: string | null },
   ): Promise<OperationDocumentDto> {
     const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
     if (!op) throw new NotFoundException("Operation not found");
@@ -1184,7 +1191,7 @@ export class OperationsService {
     this.assertCanUploadDocument(kind, op.status);
 
     if (!file?.buffer?.length) throw new BadRequestException("Missing file");
-    if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 25MB)");
     const mime = file.mimetype || "application/octet-stream";
     if (!ALLOWED_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
 
@@ -1198,8 +1205,20 @@ export class OperationsService {
       throw new BadRequestException("Document description is required");
     }
 
+    const replaceDocumentId = options?.replaceDocumentId?.trim() || null;
+    if (replaceDocumentId) {
+      const existing = await this.prisma.operationDocument.findFirst({
+        where: { id: replaceDocumentId, operationId, tenantId, kind },
+      });
+      if (!existing) throw new NotFoundException("Document to replace not found");
+      await this.prisma.operationDocument.delete({ where: { id: existing.id } });
+      await this.uploads.deleteObject("operations", existing.relativePath).catch(() => undefined);
+      await adjustTenantStorageBytes(this.prisma, tenantId, -existing.sizeBytes);
+    }
+
+    // Prescriptions are additive (multiple files per operation). Only "no medications"
+    // / reset-clinical clears all Rx docs — never wipe siblings on a normal upload.
     if (kind === OperationDocumentKind.PRESCRIPTION) {
-      await this.deletePrescriptionDocuments(tenantId, operationId);
       await this.prisma.operation.update({
         where: { id: operationId },
         data: { noMedications: false },
@@ -1222,9 +1241,33 @@ export class OperationsService {
         mimeType: mime,
         sizeBytes: file.size,
         relativePath,
+        originalSizeBytes: file.size,
+        processingStatus: "NONE",
       },
     });
+    await adjustTenantStorageBytes(this.prisma, tenantId, file.size);
+    void this.documentProcessing.enqueueProcessDocument(tenantId, "OperationDocument", row.id);
     return this.mapDoc(row);
+  }
+
+  async removeDocument(
+    tenantId: string,
+    operationId: string,
+    documentId: string,
+    viewer: JwtUser,
+  ): Promise<void> {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    await this.assertOperationAccess(viewer, op);
+
+    const doc = await this.prisma.operationDocument.findFirst({
+      where: { id: documentId, operationId, tenantId },
+    });
+    if (!doc) throw new NotFoundException("Document not found");
+    this.assertCanUploadDocument(doc.kind, op.status);
+    await this.prisma.operationDocument.delete({ where: { id: documentId } });
+    await this.uploads.deleteObject("operations", doc.relativePath).catch(() => undefined);
+    await adjustTenantStorageBytes(this.prisma, tenantId, -doc.sizeBytes);
   }
 
   async setNoMedications(tenantId: string, operationId: string, noMedications: boolean, viewer: JwtUser): Promise<void> {

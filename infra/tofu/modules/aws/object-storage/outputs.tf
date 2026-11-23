@@ -12,3 +12,8 @@ output "bucket_regional_domain_name" {
   description = "Regional domain name (CloudFront S3 origin)."
   value       = aws_s3_bucket.this.bucket_regional_domain_name
 }
+
+output "storage_dashboard_name" {
+  description = "CloudWatch dashboard name for tenant-uploads buckets (null for web)."
+  value       = try(aws_cloudwatch_dashboard.storage[0].dashboard_name, null)
+}

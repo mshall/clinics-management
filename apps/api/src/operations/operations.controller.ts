@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -53,7 +54,7 @@ import {
 import { OperationsService } from "./operations.service";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 
-const UPLOAD_LIMIT = 15 * 1024 * 1024;
+const UPLOAD_LIMIT = 25 * 1024 * 1024;
 
 const OPERATIONS_VIEW_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,
@@ -264,7 +265,7 @@ export class OperationsController {
   @Post(":id/documents")
   @ApiOperation({
     summary:
-      "Upload operation document (multipart: file, kind ATTACHMENT|PRESCRIPTION|CONSENT|OPERATION_NOTE|POST_SURGERY, description required except prescription)",
+      "Upload operation document (multipart: file, kind ATTACHMENT|PRESCRIPTION|CONSENT|OPERATION_NOTE|POST_SURGERY, description required except prescription; optional replaceDocumentId for single-file replace)",
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
@@ -278,6 +279,10 @@ export class OperationsController {
           enum: ["ATTACHMENT", "PRESCRIPTION", "CONSENT", "OPERATION_NOTE", "POST_SURGERY"],
         },
         description: { type: "string" },
+        replaceDocumentId: {
+          type: "string",
+          description: "When set, deletes this existing document of the same kind before creating the new one",
+        },
       },
     },
   })
@@ -294,6 +299,7 @@ export class OperationsController {
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body("kind") kindRaw?: string,
     @Body("description") description?: string,
+    @Body("replaceDocumentId") replaceDocumentId?: string,
   ): Promise<OperationDocumentDto> {
     await this.assertStage2Access(user);
     if (!file) throw new BadRequestException("file is required");
@@ -315,7 +321,22 @@ export class OperationsController {
         "kind must be ATTACHMENT, PRESCRIPTION, CONSENT, OPERATION_NOTE, or POST_SURGERY",
       );
     }
-    return this.operations.uploadDocument(requireTenantId(user), id, kind, description, file, user);
+    return this.operations.uploadDocument(requireTenantId(user), id, kind, description, file, user, {
+      replaceDocumentId,
+    });
+  }
+
+  @Delete(":id/documents/:docId")
+  @ApiOperation({ summary: "Remove an operation document (editable / allowed status for that kind)" })
+  @ApiOkResponse({ description: "{ ok: true }" })
+  async removeDocument(
+    @CurrentUser() user: JwtUser,
+    @Param("id") operationId: string,
+    @Param("docId") docId: string,
+  ): Promise<{ ok: true }> {
+    await this.assertStage2Access(user);
+    await this.operations.removeDocument(requireTenantId(user), operationId, docId, user);
+    return { ok: true };
   }
 
   @RequiresScope("rx.prescribe")
@@ -334,12 +355,12 @@ export class OperationsController {
   @RequiresScope("rx.prescribe")
   @Post(":id/reset-clinical")
   @ApiOperation({ summary: "Clear medications and optionally prescription documents (scheduled operations only)" })
-  @ApiOkResponse({ description: "Clinical data cleared" })
+  @ApiOkResponse({ description: "{ ok: true }" })
   async resetClinical(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body() body?: { clearPrescription?: boolean },
-  ) {
+  ): Promise<{ ok: true }> {
     await this.assertStage2Access(user);
     return this.operations.resetClinical(requireTenantId(user), id, user, body);
   }

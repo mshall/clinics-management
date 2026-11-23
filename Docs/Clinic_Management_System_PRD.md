@@ -107,7 +107,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 **Clinical & patients (implemented on `main`)**
 - Patient registry with bilingual names, optional DOB (**calculated age on profile**), **unique phone per tenant**, national ID, acquisition tracking, registration documents (camera capture), edit/delete (role-gated — includes **Call Center** and **Group Supervisor**).
 - Patient profile: vitals history, encounters, **clinical document sections** (labs, radiology, prescriptions, other) with **in-app viewer** (pinch zoom, swipe/gallery navigation), **crop** (confirm before replace), and **delete** (confirm dialog); national ID / SSN / passport scan surfaced in **Other documents**.
-- Encounters: SOAP, vitals, ICD-10 diagnoses, medications, lab/radiology/Rx uploads, generate prescription image, finalize workflow.
+- Encounters: SOAP, vitals, ICD-10 diagnoses, medications, lab/radiology/**multi-file Rx** uploads (additive; per-file view/replace/delete with image zoom + PDF viewer), generate prescription image, finalize workflow.
 - Appointments: schedule, status lifecycle, physician/clinic scope.
 - Surgical **operations** module (schedule, balance, documents, medications, revenue linkage, **full scheduled edit** parity with create form).
 
@@ -231,8 +231,8 @@ See [`Test_Data_Users.md`](./Test_Data_Users.md) for demo logins and QA scenario
 - Schedule **operations** (procedures) per clinic with patient, clinician, date, cost, down payment, and balance.
 - **`feeCurrency`** per operation (EGP, USD, OMR, SAR, AED) — defaults to the clinic’s **`defaultCurrency`**; revenue posts in the operation currency.
 - Status workflow posts or voids linked **revenue** when completed or cancelled; completion dialog collects remaining balance in the operation currency.
-- Attach documents and medications per operation (same patterns as encounters), including **Consent** and **Operation Report** on create and post-surgery.
-- **Scheduled edit parity:** edit dialog matches create layout (fieldset sections, two-column grids on desktop, responsive scroll on mobile); `GET /operations/:id` loads clinical detail; `POST /operations/:id/reset-clinical` replaces meds/docs on save.
+- Attach documents and medications per operation (same patterns as encounters), including **Consent** and **Operation Report** on create and post-surgery; **multi-file Rx** uploads are additive (per-file view/replace/delete with image zoom + PDF viewer).
+- **Scheduled edit parity:** edit dialog matches create layout (fieldset sections, two-column grids on desktop, responsive scroll on mobile); `GET /operations/:id` loads clinical detail; `POST /operations/:id/reset-clinical` replaces meds/docs on save and returns `{ ok: true }` (empty bodies previously broke the web client with “Unexpected end of JSON input” when call-center users saved documents).
 - **Completed operation correction:** group/clinic admins may edit fees, patient, clinician, and comments; linked revenue updates automatically.
 - Physicians see only operations where they are the assigned clinician; clinic-scoped roles see assigned clinics.
 
@@ -491,7 +491,7 @@ Authorization model:
 | Dynamic currency labels and `Intl` formatting on encounters, operations, expenses | Shipped |
 | Scheduled operation **edit parity** with create (meds, docs, comments, responsive dialog) | Shipped |
 | HR **deactivate / re-hire** with employment periods; admin-only **archive (soft)** + restore | Shipped |
-| `GET /operations/:id`, `POST /operations/:id/reset-clinical` | Shipped |
+| `GET /operations/:id`, `POST /operations/:id/reset-clinical` (`{ ok: true }`; web empty-JSON guard) | Shipped |
 
 #### July 2026 (late) increments
 

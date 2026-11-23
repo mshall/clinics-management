@@ -32,8 +32,9 @@ kill_port() {
   fi
 }
 
-# Free only this branch's own ports, so other checkouts and the shared dev stack are left running.
-# Opt in to the old wide sweep with KIORLY_FREE_ALL_PORTS=1.
+# Free only this branch's own ports so a main stack (3020/5190/5191) and a kiorex
+# stack (3010/5174/5175) can keep running side by side.
+# Opt in to a wide sweep with KIORLY_FREE_ALL_PORTS=1.
 ports=("$API_PORT" "$WEB_PORT" "$DOCS_PORT")
 if [ "${KIORLY_FREE_ALL_PORTS:-}" = "1" ]; then
   ports+=(3000 3010 3020 5173 5174 5175 5190 5191 4175)

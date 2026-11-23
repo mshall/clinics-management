@@ -273,6 +273,15 @@ main { padding-bottom: max(env(safe-area-inset-bottom), 4.5rem); }
   padding: 0.75rem var(--dlg-px, 1.5rem) max(0.75rem, env(safe-area-inset-bottom));
   border-top: 1px solid hsl(var(--border) / 0.7); background: hsl(var(--card) / 0.96); backdrop-filter: blur(6px);
 }
+/* p-0 flex create wizards: never sticky / never negative margins (those clip Cancel/Continue).
+   Do not set padding/border here — Tailwind utilities on the component own spacing. */
+.kx-dialog-footer-flush {
+  position: static !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  background: hsl(var(--card) / 0.98);
+  backdrop-filter: blur(6px);
+}
 
 /* Solid danger surfaces carrying white text need >= 4.5:1 in dark too (the dark --destructive token is tuned for red TEXT on dark surfaces). */
 html.dark .bg-destructive { background-color: hsl(0 72% 46%); }

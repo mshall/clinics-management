@@ -12,7 +12,7 @@ Pushing product fixes to **`main`** triggers AWS deploy (App Runner + post-deplo
 ## What stays safe (do not weaken)
 
 1. **Post-deploy seed is incremental only** — `prisma/seed.ts` must **ensure** missing demo users/clinics; it must **never** `deleteMany` patients, appointments, encounters, operations, or document rows for existing tenants.
-2. **Uploads live in S3** (`UPLOAD_STORAGE=s3`, `S3_UPLOAD_BUCKET`) — App Runner image deploys and SPA S3 syncs do **not** empty the uploads bucket. Never add deploy steps that `aws s3 rm` the uploads bucket or rewrite document `storageKey` / `relativePath` without a migration plan.
+2. **Uploads live in S3** (`UPLOAD_STORAGE=s3`, `S3_UPLOAD_BUCKET`) — App Runner image deploys and SPA S3 syncs do **not** empty the uploads bucket. Never add deploy steps that `aws s3 rm` the uploads bucket or rewrite document `storageKey` / `relativePath` without a migration plan. The CDK `ApiUploadsBucket` stays **`RemovalPolicy.RETAIN`**, **no `autoDeleteObjects`**, and lifecycle must **never** `ExpirationInDays` on current `patients/` / `encounters/` / `operations/` objects (Intelligent-Tiering and noncurrent-version expiry only). Phase 1 storage hygiene is an in-place bucket update — it must not replace or wipe the bucket.
 3. **Prisma migrations must be additive** for production — no drop-table / drop-column of patient or document storage without an explicit user-approved data migration and backup.
 4. **Do not** point local `db:seed:demo` / destructive demo resets at production `DATABASE_URL`.
 5. Prefer **soft-delete** and merge tools over hard deletes when cleaning duplicates.

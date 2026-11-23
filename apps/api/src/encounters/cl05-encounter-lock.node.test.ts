@@ -18,6 +18,8 @@ const EXEMPT: Record<string, string> = {
   "marketplace/kiorex-import.service.ts": "creates NEW historical encounters (and deletes only its own import rows on rollback); no existing signed note is edited",
   "telehealth/telehealth-sync.ts": "reassigns clinicianId on DRAFT/AMENDED telehealth encounters only (ADR-039); finalized notes are never touched",
   "staging/sales-demo-reset.ts": "staging demo reset wipes the whole tenant",
+  "storage/processing/document-processing.service.ts":
+    "async quality pipeline updates size/sha/thumbs only; upload endpoints already guard the lock",
 };
 
 function walk(dir: string, out: string[] = []): string[] {

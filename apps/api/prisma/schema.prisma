@@ -1212,8 +1212,17 @@ model Tenant {
   whatsAppRemindersEnabled           Boolean                            @default(false)
   appointmentReminderHoursBefore     Int                                @default(24)
   /// When true, creating an operation requires "How did they find us?" (acquisition channel).
-  operationAcquisitionRequired       Boolean                            @default(false)
+  operationAcquisitionRequired        Boolean                           @default(false)
+  /// Storage quality pipeline: null = env default (on local/test, off AWS prod); true/false = tenant override.
+  storageQualityPipelineEnabled       Boolean?
+  /// NEEDS_HUMAN: founder/clinical lead — when true, keep untouched originals under …/orig/ for reduced files.
+  keepOriginalUploads                 Boolean                           @default(false)
+  /// Shadow mode: keep originals of reduced files until this instant (two-week window after enable).
+  storageQualityShadowUntil           DateTime?
+  /// Running total of stored upload bytes (documents + thumbs + optional orig/). Adjusted on process/delete.
+  storageBytesUsed                    BigInt                            @default(0)
   providerSettings                   Json                               @default("{}")
+  storageJobs                        StorageJob[]
   users                              User[]
   clinics                            Clinic[]
   clinicAdminScopes                  ClinicAdminScope[]
@@ -2092,20 +2101,38 @@ model PatientAllergy {
 }
 
 model PatientDocument {
-  id               String   @id @default(cuid())
-  tenantId         String
-  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  patientId        String
-  patient          Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  description      String
-  originalFileName String
-  mimeType         String
-  sizeBytes        Int
-  relativePath     String
-  createdAt        DateTime @default(now())
+  id                     String    @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId              String
+  patient                Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  description            String
+  originalFileName       String
+  mimeType               String
+  sizeBytes              Int
+  relativePath           String
+  /// Document quality processing (nullable / additive — existing rows stay valid).
+  sha256                 String?
+  originalSizeBytes      Int?
+  thumbSmallRelativePath String?
+  thumbLargeRelativePath String?
+  originalRelativePath   String?
+  processingStatus       String    @default("NONE")
+  processingError        String?
+  processedAt            DateTime?
+  width                  Int?
+  height                 Int?
+  pageCount              Int?
+  qualityNote            String?
+  ssim                   Float?
+  qualityUsed            Int?
+  longEdgeUsed           Int?
+  createdAt              DateTime  @default(now())
 
   @@index([tenantId])
   @@index([patientId])
+  @@index([tenantId, processingStatus])
+  @@index([tenantId, sha256])
 }
 
 model Encounter {
@@ -2277,20 +2304,37 @@ model EncounterMedication {
 }
 
 model EncounterDocument {
-  id               String                @id @default(cuid())
-  tenantId         String
-  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  encounterId      String
-  encounter        Encounter             @relation(fields: [encounterId], references: [id], onDelete: Cascade)
-  kind             EncounterDocumentKind
-  originalFileName String
-  mimeType         String
-  sizeBytes        Int
-  relativePath     String
-  createdAt        DateTime              @default(now())
+  id                     String                @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  encounterId            String
+  encounter              Encounter             @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  kind                   EncounterDocumentKind
+  originalFileName       String
+  mimeType               String
+  sizeBytes              Int
+  relativePath           String
+  sha256                 String?
+  originalSizeBytes      Int?
+  thumbSmallRelativePath String?
+  thumbLargeRelativePath String?
+  originalRelativePath   String?
+  processingStatus       String                @default("NONE")
+  processingError        String?
+  processedAt            DateTime?
+  width                  Int?
+  height                 Int?
+  pageCount              Int?
+  qualityNote            String?
+  ssim                   Float?
+  qualityUsed            Int?
+  longEdgeUsed           Int?
+  createdAt              DateTime              @default(now())
 
   @@index([tenantId])
   @@index([encounterId])
+  @@index([tenantId, processingStatus])
+  @@index([tenantId, sha256])
 }
 
 model RevenueEntry {
@@ -2581,21 +2625,38 @@ model Operation {
 }
 
 model OperationDocument {
-  id               String                @id @default(cuid())
-  tenantId         String
-  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  operationId      String
-  operation        Operation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  kind             OperationDocumentKind @default(ATTACHMENT)
-  description      String?
-  originalFileName String
-  mimeType         String
-  sizeBytes        Int
-  relativePath     String
-  createdAt        DateTime              @default(now())
+  id                     String                @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operationId            String
+  operation              Operation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  kind                   OperationDocumentKind @default(ATTACHMENT)
+  description            String?
+  originalFileName       String
+  mimeType               String
+  sizeBytes              Int
+  relativePath           String
+  sha256                 String?
+  originalSizeBytes      Int?
+  thumbSmallRelativePath String?
+  thumbLargeRelativePath String?
+  originalRelativePath   String?
+  processingStatus       String                @default("NONE")
+  processingError        String?
+  processedAt            DateTime?
+  width                  Int?
+  height                 Int?
+  pageCount              Int?
+  qualityNote            String?
+  ssim                   Float?
+  qualityUsed            Int?
+  longEdgeUsed           Int?
+  createdAt              DateTime              @default(now())
 
   @@index([tenantId])
   @@index([operationId])
+  @@index([tenantId, processingStatus])
+  @@index([tenantId, sha256])
 }
 
 model OperationMedication {
@@ -3035,23 +3096,59 @@ model PatientFamilyLink {
 }
 
 model PatientClinicalPhoto {
-  id               String            @id @default(cuid())
-  tenantId         String
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  patientId        String
-  patient          Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  kind             ClinicalPhotoKind @default(GENERAL)
-  pairGroupId      String?
-  caption          String?
-  originalFileName String
-  mimeType         String
-  sizeBytes        Int
-  relativePath     String
-  takenAt          DateTime?
-  createdAt        DateTime          @default(now())
+  id                     String            @id @default(cuid())
+  tenantId               String
+  tenant                 Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patientId              String
+  patient                Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  kind                   ClinicalPhotoKind @default(GENERAL)
+  pairGroupId            String?
+  caption                String?
+  originalFileName       String
+  mimeType               String
+  sizeBytes              Int
+  relativePath           String
+  sha256                 String?
+  originalSizeBytes      Int?
+  thumbSmallRelativePath String?
+  thumbLargeRelativePath String?
+  originalRelativePath   String?
+  processingStatus       String            @default("NONE")
+  processingError        String?
+  processedAt            DateTime?
+  width                  Int?
+  height                 Int?
+  pageCount              Int?
+  qualityNote            String?
+  ssim                   Float?
+  qualityUsed            Int?
+  longEdgeUsed           Int?
+  takenAt                DateTime?
+  createdAt              DateTime          @default(now())
 
   @@index([tenantId, patientId])
   @@index([tenantId, pairGroupId])
+  @@index([tenantId, processingStatus])
+  @@index([tenantId, sha256])
+}
+
+/// Storage quality / purge / reconcile job queue (SKIP LOCKED).
+model StorageJob {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kind        String
+  refModel    String
+  refId       String
+  status      String    @default("PENDING")
+  attempts    Int       @default(0)
+  runAfter    DateTime  @default(now())
+  lockedUntil DateTime?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, runAfter])
+  @@index([tenantId])
 }
 
 /// CL-07 — per-tooth odontogram (FDI notation) for dental pack.

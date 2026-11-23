@@ -42,8 +42,11 @@ describe("PL-06 plan nav presets", () => {
     assert.ok(!filtered.includes("revenue"));
   });
 
-  it("required plan escalates for operations to Clinic", () => {
+  it("required plan escalates for operations to Clinic; HR follows Pro (mod_hr)", () => {
     assert.equal(requiredPlanForNavTab("operations"), PlanKey.CLINIC);
     assert.equal(requiredPlanForNavTab("reports"), PlanKey.PRO);
+    assert.equal(requiredPlanForNavTab("hr"), PlanKey.PRO);
+    assert.ok(PLAN_NAV_TAB_PRESETS[PlanKey.PRO].includes("hr"));
+    assert.ok(!PLAN_NAV_TAB_PRESETS[PlanKey.LITE].includes("hr"));
   });
 });
