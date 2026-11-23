@@ -2,9 +2,10 @@
 # Resolve unique local ports for this checkout so `main` can run beside other branches.
 # Sourced by npm run dev / free-dev-ports / wait scripts.
 #
-#   main  → API 3020 · web 5190 · docs 5191
-#   other → API 3010 · web 5174 · docs 5175  (CI / Playwright defaults)
+#   main   → API 3020 · web 5190 · docs 5191
+#   kiorex → API 3010 · web 5174 · docs 5175  (also used by other non-main branches + CI)
 #
+# Keep these disjoint so a main checkout and a kiorex checkout can run side by side.
 # Overrides (optional): KIORLY_API_PORT, KIORLY_WEB_PORT, KIORLY_DOCS_PORT, KIORLY_DEV_BRANCH.
 # Ambient PORT/API_PORT from the shell are ignored unless KIORLY_USE_ENV_PORTS=1.
 set -euo pipefail
@@ -29,7 +30,7 @@ case "$_branch" in
     _default_web=5190
     _default_docs=5191
     ;;
-  *)
+  kiorex|*)
     _default_api=3010
     _default_web=5174
     _default_docs=5175
