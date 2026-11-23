@@ -15,7 +15,7 @@ import { PrismaClientExceptionFilter } from "./common/prisma-exception.filter";
 import { IntegrationFailureExceptionFilter } from "./integrations/integration-failure.filter";
 import { webBuildIdMiddleware } from "./common/web-build-id.middleware";
 import compressionMiddleware from "compression";
-import { json } from "express";
+import { json, type NextFunction, type Request, type Response } from "express";
 import { assertProviderEnv } from "./common/provider-env";
 
 async function bootstrap() {
@@ -25,10 +25,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
   // Org-onboarding import chunks carry base64 documents: a larger JSON limit on that HMAC path only (the signature is verified over the raw bytes).
-  app.use(
-    "/marketplace/v1/imports",
-    json({ limit: "48mb", verify: (req, _res, buf) => { (req as { rawBody?: Buffer }).rawBody = buf; } }),
-  );
+  // The parser is wrapped on purpose: Nest decides whether to install its own global JSON parser by looking for a router layer named
+  // "jsonParser"; mounting body-parser's json() directly (even path-scoped) made Nest skip it, so EVERY other JSON body arrived empty.
+  const importsJson = json({ limit: "48mb", verify: (req, _res, buf) => { (req as { rawBody?: Buffer }).rawBody = buf; } });
+  app.use("/marketplace/v1/imports", (req: Request, res: Response, next: NextFunction) => importsJson(req, res, next));
   app.use(
     compressionMiddleware({
       threshold: 1024,
