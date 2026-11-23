@@ -30,7 +30,7 @@ export async function seedTelehealthDemo(prisma: PrismaClient, opts: { appointme
   let type = await prisma.appointmentType.findFirst({ where: { tenantId, clinicId: clinic.id, serviceLocation: "VIDEO" } });
   if (!type) {
     type = await prisma.appointmentType.create({
-      data: { tenantId, clinicId: clinic.id, nameEn: "Video consultation", nameAr: "استشارة فيديو", durationMinutes: 20, feeAmount: 250, serviceLocation: "VIDEO", marketplaceBookable: true, minNoticeMinutes: 60, maxDaysAhead: 30, colorHex: "#0d9488" },
+      data: { tenantId, clinicId: clinic.id, nameEn: "Video consultation", nameAr: "استشارة فيديو", durationMinutes: 20, feeAmount: 250, serviceLocation: "VIDEO", marketplaceBookable: true, colorHex: "#0d9488" },
     });
   }
   if (!opts.appointment) return { doctorEmail: doctor.email, typeId: type.id };
