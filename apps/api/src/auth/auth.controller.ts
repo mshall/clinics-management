@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Headers,
   HttpStatus,
   Param,
   Patch,
@@ -12,6 +13,8 @@ import {
   StreamableFile,
   UploadedFile,
   UseGuards,
+  UnauthorizedException,
+  ForbiddenException,
   UseInterceptors,
 } from "@nestjs/common";
 import type { Request } from "express";
@@ -24,6 +27,10 @@ import { MfaService } from "./mfa.service";
 import { CurrentUser } from "./current-user.decorator";
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import { LoginDto } from "./dto/login.dto";
+import { HandoffExchangeDto, HandoffLoginDto } from "./dto/handoff.dto";
+import { HandoffCodes, HandoffError, isHomeOrigin, webBaseUrl } from "./handoff";
+import { PrismaHandoffStore } from "./handoff.store";
+import { AuditService } from "../audit/audit.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import type { JwtUser } from "./jwt-user";
 import { AuthPasswordResetService } from "./auth-password-reset.service";
@@ -44,7 +51,13 @@ export class AuthController {
     private readonly passwordReset: AuthPasswordResetService,
     private readonly otpLogin: AuthOtpLoginService,
     private readonly sessions: AuthSessionService,
+    private readonly handoffStore: PrismaHandoffStore,
+    private readonly audit: AuditService,
   ) {}
+
+  private handoffCodes() {
+    return new HandoffCodes(this.handoffStore, "clinic");
+  }
 
   @Post("login")
   @HttpCode(HttpStatus.OK)
@@ -52,6 +65,50 @@ export class AuthController {
   @ApiOkResponse({ type: LoginResponseDto })
   login(@Body() dto: LoginDto, @Req() req: Request) {
     return this.auth.login(dto.email, dto.password, dto.mfaCode, loginMetaFromRequest(req));
+  }
+
+  /**
+   * Kiorly Home password sign-in, step 1 (ADR-038 handoff). Same credential, account and rate-limit checks as `login`, but the answer is a
+   * single-use 30-second code (never a token) and where to send the browser. Only the Kiorly Home origin may call it (Origin allow-list).
+   * A user with a second factor cannot complete here: the answer is `status: FALLBACK` with the product's own sign-in page (flag `reason=mfa`).
+   */
+  @Post("handoff/login")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Kiorly Home: verify credentials, return a single-use handoff code" })
+  async handoffLogin(@Body() dto: HandoffLoginDto, @Headers("origin") origin: string | undefined, @Req() req: Request) {
+    req.res?.setHeader("Cache-Control", "no-store");
+    if (!isHomeOrigin(origin)) {
+      throw new ForbiddenException({ message: "This sign-in start is not allowed from here", errorCode: "HANDOFF_ORIGIN_NOT_ALLOWED" });
+    }
+    const v = await this.auth.verifyForHandoff(dto.email, dto.password);
+    const web = webBaseUrl();
+    const edition = dto.edition ?? null;
+    const ed = edition ? `&edition=${edition}` : "";
+    if (v.needsSecondFactor) {
+      return { status: "FALLBACK", reason: "mfa", redirectUrl: web ? `${web}/login?from=kiorly-home&reason=mfa${ed}` : null };
+    }
+    const { code, expiresInSeconds } = await this.handoffCodes().issue({ subjectId: v.userId, origin: origin!, edition });
+    if (v.tenantId) {
+      void this.audit.recordEvent({ tenantId: v.tenantId, actorId: v.userId, clinicId: null, action: "HANDOFF_ISSUED", resource: "Auth", resourceId: v.userId, metadata: { via: "kiorly-home" } }).catch(() => undefined);
+    }
+    return { status: "OK", code, expiresInSeconds, redirectUrl: web ? `${web}/login?handoff=${encodeURIComponent(code)}&from=kiorly-home${ed}` : null };
+  }
+
+  /** Kiorly Home password sign-in, step 2: the Clinic web redeems the code once and receives the normal login result. Replays and expired codes: 401. */
+  @Post("handoff/exchange")
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: LoginResponseDto })
+  @ApiOperation({ summary: "Kiorly Home: redeem a handoff code for the normal session (single use)" })
+  async handoffExchange(@Body() dto: HandoffExchangeDto, @Req() req: Request) {
+    req.res?.setHeader("Cache-Control", "no-store");
+    let subjectId: string;
+    try {
+      ({ subjectId } = await this.handoffCodes().redeem({ code: dto.code, edition: dto.edition ?? null }));
+    } catch (e) {
+      if (e instanceof HandoffError) throw new UnauthorizedException({ message: e.message, errorCode: e.code });
+      throw e;
+    }
+    return this.auth.issueSsoSession(subjectId, undefined, loginMetaFromRequest(req));
   }
 
   @Post("refresh")

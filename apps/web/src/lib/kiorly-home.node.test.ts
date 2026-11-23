@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { homeUrlFromEnv, LOCAL_HOME_URL, switchWorkspaceHref, wantsPassportAutostart } from "./kiorly-home";
+import { homeUrlFromEnv, LOCAL_HOME_URL, switchWorkspaceHref, wantsPassportAutostart, readHandoff, withoutHandoff } from "./kiorly-home";
 
 describe("Switch workspace link (Kiorly Home)", () => {
   it("points at <home>/signin?switch=1, whatever path the configured URL carries", () => {
@@ -30,5 +30,20 @@ describe("?sso=passport auto-start", () => {
   it("does not start for anything else, nor when the person came back with the Back button (no loop)", () => {
     for (const s of ["", "?", "?sso=other", "?sso=", "?from=kiorly-home", "?SSO=passport"]) assert.equal(wantsPassportAutostart(s), false, s);
     assert.equal(wantsPassportAutostart("?sso=passport", "back_forward"), false);
+  });
+});
+
+describe("Kiorly Home password handoff (URL handling)", () => {
+  it("reads a well-formed code and a known-shape reason, nothing else", () => {
+    const code = "A".repeat(43);
+    assert.deepEqual(readHandoff(`?handoff=${code}&from=kiorly-home`), { code, reason: null });
+    assert.deepEqual(readHandoff("?reason=mfa&from=kiorly-home"), { code: null, reason: "mfa" });
+    assert.deepEqual(readHandoff("?handoff=<script>&reason=Bad Reason"), { code: null, reason: null });
+    assert.deepEqual(readHandoff(""), { code: null, reason: null });
+  });
+  it("strips the code (and reason) from the URL but keeps other parameters", () => {
+    assert.equal(withoutHandoff("/login", `?handoff=${"B".repeat(43)}&from=kiorly-home&edition=NURSE`), "/login?from=kiorly-home&edition=NURSE");
+    assert.equal(withoutHandoff("/login", `?handoff=${"B".repeat(43)}`), "/login");
+    assert.equal(withoutHandoff("/login", "?reason=mfa&x=1", "#a"), "/login?x=1#a");
   });
 });

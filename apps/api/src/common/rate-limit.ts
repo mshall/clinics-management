@@ -48,7 +48,7 @@ export const AUTHED_READ_RATE = { limit: 600, windowMs: 60_000 } as const;
 /** Pick the per-IP policy for an /auth/* request. Pure, unit-tested. */
 export function authRatePolicy(path: string, method = "GET"): { limit: number; windowMs: number } {
   if (path.includes("/otp") || path.includes("/signup/verify") || path.includes("/password/forgot") || path.includes("/mfa/whatsapp/challenge")) return OTP_RATE;
-  if (path.includes("/auth/login") || path.includes("/auth/refresh") || path.includes("/signup/complete")) return LOGIN_RATE;
+  if (path.includes("/auth/login") || path.includes("/auth/handoff/login") || path.includes("/auth/refresh") || path.includes("/signup/complete")) return LOGIN_RATE;
   if (method.toUpperCase() === "GET" && (/\/auth\/me$/.test(path) || /\/auth\/sessions$/.test(path))) return AUTHED_READ_RATE;
   return PUBLIC_AUTH_RATE;
 }

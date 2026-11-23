@@ -210,7 +210,10 @@
       "requestFailed": "Could not send code."
     },
     "apiStarting": "The server is starting up. Sign-in will be available in a moment.",
-    "mfaRequired": "Enter the 6-digit code from your authenticator app."
+    "mfaRequired": "Enter the 6-digit code from your authenticator app.",
+    "handoffBusy": "Signing you in…",
+    "handoffFailed": "We could not complete the sign-in from Kiorly. Sign in below.",
+    "handoffReason": {"mfa": "Your account uses a second factor. Sign in here to enter the code.", "password_expired": "Your password has expired. Sign in here to set a new one.", "org": "Choose your organisation here to continue.", "other": "Sign in here to continue."}
   },
   "signup": {
     "title": "Start with Kiorly",

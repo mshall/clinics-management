@@ -149,12 +149,8 @@ export class AuthService {
     };
   }
 
-  async login(
-    email: string,
-    password: string,
-    mfaCode?: string,
-    meta: LoginSessionMeta = {},
-  ) {
+  /** Finds the active user whose password matches (e-mail variants tolerated) and applies the account/tenant/subscription gates. Shared by `login` and the Kiorly Home handoff. */
+  private async verifyPasswordUser(email: string, password: string) {
     const normalized = normalizeLoginEmail(email);
     const variants = loginEmailLookupVariants(normalized);
     const candidates = await this.prisma.user.findMany({
@@ -183,7 +179,26 @@ export class AuthService {
     const user = candidates.find((u) => passwordMatches(password, u.passwordHash));
     if (!user) throw new UnauthorizedException("Invalid credentials");
     await this.assertLoginAllowed(user);
+    return user;
+  }
+
+  async login(
+    email: string,
+    password: string,
+    mfaCode?: string,
+    meta: LoginSessionMeta = {},
+  ) {
+    const user = await this.verifyPasswordUser(email, password);
     return this.issueLoginSession(user.id, mfaCode, meta, user);
+  }
+
+  /**
+   * Kiorly Home handoff step 1: same credential and account checks as `login`, but no session. `needsSecondFactor` means the handoff cannot
+   * complete here (TOTP / WhatsApp / recovery code are asked by the product's own sign-in page), so Home redirects there with a flag.
+   */
+  async verifyForHandoff(email: string, password: string): Promise<{ userId: string; tenantId: string | null; email: string; needsSecondFactor: boolean }> {
+    const user = await this.verifyPasswordUser(email, password);
+    return { userId: user.id, tenantId: user.tenantId, email: user.email, needsSecondFactor: Boolean(user.mfaEnabled) };
   }
 
   /** Account/tenant/subscription gates shared by password login and Kiorex Passport sign-in. */

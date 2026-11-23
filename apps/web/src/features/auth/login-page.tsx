@@ -6,7 +6,7 @@ import { KiorexPassportButton, startKiorexPassportSignIn } from "@/features/auth
 import { rememberSignInMethod } from "@/lib/sign-in-method";
 import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
 import { useSignInMethod } from "@/components/use-sign-in-method";
-import { currentNavigationType, wantsPassportAutostart } from "@/lib/kiorly-home";
+import { currentNavigationType, wantsPassportAutostart, readHandoff, withoutHandoff } from "@/lib/kiorly-home";
 import { toast } from "sonner";
 import { useKiorexConfig } from "@/features/auth/use-kiorex-config";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiUrl } from "@/lib/api-url";
-import { loginRequest } from "@/lib/auth-api";
+import { handoffExchangeRequest, loginRequest } from "@/lib/auth-api";
 import { resolvePostLoginPath } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -46,12 +46,35 @@ export function LoginPage() {
   const sim = useSignInMethod(kx.isPending ? undefined : kx.data?.enabled === true);
   // Kiorly Home sends `?sso=passport[&edition=NURSE]`: start "Sign in with Kiorex Passport" by itself (once per page load; the Passport SSO session makes it silent).
   const autostarted = useRef(false);
+  // Kiorly Home password handoff: redeem the single-use code once, strip it from the address bar first, then adopt the normal session.
+  const [handoff] = useState(() => readHandoff(window.location.search));
+  const [handoffBusy, setHandoffBusy] = useState(!!handoff.code);
+  const redeemed = useRef(false);
+  useEffect(() => {
+    if (!handoff.code && !handoff.reason) return;
+    const edition = new URLSearchParams(window.location.search).get("edition") === "NURSE" ? "NURSE" : null;
+    window.history.replaceState(window.history.state, "", withoutHandoff(window.location.pathname, window.location.search, window.location.hash));
+    if (!handoff.code || redeemed.current) return;
+    redeemed.current = true;
+    handoffExchangeRequest(handoff.code, edition)
+      .then((res) => {
+        try { localStorage.removeItem("kiorly-passport-logout"); } catch { /* ignore */ }
+        rememberSignInMethod("password");
+        setSession(res.accessToken, res.user, res.refreshToken);
+        const { user: signedIn } = useAuthStore.getState();
+        navigate(resolvePostLoginPath(signedIn?.role, signedIn?.navTabKeys, undefined, signedIn?.roleNavTabKeys), { replace: true });
+      })
+      .catch(() => { setHandoffBusy(false); setError(t("auth.handoffFailed")); });
+  }, [handoff, setSession, navigate, t]);
+
+  // the handoff could not complete (second factor, expired password, organisation): show the product's own password form
+  useEffect(() => { if (handoff.reason && sim.ready) sim.choose("password"); }, [handoff.reason, sim.ready]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (user && token) return;
-    if (autostarted.current || kx.data?.enabled !== true || !wantsPassportAutostart(location.search, currentNavigationType())) return;
+    if (handoff.code || autostarted.current || kx.data?.enabled !== true || !wantsPassportAutostart(location.search, currentNavigationType())) return;
     autostarted.current = true;
     startKiorexPassportSignIn().catch((e: unknown) => toast.error(e instanceof Error ? e.message : t("kiorex.passport.failed")));
-  }, [user, token, kx.data?.enabled, location.search, t]);
+  }, [user, token, kx.data?.enabled, location.search, t, handoff.code]);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,6 +193,8 @@ export function LoginPage() {
             <CardTitle>{t("auth.signIn")}</CardTitle>
           </CardHeader>
           <CardContent>
+            {handoffBusy ? <p role="status" data-testid="handoff-busy" className="mb-4 text-sm text-muted-foreground">{t("auth.handoffBusy")}</p> : null}
+            {handoff.reason ? <p role="status" data-testid="handoff-reason" className="mb-4 rounded-lg border border-border bg-muted/50 p-3 text-sm">{t(`auth.handoffReason.${handoff.reason}`, { defaultValue: t("auth.handoffReason.other") })}</p> : null}
             {!sim.ready ? <div role="status" aria-busy="true" aria-label={t("auth.signIn")} data-testid="signin-loading" className="h-40 animate-pulse rounded-xl bg-muted/60" /> : null}
             {sim.ready && sim.offered ? <SignInMethodTabs className="mb-4" value={sim.method} onChange={sim.choose} labels={{ group: t("auth.method"), passport: t("auth.methodPassport"), password: t("auth.methodPassword") }} /> : null}
             {sim.ready && sim.offered && sim.method === "passport" ? (

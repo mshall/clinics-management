@@ -29,6 +29,7 @@ describe("SC-06 rate limit", () => {
     assert.deepEqual(authRatePolicy("/api/v1/auth/me", "PATCH"), PUBLIC_AUTH_RATE);
     assert.deepEqual(authRatePolicy("/api/v1/auth/login", "POST"), LOGIN_RATE);
     assert.deepEqual(authRatePolicy("/api/v1/auth/otp/request", "POST"), OTP_RATE);
+    assert.deepEqual(authRatePolicy("/api/v1/auth/handoff/login", "POST"), LOGIN_RATE); // Kiorly Home password handoff = a login attempt
     assert.ok(AUTHED_READ_RATE.limit > PUBLIC_AUTH_RATE.limit);
   });
 });

@@ -37,3 +37,21 @@ export function wantsPassportAutostart(search: string, navigationType?: string):
 export function currentNavigationType(): string | undefined {
   try { return (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined)?.type; } catch { return undefined; }
 }
+
+/**
+ * Password handoff from Kiorly Home (ADR-038): Home's form posts the credentials to this product's `POST /auth/handoff/login`, gets a
+ * single-use 30-second code and sends the browser to `<product>/login?handoff=<code>&from=kiorly-home`. This page redeems it once with
+ * `POST /auth/handoff/exchange` and strips the code from the address bar BEFORE the request. `reason=mfa|password_expired|org` means the
+ * handoff could not complete (second factor, expired password, organisation choice): the normal form is shown with a notice.
+ */
+export function readHandoff(search: string): { code: string | null; reason: string | null } {
+  const q = new URLSearchParams(search);
+  const code = q.get("handoff"); const reason = q.get("reason");
+  return { code: code && /^[A-Za-z0-9_-]{20,128}$/.test(code) ? code : null, reason: reason && /^[a-z_]{2,32}$/.test(reason) ? reason : null };
+}
+/** Same URL without `handoff` (and `reason`): safe to put into history so the code never stays in the address bar, history or a bookmark. */
+export function withoutHandoff(pathname: string, search: string, hash = ""): string {
+  const q = new URLSearchParams(search); q.delete("handoff"); q.delete("reason");
+  const rest = q.toString();
+  return `${pathname}${rest ? `?${rest}` : ""}${hash}`;
+}
