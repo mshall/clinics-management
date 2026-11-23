@@ -5119,3 +5119,54 @@ model MobileResultReview {
 
   @@unique([tenantId, orderId])
 }
+
+/// Kiorex org-onboarding import (HMAC receiver): one Clinic organization (tenant + clinic) provisioned per (integration client, Kiorex org ref).
+model KiorexImportOrg {
+  id             String   @id @default(cuid())
+  clientId       String
+  kiorexOrgId    String
+  tenantId       String
+  clinicId       String
+  importerUserId String
+  createdAt      DateTime @default(now())
+
+  batches KiorexImportBatch[]
+
+  @@unique([clientId, kiorexOrgId])
+  @@index([tenantId])
+}
+
+/// One Kiorex import batch; every row it created is listed in KiorexImportItem so the whole batch can be rolled back.
+model KiorexImportBatch {
+  id            String          @id @default(cuid())
+  orgRowId      String
+  org           KiorexImportOrg @relation(fields: [orgRowId], references: [id], onDelete: Cascade)
+  clientId      String
+  kiorexBatchId String
+  tenantId      String
+  status        String          @default("OPEN") // OPEN | ROLLED_BACK
+  createdAt     DateTime        @default(now())
+  rolledBackAt  DateTime?
+
+  items KiorexImportItem[]
+
+  @@unique([clientId, kiorexBatchId])
+}
+
+/// Idempotency + rollback ledger. `created=false` means the target row already existed (de-duplicated) and must survive a rollback.
+model KiorexImportItem {
+  id             String            @id @default(cuid())
+  batchRowId     String
+  batch          KiorexImportBatch @relation(fields: [batchRowId], references: [id], onDelete: Cascade)
+  tenantId       String
+  entity         String
+  idempotencyKey String
+  sourceKey      String
+  targetId       String
+  created        Boolean           @default(true)
+  storageKey     String?
+  createdAt      DateTime          @default(now())
+
+  @@unique([batchRowId, idempotencyKey])
+  @@index([batchRowId, entity])
+}

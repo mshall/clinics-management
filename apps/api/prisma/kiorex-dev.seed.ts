@@ -144,7 +144,7 @@ async function ensureMarketplaceClient(prisma: PrismaClient): Promise<void> {
       where: { id: existing.id },
       data: {
         name: "Kiorex dev marketplace client",
-        scopes: ["MARKETPLACE"],
+        scopes: ["MARKETPLACE", "ONBOARDING_IMPORT"],
         deactivatedAt: null,
         ...(same ? {} : { secretHash: await bcrypt.hash(KX_DEV_CLIENT_SECRET, 12) }),
       },
@@ -156,7 +156,7 @@ async function ensureMarketplaceClient(prisma: PrismaClient): Promise<void> {
       name: "Kiorex dev marketplace client",
       clientKey: KX_DEV_CLIENT_KEY,
       secretHash: await bcrypt.hash(KX_DEV_CLIENT_SECRET, 12),
-      scopes: ["MARKETPLACE"],
+      scopes: ["MARKETPLACE", "ONBOARDING_IMPORT"],
     },
   });
 }
