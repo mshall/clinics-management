@@ -5487,6 +5487,8 @@
       "helpTitle": "How to allow camera and microphone",
       "helpIos": "iPhone: open Settings > Safari > Camera and Microphone and choose Allow, then reload this page. If you opened the link inside another app, open it in Safari.",
       "helpAndroid": "Android: tap the lock icon next to the address, open Permissions, allow Camera and Microphone, then reload. In an app, allow its camera and microphone permissions in Android Settings.",
+      "helpIosApp": "iPhone: open Settings, find this app in the list, turn on Camera and Microphone, then come back and tap Try again.",
+      "helpAndroidApp": "Android: open Settings > Apps > this app > Permissions, allow Camera and Microphone, then come back and tap Try again.",
       "helpOther": "Click the camera icon in the address bar, allow Camera and Microphone for this site, then reload.",
       "camera": "Camera",
       "microphone": "Microphone",

@@ -26,5 +26,7 @@ describe("telehealth web helpers", () => {
     assert.equal(detectPlatform("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari"), "ios-safari");
     assert.equal(detectPlatform("Mozilla/5.0 (Linux; Android 14) Chrome/120"), "android-chrome");
     assert.equal(detectPlatform("Mozilla/5.0 (Macintosh) Chrome/120"), "other");
+    assert.equal(detectPlatform("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"), "ios-app");
+    assert.equal(detectPlatform("Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/UD1A; wv) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36"), "android-app");
   });
 });

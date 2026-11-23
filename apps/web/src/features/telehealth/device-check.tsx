@@ -74,7 +74,11 @@ export function DeviceCheck({ onJoin, joinLabel, busy }: { onJoin: (d: Devices) 
         <div role="alert" className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
           <p className="font-medium">{t("telehealth.device.helpTitle", "How to allow camera and microphone")}</p>
           <p className="mt-1 text-muted-foreground">
-            {platform === "ios-safari"
+            {platform === "ios-app"
+              ? t("telehealth.device.helpIosApp", "iPhone: open Settings, find this app in the list, turn on Camera and Microphone, then come back and tap Try again.")
+              : platform === "android-app"
+                ? t("telehealth.device.helpAndroidApp", "Android: open Settings > Apps > this app > Permissions, allow Camera and Microphone, then come back and tap Try again.")
+                : platform === "ios-safari"
               ? t("telehealth.device.helpIos", "iPhone: open Settings > Safari > Camera and Microphone and choose Allow, then reload this page. If you opened the link inside another app, open it in Safari.")
               : platform === "android-chrome"
                 ? t("telehealth.device.helpAndroid", "Android: tap the lock icon next to the address, open Permissions, allow Camera and Microphone, then reload. In an app, allow its camera and microphone permissions in Android Settings.")
