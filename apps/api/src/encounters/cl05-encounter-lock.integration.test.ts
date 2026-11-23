@@ -31,6 +31,7 @@ function encountersService(): EncountersService {
     {} as never,
     { shareAfterSignOff: async () => null } as never,
     { emitStatusChange: async () => undefined } as never,
+    { enqueueProcessDocument: async () => undefined } as never,
   );
 }
 
@@ -130,7 +131,12 @@ describe("CL-05 sign-off, amendments & auto-lock", () => {
       ["DELETE encounter", () => svc.delete(tenantId, lockedId, admin)],
       ["POST finalize", () => svc.finalize(tenantId, doctor, lockedId)],
     ];
-    const patients = new PatientsService(prismaSvc, uploads, { assertMutateTab: async () => undefined } as never);
+    const patients = new PatientsService(
+      prismaSvc,
+      uploads,
+      { assertMutateTab: async () => undefined } as never,
+      { enqueueProcessDocument: async () => undefined } as never,
+    );
     attempts.push(
       ["DELETE chart encounter document", () => patients.removeEncounterDocumentForPatient(tenantId, patientId, lockedId, docId, admin)],
       [

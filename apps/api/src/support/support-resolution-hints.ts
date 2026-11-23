@@ -27,7 +27,7 @@ const HINTS: Record<string, ResolutionHint> = {
   UPLOAD_PATIENT_DOCUMENT: {
     summary: "Patient document upload failed or is slow.",
     actions: [
-      "Try a smaller image or PDF under 15 MB.",
+      "Try a smaller image or PDF under 25 MB.",
       "Confirm clinic and patient exist and user has patients tab access.",
       "Check network: production uploads route through API (not direct S3).",
     ],

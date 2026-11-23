@@ -39,7 +39,7 @@ import { ENCOUNTERS_MUTATE_ROLES, ENCOUNTERS_VIEW_ROLES } from "../user-nav-tabs
 import { EncountersService } from "./encounters.service";
 import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
 
-const UPLOAD_LIMIT = 15 * 1024 * 1024;
+const UPLOAD_LIMIT = 25 * 1024 * 1024;
 
 @ApiTags("encounters")
 @ApiBearerAuth("bearer")

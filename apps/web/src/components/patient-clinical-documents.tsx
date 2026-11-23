@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { usePatientClinicalDocumentsQuery } from "@/lib/api-hooks";
 import type { PatientClinicalDocumentItem } from "@/lib/patient-document-category";
 import { clinicalDocumentDisplayDescription } from "@/lib/patient-document-category";
+import { documentQualityLabel } from "@/lib/document-quality-label";
 import { documentViewActionLabel } from "@/lib/document-view-label";
 import { apiDelete, apiFetchBlob, apiPostFormData } from "@/lib/http";
 import { isImageViewerContent, resolveViewerContentType } from "@/lib/image-mime";
@@ -452,6 +453,10 @@ function DocumentList({
             <p className="text-xs text-muted-foreground ltr-nums">
               {new Date(doc.createdAt).toLocaleDateString(locale)}
             </p>
+            {(() => {
+              const quality = documentQualityLabel(doc, t);
+              return quality ? <p className="text-xs text-muted-foreground">{quality}</p> : null;
+            })()}
             {!emphasizeDescription && doc.source === "encounter" && doc.encounterId ? (
               <Link
                 to={`/encounters/${doc.encounterId}`}

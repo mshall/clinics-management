@@ -16,6 +16,8 @@ const EXEMPT: Record<string, string> = {
   "clinic-ai/clinic-ai.service.ts": "scribe approval skips FINALIZED encounters",
   "patients/patient-360.service.ts": "duplicate-patient merge reassigns ownership; note content unchanged, merge is audited",
   "staging/sales-demo-reset.ts": "staging demo reset wipes the whole tenant",
+  "storage/processing/document-processing.service.ts":
+    "async quality pipeline updates size/sha/thumbs only; upload endpoints already guard the lock",
 };
 
 function walk(dir: string, out: string[] = []): string[] {

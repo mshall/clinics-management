@@ -42,7 +42,7 @@ import { MessagingConsentService } from "./messaging-consent.service";
 import { MessagingConsentItemDto, PutMessagingConsentDto } from "./dto/messaging-consent.dto";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
 
-const PATIENT_DOC_UPLOAD_LIMIT = 15 * 1024 * 1024;
+const PATIENT_DOC_UPLOAD_LIMIT = 25 * 1024 * 1024;
 
 @ApiTags("patients")
 @ApiBearerAuth("bearer")
@@ -154,7 +154,7 @@ export class PatientsController {
   }
 
   @Post(":id/national-id-document")
-  @ApiOperation({ summary: "Upload optional national ID / SSN scan (PDF or image, max 15MB)" })
+  @ApiOperation({ summary: "Upload optional national ID / SSN scan (PDF or image, max 25MB)" })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {

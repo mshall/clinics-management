@@ -10,36 +10,34 @@ type ProfileLimits = {
   unsharpRadius: number;
 };
 
-const PROFILES: Record<ImageEnhanceProfile, ProfileLimits> = {
-  /** Clinical uploads — aggressive downscale for snappy multi-file uploads. */
-  document: { maxLongEdge: 1600, unsharpAmount: 60, unsharpRadius: 0.5 },
-  camera: { maxLongEdge: 2400, unsharpAmount: 90, unsharpRadius: 0.6 },
+/** Avatar/logo only — clinical document/camera/general send originals unchanged (server quality pipeline). */
+const PROFILES: Record<"avatar", ProfileLimits> = {
   avatar: { maxLongEdge: 1280, unsharpAmount: 100, unsharpRadius: 0.6 },
-  general: { maxLongEdge: 1800, unsharpAmount: 70, unsharpRadius: 0.55 },
 };
 
 const JPEG_QUALITY = 0.8;
+/** HEIC fallback when server cannot decode — full resolution, high quality. */
+const HEIC_FALLBACK_QUALITY = 0.95;
 
-/** Skip client-side resize when the file is already small (speeds uploads). */
-const FAST_SKIP_MAX_BYTES: Record<ImageEnhanceProfile, number> = {
-  document: 2_000_000,
-  camera: 2_400_000,
-  avatar: 600_000,
-  general: 1_800_000,
-};
+/** Hard cap aligned with API MAX_UPLOAD_BYTES (25 MB). */
+export const CLIENT_UPLOAD_HARD_CAP_BYTES = 25 * 1024 * 1024;
+
+const FAST_SKIP_MAX_BYTES_AVATAR = 600_000;
 
 export function isEnhanceableImage(file: File): boolean {
   if (!file.type.startsWith("image/")) return false;
   return file.type !== "image/gif" && file.type !== "image/svg+xml";
 }
 
-function shouldSkipEnhancement(file: File, profile: ImageEnhanceProfile): boolean {
-  if (!isEnhanceableImage(file)) return true;
-  if (profile === "document") {
-    if (file.name.startsWith("document-capture-")) return true;
-    if (file.name.startsWith("prescription-generated-")) return true;
-  }
-  return false;
+function isHeicFile(file: File): boolean {
+  const t = file.type.toLowerCase();
+  const n = file.name.toLowerCase();
+  return t.includes("heic") || t.includes("heif") || n.endsWith(".heic") || n.endsWith(".heif");
+}
+
+/** Clinical profiles: never resize/re-encode in the browser (except HEIC fallback / over hard-cap). */
+export function shouldPassThroughOriginal(profile: ImageEnhanceProfile): boolean {
+  return profile === "document" || profile === "camera" || profile === "general";
 }
 
 function computeTargetSize(
@@ -91,28 +89,80 @@ function outputName(originalName: string, mime: string): string {
   return `${base}${ext}`;
 }
 
-function drawToCanvas(img: HTMLImageElement, width: number, height: number, profile: ImageEnhanceProfile): HTMLCanvasElement {
+function drawToCanvas(img: HTMLImageElement, width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas unavailable");
-  if (profile === "camera" || profile === "document") {
-    ctx.filter = "contrast(1.04) brightness(1.02)";
-  }
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, 0, 0, width, height);
-  ctx.filter = "none";
   return canvas;
+}
+
+async function convertHeicToJpegFullRes(file: File): Promise<File> {
+  try {
+    if (typeof createImageBitmap === "function") {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return file;
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      return await canvasToFile(canvas, outputName(file.name, "image/jpeg"), "image/jpeg", HEIC_FALLBACK_QUALITY);
+    }
+  } catch {
+    /* fall through */
+  }
+  return file;
+}
+
+/** Shrink only when over the hard API cap (emergency client fallback). */
+async function shrinkUnderHardCap(file: File): Promise<File> {
+  if (file.size <= CLIENT_UPLOAD_HARD_CAP_BYTES) return file;
+  try {
+    const img = await loadImageFromFile(file);
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    if (!w || !h) return file;
+    let scale = 0.85;
+    let out = file;
+    for (let i = 0; i < 8; i++) {
+      const tw = Math.max(1, Math.round(w * scale));
+      const th = Math.max(1, Math.round(h * scale));
+      const canvas = drawToCanvas(img, tw, th);
+      out = await canvasToFile(canvas, outputName(file.name, "image/jpeg"), "image/jpeg", 0.88);
+      if (out.size <= CLIENT_UPLOAD_HARD_CAP_BYTES) return out;
+      scale *= 0.85;
+    }
+    return out;
+  } catch {
+    return file;
+  }
 }
 
 export async function enhanceImageFile(
   file: File,
   profile: ImageEnhanceProfile = "document",
 ): Promise<File> {
-  if (shouldSkipEnhancement(file, profile)) return file;
-  if (file.size > 0 && file.size <= FAST_SKIP_MAX_BYTES[profile]) return file;
+  if (!isEnhanceableImage(file)) return file;
+
+  if (shouldPassThroughOriginal(profile)) {
+    let next = file;
+    if (isHeicFile(file)) {
+      next = await convertHeicToJpegFullRes(file);
+    }
+    if (next.size > CLIENT_UPLOAD_HARD_CAP_BYTES) {
+      next = await shrinkUnderHardCap(next);
+    }
+    return next;
+  }
+
+  // Avatar / logo path only
+  if (file.size > 0 && file.size <= FAST_SKIP_MAX_BYTES_AVATAR) return file;
 
   try {
     const img = await loadImageFromFile(file);
@@ -120,22 +170,15 @@ export async function enhanceImageFile(
     const naturalHeight = img.naturalHeight || img.height;
     if (!naturalWidth || !naturalHeight) return file;
 
-    const { maxLongEdge, unsharpAmount, unsharpRadius } = PROFILES[profile];
+    const { maxLongEdge, unsharpAmount, unsharpRadius } = PROFILES.avatar;
     const { width, height, resize } = computeTargetSize(naturalWidth, naturalHeight, maxLongEdge);
     if (!resize) return file;
 
-    const scale = Math.min(width / naturalWidth, height / naturalHeight);
     const preservePng = file.type === "image/png";
     const mime = preservePng ? "image/png" : file.type === "image/webp" ? "image/webp" : "image/jpeg";
     const quality = mime === "image/jpeg" ? JPEG_QUALITY : mime === "image/webp" ? 0.88 : 1;
 
-    // Prefer canvas over pica for most clinical downscales (much faster on multi-upload).
-    if (scale >= 0.35 || profile === "document") {
-      const canvas = drawToCanvas(img, width, height, profile);
-      return await canvasToFile(canvas, outputName(file.name, mime), mime, quality);
-    }
-
-    const from = drawToCanvas(img, naturalWidth, naturalHeight, profile);
+    const from = drawToCanvas(img, naturalWidth, naturalHeight);
     const to = document.createElement("canvas");
     to.width = width;
     to.height = height;
@@ -152,7 +195,7 @@ export async function enhanceImageFile(
   }
 }
 
-/** Sharpen camera capture; marks filename so upload won't re-process. */
+/** Camera capture: mark filename; do not downscale (server pipeline). */
 export async function enhanceCameraCaptureFile(file: File): Promise<File> {
   const enhanced = await enhanceImageFile(file, "camera");
   const mime = enhanced.type || "image/jpeg";

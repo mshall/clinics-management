@@ -44,13 +44,16 @@ import {
 import { assertMayApplyOperationUpdate } from "./operation-stage-roles";
 import { assertDownPaymentBeforeInProgress } from "./operation-status-money";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+import { DocumentProcessingService } from "../storage/processing/document-processing.service";
+import { adjustTenantStorageBytes } from "../storage/processing/storage-usage";
+import { MAX_UPLOAD_BYTES as SHARED_MAX_UPLOAD_BYTES } from "../common/upload-errors";
 import type { AddOperationMedicationDto, OperationDocumentDto, OperationMedicationDto } from "./dto/operation-clinical.dto";
 import type { CreateOperationDto } from "./dto/create-operation.dto";
 import type { OperationDto } from "./dto/operation.dto";
 import type { OperationDetailDto } from "./dto/operation-detail.dto";
 import type { UpdateOperationDto } from "./dto/update-operation.dto";
 
-const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = SHARED_MAX_UPLOAD_BYTES;
 const ALLOWED_MIME = new Set([
   "application/pdf",
   "image/jpeg",
@@ -78,6 +81,7 @@ export class OperationsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
+    private readonly documentProcessing: DocumentProcessingService,
   ) {}
 
   private ensureEditableStatus(status: OperationStatus): void {
@@ -1184,7 +1188,7 @@ export class OperationsService {
     this.assertCanUploadDocument(kind, op.status);
 
     if (!file?.buffer?.length) throw new BadRequestException("Missing file");
-    if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 25MB)");
     const mime = file.mimetype || "application/octet-stream";
     if (!ALLOWED_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
 
@@ -1222,8 +1226,12 @@ export class OperationsService {
         mimeType: mime,
         sizeBytes: file.size,
         relativePath,
+        originalSizeBytes: file.size,
+        processingStatus: "NONE",
       },
     });
+    await adjustTenantStorageBytes(this.prisma, tenantId, file.size);
+    void this.documentProcessing.enqueueProcessDocument(tenantId, "OperationDocument", row.id);
     return this.mapDoc(row);
   }
 

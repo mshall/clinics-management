@@ -35,7 +35,9 @@ Phase 1 **does not delete** live clinic documents in S3:
 | Phase | Status |
 |-------|--------|
 | 1 S3 lifecycle / hygiene | Implemented (IaC; ships with main CDK deploy as in-place bucket UPDATE) |
-| 2–7 | Not started |
+| 2 Storage meter (tenant.storageBytesUsed) | Precursor shipped with quality pipeline |
+| 3 Quality pipeline (KEEP≤4MB / REDUCE) | Implemented on `feat/storage-quality-pipeline` — flag off on AWS/prod by default |
+| 4–7 | Not started |
 
 ## PROPOSAL defaults (configurable)
 
