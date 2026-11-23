@@ -134,3 +134,22 @@ run "home_visit_address_key_is_off_for_other_products_by_default" {
     error_message = "the key is only generated when enable_home_visit_address_key is set"
   }
 }
+
+run "telehealth_turn_secret_is_an_explicit_name_empty_container_when_enabled" {
+  command = plan
+  variables {
+    telehealth_turn_secret = true
+  }
+  assert {
+    condition     = keys(module.secrets.named_placeholder_secret_arns) == ["/kiorly-clinic/staging/cloudflare-turn"]
+    error_message = "ADR-039: /kiorly-clinic/{env}/cloudflare-turn must be created as an explicit-name container"
+  }
+}
+
+run "telehealth_turn_secret_is_off_by_default" {
+  command = plan
+  assert {
+    condition     = length(module.secrets.named_placeholder_secret_arns) == 0
+    error_message = "no TURN secret unless telehealth_turn_secret = true"
+  }
+}

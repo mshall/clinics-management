@@ -35,3 +35,6 @@ and whether to accept a fixed egress IP.
 (`<product>-<env>/home-visit-address-key`, JSON field `key`, KMS-encrypted when `use_cmk`) and injects it as the runtime secret
 `HOME_VISIT_ADDRESS_ENCRYPTION_KEY`. `apps/api/src/home-visits/address-crypto.ts` requires it in production (64 hex chars => hex). **Never taint, replace or
 destroy it once home visits exist**: ciphertext is bound to this key, and a key rotation needs a re-encryption job that is not built (follow-up). Prod secrets have a 30-day deletion recovery window.
+
+## Related: telehealth TURN (ADR-039)
+With `egress_mode = none` the API cannot reach `https://rtc.live.cloudflare.com` (Cloudflare TURN credential minting); joins then fall back to STUN-only (`turn: "degraded"`), which still connects most calls directly. To issue relay credentials allow outbound HTTPS to `rtc.live.cloudflare.com` (a NAT mode, or the proxy allow-list). Browsers reach `turn.cloudflare.com` and `stun.cloudflare.com` themselves, never through our egress.

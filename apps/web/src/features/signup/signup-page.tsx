@@ -18,6 +18,7 @@ import {
 import { useAuthStore } from "@/stores/auth-store";
 import { CLINICAL_SPECIALTY_KEYS } from "@/lib/clinical-specialties";
 import { useSyncOnChange } from "@/lib/use-sync-on-change";
+import { dialCodeFor, shouldShowMarketSelector } from "@/lib/market-selector-policy";
 
 const STEPS = 5;
 
@@ -167,21 +168,25 @@ export function SignupPage() {
           <CardContent className="grid gap-y-1.5 [&>button]:mt-3 [&>label:not(:first-child)]:mt-3">
             {step === 0 && (
               <>
-                <Label htmlFor="market">{t("signup.market")}</Label>
-                <select
-                  id="market"
-                  className="native-select"
-                  value={market}
-                  onChange={(e) => setMarket(e.target.value)}
-                >
-                  {markets.map((m) => (
-                    <option key={m.code} value={m.code}>
-                      {m.nameEn}
-                    </option>
-                  ))}
-                </select>
+                {shouldShowMarketSelector(markets) && (
+                  <>
+                    <Label htmlFor="market">{t("signup.market")}</Label>
+                    <select
+                      id="market"
+                      className="native-select"
+                      value={market}
+                      onChange={(e) => setMarket(e.target.value)}
+                    >
+                      {markets.map((m) => (
+                        <option key={m.code} value={m.code}>
+                          {m.nameEn}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
                 <Label htmlFor="phone">{t("signup.phone")}</Label>
-                <Input id="phone" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                <Input id="phone" inputMode="tel" autoComplete="tel" placeholder={dialCodeFor(market)} value={phone} onChange={(e) => setPhone(e.target.value)} />
                 <Button className="w-full" disabled={busy || !phone} onClick={() => void onSendOtp()}>
                   {t("signup.sendOtp")}
                 </Button>

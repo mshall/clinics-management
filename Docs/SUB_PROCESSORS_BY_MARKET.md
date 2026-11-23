@@ -35,7 +35,14 @@ When cell **`cairo`** (`me-south-1`) is live, AWS row becomes **`me-south-1`** f
 
 Update this table when a market goes **LIVE** on its own cell.
 
+
 ---
+
+## Telehealth transport (ADR-039, all markets)
+
+| Sub-processor | Role | Data processed | Region / notes |
+|---------------|------|----------------|----------------|
+| Cloudflare, Inc. (Realtime TURN + STUN) | Transport-only relay for telehealth calls that cannot connect peer to peer | End-to-end encrypted WebRTC packets (DTLS-SRTP) and connection metadata (IP addresses) for relayed calls only; no recording, no storage, no PHI payloads | Global anycast edge. NEEDS_HUMAN: counsel review of the Cloudflare DPA and cross-border wording before launch |
 
 ## Change control
 

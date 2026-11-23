@@ -135,7 +135,7 @@ Known limits: Kiorex's provider sync and the Nurse-lab push-back call Kiorly Cli
 - **Care-plan requests** (Nurse web -> Requests inbox, KN-03): `kx_cp_demo_1` ACCEPTED (-> the real care plan `demo_cp_cp1`, Nabila), `kx_cp_demo_2` RECEIVED (waiting for the agency: Mahmoud `+201000001005`, accept it or decline it), `kx_cp_demo_3` DECLINED with a reason (Rana). Addresses are encrypted like real requests. Kiorex mirrors them as `CarePlanBooking` (CONFIRMED / REQUESTED / REJECTED).
 - **KNLAB01 nurse samples** (`ClinicalOrder` + `LabSampleCollection` + tubes, ids `demo_lo_nl1..4`; Nurse web -> Lab samples): nl1 Nabila CBC+KFT collected by Heba at care-plan visit 2, **RELEASED** (report id + secure link, order RESULTS_READY, 8 custody events); nl2 Nabila GLU **AWAITING_VALIDATION** at the lab; nl3 Hoda (solo Mona) CBC handed over, lab status **COLLECTED** (in transit / received); nl4 Dalia TSH **REJECTED_BY_LAB** (`SAMPLE_UNMATCHED`). This seed writes them as HANDED_OFF; the Kiorex demo seed (last step of `scripts/seed-all.sh`) pushes the lab status, custody and report link back through the signed `POST /marketplace/v1/lab-orders/:orderId/status`, exactly as the relay does. Run only this repo's seed and they stay HANDED_OFF.
 
-## Kiorly Team mobile (staff app) demo data: `npm run db:seed:mobile -w api` (after `db:seed:demo`; idempotent, guarded)
+## Kiorly mobile (staff app) demo data: `npm run db:seed:mobile -w api` (after `db:seed:demo`; idempotent, guarded)
 Password for every login: `Demo@12345`. The app signs in with `POST /api/v1/auth/login` (see `Docs/MOBILE.md`).
 | Plan (normalised) | Org | Logins | What to see in the app |
 |---|---|---|---|
@@ -145,3 +145,6 @@ Password for every login: `Demo@12345`. The app signs in with `POST /api/v1/auth
 | **ENTERPRISE** (`ENTERPRISE`) | Kiorly Clinic Group (Demo) | `admin@kiorly.com` | all modules, device management |
 | **BASIC** (`LITE`) | Corner Family Clinic (DEMO Basic), `demo_t_bs` | owner `owner.basic@demo.kiorex.test` · doctor `doctor.basic@` · nurse `nurse.basic@` | **upgrade screen** (`PLAN_BELOW_PRO`), but the **safety-alert inbox still works** (one open critical-vitals alert, acknowledge it) |
 Entitlement `mobile_staff_app` is a `PlanEntitlement` row per plan (LITE/NURSE_LITE off; PRO/CLINIC/ENTERPRISE/NURSE_PRO/NURSE_AGENCY on), so it also follows the per-tenant override (`TenantEntitlementOverride`) and the Kiorex org-scope OFF. Re-running the seed re-opens the demo alerts; `src/mobile/mobile.integration.test.ts` leaves them open too.
+
+## Telehealth demo (ADR-039, `prisma/demo/seed-telehealth.ts`)
+`npm run db:seed:demo -w api` makes **Dr Nadia (`nadia.na@demo.kiorex.test`, `Demo@12345`)** a telehealth doctor ("Offers telehealth" on) and adds the service "Video consultation" (20 min, EGP 250). `npm run db:seed:telehealth -w api` creates one fresh video appointment for patient Salma Telehealth (`+201000007001`, MRN `DEMO-TH-001`) starting in 3 minutes (`TELEHEALTH_DEMO_START_IN_MIN`) and prints the doctor call URL and the patient link. DEV ONLY.

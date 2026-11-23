@@ -89,14 +89,15 @@ module "kiorly_clinic" {
   opensearch           = var.opensearch
   redis                = var.redis
 
-  waf_enabled         = var.waf_enabled
-  waf_rules           = jsondecode(file("${path.root}/../../../../../../platform/waf-rules.json"))
-  use_cmk             = var.use_cmk
-  openai_secret_name  = var.openai_secret_name
-  generated_secrets   = var.generated_secrets
-  placeholder_secrets = var.placeholder_secrets
-  scheduled_jobs      = var.scheduled_jobs
-  safety_alerts       = var.safety_alerts
+  waf_enabled            = var.waf_enabled
+  waf_rules              = jsondecode(file("${path.root}/../../../../../../platform/waf-rules.json"))
+  use_cmk                = var.use_cmk
+  openai_secret_name     = var.openai_secret_name
+  generated_secrets      = var.generated_secrets
+  placeholder_secrets    = var.placeholder_secrets
+  telehealth_turn_secret = var.telehealth_turn_secret
+  scheduled_jobs         = var.scheduled_jobs
+  safety_alerts          = var.safety_alerts
 
   enable_home_visit_address_key = var.enable_home_visit_address_key # HVPRV01
   egress_mode                   = var.egress_mode                   # HB07

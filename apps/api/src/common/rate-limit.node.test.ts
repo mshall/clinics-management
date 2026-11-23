@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { clearRateLimitStore, consumeRateLimit, rateLimitKey } from "./rate-limit";
+import { AUTHED_READ_RATE, authRatePolicy, clearRateLimitStore, consumeRateLimit, LOGIN_RATE, OTP_RATE, PUBLIC_AUTH_RATE, rateLimitKey } from "./rate-limit";
 
 describe("SC-06 rate limit", () => {
   it("allows up to the limit then blocks with retryAfter", () => {
@@ -21,5 +21,15 @@ describe("SC-06 rate limit", () => {
     assert.equal(consumeRateLimit(key, 1, 1000, 0, buckets).ok, true);
     assert.equal(consumeRateLimit(key, 1, 1000, 500, buckets).ok, false);
     assert.equal(consumeRateLimit(key, 1, 1000, 1001, buckets).ok, true);
+  });
+
+  it("GET /auth/me is not throttled like a public auth route (a clinic behind one IP loads it on every page)", () => {
+    assert.deepEqual(authRatePolicy("/api/v1/auth/me", "GET"), AUTHED_READ_RATE);
+    assert.deepEqual(authRatePolicy("/api/v1/auth/sessions", "GET"), AUTHED_READ_RATE);
+    assert.deepEqual(authRatePolicy("/api/v1/auth/me", "PATCH"), PUBLIC_AUTH_RATE);
+    assert.deepEqual(authRatePolicy("/api/v1/auth/login", "POST"), LOGIN_RATE);
+    assert.deepEqual(authRatePolicy("/api/v1/auth/otp/request", "POST"), OTP_RATE);
+    assert.deepEqual(authRatePolicy("/api/v1/auth/handoff/login", "POST"), LOGIN_RATE); // Kiorly Home password handoff = a login attempt
+    assert.ok(AUTHED_READ_RATE.limit > PUBLIC_AUTH_RATE.limit);
   });
 });

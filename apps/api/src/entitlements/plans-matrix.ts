@@ -18,6 +18,8 @@ export const MODULE_ENTITLEMENT_KEYS = [
   "ai_assistant",
   "ai_scribe",
   "deposits",
+  /** ADR-039 telehealth (P2P WebRTC): ON for every plan for now; flip per plan here (no code change elsewhere). */
+  "telehealth_video",
   "multi_branch",
   "whatsapp_reminders",
   "card_payments",
@@ -36,7 +38,7 @@ export const MODULE_ENTITLEMENT_KEYS = [
   /** KNLAB01: sample collection against a lab order handed to Kiorly Lab (Nurse Pro and above). */
   "nurse_lab_samples",
   "nurse_agency",
-  /** Kiorly Team staff mobile app (commercial entitlement, NOT a safety control: the safety-alert inbox works on every plan). */
+  /** Kiorly staff mobile app (commercial entitlement, NOT a safety control: the safety-alert inbox works on every plan). */
   "mobile_staff_app",
   "max_clinicians",
   "max_branches",
@@ -57,7 +59,7 @@ export type ControllerPolicy =
 /** Relative path under `apps/api/src`. */
 export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> = {
   "admin/platform-admin.controller.ts": { kind: "platform" },
-  /** Kiorly Team: gated by MobileInterceptor (`mobile_staff_app`), with the ADR-025 safety-alert routes open on every plan. */
+  /** Kiorly: gated by MobileInterceptor (`mobile_staff_app`), with the ADR-025 safety-alert routes open on every plan. */
   "mobile/mobile.controller.ts": { kind: "open" },
   "admin/admin.controller.ts": { kind: "open" },
   "admin/data-explorer/admin-data-explorer.controller.ts": { kind: "gated", entitlement: "mod_data_explorer" },
@@ -134,8 +136,13 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "kiorex/public-kiorex-fees.controller.ts": { kind: "open" },
   "kiorex/kiorex-billing-charges.controller.ts": { kind: "open" },
   "marketplace/marketplace.controller.ts": { kind: "webhook" },
+  "marketplace/kiorex-import.controller.ts": { kind: "webhook" },
   "home-visits/home-visits.controller.ts": { kind: "open" },
   "home-visits/home-visit-internal.controller.ts": { kind: "webhook" },
+  /** ADR-039: telehealth_video + telehealth.video are checked inside the service so already-scheduled visits stay reachable (flag OFF never hides data). */
+  "telehealth/telehealth.controller.ts": { kind: "open" },
+  "telehealth/telehealth-public.controller.ts": { kind: "open" },
+  "telehealth/telehealth-internal.controller.ts": { kind: "webhook" },
   "nurse/nurse-edition.controller.ts": { kind: "open" },
   "nurse/nurse-clinical.controller.ts": { kind: "open" },
   "nurse/nurse-mar.controller.ts": { kind: "open" },
@@ -183,6 +190,7 @@ export const ENTITLEMENT_MIN_PLAN: Record<string, PlanKey> = {
   ai_assistant: PlanKey.PRO,
   ai_scribe: PlanKey.PRO,
   deposits: PlanKey.PRO,
+  telehealth_video: PlanKey.LITE,
   multi_branch: PlanKey.CLINIC,
   whatsapp_reminders: PlanKey.PRO,
   card_payments: PlanKey.PRO,
@@ -298,6 +306,7 @@ export const PLAN_MATRIX = {
     ai_assistant: false,
     ai_scribe: false,
     deposits: false,
+    telehealth_video: true,
     multi_branch: false,
     whatsapp_reminders: false,
     card_payments: false,
@@ -335,6 +344,7 @@ export const PLAN_MATRIX = {
     /** Ambient scribe is a paid add-on — enable via tenant override / catalog add-on. */
     ai_scribe: false,
     deposits: true,
+    telehealth_video: true,
     multi_branch: false,
     whatsapp_reminders: true,
     card_payments: true,
@@ -371,6 +381,7 @@ export const PLAN_MATRIX = {
     ai_assistant: true,
     ai_scribe: true,
     deposits: true,
+    telehealth_video: true,
     multi_branch: true,
     whatsapp_reminders: true,
     card_payments: true,
@@ -407,6 +418,7 @@ export const PLAN_MATRIX = {
     ai_assistant: true,
     ai_scribe: true,
     deposits: true,
+    telehealth_video: true,
     multi_branch: true,
     whatsapp_reminders: true,
     card_payments: true,
@@ -447,6 +459,7 @@ function nursePlan(over: Record<string, EntitlementSeedValue>): Record<string, E
     ai_assistant: false,
     ai_scribe: false,
     deposits: true,
+    telehealth_video: true,
     multi_branch: false,
     whatsapp_reminders: false,
     card_payments: false,

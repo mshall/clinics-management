@@ -63,6 +63,7 @@ for (const s of sets) {
       await page.evaluate(([l, d]) => { try { localStorage.setItem("cms_locale", l); localStorage.setItem("cms-theme", JSON.stringify({ state: { themeId: d ? "clinical-os-dark" : "clinical-os-light", persistDefault: true }, version: 0 })); } catch {} }, [lang, dark]);
       if (!s.anon) {
         await page.reload({ waitUntil: "domcontentloaded" });
+        { const t = page.getByTestId("signin-method-password"); await t.waitFor({ state: "visible", timeout: 8000 }).then(() => t.click()).catch(() => {}); }
         await page.locator("#email").fill(s.email); await page.locator("#password").fill(s.pw);
         await page.locator("button[type=submit]").first().click();
         await page.waitForURL((u) => !u.pathname.includes("login"), { timeout: 60000 }).catch(() => {});

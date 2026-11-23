@@ -263,6 +263,12 @@ variable "extra_interface_endpoints" {
   default     = []
 }
 
+variable "telehealth_turn_secret" {
+  description = "ADR-039: create the EMPTY Secrets Manager container /<product>/<env>/cloudflare-turn (value {\"turnKeyId\",\"apiToken\"} written by scripts/setup-telehealth-turn.sh; readable only by the App Runner instance role) and point the API at it. false = no TURN (calls fall back to STUN-only)."
+  type        = bool
+  default     = false
+}
+
 variable "placeholder_secrets" {
   description = "Secret containers populated by a human (PSP keys, HMAC client secrets, WhatsApp tokens)."
   type        = set(string)

@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { KiorexPassportButton } from "@/features/auth/kiorex-passport";
+import { KiorexPassportButton, startKiorexPassportSignIn } from "@/features/auth/kiorex-passport";
+import { rememberSignInMethod } from "@/lib/sign-in-method";
+import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
+import { useSignInMethod } from "@/components/use-sign-in-method";
+import { currentNavigationType, wantsPassportAutostart, readHandoff, withoutHandoff } from "@/lib/kiorly-home";
+import { toast } from "sonner";
 import { useKiorexConfig } from "@/features/auth/use-kiorex-config";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -11,9 +16,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiUrl } from "@/lib/api-url";
-import { loginRequest } from "@/lib/auth-api";
+import { handoffExchangeRequest, loginRequest } from "@/lib/auth-api";
 import { resolvePostLoginPath } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
+
+// DEV ONLY quick-pick test users. Keep the condition inline: Vite folds `import.meta.env.DEV` to false in production builds, which drops the
+// dynamic import and the whole ../../dev folder (asserted by scripts/check-no-dev-test-users.mjs).
+const DevTestUsers = import.meta.env.DEV && import.meta.env.VITE_DEV_TEST_USERS !== "false" ? lazy(() => import("@/dev/dev-test-users")) : null;
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -31,9 +40,41 @@ export function LoginPage() {
   const [loginMode, setLoginMode] = useState<"email" | "phone">("email");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  // KNED: on the Nurse edition (nurse.kiorly.com) "Sign in with Kiorex Passport" is the primary action; the password form stays below it.
+  // Two methods only: Kiorex Passport (default, on every edition) and Password; the last method that signed this browser in is preselected.
+  // Passport availability comes from the API (`/auth/kiorex/config`); when it is not offered only the password form shows.
   const kx = useKiorexConfig();
-  const nursePrimary = kx.data?.enabled === true && kx.data.defaultSignIn === "KIOREX_PASSPORT";
+  const sim = useSignInMethod(kx.isPending ? undefined : kx.data?.enabled === true);
+  // Kiorly Home sends `?sso=passport[&edition=NURSE]`: start "Sign in with Kiorex Passport" by itself (once per page load; the Passport SSO session makes it silent).
+  const autostarted = useRef(false);
+  // Kiorly Home password handoff: redeem the single-use code once, strip it from the address bar first, then adopt the normal session.
+  const [handoff] = useState(() => readHandoff(window.location.search));
+  const [handoffBusy, setHandoffBusy] = useState(!!handoff.code);
+  const redeemed = useRef(false);
+  useEffect(() => {
+    if (!handoff.code && !handoff.reason) return;
+    const edition = new URLSearchParams(window.location.search).get("edition") === "NURSE" ? "NURSE" : null;
+    window.history.replaceState(window.history.state, "", withoutHandoff(window.location.pathname, window.location.search, window.location.hash));
+    if (!handoff.code || redeemed.current) return;
+    redeemed.current = true;
+    handoffExchangeRequest(handoff.code, edition)
+      .then((res) => {
+        try { localStorage.removeItem("kiorly-passport-logout"); } catch { /* ignore */ }
+        rememberSignInMethod("password");
+        setSession(res.accessToken, res.user, res.refreshToken);
+        const { user: signedIn } = useAuthStore.getState();
+        navigate(resolvePostLoginPath(signedIn?.role, signedIn?.navTabKeys, undefined, signedIn?.roleNavTabKeys), { replace: true });
+      })
+      .catch(() => { setHandoffBusy(false); setError(t("auth.handoffFailed")); });
+  }, [handoff, setSession, navigate, t]);
+
+  // the handoff could not complete (second factor, expired password, organisation): show the product's own password form
+  useEffect(() => { if (handoff.reason && sim.ready) sim.choose("password"); }, [handoff.reason, sim.ready]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (user && token) return;
+    if (handoff.code || autostarted.current || kx.data?.enabled !== true || !wantsPassportAutostart(location.search, currentNavigationType())) return;
+    autostarted.current = true;
+    startKiorexPassportSignIn().catch((e: unknown) => toast.error(e instanceof Error ? e.message : t("kiorex.passport.failed")));
+  }, [user, token, kx.data?.enabled, location.search, t, handoff.code]);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,12 +106,20 @@ export function LoginPage() {
     return <Navigate to={to} replace />;
   }
 
+  const showPasswordPanel = sim.ready && (!sim.offered || sim.method === "password");
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await signInWith(email, password, mfa);
+  }
+
+  async function signInWith(emailValue: string, passwordValue: string, mfaValue: string) {
     setError(null);
     setSubmitting(true);
     try {
-      const res = await loginRequest(email, password, mfa);
+      const res = await loginRequest(emailValue, passwordValue, mfaValue);
+      try { localStorage.removeItem("kiorly-passport-logout"); } catch { /* ignore */ } // a password session never ends the Passport session
+      rememberSignInMethod("password");
       setSession(res.accessToken, res.user, res.refreshToken);
       const from = (location.state as { from?: string } | null)?.from;
       const { user: signedIn } = useAuthStore.getState();
@@ -112,6 +161,8 @@ export function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error((data as { message?: string }).message ?? t("auth.signIn"));
+      try { localStorage.removeItem("kiorly-passport-logout"); } catch { /* ignore */ }
+      rememberSignInMethod("password");
       setSession(data.accessToken, data.user, data.refreshToken);
       const from = (location.state as { from?: string } | null)?.from;
       const { user: signedIn } = useAuthStore.getState();
@@ -136,31 +187,32 @@ export function LoginPage() {
           <LanguageSwitcher />
         </div>
       </header>
-      <div className="flex flex-1 items-center justify-center p-4">
+      <div className="flex flex-1 flex-col items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-lg">
           <CardHeader>
             <CardTitle>{t("auth.signIn")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {nursePrimary ? (
-              <div className="mb-4 space-y-2" data-testid="nurse-login-primary">
+            {handoffBusy ? <p role="status" data-testid="handoff-busy" className="mb-4 text-sm text-muted-foreground">{t("auth.handoffBusy")}</p> : null}
+            {handoff.reason ? <p role="status" data-testid="handoff-reason" className="mb-4 rounded-lg border border-border bg-muted/50 p-3 text-sm">{t(`auth.handoffReason.${handoff.reason}`, { defaultValue: t("auth.handoffReason.other") })}</p> : null}
+            {!sim.ready ? <div role="status" aria-busy="true" aria-label={t("auth.signIn")} data-testid="signin-loading" className="h-40 animate-pulse rounded-xl bg-muted/60" /> : null}
+            {sim.ready && sim.offered ? <SignInMethodTabs className="mb-4" value={sim.method} onChange={sim.choose} labels={{ group: t("auth.method"), passport: t("auth.methodPassport"), password: t("auth.methodPassword") }} /> : null}
+            {sim.ready && sim.offered && sim.method === "passport" ? (
+              <div role="tabpanel" id="signin-panel-passport" className="space-y-3" data-testid="signin-passport-panel">
                 <KiorexPassportButton />
-                <p className="text-center text-xs text-muted-foreground">{t("nurse.login.orEmail")}</p>
+                <p className="text-center text-xs text-muted-foreground">{t("auth.passportHint")}</p>
               </div>
             ) : null}
-            <div className="mb-4 flex gap-2">
-              <Button type="button" variant={loginMode === "email" ? "default" : "outline"} onClick={() => setLoginMode("email")}>
-                {t("auth.email")}
-              </Button>
-              <Button type="button" variant={loginMode === "phone" ? "default" : "outline"} onClick={() => setLoginMode("phone")}>
-                {t("auth.phoneLogin")}
-              </Button>
-            </div>
-            {nursePrimary ? null : (
-              <div className="mb-4">
-                <KiorexPassportButton />
-              </div>
-            )}
+            {showPasswordPanel ? (
+              <div role={sim.offered ? "tabpanel" : undefined} id="signin-panel-password" data-testid="signin-password-panel">
+                <div className="mb-4 flex gap-2">
+                  <Button type="button" variant={loginMode === "email" ? "default" : "outline"} onClick={() => setLoginMode("email")}>
+                    {t("auth.email")}
+                  </Button>
+                  <Button type="button" variant={loginMode === "phone" ? "default" : "outline"} onClick={() => setLoginMode("phone")}>
+                    {t("auth.phoneLogin")}
+                  </Button>
+                </div>
             {loginMode === "email" ? (
             <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
               {apiReady === false ? (
@@ -238,8 +290,11 @@ export function LoginPage() {
                 </Button>
               </form>
             )}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
+        {DevTestUsers ? <Suspense fallback={null}><DevTestUsers busy={submitting} onPick={(e, p) => { setEmail(e); setPassword(p); void signInWith(e, p, ""); }} /></Suspense> : null}
       </div>
     </div>
   );

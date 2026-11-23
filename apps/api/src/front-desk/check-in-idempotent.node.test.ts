@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { AppointmentStatus } from "@prisma/client";
 import { FrontDeskService } from "./front-desk.service";
 
-/** Kiorly Team replays queued writes and users double-tap: a second check-in must return the same ticket and must not post the payment / commission / ticket again. */
+/** Kiorly replays queued writes and users double-tap: a second check-in must return the same ticket and must not post the payment / commission / ticket again. */
 describe("front desk check-in is idempotent", () => {
   const checkedInAt = new Date("2026-11-21T09:00:00.000Z");
   const apt = { id: "a1", tenantId: "t1", clinicId: "c1", patientId: "p1", clinicianId: "u1", status: AppointmentStatus.CHECKED_IN, queueTicketNumber: 7, checkedInAt, checkInPaymentAmount: 450, patient: { mrn: "MRN-1" }, clinic: {} };

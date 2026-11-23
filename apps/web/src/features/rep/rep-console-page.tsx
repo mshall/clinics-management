@@ -1,3 +1,4 @@
+import { shouldShowMarketSelector } from "@/lib/market-selector-policy";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -179,19 +180,23 @@ function NewClinicForm({ onCreated }: { onCreated: () => void }) {
         <CardTitle className="text-base">{t("rep.newClinic")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        <Label htmlFor="rep-market">{t("signup.market")}</Label>
-        <select
-          id="rep-market"
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-          value={marketId}
-          onChange={(e) => setMarketId(e.target.value)}
-        >
-          {markets.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.nameEn}
-            </option>
-          ))}
-        </select>
+        {shouldShowMarketSelector(markets) && (
+          <>
+            <Label htmlFor="rep-market">{t("signup.market")}</Label>
+            <select
+              id="rep-market"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={marketId}
+              onChange={(e) => setMarketId(e.target.value)}
+            >
+              {markets.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nameEn}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
         <Label htmlFor="rep-clinic">{t("rep.clinicName")}</Label>
         <Input id="rep-clinic" value={form.clinicName} onChange={set("clinicName")} />
         <Label htmlFor="rep-city">{t("signup.city")}</Label>

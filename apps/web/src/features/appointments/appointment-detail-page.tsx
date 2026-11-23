@@ -9,6 +9,7 @@ import { appointmentStatusClassName } from "@/components/appointment-status";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
 import { DepositBadge } from "@/components/deposit-badge";
 import { DepositPanel } from "./deposit-panel";
+import { TelehealthPanel, VideoVisitBadge } from "@/features/telehealth/telehealth-panel";
 import { noShowRiskExplanation, noShowRiskSuggestionText } from "@/lib/no-show-risk";
 import { AppointmentSourceBadges } from "@/components/appointment-source-badges";
 import { Badge } from "@/components/ui/badge";
@@ -551,6 +552,7 @@ export function AppointmentDetailPage() {
             </Button>
           ) : null}
           <AppointmentStatusBadge status={apt.status} />
+          <VideoVisitBadge serviceLocation={apt.serviceLocation} />
           <AppointmentSourceBadges
             bookingSource={apt.bookingSource}
             isNewPatientAtBooking={apt.isNewPatientAtBooking}
@@ -586,6 +588,8 @@ export function AppointmentDetailPage() {
           ) : null}
         </div>
       ) : null}
+
+      <TelehealthPanel apt={apt} />
 
       <DepositPanel
         appointmentId={apt.id}

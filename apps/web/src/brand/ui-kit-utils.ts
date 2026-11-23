@@ -6,7 +6,7 @@ export const kcn = (...i: ClassValue[]) => twMerge(clsx(i));
 
 export function readThemePref(): KxThemePref {
   try { const v = localStorage.getItem(THEME_KEY); if (v === "light" || v === "dark" || v === "system") return v; } catch { /* ignore */ }
-  return "system";
+  return "light";
 }
 
 export function applyThemePref(pref: KxThemePref): void {

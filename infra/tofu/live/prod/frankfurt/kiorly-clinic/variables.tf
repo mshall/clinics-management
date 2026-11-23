@@ -151,6 +151,12 @@ variable "generated_secrets" {
   default     = {}
 }
 
+variable "telehealth_turn_secret" {
+  description = "ADR-039: empty /kiorly-clinic/<env>/cloudflare-turn container + runtime wiring."
+  type        = bool
+  default     = false
+}
+
 variable "placeholder_secrets" {
   description = "Secret containers populated by a human."
   type        = set(string)

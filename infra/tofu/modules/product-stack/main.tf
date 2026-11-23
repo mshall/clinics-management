@@ -7,7 +7,9 @@ data "aws_caller_identity" "current" {}
 
 locals {
   name = "${var.product}-${var.env}"
-  cell = try(var.cells[var.cell], null)
+  # ADR-039 secret path /kiorly-clinic/{env}/cloudflare-turn
+  telehealth_turn_secret_name = "/${var.product}/${var.env}/cloudflare-turn"
+  cell                        = try(var.cells[var.cell], null)
 
   seed_enabled = var.enable_seed_lambda && var.env != "prod"
   has_jobs     = length(var.scheduled_jobs) > 0
@@ -86,14 +88,15 @@ data "aws_route53_zone" "this" {
 module "secrets" {
   source = "../aws/secrets"
 
-  name                  = local.name
-  kms_purposes          = var.use_cmk ? toset(compact([var.enable_database ? "rds" : "", var.enable_uploads ? "uploads" : "", "secrets", "alerts"])) : toset([])
-  generated_secrets     = local.generated_secrets
-  generated_hex_secrets = local.generated_hex_secrets
-  placeholder_secrets   = var.placeholder_secrets
-  openai_secret_name    = var.openai_secret_name
-  recovery_window_days  = var.env == "prod" ? 30 : 0
-  tags                  = local.tags
+  name                      = local.name
+  kms_purposes              = var.use_cmk ? toset(compact([var.enable_database ? "rds" : "", var.enable_uploads ? "uploads" : "", "secrets", "alerts"])) : toset([])
+  generated_secrets         = local.generated_secrets
+  generated_hex_secrets     = local.generated_hex_secrets
+  placeholder_secrets       = var.placeholder_secrets
+  named_placeholder_secrets = var.telehealth_turn_secret ? toset([local.telehealth_turn_secret_name]) : toset([])
+  openai_secret_name        = var.openai_secret_name
+  recovery_window_days      = var.env == "prod" ? 30 : 0
+  tags                      = local.tags
 }
 
 locals {
@@ -195,6 +198,7 @@ module "email" {
 # container service (App Runner + ECR)
 # ---------------------------------------------------------------------------------------------------------
 locals {
+  # ADR-039: Cloudflare Realtime TURN credentials secret (explicit name, see modules/aws/secrets named_placeholder_secrets).
   runtime_env = merge(
     {
       PORT               = tostring(var.api.port)
@@ -220,6 +224,12 @@ locals {
     var.enable_uploads ? {
       UPLOAD_STORAGE   = "s3"
       S3_UPLOAD_BUCKET = module.uploads[0].bucket_id
+    } : {},
+    var.telehealth_turn_secret ? {
+      TELEHEALTH_TURN_SECRET_NAME = local.telehealth_turn_secret_name
+      KIORLY_PROVIDER_MODE_TURN   = "real"
+      KIORLY_ENV                  = var.env
+      # Egress note: the API calls https://rtc.live.cloudflare.com (generate-ice-servers); allow it in Docs/HB07_EGRESS.md modes.
     } : {},
     var.env_vars,
   )

@@ -1,11 +1,5 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from "@nestjs/common";
-import {
-  consumeRateLimit,
-  LOGIN_RATE,
-  OTP_RATE,
-  PUBLIC_AUTH_RATE,
-  rateLimitKey,
-} from "./rate-limit";
+import { authRatePolicy, consumeRateLimit, rateLimitKey } from "./rate-limit";
 
 function clientIp(req: { ip?: string; headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }): string {
   const xf = req.headers?.["x-forwarded-for"];
@@ -28,18 +22,7 @@ export class PublicAuthRateLimitGuard implements CanActivate {
     }>();
     const path = (req.originalUrl ?? req.url ?? req.path ?? "").split("?")[0] ?? "";
     const ip = clientIp(req);
-    let policy: { limit: number; windowMs: number } = PUBLIC_AUTH_RATE;
-    if (path.includes("/auth/login") || path.includes("/auth/refresh") || path.includes("/signup/complete")) {
-      policy = LOGIN_RATE;
-    }
-    if (
-      path.includes("/otp") ||
-      path.includes("/signup/verify") ||
-      path.includes("/password/forgot") ||
-      path.includes("/mfa/whatsapp/challenge")
-    ) {
-      policy = OTP_RATE;
-    }
+    const policy = authRatePolicy(path, req.method);
     const key = rateLimitKey(["auth", path, ip, req.body?.email, req.body?.phone]);
     const result = consumeRateLimit(key, policy.limit, policy.windowMs);
     if (!result.ok) {

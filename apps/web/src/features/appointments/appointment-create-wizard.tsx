@@ -48,6 +48,7 @@ import {
 import { collectAppointmentCreateIssues } from "@/lib/create-form-validation";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { apiGet, apiPost } from "@/lib/http";
+import { VisitModeSelector, type VisitMode } from "@/features/telehealth/visit-mode-selector";
 import { formatClinicName, localeForLanguage } from "@/lib/locale-display";
 import {
   parsePhoneConflictFromError,
@@ -124,6 +125,7 @@ export function AppointmentCreateWizard({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [visitType, setVisitType] = useState<string>(DEFAULT_ENCOUNTER_VISIT_TYPE);
+  const [visitMode, setVisitMode] = useState<VisitMode>("IN_CLINIC");
   const [bookFee, setBookFee] = useState("");
   const [bookFeeCollection, setBookFeeCollection] =
     useState<ScheduledFeeCollectionValue>(emptyScheduledFeeCollection());
@@ -164,6 +166,7 @@ export function AppointmentCreateWizard({
     setStart("");
     setEnd("");
     setVisitType(DEFAULT_ENCOUNTER_VISIT_TYPE);
+    setVisitMode("IN_CLINIC");
     const d = adminOv.data?.currentTenant?.defaultVisitFee;
     setBookFee(d != null && Number.isFinite(Number(d)) ? String(d) : "");
     setBookFeeCollection(emptyScheduledFeeCollection());
@@ -261,12 +264,15 @@ export function AppointmentCreateWizard({
   const { data: bookTypes } = useQuery({
     queryKey: ["scheduling", "appointment-types", schedulingClinicId],
     queryFn: () =>
-      apiGet<Array<{ id: string; isActive: boolean; durationMinutes: number }>>(
+      apiGet<Array<{ id: string; isActive: boolean; durationMinutes: number; serviceLocation?: string }>>(
         `/api/v1/scheduling/appointment-types?clinicId=${encodeURIComponent(schedulingClinicId)}`,
       ),
     enabled: open && Boolean(schedulingClinicId.trim()),
   });
-  const bookTypeId = bookTypes?.find((x) => x.isActive)?.id ?? "";
+  // ADR-039: telehealth bookings use a VIDEO service (own duration and price); in-person ones never pick a VIDEO/HOME service by accident.
+  const videoType = bookTypes?.find((x) => x.isActive && x.serviceLocation === "VIDEO");
+  const bookTypeId =
+    (visitMode === "TELEHEALTH" ? videoType?.id : bookTypes?.find((x) => x.isActive && x.serviceLocation !== "VIDEO" && x.serviceLocation !== "HOME")?.id) ?? bookTypes?.find((x) => x.isActive)?.id ?? "";
   const slotWindowFrom = `${bookDateIso}T00:00:00.000Z`;
   const slotWindowTo = new Date(new Date(slotWindowFrom).getTime() + 86_400_000).toISOString();
   const { data: engineSlots } = useSchedulingSlotsQuery({
@@ -349,6 +355,7 @@ export function AppointmentCreateWizard({
       clinicianId,
       startsAt,
       notes: visitType,
+      ...(visitMode === "TELEHEALTH" ? { visitMode: "TELEHEALTH", ...(videoType ? { appointmentTypeId: videoType.id } : {}) } : {}),
     };
     if (!patientLocked && bookPatientMode === "new") {
       body.provisionalPatient = {
@@ -758,6 +765,7 @@ export function AppointmentCreateWizard({
                     {t("appointments.wizardSelfClinician", "You are the attending doctor for this booking.")}
                   </div>
                 )}
+                <VisitModeSelector clinicianId={isPhysician ? (clinicianId || authUser?.id || "") : clinicianId} value={visitMode} onChange={setVisitMode} />
               </div>
             ) : null}
 

@@ -1,5 +1,16 @@
 import type { Page } from "@playwright/test";
 
+/**
+ * The login offers two methods (Kiorex Passport is the default, Password is behind the toggle). Open the password form when the toggle is there
+ * (when the API does not offer Passport the form is already showing).
+ */
+export async function showPasswordForm(page: Page): Promise<void> {
+  const tab = page.getByTestId("signin-method-password");
+  const email = page.locator("#email");
+  await tab.or(email).first().waitFor({ state: "visible", timeout: 60_000 });
+  if (await tab.isVisible()) await tab.click();
+}
+
 /** Wait until post-login shell (not on /login). */
 export async function login(page: Page, email: string, password = "demo"): Promise<void> {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
@@ -11,6 +22,7 @@ export async function login(page: Page, email: string, password = "demo"): Promi
     if (theme) sessionStorage.setItem("cms-theme-session", theme);
   });
   await page.reload({ waitUntil: "domcontentloaded" });
+  await showPasswordForm(page);
   const emailField = page.locator("#email").or(page.getByLabel(/^email|البريد/i));
   await emailField.waitFor({ state: "visible", timeout: 60_000 });
   await emailField.fill(email);

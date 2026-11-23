@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="auto">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,6 +7,9 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#3730A3" />
+    <script>/* LIGHT is the default theme; only an explicit Dark / System choice (localStorage kx-theme) is restored. Runs before first paint. */
+      try { var t = localStorage.getItem("kx-theme"); document.documentElement.dataset.theme = t === "dark" ? "dark" : t === "system" ? "auto" : "light"; } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

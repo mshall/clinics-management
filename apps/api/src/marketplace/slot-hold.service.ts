@@ -12,6 +12,8 @@ import { FeatureFlagsService, requireFeature } from "../feature-flags/feature-fl
 import { HomeVisitRuleException } from "../home-visits/home-visit.errors";
 import { HomeVisitService } from "../home-visits/home-visit.service";
 import { parseVisitAddress, VisitAddressError } from "../home-visits/visit-address";
+import { EntitlementsService } from "../entitlements/entitlements.service";
+import { assertTelehealthBookable } from "../telehealth/telehealth-availability";
 
 export type CreateSlotHoldInput = {
   clinicId: string;
@@ -32,6 +34,7 @@ export class SlotHoldService {
     private readonly access: MarketplaceAccessService,
     @Optional() private readonly homeVisits?: HomeVisitService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly entitlements?: EntitlementsService,
   ) {}
 
   async createHold(client: PlatformIntegrationPrincipal, body: CreateSlotHoldInput) {
@@ -52,6 +55,10 @@ export class SlotHoldService {
 
     // HVBK03: a HOME visit type needs the patient's address on the hold (stored encrypted; never echoed back, never logged).
     const holdType = await this.prisma.appointmentType.findFirst({ where: { id: body.typeId, tenantId, clinicId: body.clinicId }, select: { serviceLocation: true } });
+    // ADR-039: a telehealth hold needs flag + entitlement + a doctor who offers telehealth (403 FEATURE_DISABLED / TELEHEALTH_NOT_OFFERED).
+    if (holdType?.serviceLocation === "VIDEO") {
+      await assertTelehealthBookable({ prisma: this.prisma as never, flags: this.flags, entitlements: this.entitlements }, tenantId, body.clinicianId);
+    }
     let visitAddressCiphertext: string | null = null;
     let visitDistrict: string | null = null;
     if (holdType?.serviceLocation === "HOME") {

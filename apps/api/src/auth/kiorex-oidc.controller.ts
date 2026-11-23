@@ -16,6 +16,7 @@ import { PublicAuthRateLimitGuard } from "../common/rate-limit.guard";
 import { CurrentUser } from "./current-user.decorator";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import type { JwtUser } from "./jwt-user";
+import { KiorexBackchannelDto, KiorexCallbackDto, KiorexCompleteDto, KiorexPasswordDto } from "./dto/kiorex-oidc.dto";
 import { KiorexOidcService } from "./kiorex-oidc.service";
 import { loginMetaFromRequest } from "./request-client-meta";
 import { resolveEdition } from "../nurse/nurse-edition";
@@ -46,7 +47,7 @@ export class KiorexOidcController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(PublicAuthRateLimitGuard)
   @ApiOperation({ summary: "Exchange the authorization code; signs in a linked user or completes an account link" })
-  callback(@Body() body: { code?: string; state?: string; iss?: string }, @Req() req: Request) {
+  callback(@Body() body: KiorexCallbackDto, @Req() req: Request) {
     return this.oidc.handleCallback(body ?? {}, loginMetaFromRequest(req));
   }
 
@@ -54,7 +55,7 @@ export class KiorexOidcController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(PublicAuthRateLimitGuard)
   @ApiOperation({ summary: "Finish a Kiorex Passport sign-in that needs the MFA step-up code" })
-  complete(@Body() body: { ticket?: string; mfaCode?: string }, @Req() req: Request) {
+  complete(@Body() body: KiorexCompleteDto, @Req() req: Request) {
     return this.oidc.completeWithMfa(body?.ticket ?? "", body?.mfaCode ?? "", loginMetaFromRequest(req));
   }
 
@@ -70,7 +71,7 @@ export class KiorexOidcController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth("bearer")
   @ApiOperation({ summary: "Start linking this Kiorly user to a Kiorex Passport (requires password re-authentication)" })
-  linkStart(@CurrentUser() user: JwtUser, @Body() body: { password?: string }) {
+  linkStart(@CurrentUser() user: JwtUser, @Body() body: KiorexPasswordDto) {
     return this.oidc.startLink(user.userId, body?.password ?? "");
   }
 
@@ -78,7 +79,7 @@ export class KiorexOidcController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth("bearer")
-  unlink(@CurrentUser() user: JwtUser, @Body() body: { password?: string }) {
+  unlink(@CurrentUser() user: JwtUser, @Body() body: KiorexPasswordDto) {
     return this.oidc.unlink(user.userId, body?.password ?? "");
   }
 
@@ -86,7 +87,7 @@ export class KiorexOidcController {
   @HttpCode(HttpStatus.OK)
   @Header("Cache-Control", "no-store")
   @ApiOperation({ summary: "OIDC Back-Channel Logout receiver (logout_token, form-encoded)" })
-  async backchannelLogout(@Body() body: { logout_token?: string }) {
+  async backchannelLogout(@Body() body: KiorexBackchannelDto) {
     await this.oidc.backchannelLogout(body?.logout_token);
     return;
   }

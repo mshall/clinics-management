@@ -1,7 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
+import { showPasswordForm } from "./helpers";
 
 async function login(page: Page) {
   await page.goto("/login");
+  await showPasswordForm(page);
   await page.getByLabel(/email/i).fill("admin@kiorly.com");
   await page.getByLabel(/password/i).fill("demo");
   await page.getByRole("button", { name: /^(sign in|log in)$/i }).click();

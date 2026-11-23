@@ -42,6 +42,17 @@ export const PUBLIC_AUTH_RATE = { limit: 30, windowMs: 60_000 } as const;
 export const LOGIN_RATE = { limit: 20, windowMs: 60_000 } as const;
 export const OTP_RATE = { limit: 10, windowMs: 60_000 } as const;
 
+/** Authenticated session reads (GET /auth/me, sessions): JWT-guarded, hit on every page load by every staff member behind one clinic NAT/IP, so not a credential-guessing surface. */
+export const AUTHED_READ_RATE = { limit: 600, windowMs: 60_000 } as const;
+
+/** Pick the per-IP policy for an /auth/* request. Pure, unit-tested. */
+export function authRatePolicy(path: string, method = "GET"): { limit: number; windowMs: number } {
+  if (path.includes("/otp") || path.includes("/signup/verify") || path.includes("/password/forgot") || path.includes("/mfa/whatsapp/challenge")) return OTP_RATE;
+  if (path.includes("/auth/login") || path.includes("/auth/handoff/login") || path.includes("/auth/refresh") || path.includes("/signup/complete")) return LOGIN_RATE;
+  if (method.toUpperCase() === "GET" && (/\/auth\/me$/.test(path) || /\/auth\/sessions$/.test(path))) return AUTHED_READ_RATE;
+  return PUBLIC_AUTH_RATE;
+}
+
 /** Test helper — clear global store. */
 export function clearRateLimitStore(): void {
   store.clear();

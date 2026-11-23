@@ -104,6 +104,16 @@ resource "aws_secretsmanager_secret" "placeholder" {
   tags                    = var.tags
 }
 
+# ADR-039: explicit-name empty containers (e.g. /kiorly-clinic/<env>/cloudflare-turn holding {"turnKeyId","apiToken"}).
+resource "aws_secretsmanager_secret" "named_placeholder" {
+  for_each                = var.named_placeholder_secrets
+  name                    = each.key
+  description             = "${each.key} - populated by scripts/setup-telehealth-turn.sh or a human (NEEDS_HUMAN); value never in OpenTofu state"
+  kms_key_id              = contains(var.kms_purposes, "secrets") ? aws_kms_key.this["secrets"].arn : null
+  recovery_window_in_days = 30
+  tags                    = var.tags
+}
+
 data "aws_secretsmanager_secret" "openai" {
   count = var.openai_secret_name == null ? 0 : 1
   name  = var.openai_secret_name

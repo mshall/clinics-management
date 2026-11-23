@@ -16,6 +16,13 @@ import { FLAG_ENFORCEMENT } from "./flag-enforcement";
 
 const SRC = join(process.cwd(), "src");
 
+/**
+ * Flags registered here before the kiorex-contracts catalogue has them. ADR-039: `telehealth.video` is proposed in
+ * Docs/contracts/telehealth-contract-change.md (a PR against the sibling repo, which this repo must not edit). Remove the key
+ * from this list as soon as flags/catalogue.json carries it; the drift test then checks it like every other flag.
+ */
+export const PENDING_CONTRACT_FLAG_KEYS: readonly string[] = ["telehealth.video"];
+
 function listTs(dir: string, out: string[] = []): string[] {
   for (const n of readdirSync(dir)) {
     const f = join(dir, n);
@@ -67,7 +74,9 @@ describe("FF01 flag registry", () => {
     const mine = cat.flags.filter((f) => f.product === "kiorly-clinic" || f.product === "kiorly-nurse");
     assert.deepEqual(
       mine.map((f) => f.key).sort(),
-      CLINIC_FLAG_DEFINITIONS.map((d) => d.key).sort(),
+      CLINIC_FLAG_DEFINITIONS.map((d) => d.key)
+        .filter((k) => !PENDING_CONTRACT_FLAG_KEYS.includes(k) || mine.some((f) => f.key === k))
+        .sort(),
     );
     for (const f of mine) {
       const d = CLINIC_FLAG_DEFINITIONS.find((x) => x.key === f.key)!;

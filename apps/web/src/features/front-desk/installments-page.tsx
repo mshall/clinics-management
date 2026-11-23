@@ -3,7 +3,7 @@ import { Bell, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ResponsiveTable } from "@/components/responsive-table";
+import { ResponsiveTable, ResponsiveTableElement } from "@/components/responsive-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -158,6 +158,7 @@ export function InstallmentsPage() {
         </CardHeader>
         <CardContent>
           <ResponsiveTable>
+            <ResponsiveTableElement>
             <thead>
               <tr>
                 <th>{t("installments.patient", "Patient")}</th>
@@ -220,6 +221,7 @@ export function InstallmentsPage() {
                 </tr>
               ) : null}
             </tbody>
+            </ResponsiveTableElement>
           </ResponsiveTable>
         </CardContent>
       </Card>

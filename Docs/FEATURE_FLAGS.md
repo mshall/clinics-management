@@ -35,6 +35,7 @@ dependencies live in code). Scopes: G global · M market · O organization.
 | `clinic.home_visits` | Launch-locked | G M O | gate: GHV1 + GHV2 (human evidence, never recorded by code) | NEW home bookings, new HOME visit types and enabling a clinician for home visits; booked visits, reads, execution and **all safety endpoints** are never gated (ADR-025) |
 | `clinic.home_route_view` | Module | G M O | clinic.home_visits | route legs + navigation links on `GET /home-visits/route` (OFF = list view only) |
 | `clinic.home_dispatch` | Module | G M O | clinic.home_visits | `GET /home-visits/:id/suggestions` (OFF = manual assignment, `POST /assign` still works) |
+| `telehealth.video` | Module | G M O | — | ADR-039: NEW telehealth sessions/visit type/Kiorex VIDEO slots+holds+bookings (`403 FEATURE_DISABLED`); already-scheduled visits stay visible and joinable (OFF never hides data). Registered here first; pending in `kiorex-contracts` (see `Docs/contracts/telehealth-contract-change.md`). Also needs entitlement `telehealth_video` (all plans) |
 | `nurse.edition` | Module | G M | — | Nurse sign-up (`POST /public/nurse/signup/complete`); existing Nurse tenants unaffected. Edition-gated: **nurse.\* keys are effective only for NURSE-edition organizations** |
 | `nurse.individual_tenants` | Commercial | G M | nurse.edition | solo-nurse sign-up |
 | `nurse.care_plans` | Launch-locked | G M O | gate: GKN1 | creating care plans (active plans complete) |

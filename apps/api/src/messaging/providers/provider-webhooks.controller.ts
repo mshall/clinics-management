@@ -1,7 +1,8 @@
 import { BadRequestException, Body, Controller, Headers, HttpCode, NotFoundException, Param, Post, RawBodyRequest, Req, UnauthorizedException } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
-import { emailHttpConfig, smsConfig, whatsAppHttpConfig } from "../../common/provider-env";
+import { emailHttpConfig, smsConfig, smsVendor, whatsAppHttpConfig } from "../../common/provider-env";
+import { parseTwilioStatus, verifyTwilioSignature } from "../../common/vendors/twilio-sms";
 import { verifyWebhookSignature } from "../../common/webhook-hmac";
 import { emailReceiptsFromWebhook } from "./email-http.mapping";
 import { smsReceiptsFromWebhook } from "./sms.mapping";
@@ -34,9 +35,16 @@ export class ProviderWebhooksController {
     @Headers("x-signature") altSignature: string | undefined,
     @Headers("x-kiorly-timestamp") timestamp: string | undefined,
     @Body() body: unknown,
+    @Headers("x-twilio-signature") twilioSignature?: string,
   ) {
     if (!(KINDS as readonly string[]).includes(kind)) throw new NotFoundException();
     const k = kind as Kind;
+    if (k === "sms" && smsVendor() === "twilio") { // native Twilio: form-encoded status callback signed with the auth token over the public URL
+      const rawForm = req.rawBody?.toString("utf8") ?? "";
+      if (!verifyTwilioSignature(smsConfig().webhookSecret, process.env.SMS_WEBHOOK_PUBLIC_URL?.trim() ?? "", rawForm, { "x-twilio-signature": twilioSignature })) throw new UnauthorizedException("Invalid webhook signature");
+      const evs: DeliveryReceipt[] = parseTwilioStatus(rawForm).map((e) => ({ providerMessageId: e.providerRef, status: e.status === "FAILED" ? "failed" : e.status === "READ" ? "read" : e.status === "DELIVERED" ? "delivered" : "sent", ...(e.error ? { error: e.error } : {}) }));
+      return { ok: true, ...(await this.receipts.apply("sms", evs)) };
+    }
     const secret = k === "sms" ? smsConfig().webhookSecret : k === "email" ? emailHttpConfig().webhookSecret : whatsAppHttpConfig().webhookSecret;
     const raw = req.rawBody?.toString("utf8") ?? JSON.stringify(body ?? {});
     if (!verifyWebhookSignature({ secret, rawBody: raw, signature: signature ?? altSignature, timestamp })) {

@@ -1,10 +1,15 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { AppointmentStatus } from "@prisma/client";
 import { Type } from "class-transformer";
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from "class-validator";
+import { IsDateString, IsEnum, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from "class-validator";
 import { ScheduledFeeCollectionDto } from "../../common/dto/scheduled-fee-collection.dto";
 
 export class UpdateAppointmentDto {
+  @ApiPropertyOptional({ enum: ["IN_CLINIC", "TELEHEALTH"], description: "ADR-039: convert between in-person and telehealth (the link then says 'changed to in-person')" })
+  @IsOptional()
+  @IsIn(["IN_CLINIC", "TELEHEALTH"])
+  visitMode?: "IN_CLINIC" | "TELEHEALTH";
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

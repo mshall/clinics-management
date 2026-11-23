@@ -9,7 +9,7 @@
  * the mode explicitly. Real providers are wired in a dedicated pre-launch pass (Docs/KIORLY_NEEDS_HUMAN.md,
  * "Provider go-live"). No credentials ever live in code.
  */
-export type ProviderKind = "email" | "whatsapp" | "sms" | "push" | "psp" | "maps";
+export type ProviderKind = "email" | "whatsapp" | "sms" | "push" | "psp" | "maps" | "turn";
 export type ProviderMode = "mock" | "real";
 
 const LEGACY_REAL_SWITCH: Record<ProviderKind, () => boolean> = {
@@ -19,6 +19,7 @@ const LEGACY_REAL_SWITCH: Record<ProviderKind, () => boolean> = {
   push: () => Boolean(process.env.WEB_PUSH_VAPID_PUBLIC?.trim() && process.env.WEB_PUSH_VAPID_PRIVATE?.trim()),
   psp: () => false,
   maps: () => false,
+  turn: () => false,
 };
 
 function parse(raw: string | undefined): ProviderMode | null {
@@ -39,7 +40,7 @@ export function isMock(kind: ProviderKind): boolean {
   return providerMode(kind) === "mock";
 }
 
-export const PROVIDER_KINDS: readonly ProviderKind[] = ["email", "whatsapp", "sms", "push", "psp", "maps"];
+export const PROVIDER_KINDS: readonly ProviderKind[] = ["email", "whatsapp", "sms", "push", "psp", "maps", "turn"];
 
 export function providerModes(): Record<ProviderKind, ProviderMode> {
   return Object.fromEntries(PROVIDER_KINDS.map((k) => [k, providerMode(k)])) as Record<ProviderKind, ProviderMode>;

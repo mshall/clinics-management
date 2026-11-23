@@ -85,3 +85,23 @@ export async function loginRequest(email: string, password: string, mfaCode?: st
   }
   return data as LoginResponse;
 }
+
+/** Kiorly Home password handoff (ADR-038): redeem the single-use code from `?handoff=` for the normal login result. Replays and expired codes are a 401. */
+export async function handoffExchangeRequest(code: string, edition?: "NURSE" | null): Promise<LoginResponse> {
+  let res: Response;
+  try {
+    res = await fetch(apiUrl("/api/v1/auth/handoff/exchange"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ code, ...(edition ? { edition } : {}) }),
+    });
+  } catch {
+    throw new ApiError("Cannot reach the server. Check your connection and try again.", 0);
+  }
+  const data = (await res.json().catch(() => null)) as LoginResponse | { message?: string | string[] } | null;
+  if (!res.ok) throw new ApiError(loginHttpErrorMessage(res.status, data, "Sign in failed"), res.status, data);
+  const token = data && typeof data === "object" ? (data as { accessToken?: unknown }).accessToken : undefined;
+  const user = data && typeof data === "object" ? (data as { user?: unknown }).user : undefined;
+  if (typeof token !== "string" || !token || !user || typeof user !== "object") throw new ApiError("Sign in failed", res.status, data);
+  return data as LoginResponse;
+}

@@ -305,6 +305,21 @@ export const CLINIC_FLAG_DEFINITIONS: readonly FlagDefinition[] = [
     whenOffEn: "Manual assignment",
     whenOffAr: "إسناد يدوي",
   }),
+  /**
+   * ADR-039 telehealth. The key is `telehealth.video` (founder, 23 Nov 2026), not `clinic.*`. It is registered locally first and
+   * proposed to kiorex-contracts (Docs/contracts/telehealth-contract-change.md); until that lands the contracts drift test
+   * tolerates it through PENDING_CONTRACT_FLAG_KEYS in ff01-registry.node.test.ts.
+   */
+  clinic({
+    key: "telehealth.video",
+    scopes: GMO,
+    class: "Module",
+    dependsOn: [],
+    descriptionEn: "Telehealth video visits (peer-to-peer WebRTC, no recording)",
+    descriptionAr: "زيارات الفيديو عن بُعد (اتصال مباشر بين الطرفين دون تسجيل)",
+    whenOffEn: "No telehealth slots on Kiorex, no visit-type option, no new sessions; scheduled visits stay visible with a banner",
+    whenOffAr: "لا مواعيد فيديو على كيوريكس ولا خيار نوع الزيارة ولا جلسات جديدة؛ تبقى الزيارات المجدولة ظاهرة مع تنبيه",
+  }),
   nurse({
     key: "nurse.edition",
     scopes: GM,
