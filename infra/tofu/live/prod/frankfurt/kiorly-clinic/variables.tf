@@ -44,7 +44,7 @@ variable "db" {
 }
 
 variable "uploads" {
-  description = "Uploads bucket settings (versioning, kms, prefix_expiration_days)."
+  description = "Uploads bucket settings (versioning, kms, lifecycle / CORS / inventory — see product-stack uploads object and tofu README §6b)."
   type        = any
   default     = {}
 }

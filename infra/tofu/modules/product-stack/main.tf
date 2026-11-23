@@ -149,13 +149,20 @@ module "uploads" {
   count  = var.enable_uploads ? 1 : 0
   source = "../aws/object-storage"
 
-  name                   = "${local.name}-uploads"
-  data_class             = "tenant-uploads"
-  versioning             = var.uploads.versioning
-  kms_key_arn            = var.uploads.kms ? try(local.kms["uploads"], null) : null
-  prefix_expiration_days = var.uploads.prefix_expiration_days
-  force_destroy          = var.env != "prod" # prod uploads are RETAINed (CDK removalPolicy RETAIN)
-  tags                   = local.tags
+  name                           = "${local.name}-uploads"
+  data_class                     = "tenant-uploads"
+  versioning                     = var.uploads.versioning
+  kms_key_arn                    = var.uploads.kms ? try(local.kms["uploads"], null) : null
+  noncurrent_expiration_days     = var.uploads.noncurrent_expiration_days
+  newer_noncurrent_versions      = var.uploads.newer_noncurrent_versions
+  intelligent_tiering_after_days = var.uploads.intelligent_tiering_after_days
+  intelligent_tiering_min_bytes  = var.uploads.intelligent_tiering_min_bytes
+  intelligent_tiering_prefixes   = var.uploads.intelligent_tiering_prefixes
+  prefix_expiration_days         = var.uploads.prefix_expiration_days
+  allowed_origins                = var.uploads.allowed_origins
+  enable_inventory               = var.uploads.enable_inventory
+  force_destroy                  = var.env != "prod" # prod uploads are RETAINed (CDK removalPolicy RETAIN)
+  tags                           = local.tags
 }
 
 module "web" {
@@ -319,6 +326,51 @@ module "observability" {
   log_retention_days       = var.log_retention_days
   budget_usd               = var.budget_usd
   tags                     = local.tags
+}
+
+# Phase 1 — uploads StandardStorage growth > N% over 7 days → observability SNS.
+# Lives here (not in object-storage) because the SNS topic is created after App Runner.
+resource "aws_cloudwatch_metric_alarm" "uploads_storage_growth" {
+  count               = var.enable_uploads && var.uploads.enable_storage_growth_alarm ? 1 : 0
+  alarm_name          = "${local.name}-uploads-storage-growth-7d"
+  alarm_description   = "Uploads StandardStorage grew more than ${var.uploads.storage_growth_alarm_percent}% over 7 days (PROPOSAL)."
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  threshold           = var.uploads.storage_growth_alarm_percent
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [module.observability.alerts_topic_arn]
+  ok_actions          = [module.observability.alerts_topic_arn]
+
+  metric_query {
+    id          = "current"
+    return_data = false
+    metric {
+      namespace   = "AWS/S3"
+      metric_name = "BucketSizeBytes"
+      period      = 86400
+      stat        = "Average"
+      dimensions = {
+        BucketName  = module.uploads[0].bucket_id
+        StorageType = "StandardStorage"
+      }
+    }
+  }
+
+  metric_query {
+    id          = "week_ago"
+    expression  = "SHIFT(current, -604800)"
+    label       = "SizeSevenDaysAgo"
+    return_data = false
+  }
+
+  metric_query {
+    id          = "growth_pct"
+    expression  = "IF(week_ago > 0, (current - week_ago) / week_ago * 100, 0)"
+    label       = "GrowthPercent7d"
+    return_data = true
+  }
+
+  tags = local.tags
 }
 
 # ---------------------------------------------------------------------------------------------------------
