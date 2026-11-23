@@ -79,11 +79,61 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     cdk.Tags.of(webBucket).add("KiorlyHostCell", hostCell);
     tagCellResources(webBucket);
 
+    // Phase 1 storage hygiene (feat/storage-growth). Mirrors infra/tofu/modules/aws/object-storage
+    // for the still-live CDK uploads bucket. Clinical current versions are never expired here.
+    // PROPOSAL defaults: noncurrent 90d / keep 3; Intelligent-Tiering after 30d (≥128 KiB);
+    // imports/ 30d; pending/ 1d. CORS origins empty until Phase 5 (no open CORS).
+    const uploadsIntelligentTierAfter = cdk.Duration.days(30);
+    const uploadsNoncurrentExpire = cdk.Duration.days(90);
     const apiUploadsBucket = new s3.Bucket(this, "ApiUploadsBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
+      versioned: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: [
+        {
+          id: "abort-incomplete-multipart",
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(7),
+          enabled: true,
+        },
+        {
+          id: "expire-noncurrent-versions",
+          noncurrentVersionExpiration: uploadsNoncurrentExpire,
+          noncurrentVersionsToRetain: 3,
+          enabled: true,
+        },
+        {
+          id: "expire-delete-markers",
+          expiredObjectDeleteMarker: true,
+          enabled: true,
+        },
+        ...(["patients/", "encounters/", "operations/", "imports/"] as const).map((prefix) => ({
+          id: `tier-to-intelligent-${prefix.replace(/\/$/, "").replace(/\//g, "-")}`,
+          prefix,
+          objectSizeGreaterThan: 131072,
+          transitions: [
+            {
+              storageClass: s3.StorageClass.INTELLIGENT_TIERING,
+              transitionAfter: uploadsIntelligentTierAfter,
+            },
+          ],
+          enabled: true,
+        })),
+        {
+          id: "expire-imports",
+          prefix: "imports/",
+          expiration: cdk.Duration.days(30),
+          enabled: true,
+        },
+        {
+          id: "expire-pending",
+          prefix: "pending/",
+          expiration: cdk.Duration.days(1),
+          enabled: true,
+        },
+      ],
+      metrics: [{ id: "EntireBucket" }],
     });
     cdk.Tags.of(apiUploadsBucket).add("KiorlyDataClass", "tenant-uploads");
     cdk.Tags.of(apiUploadsBucket).add("KiorlyHostCell", hostCell);

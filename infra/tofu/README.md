@@ -128,5 +128,34 @@ logic. `enabled = false` until that endpoint exists and the DPO signs off; enabl
 
 Offline check for this section: `cd live/{staging,prod}/frankfurt/kiorly-clinic && tofu init -backend=false && tofu validate`.
 
+## 6b. Storage lifecycle (Phase 1 — uploads bucket hygiene)
+
+Module: `modules/aws/object-storage` (wired by `product-stack` module `uploads`). **Nothing applied from this tree yet.**
+The live CDK `ApiUploadsBucket` mirrors the same rules until OpenTofu adopts the bucket (T5).
+
+Access logging stays **off** (cost). CloudTrail **data events** for the uploads bucket remain an optional account-level choice (document in the PR; do not enable here by default).
+
+| Lifecycle rule id | What it does | Variable / default |
+|---|---|---|
+| `abort-incomplete-multipart` | Abort incomplete MPU after 7 days | fixed |
+| `expire-noncurrent-versions` | Expire non-current versions after N days, keep newest M | `noncurrent_expiration_days` **90** (PROPOSAL), `newer_noncurrent_versions` **3** |
+| `expire-delete-markers` | Remove expired object delete markers | when versioning on |
+| `tier-to-intelligent-<prefix>` | Current version → `INTELLIGENT_TIERING` after N days; filter `object_size_greater_than` 128 KiB | `intelligent_tiering_after_days` **30** (PROPOSAL), prefixes default `patients/`, `encounters/`, `operations/`, `imports/`; min bytes **131072** |
+| `expire-imports` / `expire-pending` (via `prefix_expiration_days`) | Current-version expiry for staging keys only | `imports/` **30** d, `pending/` **1** d (Phase 5 prep) |
+
+**Never** expire the current version of `patients/`, `encounters/`, `operations/`, or `clinicians/` via lifecycle — only the Phase 4 application purge job may remove clinical blobs.
+
+| Hygiene / observability | Notes |
+|---|---|
+| Block public access + TLS-only bucket policy | Already required |
+| SSE default | SSE-S3 (`AES256`) or SSE-KMS when `kms_key_arn` set (`uploads.kms`) |
+| Versioning | On for uploads (`uploads.versioning`) |
+| CORS | `allowed_origins` list; empty ⇒ **no** CORS config (Phase 5 fills origins) |
+| Inventory | `enable_inventory` default **false** → daily CSV under `inventory/` |
+| CloudWatch dashboard | Created for `tenant-uploads` buckets (`*-uploads-storage`) |
+| Growth alarm | `product-stack` → SNS `observability.alerts_topic_arn` when StandardStorage grows **> 30%** in 7 days (PROPOSAL, `storage_growth_alarm_percent`) |
+
+Product-stack `uploads` object accepts all of the above; live `terraform.tfvars` may keep `uploads = { versioning = true, kms = true }` and inherit defaults.
+
 ## 7. Demo-data seeding on staging (Q10, non-production only)
 `modules/product-stack/demo_seed.tf` adds a `<name>-demo-seed` container-image Lambda (isolated subnets, DB access, least-privilege IAM, `MODE=mock`) created **only** when `enable_demo_seed = true` (default false; true only in `live/staging/**/terraform.tfvars`). A plan with `env = "prod"` and `enable_demo_seed = true` fails (`terraform_data.demo_seed_guard`), covered offline by `tofu test` in `modules/product-stack` (`tests/demo_seed_guard.tftest.hcl`, mock provider). Outputs `demo_seed_function_name` and `demo_seed_invoke` give the invocation. The Lambda image is the `<name>-seed` ECR repo built from `apps/api/Dockerfile.seed` (handler `demo-seed.handler`, source `infra/lambda/demo-seed/run.mjs`, test `node --test infra/lambda/demo-seed/run.test.mjs`). It is never invoked by OpenTofu or CI: after a human deployed staging, run `scripts/seed-staging.sh` from the workspace root (see `Docs/TEST_DATA.md` -> "Seeding staging on AWS").
