@@ -12,7 +12,7 @@ import { join } from "node:path";
 const u = (role: UserRole, extra: Partial<{ isTenantOwner: boolean; additionalRoles: UserRole[] }> = {}) => ({ userId: "u", tenantId: "t", email: "e", role, ...extra });
 const on = (role: UserRole, edition = "CLINIC", extra = {}) => modulesFor(u(role, extra), edition).filter((m) => m.enabled).map((m) => m.key);
 
-describe("Kiorly Team: entitlement matrix", () => {
+describe("Kiorly: entitlement matrix", () => {
   it("mobile_staff_app is on for PRO and above only", () => {
     assert.ok((MODULE_ENTITLEMENT_KEYS as readonly string[]).includes("mobile_staff_app"));
     assert.equal(ENTITLEMENT_MIN_PLAN.mobile_staff_app, PlanKey.PRO);
@@ -28,7 +28,7 @@ describe("Kiorly Team: entitlement matrix", () => {
   });
 });
 
-describe("Kiorly Team: modules per role", () => {
+describe("Kiorly: modules per role", () => {
   it("physician: clinical modules, no revenue", () => {
     const m = on(UserRole.PHYSICIAN);
     for (const k of ["clinic.schedule", "clinic.patients", "clinic.visits", "clinic.prescriptions", "clinic.labs", "clinic.vitals"]) assert.ok(m.includes(k), k);
@@ -66,7 +66,7 @@ describe("Kiorly Team: modules per role", () => {
   it("HR officer has no modules", () => assert.deepEqual(on(UserRole.HR_OFFICER), []));
 });
 
-describe("Kiorly Team: gating contract", () => {
+describe("Kiorly: gating contract", () => {
   it("alerts, bootstrap, auth and remote sign-out stay open on every plan", () => {
     for (const [m, p] of [["GET", "/mobile/bootstrap"], ["GET", "/mobile/alerts"], ["POST", "/mobile/alerts/hv_1/ack"], ["POST", "/mobile/upgrade-request"], ["DELETE", "/mobile/devices/abc"], ["POST", "/auth/refresh"]] as const) assert.ok(isMobileExempt(m, p), `${m} ${p}`);
     for (const [m, p] of [["GET", "/mobile/inbox"], ["GET", "/mobile/upgrade-request"], ["POST", "/mobile/devices"], ["GET", "/mobile/schedule"], ["GET", "/patients"]] as const) assert.ok(!isMobileExempt(m, p), `${m} ${p}`);
@@ -87,9 +87,16 @@ import { isMobilePlanGated } from "./mobile.interceptor";
 describe("plan gate classification (MobilePlanGuard + interceptor share it)", () => {
   it("gates /mobile/* and app-identified requests except the exempt routes", () => {
     assert.equal(isMobilePlanGated("GET", "/mobile/summary", undefined), true);
+    assert.equal(isMobilePlanGated("GET", "/patients", "kiorly/1.2"), true);
+    // legacy client names still identify the app (installed dev builds, older e2e): kiorly-team/* and kiorly-work/*
     assert.equal(isMobilePlanGated("GET", "/patients", "kiorly-team/1.2"), true);
+    assert.equal(isMobilePlanGated("GET", "/patients", "kiorly-work/0.9"), true);
+    assert.equal(isMobilePlanGated("GET", "/patients", "kiorly"), true);
+    assert.equal(isMobilePlanGated("GET", "/patients", "kiorlyx/1"), false);
+    assert.equal(isMobilePlanGated("GET", "/patients", "not-kiorly/1"), false);
     assert.equal(isMobilePlanGated("GET", "/patients", undefined), false);
     assert.equal(isMobilePlanGated("GET", "/mobile/alerts", undefined), false);
+    assert.equal(isMobilePlanGated("GET", "/mobile/bootstrap", "kiorly/1"), false);
     assert.equal(isMobilePlanGated("GET", "/mobile/bootstrap", "kiorly-team/1"), false);
   });
 });
@@ -102,7 +109,7 @@ describe("MobilePlanGuard: FEATURE_DISABLED before any controller guard (role/sc
   const mkGuard = (enabled: boolean) => new MobilePlanGuard({ getOrThrow: () => secret } as never, { evaluate: async () => ({ enabled, reason: enabled ? null : "PLAN_BELOW_PRO" }) } as never);
   const ctx = (url: string, headers: Record<string, string>, method = "GET") => ({ getType: () => "http", switchToHttp: () => ({ getRequest: () => ({ method, originalUrl: url, headers }) }) }) as never;
   it("a non-entitled org gets FEATURE_DISABLED on /mobile/* and app-flagged routes", async () => {
-    for (const [url, h] of [["/api/v1/mobile/prescriptions", {}], ["/api/v1/appointments", { "x-kiorly-client": "kiorly-team/1" }]] as const) {
+    for (const [url, h] of [["/api/v1/mobile/prescriptions", {}], ["/api/v1/appointments", { "x-kiorly-client": "kiorly/1" }]] as const) {
       await assert.rejects(() => mkGuard(false).canActivate(ctx(url, { authorization: `Bearer ${tok}`, ...h })), (e: { getResponse(): { code: string; key: string } }) => e.getResponse().code === "FEATURE_DISABLED" && e.getResponse().key === "mobile_staff_app");
     }
   });

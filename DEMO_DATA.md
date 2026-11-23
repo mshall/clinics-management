@@ -19,7 +19,7 @@ cd clinics-management/apps/api
 npm run db:seed                                  # base seed, once (plans, market EG, kx_dev_client, the older `demo` tenants)
 npm run db:seed:demo                             # idempotent demo dataset (prisma/demo/seed-demo.ts, includes the Rev 2.3 part)
 npm run db:seed:demo -- --reset                  # deletes ONLY demo tenants (demo_t_* incl. the two Nurse ones) and re-creates them, dates re-anchored to today
-npm run db:seed:mobile                           # Kiorly Team add-on: Basic clinic + mobile alerts (idempotent; scripts/seed-all.sh runs it right after db:seed:demo; see ../kiorly-team/DEMO_DATA.md)
+npm run db:seed:mobile                           # Kiorly add-on: Basic clinic + mobile alerts (idempotent; scripts/seed-all.sh runs it right after db:seed:demo; see ../kiorly-team/DEMO_DATA.md)
 ../../scripts/seed-all.sh [--reset]              # all products in order (needed once for the Kiorex mirror and the Lab hand-off)
 ```
 
@@ -72,7 +72,7 @@ Password for every `@demo.kiorex.test` and `@nurse-demo.kiorly.test` account: **
 |---|---|---|---|---|
 | `mona@nurse-demo.kiorly.test` (Mona Adel; Passport `+201000003001`) | Demo Home Nursing (Mona), SOLO | PHYSICIAN (nurse profession) | admin, appointments, customer_support, dashboard, encounters, patients, profile, reports, revenue | solo, MoH + syndicate VERIFIED, covers nasr-city / heliopolis / new-cairo, 12 open safety alerts |
 | `owner@nurse-demo.kiorly.test` (Agency Owner; Passport `…3002`) | Demo Care Agency | CLINIC_ADMIN | admin, appointments, customer_support, dashboard, encounters, hr, patients, profile, reports, revenue | care-plan requests inbox |
-| `dispatch@nurse-demo.kiorly.test` (Dina Dispatcher; `…3003`) | agency | RECEPTIONIST (dispatcher) | appointments, encounters, patients, profile | dispatch queue and guard; Kiorly Team: schedule, patients, home visits + org home-visit safety alerts (can acknowledge) |
+| `dispatch@nurse-demo.kiorly.test` (Dina Dispatcher; `…3003`) | agency | RECEPTIONIST (dispatcher) | appointments, encounters, patients, profile | dispatch queue and guard; Kiorly: schedule, patients, home visits + org home-visit safety alerts (can acknowledge) |
 | `nurse1@` Heba (`…3004`) | agency | PHYSICIAN | appointments, encounters, patients, profile, reports | VERIFIED; the demo nurse for the day route |
 | `nurse2@` Salma (`…3005`) | agency | | | VERIFIED, MoH licence **expires in 18 days** |
 | `nurse3@` Nadine (`…3007`) | agency | | | verification **REJECTED** (dispatch refuses) |
@@ -108,7 +108,7 @@ Patients: the first 12 of `na` are the Passport personas (`+201000001001..1012`,
 | Nurse samples (KNLAB01) | `demo_lo_nl1` RELEASED (report link), `nl2` AWAITING_VALIDATION, `nl3` in transit, `nl4` REFUSED by the lab; Rana's Lab consent **revoked**, Nourhan **never asked** -> refusal `LAB_HANDOFF_NO_CONSENT` | `/nurse/lab`, `/nurse/lab/:orderId` |
 | Physio | referrals, assessments, active + discharged plans, progress notes, pain/ROM trend, HEP link, 10-session series for Mahmoud El-Sayed (3 done) | as `mai.na@`: Patients -> Mahmoud -> physio |
 | Verification states | VERIFIED Mona / Heba / Salma / Mai; REJECTED Nadine; EXPIRED Rawan and Dr Samah; UNVERIFIED Yara; PENDING Dr Adham and Dr Hany's physio licence | `/profile/verification`, `/verifications` (platform), agency Team |
-| Mobile add-on | `demo_enc_mobile_rx` (Cetirizine prescription awaiting signature, DRAFT), `demo_co_mobile_crit` (potassium 6.9 mmol/L CRITICAL_HIGH) + `demo_co_mobile_norm`, open alerts | Kiorly Team app, see its doc |
+| Mobile add-on | `demo_enc_mobile_rx` (Cetirizine prescription awaiting signature, DRAFT), `demo_co_mobile_crit` (potassium 6.9 mmol/L CRITICAL_HIGH) + `demo_co_mobile_norm`, open alerts | Kiorly app, see its doc |
 
 ## 5. Manual test scripts
 
@@ -148,7 +148,7 @@ Patients: the first 12 of `na` are the Passport personas (`+201000001001..1012`,
 | Nurse (Clinic edition) | appointments, encounters (vitals), patients | signing prescriptions (profession NURSE cannot), Revenue |
 | Finance officer | Revenue, Expenses, Reports | clinical notes (compare section 7) |
 | Nurse edition: solo / agency nurse | own route and visits, MAR, own safety alerts | addresses of visits not assigned to them; Revenue (agency nurses) |
-| Dispatcher | dispatch queue, assignment, Kiorly Team home visits + home-visit safety alerts (read/ack) | clinical records, prescriptions, Revenue |
+| Dispatcher | dispatch queue, assignment, Kiorly home visits + home-visit safety alerts (read/ack) | clinical records, prescriptions, Revenue |
 | Basic (Lite) | appointments, patients, encounters, Revenue snapshot | Clinics, Expenses, Reports, mobile app modules (upgrade screen) |
 | Home-visit address | assignee and admins within 24 h of the visit | everyone after 24 h (masked) |
 

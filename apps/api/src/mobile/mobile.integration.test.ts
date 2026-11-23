@@ -39,7 +39,7 @@ async function run(user: JwtUser | undefined, method: string, url: string, heade
 }
 const code = async (fn: () => Promise<unknown>) => { try { await fn(); return null; } catch (e) { const r = (e as { getResponse?: () => { code?: string } }).getResponse?.(); return r?.code ?? "ERR"; } };
 
-describe("Kiorly Team backend (real DB)", () => {
+describe("Kiorly backend (real DB)", () => {
   before(async () => {
     await prisma.$connect();
     snaps.setSnapshotForTests(null);
@@ -95,8 +95,9 @@ describe("Kiorly Team backend (real DB)", () => {
     assert.ok(owner.modules.find((m) => m.key === "clinic.revenue")?.enabled);
   });
 
-  it("client enforcement: kiorly-team client without the entitlement is 403 FEATURE_DISABLED, except alerts/bootstrap/auth/sign-out", async () => {
-    const h = { "x-kiorly-client": "kiorly-team/1.0.0" };
+  it("client enforcement: kiorly client (and the legacy kiorly-team/kiorly-work names) without the entitlement is 403 FEATURE_DISABLED, except alerts/bootstrap/auth/sign-out", async () => {
+    const h = { "x-kiorly-client": "kiorly/1.0.0" };
+    for (const legacy of ["kiorly-team/1.0.0", "kiorly-work/0.9.0"]) assert.equal(await code(() => run(BASIC_OWNER, "GET", "/patients", { "x-kiorly-client": legacy })), "FEATURE_DISABLED");
     assert.equal(await code(() => run(BASIC_OWNER, "GET", "/patients", h)), "FEATURE_DISABLED");
     assert.equal(await code(() => run(BASIC_OWNER, "GET", "/mobile/inbox")), "FEATURE_DISABLED");
     assert.equal(await run(BASIC_OWNER, "GET", "/mobile/alerts", h), true);
@@ -141,7 +142,7 @@ describe("Kiorly Team backend (real DB)", () => {
     assert.equal(r.provider, "mock");
     const inbox = await svc.inbox(doc, { limit: "5" });
     assert.equal(inbox.unread, before + 1);
-    assert.equal(inbox.items[0].title, "Kiorly Team test notification");
+    assert.equal(inbox.items[0].title, "Kiorly test notification");
     assert.ok(/[؀-ۿ]/.test(inbox.items[0].titleAr));
     await svc.markRead(doc, inbox.items[0].id);
     assert.equal((await svc.inbox(doc, {})).unread, before);

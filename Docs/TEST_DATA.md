@@ -135,7 +135,7 @@ Known limits: Kiorex's provider sync and the Nurse-lab push-back call Kiorly Cli
 - **Care-plan requests** (Nurse web -> Requests inbox, KN-03): `kx_cp_demo_1` ACCEPTED (-> the real care plan `demo_cp_cp1`, Nabila), `kx_cp_demo_2` RECEIVED (waiting for the agency: Mahmoud `+201000001005`, accept it or decline it), `kx_cp_demo_3` DECLINED with a reason (Rana). Addresses are encrypted like real requests. Kiorex mirrors them as `CarePlanBooking` (CONFIRMED / REQUESTED / REJECTED).
 - **KNLAB01 nurse samples** (`ClinicalOrder` + `LabSampleCollection` + tubes, ids `demo_lo_nl1..4`; Nurse web -> Lab samples): nl1 Nabila CBC+KFT collected by Heba at care-plan visit 2, **RELEASED** (report id + secure link, order RESULTS_READY, 8 custody events); nl2 Nabila GLU **AWAITING_VALIDATION** at the lab; nl3 Hoda (solo Mona) CBC handed over, lab status **COLLECTED** (in transit / received); nl4 Dalia TSH **REJECTED_BY_LAB** (`SAMPLE_UNMATCHED`). This seed writes them as HANDED_OFF; the Kiorex demo seed (last step of `scripts/seed-all.sh`) pushes the lab status, custody and report link back through the signed `POST /marketplace/v1/lab-orders/:orderId/status`, exactly as the relay does. Run only this repo's seed and they stay HANDED_OFF.
 
-## Kiorly Team mobile (staff app) demo data: `npm run db:seed:mobile -w api` (after `db:seed:demo`; idempotent, guarded)
+## Kiorly mobile (staff app) demo data: `npm run db:seed:mobile -w api` (after `db:seed:demo`; idempotent, guarded)
 Password for every login: `Demo@12345`. The app signs in with `POST /api/v1/auth/login` (see `Docs/MOBILE.md`).
 | Plan (normalised) | Org | Logins | What to see in the app |
 |---|---|---|---|

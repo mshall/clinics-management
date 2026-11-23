@@ -85,7 +85,7 @@ export class FrontDeskService {
     if (apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot check in this appointment");
     }
-    // Idempotent: a repeated check-in (double tap, Kiorly Team offline replay) returns the existing ticket; it never issues a second ticket nor posts the check-in payment / commission again.
+    // Idempotent: a repeated check-in (double tap, Kiorly offline replay) returns the existing ticket; it never issues a second ticket nor posts the check-in payment / commission again.
     if (apt.status === AppointmentStatus.CHECKED_IN && apt.queueTicketNumber != null && apt.checkedInAt) {
       const [enc, clinician] = await Promise.all([
         this.prisma.encounter.findFirst({ where: { tenantId, appointmentId, status: { in: [EncounterStatus.DRAFT, EncounterStatus.AMENDED] } }, select: { id: true } }),

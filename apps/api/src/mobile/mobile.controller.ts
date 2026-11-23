@@ -15,7 +15,7 @@ const need = (b: Record<string, unknown>, k: string, max = 300): string => {
 };
 
 /**
- * Kiorly Team staff app API. All routes need a staff JWT. Routes other than bootstrap / alerts / DELETE devices need the `mobile_staff_app`
+ * Kiorly staff app API. All routes need a staff JWT. Routes other than bootstrap / alerts / DELETE devices need the `mobile_staff_app`
  * entitlement (MobileInterceptor); the alert inbox is a safety control and works on every plan (ADR-025).
  */
 @ApiTags("mobile")

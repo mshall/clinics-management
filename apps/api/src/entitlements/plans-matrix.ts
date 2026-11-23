@@ -36,7 +36,7 @@ export const MODULE_ENTITLEMENT_KEYS = [
   /** KNLAB01: sample collection against a lab order handed to Kiorly Lab (Nurse Pro and above). */
   "nurse_lab_samples",
   "nurse_agency",
-  /** Kiorly Team staff mobile app (commercial entitlement, NOT a safety control: the safety-alert inbox works on every plan). */
+  /** Kiorly staff mobile app (commercial entitlement, NOT a safety control: the safety-alert inbox works on every plan). */
   "mobile_staff_app",
   "max_clinicians",
   "max_branches",
@@ -57,7 +57,7 @@ export type ControllerPolicy =
 /** Relative path under `apps/api/src`. */
 export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> = {
   "admin/platform-admin.controller.ts": { kind: "platform" },
-  /** Kiorly Team: gated by MobileInterceptor (`mobile_staff_app`), with the ADR-025 safety-alert routes open on every plan. */
+  /** Kiorly: gated by MobileInterceptor (`mobile_staff_app`), with the ADR-025 safety-alert routes open on every plan. */
   "mobile/mobile.controller.ts": { kind: "open" },
   "admin/admin.controller.ts": { kind: "open" },
   "admin/data-explorer/admin-data-explorer.controller.ts": { kind: "gated", entitlement: "mod_data_explorer" },
