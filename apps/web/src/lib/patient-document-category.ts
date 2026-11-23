@@ -30,6 +30,10 @@ export interface PatientClinicalDocumentItem {
   mimeType: string;
   sizeBytes: number;
   createdAt: string;
+  qualityNote?: string | null;
+  originalSizeBytes?: number | null;
+  qualityUsed?: number | null;
+  originalAvailable?: boolean;
 }
 
 export const NATIONAL_ID_CLINICAL_DOCUMENT_ID = "national-id";

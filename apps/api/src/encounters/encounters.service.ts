@@ -53,6 +53,9 @@ import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
 import { PatientsService } from "../patients/patients.service";
 import { assertPatientProfileComplete } from "../patients/patient-profile.guard";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+import { DocumentProcessingService } from "../storage/processing/document-processing.service";
+import { adjustTenantStorageBytes } from "../storage/processing/storage-usage";
+import { MAX_UPLOAD_BYTES as SHARED_MAX_UPLOAD_BYTES } from "../common/upload-errors";
 import type { AddDiagnosisDto } from "./dto/add-diagnosis.dto";
 import type { AddEncounterMedicationDto } from "./dto/add-encounter-medication.dto";
 import type { CreateEncounterDto } from "./dto/create-encounter.dto";
@@ -76,7 +79,7 @@ import { RxSafetyCheckService } from "../clinical/rx-safety-check.service";
 import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
 import { RecordShareService } from "../marketplace/record-share.service";
 
-const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = SHARED_MAX_UPLOAD_BYTES;
 const ALLOWED_MIME = new Set([
   "application/pdf",
   "image/jpeg",
@@ -124,6 +127,7 @@ export class EncountersService {
     private readonly commissionCharges: CommissionChargeService,
     private readonly recordShare: RecordShareService,
     private readonly appointmentOutbox: AppointmentOutboxService,
+    private readonly documentProcessing: DocumentProcessingService,
   ) {}
 
   private mapDiag(d: {
@@ -1038,7 +1042,7 @@ export class EncountersService {
     await this.ensureEditableEncounter(enc);
 
     if (!file?.buffer?.length) throw new BadRequestException("Missing file");
-    if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    if (file.size > MAX_UPLOAD_BYTES) throw new BadRequestException("File too large (max 25MB)");
     const mime = file.mimetype || "application/octet-stream";
     if (!ALLOWED_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
 
@@ -1065,8 +1069,12 @@ export class EncountersService {
         mimeType: mime,
         sizeBytes: file.size,
         relativePath,
+        originalSizeBytes: file.size,
+        processingStatus: "NONE",
       },
     });
+    await adjustTenantStorageBytes(this.prisma, tenantId, file.size);
+    void this.documentProcessing.enqueueProcessDocument(tenantId, "EncounterDocument", row.id);
     return this.mapDoc(row);
   }
 

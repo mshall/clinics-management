@@ -16,6 +16,8 @@ import {
   loadUserMoneyVisibilityOverrides,
 } from "../common/user-money-visibility";
 import { PrismaService } from "../prisma/prisma.service";
+import { DocumentProcessingService } from "../storage/processing/document-processing.service";
+import { adjustTenantStorageBytes } from "../storage/processing/storage-usage";
 import {
   clusterDoubleLinkedPatients,
   isSafeAutoMergeCluster,
@@ -36,7 +38,10 @@ const ACTIVE_APPT = new Set<AppointmentStatus>([
 
 @Injectable()
 export class Patient360Service {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly documentProcessing: DocumentProcessingService,
+  ) {}
 
   async getSummary(tenantId: string, patientId: string) {
     const patient = await this.prisma.patient.findFirst({ where: { id: patientId, tenantId, deletedAt: null } });
@@ -648,7 +653,7 @@ export class Patient360Service {
       takenAt?: string;
     },
   ) {
-    return this.prisma.patientClinicalPhoto.create({
+    const row = await this.prisma.patientClinicalPhoto.create({
       data: {
         tenantId,
         patientId,
@@ -660,7 +665,12 @@ export class Patient360Service {
         sizeBytes: meta.sizeBytes,
         relativePath: meta.relativePath,
         takenAt: meta.takenAt ? new Date(meta.takenAt) : null,
+        originalSizeBytes: meta.sizeBytes,
+        processingStatus: "NONE",
       },
     });
+    await adjustTenantStorageBytes(this.prisma, tenantId, meta.sizeBytes);
+    void this.documentProcessing.enqueueProcessDocument(tenantId, "PatientClinicalPhoto", row.id);
+    return row;
   }
 }

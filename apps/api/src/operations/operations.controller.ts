@@ -53,7 +53,7 @@ import {
 import { OperationsService } from "./operations.service";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 
-const UPLOAD_LIMIT = 15 * 1024 * 1024;
+const UPLOAD_LIMIT = 25 * 1024 * 1024;
 
 const OPERATIONS_VIEW_ROLES: Set<UserRole> = new Set([
   UserRole.GROUP_ADMIN,

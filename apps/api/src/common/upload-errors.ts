@@ -1,6 +1,20 @@
 import { BadRequestException } from "@nestjs/common";
 
-export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+/** Hard upload cap (images/PDFs). PROPOSAL raised from 15 MB → 25 MB for clinical originals. */
+export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+/** Per-kind caps (PROPOSAL). Falls back to MAX_UPLOAD_BYTES. */
+export const UPLOAD_MAX_BYTES_BY_KIND: Record<string, number> = {
+  image: 25 * 1024 * 1024,
+  pdf: 25 * 1024 * 1024,
+  default: MAX_UPLOAD_BYTES,
+};
+
+export function maxUploadBytesForMime(mime: string): number {
+  if (mime.startsWith("image/")) return UPLOAD_MAX_BYTES_BY_KIND.image ?? MAX_UPLOAD_BYTES;
+  if (mime.includes("pdf")) return UPLOAD_MAX_BYTES_BY_KIND.pdf ?? MAX_UPLOAD_BYTES;
+  return UPLOAD_MAX_BYTES_BY_KIND.default ?? MAX_UPLOAD_BYTES;
+}
 
 export function throwUploadFileRequired(): never {
   throw new BadRequestException({
