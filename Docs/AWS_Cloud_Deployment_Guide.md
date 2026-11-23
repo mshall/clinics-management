@@ -8,6 +8,8 @@ This document describes how the **Clinics Management** monorepo is deployed to *
 
 **Live tenant caution (Dr Ahmed Shall Group):** Deploys from `main` must not wipe RDS rows or empty the **uploads S3** bucket. Post-deploy seed is **incremental ensure-only**. See `.cursor/rules/aws-deploy-data-safety.mdc`.
 
+**Path-scoped deploys (`.github/workflows/deploy-aws.yml`):** pushes to `main` are classified by `scripts/detect-deploy-scope.sh` into `web` (SPA S3 + CloudFront only), `api` (CDK/App Runner; current SPA restored from S3), `full` (both), or `skip` (docs-only). Web-only never rebuilds the API image or touches **ApiUploadsBucket**. Manual override: workflow_dispatch → `deploy_scope`.
+
 ---
 
 ## 1. What you are deploying

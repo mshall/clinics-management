@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Deploy kiorly-clinics-management CDK stack from CI (GitHub Actions). Expects AWS credentials in env (OIDC or keys).
 # Local / branch: kiorex uses profile aws-kiorex-profile via scripts/resolve-aws-profile.sh
+#
+# DEPLOY_SCOPE (optional):
+#   full (default) — API image + web SPA via CDK
+#   api            — API/CDK only; restore current SPA from S3 so WebDeploy asset stays unchanged
+#   web            — SPA S3 sync + CloudFront only (no App Runner / Docker rebuild)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Named profiles are for local CLI only. GitHub Actions already injects keys/OIDC into the
@@ -13,27 +18,66 @@ export AWS_REGION="${AWS_REGION:-eu-central-1}"
 export CDK_DEFAULT_REGION="${CDK_DEFAULT_REGION:-eu-central-1}"
 export CDK_DEFAULT_ACCOUNT
 CDK_DEFAULT_ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+export GITHUB_SHA="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
+DEPLOY_SCOPE="${DEPLOY_SCOPE:-full}"
 
-echo "CDK deploy: AWS_PROFILE=${AWS_PROFILE:-(default)} account=${CDK_DEFAULT_ACCOUNT} region=${AWS_REGION}"
+echo "CDK deploy: scope=${DEPLOY_SCOPE} AWS_PROFILE=${AWS_PROFILE:-(default)} account=${CDK_DEFAULT_ACCOUNT} region=${AWS_REGION}"
+
+if [[ "$DEPLOY_SCOPE" == "web" ]]; then
+  bash "$ROOT/scripts/cicd-deploy-web-only.sh"
+  exit 0
+fi
+
 docker version
 
 cd "$ROOT"
-# CI: trim npm noise — deprecations (rimraf/glob/prebuild-install, etc.) are almost always transitive
-# from Prisma/@cursor-sdk/sqlite3/native toolchains, not direct app code. --no-audit/--no-fund skip the
-# summary footer; LOGLEVEL=error applies only to this npm ci (workspace builds keep default logging).
-if [[ "${CI:-}" == "true" ]]; then
-  NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
-else
-  npm ci --no-audit --no-fund
+
+# Prefer restored node_modules from Actions cache; only npm ci when missing.
+if [[ ! -d node_modules ]]; then
+  if [[ "${CI:-}" == "true" ]]; then
+    NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
+  else
+    npm ci --no-audit --no-fund
+  fi
 fi
-export GITHUB_SHA="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"
-npm run build -w web
+
+restore_web_dist_from_s3() {
+  local stack_name="${STACK_NAME:-kiorly-clinics-management}"
+  local bucket
+  bucket="$(aws cloudformation describe-stack-resources \
+    --stack-name "$stack_name" \
+    --region "$AWS_REGION" \
+    --query "StackResources[?ResourceType=='AWS::S3::Bucket' && contains(LogicalResourceId, 'WebBucket')].PhysicalResourceId | [0]" \
+    --output text 2>/dev/null || true)"
+  if [[ -z "$bucket" || "$bucket" == "None" ]]; then
+    echo "WARN  could not resolve WebBucket — building web so synth has a dist/"
+    npm run build -w web
+    return 0
+  fi
+  if [[ "$bucket" == *apiuploads* ]]; then
+    echo "::error::Refusing to pull uploads bucket as web dist"
+    exit 1
+  fi
+  echo "API-only: restoring apps/web/dist from s3://${bucket} (keeps WebDeploy asset stable)"
+  rm -rf apps/web/dist
+  mkdir -p apps/web/dist
+  aws s3 sync "s3://${bucket}" apps/web/dist --region "$AWS_REGION"
+}
+
+if [[ "$DEPLOY_SCOPE" == "api" ]]; then
+  restore_web_dist_from_s3
+else
+  npm run build -w web
+fi
+
 node scripts/check-boot-proxy-order.mjs
 cd infra
-if [[ "${CI:-}" == "true" ]]; then
-  NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
-else
-  npm ci --no-audit --no-fund
+if [[ ! -d node_modules/aws-cdk-lib ]]; then
+  if [[ "${CI:-}" == "true" ]]; then
+    NPM_CONFIG_LOGLEVEL=error npm ci --no-audit --no-fund
+  else
+    npm ci --no-audit --no-fund
+  fi
 fi
 if [[ ! -d node_modules/aws-cdk-lib ]]; then
   echo "::error::infra npm ci did not install aws-cdk-lib — CDK TypeScript build will fail."
@@ -45,10 +89,15 @@ npm run build
 npx cdk synth --quiet
 npm run check:ascii-descriptions
 
-# In GitHub Actions, emit verbose CDK / construct logging for post-mortem artifacts.
-CDK_DEPLOY_ARGS=(--require-approval never -c "webBuildId=${GITHUB_SHA}")
-if [ "${CI:-}" = "true" ]; then
-  export CDK_DEBUG="${CDK_DEBUG:-1}"
+# Only stamp WEB_BUILD_ID on App Runner when the SPA is part of this deploy.
+# API-only keeps the previous env value so CloudFormation does not churn App Runner for SPA versioning.
+CDK_DEPLOY_ARGS=(--require-approval never)
+if [[ "$DEPLOY_SCOPE" != "api" ]]; then
+  CDK_DEPLOY_ARGS+=(-c "webBuildId=${GITHUB_SHA}")
+fi
+# Verbose CDK / CDK_DEBUG only when explicitly requested (huge logs slow the job).
+if [[ "${CI:-}" == "true" && "${CDK_VERBOSE:-}" == "1" ]]; then
+  export CDK_DEBUG=1
   CDK_DEPLOY_ARGS+=(--verbose)
 fi
 npx cdk synth "${CDK_DEPLOY_ARGS[@]}"

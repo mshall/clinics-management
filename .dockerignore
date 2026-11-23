@@ -14,3 +14,14 @@ infra/cdk.out
 **/test-results
 **/.turbo
 **/dist-seed
+
+# Keep API/seed image fingerprints stable on SPA-only commits (Dockerfile only needs web package.json).
+apps/web/**
+!apps/web/package.json
+apps/docs
+**/e2e
+**/*.node.test.ts
+**/*.integration.test.ts
+**/*.spec.ts
+Docs
+agent-transcripts

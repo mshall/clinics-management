@@ -265,6 +265,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, "..", ".."), {
         file: "apps/api/Dockerfile.seed",
         platform: ecr_assets.Platform.LINUX_AMD64,
+        cacheFrom: [{ type: "gha", params: { scope: "kiorly-seed-image" } }],
+        cacheTo: { type: "gha", params: { mode: "max", scope: "kiorly-seed-image" } },
       }),
       timeout: cdk.Duration.minutes(15),
       memorySize: 3008,
@@ -306,6 +308,9 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
       file: "apps/api/Dockerfile",
       // App Runner provisions x86_64 instances for this service shape; ARM-only images fail health checks.
       platform: ecr_assets.Platform.LINUX_AMD64,
+      // GitHub Actions Buildx GHA cache — cuts cold `npm ci` layers on API image rebuilds.
+      cacheFrom: [{ type: "gha", params: { scope: "kiorly-api-image" } }],
+      cacheTo: { type: "gha", params: { mode: "max", scope: "kiorly-api-image" } },
     });
 
     const accessRole = new iam.Role(this, "AppRunnerEcrAccess", {
@@ -549,6 +554,16 @@ function handler(event) {
     new cdk.CfnOutput(this, "AppUrl", {
       value: `https://${dist.distributionDomainName}`,
       description: `HTTPS URL: SPA and /api/* (cell ${hostCell}, region ${deploymentRegion})`,
+    });
+
+    new cdk.CfnOutput(this, "WebBucketName", {
+      value: webBucket.bucketName,
+      description: "SPA static hosting bucket (not ApiUploadsBucket — safe for web-only sync)",
+    });
+
+    new cdk.CfnOutput(this, "DistributionId", {
+      value: dist.distributionId,
+      description: "CloudFront distribution for SPA invalidation after web-only deploy",
     });
 
     new cdk.CfnOutput(this, "AppRunnerServiceUrl", {
