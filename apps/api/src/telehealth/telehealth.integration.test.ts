@@ -4,6 +4,7 @@ import { AppointmentStatus, EncounterStatus, TelehealthSessionStatus } from "@pr
 import { createPrismaClient } from "../prisma/create-prisma-client";
 import { buildThKit, buildThWorld, seedVideoAppointment, type ThKit, type ThWorld } from "./th-test-kit";
 import { signTelehealthToken } from "./telehealth-token";
+import { TelehealthNotifier } from "./telehealth-notifier.service";
 
 process.env.JWT_SECRET ??= "integration-test-jwt-secret-0123456789abcdef";
 const prisma = createPrismaClient();
@@ -220,6 +221,29 @@ describe("ADR-039 telehealth (integration)", () => {
     await kit.appointments.updateStatus(w.tenantId, s.apt.id, AppointmentStatus.CANCELLED, w.admin.jwt, "test");
     assert.equal((await kit.telehealth.publicInfo(s.token)).state, "CANCELLED");
     await assert.rejects(kit.telehealth.joinAsPatient(s.token), (e) => code(e) === "TELEHEALTH_CANCELLED");
+  });
+
+  it("notifications: link on create, 'moved' on a time edit (same link), re-sent link after regenerate; deduped; none when cancelled", async () => {
+    const s = await seedVideoAppointment(prisma, w, kit, { inMin: 3 * 24 * 60 });
+    await prisma.patient.update({ where: { id: w.patient.id }, data: { email: "sara@example.com" } });
+    const notifier = new TelehealthNotifier(kit.p, { isGranted: async () => true } as never, { isEnabled: async () => false } as never);
+    const sent = () => prisma.outboundMessage.findMany({ where: { appointmentId: s.apt.id }, orderBy: { createdAt: "asc" } });
+    assert.deepEqual(await notifier.sessionChanged(s.session.id), ["link"]);
+    assert.deepEqual(await notifier.sessionChanged(s.session.id), [], "deduped");
+    let rows = await sent();
+    assert.deepEqual(rows.map((r) => r.channel).sort(), ["EMAIL", "SMS"], "SMS (org has no WhatsApp) + email because the patient has one");
+    assert.ok(rows.every((r) => r.templateKey === "telehealth_link" && r.body.includes("/v/")));
+    await kit.appointments.update(w.tenantId, s.apt.id, { startsAt: new Date(Date.now() + 4 * 24 * 3600_000).toISOString(), endsAt: new Date(Date.now() + 4 * 24 * 3600_000 + 20 * 60_000).toISOString() } as never, w.admin.jwt);
+    assert.deepEqual(await notifier.sessionChanged(s.session.id), ["moved"]);
+    rows = await sent();
+    const moved = rows.filter((r) => r.templateKey === "telehealth_moved");
+    assert.ok(moved.length >= 1 && moved[0]!.body.includes(s.token), "same link in the moved message");
+    assert.equal((await kit.telehealth.publicInfo(s.token) as { moved: boolean }).moved, true);
+    await kit.telehealth.regenerateLink(w.admin.jwt, s.session.id);
+    assert.deepEqual(await notifier.sessionChanged(s.session.id), ["link"]);
+    await kit.appointments.updateStatus(w.tenantId, s.apt.id, AppointmentStatus.CANCELLED, w.admin.jwt, "x");
+    assert.deepEqual(await notifier.sessionChanged(s.session.id), []);
+    await prisma.patient.update({ where: { id: w.patient.id }, data: { email: null } });
   });
 
   it("end: clinician ends once (idempotent), emits ended event; patient leaving does not end the visit", async () => {
