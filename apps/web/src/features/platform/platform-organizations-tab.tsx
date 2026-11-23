@@ -166,7 +166,7 @@ export function PlatformOrganizationsTab() {
       );
     }
     return errors;
-  }, [gaEmail, gaName, gaPassword, partialClinic, t, tenantName, tenantNameAr]);
+  }, [gaEmail, gaName, gaPassword, partialClinic, t, tenantMarketId, tenantName, tenantNameAr]);
 
   const handleCreateOrg = () => {
     if (createTenantMut.isPending) return;

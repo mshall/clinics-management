@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/password-input";
@@ -22,6 +22,7 @@ import {
 import { OrgHierarchyPanel } from "@/features/org-hierarchy/org-hierarchy-panel";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import { collectOrgUserCreateIssues } from "@/lib/create-form-validation";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type UserDetail = PlatformUserRow;
 type DialogMode = null | "create" | { edit: { userId: string; tenantId: string } };
@@ -88,7 +89,7 @@ export function PlatformUsersTab() {
 
   const clinicRows = clinicsQuery.data ?? [];
 
-  useEffect(() => {
+  useSyncOnChange([isEdit, userDetailQuery.data], () => {
     if (!isEdit || !userDetailQuery.data) return;
     const u = userDetailQuery.data;
     setUEmail(u.email);
@@ -96,13 +97,13 @@ export function PlatformUsersTab() {
     setURole(u.role as (typeof ORG_USER_ROLES)[number]);
     setUClinicIds(u.clinicIds);
     setUPassword("");
-  }, [isEdit, userDetailQuery.data]);
+  });
 
-  useEffect(() => {
+  useSyncOnChange([uRole], () => {
     if (isOrgWideUserRole(uRole)) {
       setUClinicIds([]);
     }
-  }, [uRole]);
+  });
 
   const resetCreateForm = () => {
     setUTenantId("");

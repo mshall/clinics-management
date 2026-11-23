@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { apiGet } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
 import { AvailabilityEditor, ZonesEditor } from "./availability-zones";
-import { ErrorBlock, LoadingBlock, PageShell, StatusPill, useNurseContext } from "./nurse-shared";
+import { ErrorBlock, LoadingBlock, PageShell, StatusPill } from "./nurse-shared";
+import { useNurseContext } from "./nurse-shared-utils";
 
 type Step = { key: "profession_verification" | "coverage_zones" | "services_offered" | "prices" | "availability" | "safety_contact"; done: boolean; extra?: string[] };
 type Onboarding = { kind: "SOLO" | "AGENCY" | null; steps: Step[]; complete: boolean };

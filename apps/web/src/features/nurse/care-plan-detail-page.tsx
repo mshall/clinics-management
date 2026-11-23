@@ -10,24 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiPost } from "@/lib/http";
 import type { CarePlanView } from "./care-plans-page";
-import {
-  AddressFields,
-  addressPayload,
-  emptyAddress,
-  ErrorBlock,
-  errorCode,
-  Field,
-  fmtDateTime,
-  GateNotice,
-  isGateError,
-  LoadingBlock,
-  PageShell,
-  selectClass,
-  StatusPill,
-  todayIso,
-  useErrorText,
-  type AddressDraft,
-} from "./nurse-shared";
+import { AddressFields, ErrorBlock, Field, GateNotice, LoadingBlock, PageShell, selectClass, StatusPill } from "./nurse-shared";
+import { type AddressDraft } from "./nurse-shared-utils";
+import { addressPayload, emptyAddress, errorCode, fmtDateTime, isGateError, todayIso, useErrorText } from "./nurse-shared-utils";
 
 type Action = "resume" | "extend" | "end" | null;
 const END_REASONS = ["COMPLETED", "CANCELLED_BY_PATIENT", "CANCELLED_BY_PROVIDER", "EXPIRED"] as const;

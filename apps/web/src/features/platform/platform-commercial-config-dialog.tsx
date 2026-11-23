@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPost, apiPut } from "@/lib/http";
 import { nativeSelectClassName } from "@/lib/form-control-styles";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export type CommercialConfig = {
   trial: {
@@ -49,12 +50,12 @@ export function PlatformCommercialConfigDialog({ marketId, marketLabel, open, on
     enabled: open && Boolean(marketId),
   });
 
-  useEffect(() => {
+  useSyncOnChange([configQuery.data], () => {
     if (configQuery.data?.config) {
       setDraft(structuredClone(configQuery.data.config));
       setPreviewKeys([]);
     }
-  }, [configQuery.data]);
+  });
 
   const previewMut = useMutation({
     mutationFn: (body: CommercialConfig) =>

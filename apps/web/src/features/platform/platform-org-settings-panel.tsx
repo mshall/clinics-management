@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
@@ -11,6 +11,7 @@ import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog"
 import { collectOrgSettingsIssues } from "@/lib/create-form-validation";
 import { apiGet, apiPatch } from "@/lib/http";
 import { apiErrorMessage, type TenantDetail } from "@/features/platform/platform-shared";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function PlatformOrgSettingsPanel({
   tenantId,
@@ -39,7 +40,7 @@ export function PlatformOrgSettingsPanel({
 
   const detail = detailQuery.data;
 
-  useEffect(() => {
+  useSyncOnChange([detail], () => {
     if (!detail) return;
     setEditName(detail.name);
     setEditNameAr(detail.nameAr ?? "");
@@ -47,7 +48,7 @@ export function PlatformOrgSettingsPanel({
     setEditLocale(detail.defaultLocale);
     setEditVisitFee(String(detail.defaultVisitFee));
     setSettingsErr(null);
-  }, [detail]);
+  });
 
   const patchBody = useMemo(() => {
     const body: Record<string, string | number> = {

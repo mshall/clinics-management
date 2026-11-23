@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiFetchBlob, apiGet } from "@/lib/http";
 import { localeForLanguage } from "@/lib/locale-display";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type Photo = {
   id: string;
@@ -52,9 +53,9 @@ export function PatientClinicalPhotoGallery({ patientId, embedded }: { patientId
   const [activeIndex, setActiveIndex] = useState(0);
   const activePair = pairs[activeIndex];
 
-  useEffect(() => {
+  useSyncOnChange([activeIndex, pairs.length], () => {
     if (activeIndex >= pairs.length) setActiveIndex(0);
-  }, [activeIndex, pairs.length]);
+  });
 
   const richGallery = (
     <div className="space-y-4 text-sm">
@@ -248,28 +249,29 @@ function ClinicalPhotoImage({
   style?: CSSProperties;
 }) {
   const { t } = useTranslation();
-  const [src, setSrc] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const photoKey = `${patientId}/${photoId}`;
+  const [result, setResult] = useState<{ key: string; src: string | null; failed: boolean } | null>(null);
+  const current = result?.key === photoKey ? result : null;
+  const src = current?.src ?? null;
+  const failed = current?.failed ?? false;
 
   useEffect(() => {
     let alive = true;
     let objectUrl: string | null = null;
-    setFailed(false);
-    setSrc(null);
     void apiFetchBlob(`/api/v1/patients/${patientId}/clinical-photos/${photoId}/file`)
       .then(({ blob }) => {
         if (!alive) return;
         objectUrl = URL.createObjectURL(blob);
-        setSrc(objectUrl);
+        setResult({ key: photoKey, src: objectUrl, failed: false });
       })
       .catch(() => {
-        if (alive) setFailed(true);
+        if (alive) setResult({ key: photoKey, src: null, failed: true });
       });
     return () => {
       alive = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [patientId, photoId]);
+  }, [patientId, photoId, photoKey]);
 
   if (failed) {
     return (

@@ -12,29 +12,7 @@ import {
   patientDocumentCategoryLabel,
   type DocumentCategoryOption,
   type PendingDocumentRow,
-} from "./pending-document-types";
-import { collectPendingDocumentFieldErrors } from "./pending-document-validation";
-
-export type {
-  DocumentCategoryOption,
-  PatientDocumentCategory,
-  PendingDocumentRow,
-} from "./pending-document-types";
-export {
-  PATIENT_DOCUMENT_CATEGORIES,
-  emptyPendingDocumentRow,
-  patientDocumentCategoryLabel,
-  pendingDocumentDescription,
-} from "./pending-document-types";
-export type { PendingDocumentValidationOptions } from "./pending-document-validation";
-export {
-  collectPendingDocumentFieldErrors,
-  pendingDocumentValidationMessage,
-} from "./pending-document-validation";
-
-export function validatePendingDocuments(rows: PendingDocumentRow[]): string | null {
-  return collectPendingDocumentFieldErrors(rows).code;
-}
+} from "@/components/pending-document-utils";
 
 type PendingDocumentAttachmentsProps = {
   rows: PendingDocumentRow[];

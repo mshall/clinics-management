@@ -7,11 +7,11 @@ import { usePatientPhoneConflictQuery } from "@/lib/api-hooks";
 import {
   MIN_PHONE_DIGITS,
   normalizePhoneDigits,
-  patientPhoneConflictName,
   phoneConflictMessage,
   type PatientPhoneConflictPatient,
 } from "@/lib/patient-phone-conflict";
 import { cn } from "@/lib/utils";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type PatientPhoneFieldProps = {
   value: string;
@@ -56,18 +56,19 @@ export function PatientPhoneField({
     onConflictChange?.(queriedConflict);
   }, [queriedConflict, onConflictChange]);
 
-  useEffect(() => {
-    if (!activeConflict?.id) {
+  const activeConflictId = activeConflict?.id;
+  useSyncOnChange([activeConflictId, dialogPatientId], () => {
+    if (!activeConflictId) {
       setDialogOpen(false);
       setDialogPatientId(null);
       return;
     }
     // Open once per conflicting patient id so typing does not spam the dialog.
-    if (dialogPatientId !== activeConflict.id) {
-      setDialogPatientId(activeConflict.id);
+    if (dialogPatientId !== activeConflictId) {
+      setDialogPatientId(activeConflictId);
       setDialogOpen(true);
     }
-  }, [activeConflict, dialogPatientId]);
+  });
 
   const showConflict = Boolean(activeConflict);
 
@@ -121,5 +122,3 @@ function useDebouncedValue<T>(value: T, ms: number): T {
   }, [value, ms]);
   return debounced;
 }
-
-export { patientPhoneConflictName };

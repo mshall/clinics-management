@@ -32,9 +32,23 @@ export function ProfileSessionsPanel() {
     }
   }, [t]);
 
+  // Initial load (`loading` starts true, so no synchronous state update is needed here).
   useEffect(() => {
-    void load();
-  }, [load]);
+    let active = true;
+    apiGet<SessionRow[]>("/api/v1/auth/sessions")
+      .then((data) => {
+        if (active) setRows(data);
+      })
+      .catch((err: unknown) => {
+        if (active) toast.error(err instanceof ApiError ? err.message : t("common.error"));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [t]);
 
   async function revoke(id: string) {
     try {

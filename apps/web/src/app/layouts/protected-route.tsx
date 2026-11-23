@@ -1,25 +1,23 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/stores/auth-store";
 
+function subscribePersistHydration(onChange: () => void): () => void {
+  const unsub = useAuthStore.persist.onFinishHydration?.(onChange);
+  return () => {
+    unsub?.();
+  };
+}
+
+function getPersistHydrated(): boolean {
+  const p = useAuthStore.persist;
+  return typeof p.hasHydrated === "function" ? p.hasHydrated() : true;
+}
+
 function usePersistHydrated(): boolean {
-  const [ready, setReady] = useState(() => {
-    const p = useAuthStore.persist;
-    return typeof p.hasHydrated === "function" ? p.hasHydrated() : true;
-  });
-  useEffect(() => {
-    const p = useAuthStore.persist;
-    if (typeof p.hasHydrated === "function" && p.hasHydrated()) {
-      setReady(true);
-    }
-    const unsub = p.onFinishHydration?.(() => setReady(true));
-    return () => {
-      unsub?.();
-    };
-  }, []);
-  return ready;
+  return useSyncExternalStore(subscribePersistHydration, getPersistHydrated, getPersistHydrated);
 }
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {

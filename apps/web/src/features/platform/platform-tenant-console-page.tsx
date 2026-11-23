@@ -1,7 +1,7 @@
 import type { TranslateFn } from "@/lib/translate-fn";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Timer } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { apiGet, apiPost } from "@/lib/http";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SetPlanConfirmDialog } from "@/features/platform/set-plan-confirm-dialog";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type TenantLifecycleDto = {
   id: string;
@@ -96,18 +97,14 @@ export function PlatformTenantConsolePage() {
     queryFn: () => apiGet<TenantLifecycleDto>(`/api/v1/admin/platform/tenants/${tenantId}`),
   });
 
-  useEffect(() => {
+  useSyncOnChange([q.data?.subscription?.planKey, q.data?.subscription?.clinicianSeats, q.data?.subscription?.interval], () => {
     if (!q.data?.subscription) return;
     setPlanKey(q.data.subscription.planKey);
     setPlanSeats(String(q.data.subscription.clinicianSeats));
     if (q.data.subscription.interval === "ANNUAL" || q.data.subscription.interval === "MONTHLY") {
       setPlanInterval(q.data.subscription.interval);
     }
-  }, [
-    q.data?.subscription?.planKey,
-    q.data?.subscription?.clinicianSeats,
-    q.data?.subscription?.interval,
-  ]);
+  });
 
   const extendTrial = useMutation({
     mutationFn: () =>

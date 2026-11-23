@@ -15,10 +15,12 @@ import { PrismaClientExceptionFilter } from "./common/prisma-exception.filter";
 import { IntegrationFailureExceptionFilter } from "./integrations/integration-failure.filter";
 import { webBuildIdMiddleware } from "./common/web-build-id.middleware";
 import compressionMiddleware from "compression";
+import { assertProviderEnv } from "./common/provider-env";
 
 async function bootstrap() {
   bootstrapTelemetry();
   applyStagingEnvDefaults();
+  assertProviderEnv(); // fail fast: MODE=real but URL/credentials missing
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
   app.use(

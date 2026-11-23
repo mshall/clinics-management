@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useAdminOverviewQuery } from "@/lib/api-hooks";
 import { ApiError, apiPatch } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function OrgWhatsAppRemindersCard() {
   const { t } = useTranslation();
@@ -20,14 +21,14 @@ export function OrgWhatsAppRemindersCard() {
   const [enabled, setEnabled] = useState(false);
   const [reminderHours, setReminderHours] = useState("24");
 
-  useEffect(() => {
+  useSyncOnChange([tenant], () => {
     const row = tenant as
       | { whatsAppRemindersEnabled?: boolean; appointmentReminderHoursBefore?: number }
       | undefined;
     if (!row) return;
     if (row.whatsAppRemindersEnabled != null) setEnabled(row.whatsAppRemindersEnabled);
     if (row.appointmentReminderHoursBefore != null) setReminderHours(String(row.appointmentReminderHoursBefore));
-  }, [tenant]);
+  });
 
   const saveMut = useMutation({
     mutationFn: () => {

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { nativeSelectClassName } from "@/lib/form-control-styles";
 import { CLINICAL_SPECIALTY_VALUES } from "@/lib/clinical-specialties";
 import { apiGet, apiPost, apiPostFormData } from "@/lib/http";
 import { ClinicianVerificationStatusChip } from "./clinician-verification-status-chip";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type RegisterRule = { code: string; labelEn: string; labelAr: string; required: boolean; hasExpiry: boolean; isSyndicate: boolean };
 
@@ -87,7 +88,7 @@ export function ClinicianVerificationPage() {
   });
 
   const v = q.data;
-  useEffect(() => {
+  useSyncOnChange([v], () => {
     if (!v) return;
     setSyndicateNumber(v.syndicateNumber ?? "");
     setSpecialty(v.specialty ?? "");
@@ -99,7 +100,7 @@ export function ClinicianVerificationPage() {
         v.registrations.map((r) => [r.registerCode, { number: r.registrationNumber, expiresAt: r.expiresAt ? r.expiresAt.slice(0, 10) : "" }]),
       ),
     );
-  }, [v]);
+  });
   const docKinds = [...(v?.requiredDocuments ?? ["SYNDICATE_CARD", "SPECIALTY_CERTIFICATE"]), ...OPTIONAL_DOC_KINDS.filter((k) => !(v?.requiredDocuments ?? []).includes(k))];
   const extraRegisters = (v?.requiredRegisters ?? []).filter((r) => !r.isSyndicate);
   const readOnly = v?.status === "PENDING" || v?.status === "VERIFIED";

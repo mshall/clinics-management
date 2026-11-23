@@ -12,9 +12,10 @@ import { useAssistantChatMutation, useAssistantContextQuery } from "@/lib/assist
 import { useEntitlement } from "@/hooks/use-entitlement";
 import { useAuthStore } from "@/stores/auth-store";
 import { isAssistantEnabledForRole } from "@/lib/assistant-policy";
-import { useNurseContext } from "@/features/nurse/nurse-shared";
+import { useNurseContext } from "@/features/nurse/nurse-shared-utils";
 import { AssistantMessageBody } from "@/features/assistant/assistant-message-body";
 import { Badge } from "@/components/ui/badge";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type ChatLine = { role: "user" | "assistant"; text: string; actions?: AssistantChatAction[] };
 
@@ -37,11 +38,11 @@ export function RoleAssistantWidget() {
   const contextQ = useAssistantContextQuery(roleOk && entitled, locale);
   const chatMut = useAssistantChatMutation();
 
-  useEffect(() => {
+  useSyncOnChange([open, contextQ.data?.greeting, lines.length], () => {
     if (open && contextQ.data?.greeting && lines.length === 0) {
       setLines([{ role: "assistant", text: contextQ.data.greeting }]);
     }
-  }, [open, contextQ.data?.greeting, lines.length]);
+  });
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -86,7 +87,7 @@ export function RoleAssistantWidget() {
     return (
       <div
         className={cn(
-          "fixed bottom-5 z-50 w-[min(100vw-2rem,22rem)] rounded-xl border border-border bg-card p-3 shadow-lg",
+          "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] md:bottom-5 z-50 w-[min(100vw-2rem,22rem)] rounded-xl border border-border bg-card p-3 shadow-lg",
           rtl ? "left-4" : "right-4",
         )}
         dir={rtl ? "rtl" : "ltr"}
@@ -107,7 +108,7 @@ export function RoleAssistantWidget() {
   return (
     <div
       className={cn(
-        "fixed bottom-5 z-50 flex flex-col items-end gap-2",
+        "fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] md:bottom-5 z-50 flex flex-col items-end gap-2",
         rtl ? "left-4 items-start" : "right-4 items-end",
       )}
       dir={rtl ? "rtl" : "ltr"}

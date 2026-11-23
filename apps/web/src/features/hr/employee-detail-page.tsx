@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2, UserCircle, UserCheck, UserX } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -30,6 +30,7 @@ import { formatEmployeeSalaryAmount } from "@/lib/money-display";
 import { CompensationFields, CompensationSummary } from "@/features/hr/compensation-kit";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const EMP_TYPE_VALUES = ["FULL_TIME", "PART_TIME", "CONTRACTOR", "LOCUM"] as const;
 
@@ -91,7 +92,7 @@ export function EmployeeDetailPage() {
     ),
   });
 
-  useEffect(() => {
+  useSyncOnChange([emp, orgBaseCurrency], () => {
     if (!emp) return;
     setClinicId(emp.clinicId);
     setAssignedClinicIds(emp.linkedUserClinicIds ?? [emp.clinicId]);
@@ -106,7 +107,7 @@ export function EmployeeDetailPage() {
     setHireDate(emp.hireDate);
     setSalaryBase(String(emp.salaryBase));
     setSalaryCurrency(emp.salaryCurrency ?? emp.salaryCurrencyEffective ?? orgBaseCurrency);
-  }, [emp, orgBaseCurrency]);
+  });
 
   const clinicItems: PickListItem[] = useMemo(
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
@@ -120,18 +121,20 @@ export function EmployeeDetailPage() {
   const linkedUserRole = emp?.linkedUserRole ?? "";
   const showClinicAssignment = Boolean(linkedUserRole) && !isOrgWideUserRole(linkedUserRole);
   const requiresClinicAssignment = isClinicRequiredUserRole(linkedUserRole);
+  const linkedUserClinicIds = emp?.linkedUserClinicIds;
+  const empHomeClinicId = emp?.clinicId;
   const assignedClinicLabels = useMemo(() => {
-    const ids = emp?.linkedUserClinicIds ?? (emp?.clinicId ? [emp.clinicId] : []);
+    const ids = linkedUserClinicIds ?? (empHomeClinicId ? [empHomeClinicId] : []);
     return ids
       .map((id) => clinics.find((c) => c.id === id))
       .filter(Boolean)
       .map((c) => formatClinicName(c!, i18n.language));
-  }, [emp?.linkedUserClinicIds, emp?.clinicId, clinics, i18n.language]);
+  }, [linkedUserClinicIds, empHomeClinicId, clinics, i18n.language]);
 
-  useEffect(() => {
+  useSyncOnChange([editing, emp?.salaryCurrency, orgBaseCurrency], () => {
     if (!editing || emp?.salaryCurrency) return;
     setSalaryCurrency(orgBaseCurrency);
-  }, [editing, emp?.salaryCurrency, orgBaseCurrency]);
+  });
 
   const locale = localeForLanguage(i18n.language);
 

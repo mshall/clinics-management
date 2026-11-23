@@ -4,15 +4,10 @@ import type { PickListItem } from "@/components/searchable-pick-list";
 import { resolveClinicIdFromQuery } from "@/lib/pick-list-utils";
 import { isOrgWideUserRole, isProvisionLoginClinicRequired } from "@/features/platform/platform-shared";
 import { HR_LOGIN_PASSWORD_MIN_LENGTH } from "@/lib/employee-login-suggest";
-import {
-  collectPendingDocumentFieldErrors,
-  pendingDocumentValidationMessage,
-  type PendingDocumentRow,
-} from "@/components/pending-document-attachments";
-import {
-  validatePatientAcquisitionForm,
-  type PatientAcquisitionFormValues,
-} from "@/components/patient-acquisition-fields";
+import { type PendingDocumentRow } from "@/components/pending-document-utils";
+import { collectPendingDocumentFieldErrors, pendingDocumentValidationMessage } from "@/components/pending-document-utils";
+import { type PatientAcquisitionFormValues } from "@/components/patient-acquisition-form";
+import { validatePatientAcquisitionForm } from "@/components/patient-acquisition-form";
 import type { ClinicFormValues } from "@/features/clinics/clinic-form-utils";
 import { collectClinicFormErrors } from "@/features/clinics/clinic-form-utils";
 import { getOrgUserCreateMissingLabels } from "@/features/platform/org-user-form-validation";

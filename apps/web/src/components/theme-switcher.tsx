@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { KxThemeToggle, withThemeTransition } from "@/brand/components/web/KxControls";
+import { KxThemeToggle } from "@/brand/components/web/KxControls";
+import { withThemeTransition } from "@/brand/components/web/theme-transition";
 import { applyThemeDom, isDarkTheme, themeWithMode, useThemeStore } from "@/stores/theme-store";
 
 /** Shared sun/moon toggle (cross-fade, reduced-motion safe). Keeps the user's theme family; an explicit choice is remembered for the next visit. */

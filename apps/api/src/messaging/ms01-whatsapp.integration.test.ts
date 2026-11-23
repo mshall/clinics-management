@@ -1,3 +1,4 @@
+import { SmsService } from "./providers/sms.service";
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { PrismaClient, MessageChannel } from "@prisma/client";
@@ -104,6 +105,7 @@ describe("MS-01 worker template policy", () => {
       new WhatsAppSendService(prismaSvc),
       consent,
       usage,
+      new SmsService(),
     );
     const tenant = await prisma.tenant.findFirstOrThrow({ select: { id: true } });
     const row = await prisma.outboundMessage.create({

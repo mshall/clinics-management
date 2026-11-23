@@ -10,25 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPost } from "@/lib/http";
 import { allergyLabel, type PatientAllergyCode } from "@/lib/patient-allergies";
-import {
-  EmptyBlock,
-  ErrorBlock,
-  errorBody,
-  errorCode,
-  Field,
-  fmtDate,
-  fmtDateTime,
-  GateNotice,
-  isGateError,
-  LoadingBlock,
-  PageShell,
-  PatientPicker,
-  selectClass,
-  StatusPill,
-  todayIso,
-  useNurseContext,
-  type PatientLite,
-} from "./nurse-shared";
+import { EmptyBlock, ErrorBlock, Field, GateNotice, LoadingBlock, PageShell, PatientPicker, selectClass, StatusPill, type PatientLite } from "./nurse-shared";
+import { errorBody, errorCode, fmtDate, fmtDateTime, isGateError, todayIso, useNurseContext } from "./nurse-shared-utils";
 
 type OrderLine = { medicineName: string; dose?: string; route?: string; frequency?: string; minIntervalMinutes?: number };
 type Order = { id: string; patientId: string; source: "PHOTO_UPLOAD" | "SHARED_KIORLY"; prescriberName: string; orderedOn: string; expiresOn: string; controlled: boolean; lines: OrderLine[]; status: "ACTIVE" | "REVOKED" };

@@ -2,7 +2,8 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import { AuditService } from "../audit/audit.service";
 import type { JwtUser } from "../auth/jwt-user";
 import { PrismaService } from "../prisma/prisma.service";
-import { ALERT_ROLES, can, isHomeVisitManager } from "./mobile-roles";
+import { ALERT_ROLES, DISPATCHER_ROLES, can, isHomeVisitManager } from "./mobile-roles";
+import { hasAnyRole } from "../common/effective-roles";
 
 /** SAFETY PATH (ADR-025): never consults the commercial plan entitlement or any flag. Every plan gets read + acknowledge. */
 export type AlertKind = "HOME_VISIT_SOS" | "HOME_VISIT_MISSED_CHECKIN" | "NURSE_SAFETY" | "CRITICAL_VITALS" | "CRITICAL_LAB_RESULT";
@@ -37,11 +38,19 @@ export class MobileAlertsService {
     return !isHomeVisitManager(u);
   }
 
+  /** Nurse-edition agency dispatcher: org-wide home-visit safety alerts only (never vitals / lab alerts). */
+  private async dispatcher(u: JwtUser): Promise<boolean> {
+    if (!u.tenantId || can(u, ALERT_ROLES) || !hasAnyRole(u, DISPATCHER_ROLES)) return false;
+    const t = await this.prisma.tenant.findUnique({ where: { id: u.tenantId }, select: { edition: true } });
+    return t?.edition === "NURSE";
+  }
+
   async list(u: JwtUser, status: "open" | "all" = "open"): Promise<{ items: MobileAlert[]; open: number }> {
     const tenantId = u.tenantId;
-    if (!tenantId || !can(u, ALERT_ROLES)) return { items: [], open: 0 };
+    const dispatcher = await this.dispatcher(u);
+    if (!tenantId || (!can(u, ALERT_ROLES) && !dispatcher)) return { items: [], open: 0 };
     const since = new Date(Date.now() - WINDOW_MS);
-    const mine = this.clinician(u);
+    const mine = dispatcher ? false : this.clinician(u);
     const items: MobileAlert[] = [];
     const acks = new Map((await this.prisma.mobileAlertAck.findMany({ where: { tenantId, ackedAt: { gte: since } } })).map((a) => [a.alertKey, a]));
     const names = new Map((await this.prisma.user.findMany({ where: { tenantId }, select: { id: true, displayName: true } })).map((x) => [x.id, x.displayName]));
@@ -69,8 +78,8 @@ export class MobileAlertsService {
       });
     }
 
-    // 2. Critical vital signs without an escalation entry (KNESC01)
-    const vit = await this.prisma.vitalsObservation.findMany({
+    // 2. Critical vital signs without an escalation entry (KNESC01); dispatchers get home-visit safety alerts only
+    const vit = dispatcher ? [] : await this.prisma.vitalsObservation.findMany({
       where: { tenantId, critical: true, recordedAt: { gte: since }, ...(status === "open" ? { escalatedAt: null } : {}), ...(mine ? { recordedById: u.userId } : {}) },
       orderBy: { recordedAt: "desc" }, take: 50,
     });
@@ -87,7 +96,7 @@ export class MobileAlertsService {
     }
 
     // 3. Critical lab results waiting for the doctor
-    if (can(u, [...ALERT_ROLES])) {
+    if (!dispatcher && can(u, [...ALERT_ROLES])) {
       const lab = await this.prisma.clinicalOrder.findMany({
         where: { tenantId, kind: "LAB", status: "RESULTS_READY", resultsReadyAt: { gte: since }, items: { some: { resultFlag: { startsWith: "CRITICAL" } } }, ...(mine ? { createdByUserId: u.userId } : {}) },
         include: { patient: { select: { mrn: true } } }, orderBy: { resultsReadyAt: "desc" }, take: 50,
@@ -109,9 +118,11 @@ export class MobileAlertsService {
   /** Idempotent, audited acknowledgement. First acknowledger wins. */
   async ack(u: JwtUser, id: string, note?: string) {
     const tenantId = u.tenantId;
-    if (!tenantId || !can(u, ALERT_ROLES)) throw new ForbiddenException({ code: "FORBIDDEN", message: "Your role cannot acknowledge safety alerts" });
+    const dispatcher = await this.dispatcher(u);
+    if (!tenantId || (!can(u, ALERT_ROLES) && !dispatcher)) throw new ForbiddenException({ code: "FORBIDDEN", message: "Your role cannot acknowledge safety alerts" });
     const [prefix, rowId] = [id.slice(0, id.indexOf("_")), id.slice(id.indexOf("_") + 1)];
-    const mine = this.clinician(u);
+    if (dispatcher && prefix !== "hv") throw new NotFoundException({ code: "ALERT_NOT_FOUND" });
+    const mine = dispatcher ? false : this.clinician(u);
     const now = new Date();
     if (prefix === "hv") {
       const a = await this.prisma.homeSafetyAlert.findFirst({ where: { id: rowId, tenantId, ...(mine ? { visit: { clinicianId: u.userId } } : {}) } });
@@ -120,7 +131,7 @@ export class MobileAlertsService {
     } else if (prefix === "vit") {
       const v = await this.prisma.vitalsObservation.findFirst({ where: { id: rowId, tenantId, critical: true, ...(mine ? { recordedById: u.userId } : {}) } });
       if (!v) throw new NotFoundException({ code: "ALERT_NOT_FOUND" });
-      if (!v.escalatedAt) await this.prisma.vitalsObservation.update({ where: { id: v.id }, data: { escalatedAt: now, escalationAction: v.escalationAction ?? "OTHER", escalationNote: note?.slice(0, 1000) ?? "Acknowledged in Kiorly Work" } });
+      if (!v.escalatedAt) await this.prisma.vitalsObservation.update({ where: { id: v.id }, data: { escalatedAt: now, escalationAction: v.escalationAction ?? "OTHER", escalationNote: note?.slice(0, 1000) ?? "Acknowledged in Kiorly Team" } });
     } else if (prefix === "lab") {
       const o = await this.prisma.clinicalOrder.findFirst({ where: { id: rowId, tenantId, kind: "LAB" } });
       if (!o) throw new NotFoundException({ code: "ALERT_NOT_FOUND" });

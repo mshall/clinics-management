@@ -1,3 +1,4 @@
+import { SmsService } from "../messaging/providers/sms.service";
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
@@ -49,6 +50,8 @@ describe("mock providers: every message lands in the dev inbox; delivery, replie
       email,
       { handleWebhook: async (provider: string, raw: string, sig: string) => (pspCalls.push({ provider, raw, sig }), { ok: true }) } as never,
       new PaymentGatewayRegistry(),
+      new SmsService(),
+      wa,
     );
   });
   after(async () => {

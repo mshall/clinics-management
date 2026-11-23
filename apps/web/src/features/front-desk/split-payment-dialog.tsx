@@ -12,6 +12,7 @@ import { apiPost, ApiError } from "@/lib/http";
 import { localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
 import { setPaymentFlowActive } from "@/lib/unsaved-work-registry";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export type SplitMethod = "CASH" | "CARD" | "TRANSFER" | "WALLET" | "OTHER";
 const METHODS: SplitMethod[] = ["CASH", "CARD", "TRANSFER", "WALLET"];
@@ -60,14 +61,14 @@ export function SplitPaymentDialog({
   ]);
   const [serviceDesc, setServiceDesc] = useState(target.kind === "SERVICE" ? target.description : "");
 
-  useEffect(() => {
+  useSyncOnChange([open, balance, target.kind, target.kind === "SERVICE" ? target.description : null], () => {
     if (!open) return;
     setRows([
       { method: "CASH", amount: balance > 0 ? String(round2(balance / 2)) : "", reference: "", channel: "" },
       { method: "CARD", amount: balance > 0 ? String(round2(balance - round2(balance / 2))) : "", reference: "", channel: "" },
     ]);
     if (target.kind === "SERVICE") setServiceDesc(target.description);
-  }, [open, balance, target]);
+  });
 
   const total = round2(rows.reduce((s, r) => s + (Number(r.amount) || 0), 0));
   const remainder = round2(balance - total);

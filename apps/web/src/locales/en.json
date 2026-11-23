@@ -4664,6 +4664,7 @@
   "homeVisits": {
     "today": "Today",
     "none": "No home visits for this day.",
+    "arrivedOffSite": "Arrived about {{meters}} m from the visit address (check the location was right).",
     "needLocation": "Allow location access to continue.",
     "failed": "The action could not be completed.",
     "onMyWay": "On my way",

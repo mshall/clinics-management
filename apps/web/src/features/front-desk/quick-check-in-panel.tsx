@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { setPaymentFlowActive } from "@/lib/unsaved-work-registry";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -34,7 +34,7 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
   const [collection, setCollection] = useState<VisitCollectionValue>(emptyVisitCollection);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [referenceError, setReferenceError] = useState<string | null>(null);
-  const fieldsRef = useRef<VisitCollectionFieldsHandle>(null);
+  const [fieldsHandle, setFieldsHandle] = useState<VisitCollectionFieldsHandle | null>(null);
   const rules = transferRulesFromMarket(useTenantMarket().data);
 
   const paymentAmount = Number.parseFloat(payment.trim());
@@ -83,7 +83,7 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
     onError: (e: unknown) => {
       if (e instanceof ApiError && isTransferReferenceApiError(e.body)) {
         setReferenceError(apiErrorMessage(e));
-        fieldsRef.current?.focusReference();
+        fieldsHandle?.focusReference();
         return;
       }
       toast.error(e instanceof ApiError || e instanceof Error ? apiErrorMessage(e) : String(e));
@@ -115,7 +115,7 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
     const collectErr = validateVisitCollection(effectiveAmount, collection, t, rules);
     if (collectErr) {
       setSubmitAttempted(true);
-      if (collection.mode === "MONEY_TRANSFER") fieldsRef.current?.focusReference();
+      if (collection.mode === "MONEY_TRANSFER") fieldsHandle?.focusReference();
       else toast.error(collectErr);
       return;
     }
@@ -130,7 +130,7 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
         key: String(n),
         alt: true,
         allowInInputs: true,
-        handler: () => fieldsRef.current?.selectOption(n - 1),
+        handler: () => fieldsHandle?.selectOption(n - 1),
       })),
     ],
     active,
@@ -212,7 +212,7 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
           />
         </div>
         <VisitCollectionFields
-          ref={fieldsRef}
+          ref={setFieldsHandle}
           className="sm:col-span-2"
           amount={effectiveAmount}
           value={collection}

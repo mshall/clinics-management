@@ -15,7 +15,7 @@ import type {
 import { isMock } from "../../common/provider-mode";
 
 function webhookSecret(): string {
-  return process.env.KIORLY_PAYMOB_WEBHOOK_SECRET ?? process.env.PAYMOB_HMAC_SECRET ?? "dev-paymob-secret";
+  return process.env.KIORLY_PAYMOB_WEBHOOK_SECRET ?? process.env.PAYMOB_HMAC_SECRET ?? (isMock("psp") ? "dev-paymob-secret" : "");
 }
 
 function hostedBase(): string {
@@ -87,6 +87,7 @@ export class PaymobGateway implements PaymentGateway {
       amount: String(obj.amount ?? "0"),
       currency: String(obj.currency ?? "EGP"),
       status: success ? "succeeded" : "failed",
+      kind: obj.type === "refund" ? "refund" : "payment",
     };
   }
 

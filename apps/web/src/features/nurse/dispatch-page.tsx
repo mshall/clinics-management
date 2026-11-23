@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiGet, apiPost, apiPut } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
 import { AvailabilityEditor, ZonesEditor } from "./availability-zones";
-import { currentPosition, EmptyBlock, ErrorBlock, errorCode, Field, fmtDateTime, GateNotice, isGateError, LoadingBlock, money, PageShell, PatientPicker, selectClass, StatusPill, todayIso, useErrorText, useNurseContext, type PatientLite, type RosterItem } from "./nurse-shared";
+import { EmptyBlock, ErrorBlock, Field, GateNotice, LoadingBlock, PageShell, PatientPicker, selectClass, StatusPill, type PatientLite, type RosterItem } from "./nurse-shared";
+import { currentPosition, errorCode, fmtDateTime, isGateError, money, todayIso, useErrorText, useNurseContext } from "./nurse-shared-utils";
 
 type HomeVisitRow = { id: string; state: string; plannedStartsAt: string; plannedEndsAt: string; district: string; clinicianId: string | null; patient: { name?: string; id: string }; source: "KIOREX" | "KIORLY" };
 type Suggestion = { clinicianId: string; score: number; reasons: string[] };

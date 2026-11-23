@@ -9,16 +9,14 @@ const ALERT_STATUSES = new Set(["PAST_DUE", "GRACE", "READ_ONLY", "SUSPENDED"]);
 export function DunningBanner() {
   const { t } = useTranslation();
   const token = useAuthStore((s) => s.accessToken);
-  const [state, setState] = useState<SubscriptionAccessState | null>(null);
+  const [fetched, setFetched] = useState<{ token: string; value: SubscriptionAccessState | null } | null>(null);
+  const state = token && fetched?.token === token ? fetched.value : null;
 
   useEffect(() => {
-    if (!token) {
-      setState(null);
-      return;
-    }
+    if (!token) return;
     void fetchSubscriptionAccessState()
-      .then(setState)
-      .catch(() => setState(null));
+      .then((value) => setFetched({ token, value }))
+      .catch(() => setFetched({ token, value: null }));
   }, [token]);
 
   if (!state?.banner || !ALERT_STATUSES.has(state.status)) return null;

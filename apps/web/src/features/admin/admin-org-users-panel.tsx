@@ -1,6 +1,6 @@
 import { CompensationFields } from "@/features/hr/compensation-kit";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ import { collectOrgUserCreateIssues } from "@/lib/create-form-validation";
 import { OrgUserPermissionsEditor } from "@/features/admin/org-user-permissions-editor";
 import { mapApiRole } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type OrgUserRow = {
   id: string;
@@ -180,7 +181,7 @@ export function AdminOrgUsersPanel() {
     ? orgUserRolesForCreate(authUser?.role)
     : orgUserRolesForEdit(userDetailQuery.data?.role ?? uRole);
 
-  useEffect(() => {
+  useSyncOnChange([isEdit, userDetailQuery.data, clinics.length], () => {
     if (!isEdit || !userDetailQuery.data) return;
     const u = userDetailQuery.data;
     setUEmail(u.email);
@@ -191,18 +192,18 @@ export function AdminOrgUsersPanel() {
     setUSalaryBase(u.employeeSalaryBase != null ? String(u.employeeSalaryBase) : "0");
     setUSalaryCurrency(u.employeeSalaryCurrency ?? u.employeeSalaryCurrencyEffective ?? orgBaseCurrency);
     setUPassword("");
-  }, [isEdit, userDetailQuery.data, clinics]);
+  });
 
-  useEffect(() => {
+  useSyncOnChange([isEdit, userDetailQuery.data?.employeeSalaryCurrency, orgBaseCurrency], () => {
     if (!isEdit || userDetailQuery.data?.employeeSalaryCurrency) return;
     setUSalaryCurrency(orgBaseCurrency);
-  }, [isEdit, userDetailQuery.data?.employeeSalaryCurrency, orgBaseCurrency]);
+  });
 
-  useEffect(() => {
+  useSyncOnChange([uRole], () => {
     if (isOrgWideUserRole(uRole)) {
       setUClinicIds([]);
     }
-  }, [uRole]);
+  });
 
   const resetCreateForm = () => {
     setUEmail("");
@@ -422,7 +423,7 @@ export function AdminOrgUsersPanel() {
     [i18n.language, t],
   );
 
-  const rows = usersQuery.data?.items ?? [];
+  const rows = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data?.items]);
   const total = usersQuery.data?.total ?? 0;
   const totalPages = usersQuery.data?.totalPages ?? 1;
 
@@ -465,10 +466,10 @@ export function AdminOrgUsersPanel() {
     }
   };
 
-  useEffect(() => {
+  useSyncOnChange([page, pageSize, search, roleFilter, usersView], () => {
     setSelectAllMatching(false);
     setSelectedIds(new Set());
-  }, [page, pageSize, search, roleFilter, usersView]);
+  }, { skipMount: true });
 
   const formatWhen = (iso?: string | null) =>
     iso ? new Date(iso).toLocaleString() : t("admin.orgUsersNotApplicable", "—");

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiPut } from "@/lib/http";
 import type { KiorexCancellationPolicy, KiorexSettingsDto } from "./kiorex-types";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const FIELDS: (keyof KiorexCancellationPolicy)[] = [
   "patientCancelMinHours",
@@ -22,9 +23,9 @@ export function KiorexPolicyCard({ clinicId, settings }: { clinicId: string; set
   const effective = settings.cancellationPolicy.effective;
   const [draft, setDraft] = useState<Record<string, string>>({});
 
-  useEffect(() => {
+  useSyncOnChange([effective], () => {
     setDraft(Object.fromEntries(FIELDS.map((k) => [k, String(effective[k])])));
-  }, [effective]);
+  });
 
   const save = useMutation({
     mutationFn: (cancellationPolicy: Partial<KiorexCancellationPolicy> | null) =>

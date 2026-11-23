@@ -2,7 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Pencil, Receipt } from "lucide-react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { useTranslation } from "react-i18next";
@@ -42,6 +44,7 @@ import {
   filterToolbarClassName,
   nativeSelectClassName,
 } from "@/lib/form-control-styles";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 function expenseDateInputValue(iso: string): string {
   const d = new Date(iso);
@@ -83,7 +86,7 @@ export function ExpensesPage() {
     setSortOrder(next.sortOrder);
     setPage(1);
   };
-  const expenses = expData?.items ?? [];
+  const expenses = useMemo(() => expData?.items ?? [], [expData?.items]);
   const expTotal = expData?.total ?? 0;
   const expTotalPages = expData?.totalPages ?? 1;
   const { data: clinics = [] } = useClinicsQuery();
@@ -91,12 +94,13 @@ export function ExpensesPage() {
   const resolveClinicCurrency = useClinicCurrencyResolver();
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const [clinicId, setClinicId] = useState("");
-  useEffect(() => {
+  const viewerUrlRef = useRef<string | null>(null);
+  useSyncOnChange([singleManagedClinic?.id], () => {
     if (singleManagedClinic) {
       setClinicId(singleManagedClinic.id);
       setFilterClinicId(singleManagedClinic.id);
     }
-  }, [singleManagedClinic?.id]);
+  });
 
   useEffect(() => {
     return () => {
@@ -120,7 +124,6 @@ export function ExpensesPage() {
   const [expenseCurrency, setExpenseCurrency] = useState<string>(orgBaseCurrency);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const proofInputRef = useRef<HTMLInputElement>(null);
-  const viewerUrlRef = useRef<string | null>(null);
   const [proofViewer, setProofViewer] = useState<{ filename: string; url: string; contentType: string } | null>(null);
   const validation = useValidationIssuesDialog({ intent: "submit" });
   const [efCategory, setEfCategory] = useState("");
@@ -147,9 +150,9 @@ export function ExpensesPage() {
   const editClinicCurrency = resolveClinicCurrency(editClinicId || editExpense?.clinicId);
   const displayCurrency = resolveClinicCurrency(filterClinicId || clinicId || singleManagedClinic?.id);
 
-  useEffect(() => {
+  useSyncOnChange([createClinicCurrency], () => {
     setExpenseCurrency(createClinicCurrency);
-  }, [createClinicCurrency]);
+  });
 
   const clinicLabelForExpense = (e: ExpenseDto) => {
     const c = clinicById.get(e.clinicId);
@@ -314,7 +317,8 @@ export function ExpensesPage() {
   };
 
   const filteredExpenses = useMemo(() => {
-    const formatMoney = (x: number, currency: string) => formatMoneyAmount(x, currency, loc);
+    const memoLocale = localeForLanguage(i18n.language);
+    const formatMoney = (x: number, currency: string) => formatMoneyAmount(x, currency, memoLocale);
     return expenses.filter((e) => {
       if (efCategory.trim() && !columnFilterIncludes(formatExpenseCategory(e.category, t), efCategory)) return false;
       if (efVendor.trim() && !columnFilterIncludes(e.vendorName ?? "", efVendor)) return false;
@@ -324,7 +328,7 @@ export function ExpensesPage() {
       }
       if (efStatus.trim() && !columnFilterIncludes(formatExpenseStatus(e.status, t), efStatus)) return false;
       if (efDate.trim()) {
-        const ds = new Date(e.incurredAt).toLocaleDateString(loc);
+        const ds = new Date(e.incurredAt).toLocaleDateString(memoLocale);
         if (!columnFilterIncludes(ds, efDate) && !columnFilterIncludes(e.incurredAt, efDate)) return false;
       }
       if (efProof.trim()) {
@@ -333,7 +337,7 @@ export function ExpensesPage() {
       }
       return true;
     });
-  }, [expenses, efCategory, efVendor, efAmount, efStatus, efDate, efProof, i18n.language]);
+  }, [expenses, efCategory, efVendor, efAmount, efStatus, efDate, efProof, i18n.language, t]);
   const selectedPeriodTotal = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
 
   const viewProof = async (id: string, filename: string | null) => {

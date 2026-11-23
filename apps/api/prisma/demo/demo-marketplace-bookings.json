@@ -280,6 +280,1099 @@
    "kiorexStatus": "HELD",
    "kiorlyStatus": "SCHEDULED",
    "deposit": "REQUIRED"
+  },
+  {
+   "key": "sp01a",
+   "doctorNameEn": "Dr Adel Aziz",
+   "patientPhone": "+201000001001",
+   "dayOffset": -5,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp01b",
+   "doctorNameEn": "Dr Amal Fahmy",
+   "patientPhone": "+201000001006",
+   "dayOffset": 2,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID",
+   "tele": true
+  },
+  {
+   "key": "sp01c",
+   "doctorNameEn": "Dr Amal Fahmy",
+   "patientPhone": "+201000001010",
+   "dayOffset": -6,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp02a",
+   "doctorNameEn": "Dr Asmaa Metwally",
+   "patientPhone": "+201000001002",
+   "dayOffset": -6,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp02b",
+   "doctorNameEn": "Dr Asmaa Metwally",
+   "patientPhone": "+201000001007",
+   "dayOffset": 3,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp02c",
+   "doctorNameEn": "Dr Alaa Refaat",
+   "patientPhone": "+201000001011",
+   "dayOffset": -3,
+   "hourUtc": 8,
+   "kiorexStatus": "CANCELLED",
+   "kiorlyStatus": "CANCELLED",
+   "deposit": "REFUNDED"
+  },
+  {
+   "key": "sp03a",
+   "doctorNameEn": "Dr Amir Yassin",
+   "patientPhone": "+201000001003",
+   "dayOffset": -7,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp03b",
+   "doctorNameEn": "Dr Anas Taha",
+   "patientPhone": "+201000001008",
+   "dayOffset": 4,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID",
+   "tele": true
+  },
+  {
+   "key": "sp03c",
+   "doctorNameEn": "Dr Anas Taha",
+   "patientPhone": "+201000001012",
+   "dayOffset": -6,
+   "hourUtc": 9,
+   "kiorexStatus": "NO_SHOW",
+   "kiorlyStatus": "NO_SHOW",
+   "deposit": "FORFEITED"
+  },
+  {
+   "key": "sp04a",
+   "doctorNameEn": "Dr Basma Barakat",
+   "patientPhone": "+201000001004",
+   "dayOffset": -8,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp04b",
+   "doctorNameEn": "Dr Basma Barakat",
+   "patientPhone": "+201000001009",
+   "dayOffset": 5,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp04c",
+   "doctorNameEn": "Dr Eman Habib",
+   "patientPhone": "+201000001001",
+   "dayOffset": 4,
+   "hourUtc": 10,
+   "kiorexStatus": "PENDING_CLINIC",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp05a",
+   "doctorNameEn": "Dr Ashraf Mounir",
+   "patientPhone": "+201000001005",
+   "dayOffset": -9,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp05b",
+   "doctorNameEn": "Dr Esraa Selim",
+   "patientPhone": "+201000001010",
+   "dayOffset": 6,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp05c",
+   "doctorNameEn": "Dr Esraa Selim",
+   "patientPhone": "+201000001002",
+   "dayOffset": 4,
+   "hourUtc": 8,
+   "kiorexStatus": "HELD",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "REQUIRED"
+  },
+  {
+   "key": "sp06a",
+   "doctorNameEn": "Dr Farida Shalaby",
+   "patientPhone": "+201000001006",
+   "dayOffset": -10,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp06b",
+   "doctorNameEn": "Dr Farida Shalaby",
+   "patientPhone": "+201000001011",
+   "dayOffset": 7,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp06c",
+   "doctorNameEn": "Dr Ayman Abbas",
+   "patientPhone": "+201000001003",
+   "dayOffset": 0,
+   "hourUtc": 11,
+   "kiorexStatus": "CHECKED_IN",
+   "kiorlyStatus": "CHECKED_IN",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp07a",
+   "doctorNameEn": "Dr Bassem Diab",
+   "patientPhone": "+201000001007",
+   "dayOffset": -11,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp07b",
+   "doctorNameEn": "Dr Emad Kamel",
+   "patientPhone": "+201000001012",
+   "dayOffset": 2,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID",
+   "tele": true
+  },
+  {
+   "key": "sp07c",
+   "doctorNameEn": "Dr Emad Kamel",
+   "patientPhone": "+201000001004",
+   "dayOffset": 6,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp08a",
+   "doctorNameEn": "Dr Ghada Okasha",
+   "patientPhone": "+201000001008",
+   "dayOffset": -12,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp08b",
+   "doctorNameEn": "Dr Ghada Okasha",
+   "patientPhone": "+201000001001",
+   "dayOffset": 3,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE",
+   "tele": true
+  },
+  {
+   "key": "sp08c",
+   "doctorNameEn": "Dr Hanan Soliman",
+   "patientPhone": "+201000001005",
+   "dayOffset": -7,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp09a",
+   "doctorNameEn": "Dr Essam Gad",
+   "patientPhone": "+201000001009",
+   "dayOffset": -13,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp09b",
+   "doctorNameEn": "Dr Hend Amin",
+   "patientPhone": "+201000001002",
+   "dayOffset": 4,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp09c",
+   "doctorNameEn": "Dr Hend Amin",
+   "patientPhone": "+201000001006",
+   "dayOffset": -4,
+   "hourUtc": 9,
+   "kiorexStatus": "CANCELLED",
+   "kiorlyStatus": "CANCELLED",
+   "deposit": "REFUNDED"
+  },
+  {
+   "key": "sp10a",
+   "doctorNameEn": "Dr Jihan Eissa",
+   "patientPhone": "+201000001010",
+   "dayOffset": -5,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp10b",
+   "doctorNameEn": "Dr Jihan Eissa",
+   "patientPhone": "+201000001003",
+   "dayOffset": 5,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp10c",
+   "doctorNameEn": "Dr Fady Maher",
+   "patientPhone": "+201000001007",
+   "dayOffset": -4,
+   "hourUtc": 10,
+   "kiorexStatus": "NO_SHOW",
+   "kiorlyStatus": "NO_SHOW",
+   "deposit": "FORFEITED"
+  },
+  {
+   "key": "sp11a",
+   "doctorNameEn": "Dr Gamal Rashad",
+   "patientPhone": "+201000001011",
+   "dayOffset": -6,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp11b",
+   "doctorNameEn": "Dr Hatem Wahba",
+   "patientPhone": "+201000001004",
+   "dayOffset": 6,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID",
+   "tele": true
+  },
+  {
+   "key": "sp11c",
+   "doctorNameEn": "Dr Hatem Wahba",
+   "patientPhone": "+201000001008",
+   "dayOffset": 5,
+   "hourUtc": 8,
+   "kiorexStatus": "PENDING_CLINIC",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp12a",
+   "doctorNameEn": "Dr Laila Radi",
+   "patientPhone": "+201000001012",
+   "dayOffset": -7,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp12b",
+   "doctorNameEn": "Dr Laila Radi",
+   "patientPhone": "+201000001005",
+   "dayOffset": 7,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp12c",
+   "doctorNameEn": "Dr Lobna Badawy",
+   "patientPhone": "+201000001009",
+   "dayOffset": 5,
+   "hourUtc": 9,
+   "kiorexStatus": "HELD",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "REQUIRED"
+  },
+  {
+   "key": "sp13a",
+   "doctorNameEn": "Dr Hazem Ghoneim",
+   "patientPhone": "+201000001001",
+   "dayOffset": -8,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp13b",
+   "doctorNameEn": "Dr Maha Morsy",
+   "patientPhone": "+201000001006",
+   "dayOffset": 2,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp13c",
+   "doctorNameEn": "Dr Maha Morsy",
+   "patientPhone": "+201000001010",
+   "dayOffset": 0,
+   "hourUtc": 11,
+   "kiorexStatus": "CHECKED_IN",
+   "kiorlyStatus": "CHECKED_IN",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp14a",
+   "doctorNameEn": "Dr Marwa Saad",
+   "patientPhone": "+201000001002",
+   "dayOffset": -9,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp14b",
+   "doctorNameEn": "Dr Marwa Saad",
+   "patientPhone": "+201000001007",
+   "dayOffset": 3,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE",
+   "tele": true
+  },
+  {
+   "key": "sp14c",
+   "doctorNameEn": "Dr Ihab Zahran",
+   "patientPhone": "+201000001011",
+   "dayOffset": 7,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp15a",
+   "doctorNameEn": "Dr Ismail Younis",
+   "patientPhone": "+201000001003",
+   "dayOffset": -10,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp15b",
+   "doctorNameEn": "Dr Kamal Darwish",
+   "patientPhone": "+201000001008",
+   "dayOffset": 4,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp15c",
+   "doctorNameEn": "Dr Kamal Darwish",
+   "patientPhone": "+201000001012",
+   "dayOffset": -8,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp16a",
+   "doctorNameEn": "Dr Mervat Helmy",
+   "patientPhone": "+201000001004",
+   "dayOffset": -11,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp16b",
+   "doctorNameEn": "Dr Mervat Helmy",
+   "patientPhone": "+201000001009",
+   "dayOffset": 5,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE",
+   "tele": true
+  },
+  {
+   "key": "sp16c",
+   "doctorNameEn": "Dr Nada Nagy",
+   "patientPhone": "+201000001001",
+   "dayOffset": -2,
+   "hourUtc": 10,
+   "kiorexStatus": "CANCELLED",
+   "kiorlyStatus": "CANCELLED",
+   "deposit": "REFUNDED"
+  },
+  {
+   "key": "sp17a",
+   "doctorNameEn": "Dr Maged Sharaf",
+   "patientPhone": "+201000001005",
+   "dayOffset": -12,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp17b",
+   "doctorNameEn": "Dr Nahla Awad",
+   "patientPhone": "+201000001010",
+   "dayOffset": 6,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp17c",
+   "doctorNameEn": "Dr Nahla Awad",
+   "patientPhone": "+201000001002",
+   "dayOffset": -5,
+   "hourUtc": 8,
+   "kiorexStatus": "NO_SHOW",
+   "kiorlyStatus": "NO_SHOW",
+   "deposit": "FORFEITED"
+  },
+  {
+   "key": "sp18a",
+   "doctorNameEn": "Dr Noha Abdelhamid",
+   "patientPhone": "+201000001006",
+   "dayOffset": -13,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp18b",
+   "doctorNameEn": "Dr Noha Abdelhamid",
+   "patientPhone": "+201000001011",
+   "dayOffset": 7,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp18c",
+   "doctorNameEn": "Dr Marwan El-Banna",
+   "patientPhone": "+201000001003",
+   "dayOffset": 6,
+   "hourUtc": 9,
+   "kiorexStatus": "PENDING_CLINIC",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp19a",
+   "doctorNameEn": "Dr Mohab Labib",
+   "patientPhone": "+201000001007",
+   "dayOffset": -5,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp19b",
+   "doctorNameEn": "Dr Nabil Qandil",
+   "patientPhone": "+201000001012",
+   "dayOffset": 2,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp19c",
+   "doctorNameEn": "Dr Nabil Qandil",
+   "patientPhone": "+201000001004",
+   "dayOffset": 3,
+   "hourUtc": 10,
+   "kiorexStatus": "HELD",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "REQUIRED"
+  },
+  {
+   "key": "sp20a",
+   "doctorNameEn": "Dr Nesma Tantawy",
+   "patientPhone": "+201000001008",
+   "dayOffset": -6,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp20b",
+   "doctorNameEn": "Dr Nesma Tantawy",
+   "patientPhone": "+201000001001",
+   "dayOffset": 3,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp20c",
+   "doctorNameEn": "Dr Rasha Hosny",
+   "patientPhone": "+201000001005",
+   "dayOffset": 0,
+   "hourUtc": 11,
+   "kiorexStatus": "CHECKED_IN",
+   "kiorlyStatus": "CHECKED_IN",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp21a",
+   "doctorNameEn": "Dr Osama Aziz",
+   "patientPhone": "+201000001009",
+   "dayOffset": -7,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED",
+   "teleEnded": true
+  },
+  {
+   "key": "sp21b",
+   "doctorNameEn": "Dr Rehab Fahmy",
+   "patientPhone": "+201000001002",
+   "dayOffset": 4,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID",
+   "tele": true
+  },
+  {
+   "key": "sp21c",
+   "doctorNameEn": "Dr Rehab Fahmy",
+   "patientPhone": "+201000001006",
+   "dayOffset": 8,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp22a",
+   "doctorNameEn": "Dr Reham Metwally",
+   "patientPhone": "+201000001010",
+   "dayOffset": -8,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp22b",
+   "doctorNameEn": "Dr Reham Metwally",
+   "patientPhone": "+201000001003",
+   "dayOffset": 5,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp22c",
+   "doctorNameEn": "Dr Raafat Refaat",
+   "patientPhone": "+201000001007",
+   "dayOffset": -6,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp23a",
+   "doctorNameEn": "Dr Ramy Yassin",
+   "patientPhone": "+201000001011",
+   "dayOffset": -9,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp23b",
+   "doctorNameEn": "Dr Sameh Taha",
+   "patientPhone": "+201000001004",
+   "dayOffset": 6,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp23c",
+   "doctorNameEn": "Dr Sameh Taha",
+   "patientPhone": "+201000001008",
+   "dayOffset": -3,
+   "hourUtc": 8,
+   "kiorexStatus": "CANCELLED",
+   "kiorlyStatus": "CANCELLED",
+   "deposit": "REFUNDED"
+  },
+  {
+   "key": "sp24a",
+   "doctorNameEn": "Dr Sahar Barakat",
+   "patientPhone": "+201000001012",
+   "dayOffset": -10,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp24b",
+   "doctorNameEn": "Dr Sahar Barakat",
+   "patientPhone": "+201000001005",
+   "dayOffset": 7,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp24c",
+   "doctorNameEn": "Dr Samar Habib",
+   "patientPhone": "+201000001009",
+   "dayOffset": -6,
+   "hourUtc": 9,
+   "kiorexStatus": "NO_SHOW",
+   "kiorlyStatus": "NO_SHOW",
+   "deposit": "FORFEITED"
+  },
+  {
+   "key": "sp25a",
+   "doctorNameEn": "Dr Seif Mounir",
+   "patientPhone": "+201000001001",
+   "dayOffset": -11,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp25b",
+   "doctorNameEn": "Dr Shaimaa Selim",
+   "patientPhone": "+201000001006",
+   "dayOffset": 2,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp25c",
+   "doctorNameEn": "Dr Shaimaa Selim",
+   "patientPhone": "+201000001010",
+   "dayOffset": 4,
+   "hourUtc": 10,
+   "kiorexStatus": "PENDING_CLINIC",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp26a",
+   "doctorNameEn": "Dr Shereen Shalaby",
+   "patientPhone": "+201000001002",
+   "dayOffset": -12,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp26b",
+   "doctorNameEn": "Dr Shereen Shalaby",
+   "patientPhone": "+201000001007",
+   "dayOffset": 3,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp26c",
+   "doctorNameEn": "Dr Wael Abbas",
+   "patientPhone": "+201000001011",
+   "dayOffset": 4,
+   "hourUtc": 8,
+   "kiorexStatus": "HELD",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "REQUIRED"
+  },
+  {
+   "key": "sp27a",
+   "doctorNameEn": "Dr Yehia Diab",
+   "patientPhone": "+201000001003",
+   "dayOffset": -13,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp27b",
+   "doctorNameEn": "Dr Zein Kamel",
+   "patientPhone": "+201000001008",
+   "dayOffset": 4,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID",
+   "tele": true
+  },
+  {
+   "key": "sp27c",
+   "doctorNameEn": "Dr Zein Kamel",
+   "patientPhone": "+201000001012",
+   "dayOffset": 0,
+   "hourUtc": 11,
+   "kiorexStatus": "CHECKED_IN",
+   "kiorlyStatus": "CHECKED_IN",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp28a",
+   "doctorNameEn": "Dr Soha Okasha",
+   "patientPhone": "+201000001004",
+   "dayOffset": -5,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp28b",
+   "doctorNameEn": "Dr Soha Okasha",
+   "patientPhone": "+201000001009",
+   "dayOffset": 5,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp28c",
+   "doctorNameEn": "Dr Suzan Soliman",
+   "patientPhone": "+201000001001",
+   "dayOffset": 6,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp29a",
+   "doctorNameEn": "Dr Ziad Gad",
+   "patientPhone": "+201000001005",
+   "dayOffset": -6,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp29b",
+   "doctorNameEn": "Dr Walaa Amin",
+   "patientPhone": "+201000001010",
+   "dayOffset": 6,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp29c",
+   "doctorNameEn": "Dr Walaa Amin",
+   "patientPhone": "+201000001002",
+   "dayOffset": -7,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp30a",
+   "doctorNameEn": "Dr Yasmine Eissa",
+   "patientPhone": "+201000001006",
+   "dayOffset": -7,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE",
+   "teleEnded": true
+  },
+  {
+   "key": "sp30b",
+   "doctorNameEn": "Dr Yasmine Eissa",
+   "patientPhone": "+201000001011",
+   "dayOffset": 7,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE",
+   "tele": true
+  },
+  {
+   "key": "sp30c",
+   "doctorNameEn": "Dr Magdy Maher",
+   "patientPhone": "+201000001003",
+   "dayOffset": -4,
+   "hourUtc": 9,
+   "kiorexStatus": "CANCELLED",
+   "kiorlyStatus": "CANCELLED",
+   "deposit": "REFUNDED"
+  },
+  {
+   "key": "sp31a",
+   "doctorNameEn": "Dr Sabry Rashad",
+   "patientPhone": "+201000001007",
+   "dayOffset": -8,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp31b",
+   "doctorNameEn": "Dr Hesham Wahba",
+   "patientPhone": "+201000001012",
+   "dayOffset": 2,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp31c",
+   "doctorNameEn": "Dr Hesham Wahba",
+   "patientPhone": "+201000001004",
+   "dayOffset": -4,
+   "hourUtc": 10,
+   "kiorexStatus": "NO_SHOW",
+   "kiorlyStatus": "NO_SHOW",
+   "deposit": "FORFEITED"
+  },
+  {
+   "key": "sp32a",
+   "doctorNameEn": "Dr Zeinab Radi",
+   "patientPhone": "+201000001008",
+   "dayOffset": -9,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp32b",
+   "doctorNameEn": "Dr Zeinab Radi",
+   "patientPhone": "+201000001001",
+   "dayOffset": 3,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp32c",
+   "doctorNameEn": "Dr Doaa Badawy",
+   "patientPhone": "+201000001005",
+   "dayOffset": 5,
+   "hourUtc": 8,
+   "kiorexStatus": "PENDING_CLINIC",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp33a",
+   "doctorNameEn": "Dr Moataz Ghoneim",
+   "patientPhone": "+201000001009",
+   "dayOffset": -10,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp33b",
+   "doctorNameEn": "Dr Radwa Morsy",
+   "patientPhone": "+201000001002",
+   "dayOffset": 4,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID",
+   "tele": true
+  },
+  {
+   "key": "sp33c",
+   "doctorNameEn": "Dr Radwa Morsy",
+   "patientPhone": "+201000001006",
+   "dayOffset": 5,
+   "hourUtc": 9,
+   "kiorexStatus": "HELD",
+   "kiorlyStatus": "SCHEDULED",
+   "deposit": "REQUIRED"
+  },
+  {
+   "key": "sp34a",
+   "doctorNameEn": "Dr Manal Saad",
+   "patientPhone": "+201000001010",
+   "dayOffset": -11,
+   "hourUtc": 8,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp34b",
+   "doctorNameEn": "Dr Manal Saad",
+   "patientPhone": "+201000001003",
+   "dayOffset": 5,
+   "hourUtc": 9,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp34c",
+   "doctorNameEn": "Dr Nader Zahran",
+   "patientPhone": "+201000001007",
+   "dayOffset": 0,
+   "hourUtc": 11,
+   "kiorexStatus": "CHECKED_IN",
+   "kiorlyStatus": "CHECKED_IN",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp35a",
+   "doctorNameEn": "Dr Ragab Younis",
+   "patientPhone": "+201000001011",
+   "dayOffset": -12,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
+  },
+  {
+   "key": "sp35b",
+   "doctorNameEn": "Dr Abdallah Darwish",
+   "patientPhone": "+201000001004",
+   "dayOffset": 6,
+   "hourUtc": 10,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "PAID"
+  },
+  {
+   "key": "sp35c",
+   "doctorNameEn": "Dr Abdallah Darwish",
+   "patientPhone": "+201000001008",
+   "dayOffset": 7,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp36a",
+   "doctorNameEn": "Dr Lamis Helmy",
+   "patientPhone": "+201000001012",
+   "dayOffset": -13,
+   "hourUtc": 10,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp36b",
+   "doctorNameEn": "Dr Lamis Helmy",
+   "patientPhone": "+201000001005",
+   "dayOffset": 7,
+   "hourUtc": 8,
+   "kiorexStatus": "CONFIRMED",
+   "kiorlyStatus": "CONFIRMED",
+   "deposit": "NONE"
+  },
+  {
+   "key": "sp36c",
+   "doctorNameEn": "Dr Salwa Nagy",
+   "patientPhone": "+201000001009",
+   "dayOffset": -8,
+   "hourUtc": 9,
+   "kiorexStatus": "COMPLETED",
+   "kiorlyStatus": "COMPLETED",
+   "deposit": "RELEASED"
   }
  ]
 }

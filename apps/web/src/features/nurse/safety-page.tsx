@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPost, apiPut } from "@/lib/http";
-import { currentPosition, EmptyBlock, ErrorBlock, Field, fmtDateTime, LoadingBlock, PageShell, selectClass, StatusPill, useErrorText } from "./nurse-shared";
+import { EmptyBlock, ErrorBlock, Field, LoadingBlock, PageShell, selectClass, StatusPill } from "./nurse-shared";
+import { currentPosition, fmtDateTime, useErrorText } from "./nurse-shared-utils";
 
 type RouteVisit = { id: string; state: string; plannedStartsAt: string; plannedEndsAt: string; district: string; patient: { name?: string } };
 type Alert = { id: string; visitId: string; kind: "NO_ANSWER" | "SOS" | "UNSAFE_ABORT"; raisedAt: string; status: string; withinSla: boolean };

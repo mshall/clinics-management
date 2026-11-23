@@ -4763,6 +4763,10 @@ model HomeVisit {
   plannedEndsAt      DateTime
   enRouteAt          DateTime?
   arrivedAt          DateTime?
+  /// Distance (metres) between the arrival fix and the visit address coordinates; null when either has no coordinates. Never blocks the arrival.
+  arrivalDistanceM   Int?
+  /// Non-blocking dispatcher/owner flag: arrival fix farther than HOME_VISIT_ARRIVAL_THRESHOLD_M from the address. Never shown to the patient.
+  arrivedOffSite     Boolean             @default(false)
   finishedAt         DateTime?
   endedAt            DateTime?
   abortReason        String?
@@ -5122,7 +5126,7 @@ enum MobileDeviceStatus {
   REVOKED
 }
 
-/// Kiorly Work staff app: one row per (user, device). The device-bound token is stored hashed (sha256), never in clear.
+/// Kiorly Team staff app: one row per (user, device). The device-bound token is stored hashed (sha256), never in clear.
 model MobileDevice {
   id           String             @id @default(cuid())
   tenantId     String
@@ -5180,6 +5184,25 @@ model MobileAlertAck {
   ackedAt  DateTime @default(now())
 
   @@unique([tenantId, alertKey])
+}
+
+/// Kiorly Team: a staff member asked their org owner/admin to upgrade to a plan that includes `mobile_staff_app`. Allowed on Basic (not entitlement-gated).
+/// Repeat requests by the same user for the same feature within 24h are de-duplicated by the service.
+model MobileUpgradeRequest {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String
+  role          String
+  /// A module key (e.g. clinic.vitals) or "general".
+  featureKey    String
+  plan          String
+  note          String?
+  status        String   @default("OPEN")
+  notifiedCount Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, userId, featureKey, createdAt])
+  @@index([tenantId, status, createdAt])
 }
 
 /// Doctor review (approval) of a lab/imaging result from the staff app.

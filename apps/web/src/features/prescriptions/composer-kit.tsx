@@ -1,7 +1,8 @@
 import { Ban, Download, Eye, FileText, FileUp, Pill, Printer, Trash2, Upload } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { StatusChip, Surface, kcn } from "@/brand/ui-kit";
+import { StatusChip, Surface } from "@/brand/ui-kit";
+import { kcn } from "@/brand/ui-kit-utils";
 import { Button } from "@/components/ui/button";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";

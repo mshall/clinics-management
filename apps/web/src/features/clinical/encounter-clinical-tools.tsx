@@ -9,7 +9,8 @@ import { apiGet, apiPost } from "@/lib/http";
 import type { EncounterDetailDto } from "@/lib/api-types";
 import { ClinicalLetterDialog } from "@/features/clinical/clinical-letter-dialog";
 import { Link } from "react-router-dom";
-import { RxSafetyAlerts, type RxSafetyAlert } from "@/features/clinical/rx-safety-alerts";
+import { RxSafetyAlerts } from "@/features/clinical/rx-safety-alerts";
+import { type RxSafetyAlert } from "@/features/clinical/rx-safety-utils";
 
 type IcdRow = { icd10Code: string; descriptionEn: string; descriptionAr: string };
 type Shortcut = { id: string; label: string; type: string; payload: unknown };

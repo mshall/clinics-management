@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { apiGet, apiPost } from "@/lib/http";
 import { resolvePostLoginPath } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
+import { useKiorexConfig } from "@/features/auth/use-kiorex-config";
 
 type Session = { accessToken: string; refreshToken?: string; user: Parameters<ReturnType<typeof useAuthStore.getState>["setSession"]>[1] };
 type CallbackResult =
@@ -18,15 +19,6 @@ type CallbackResult =
   | { status: "MFA_REQUIRED"; ticket: string; mfaWhatsApp: boolean }
   | { status: "LINK_REQUIRED" }
   | { status: "LINKED" };
-
-export function useKiorexConfig() {
-  return useQuery({
-    queryKey: ["auth", "kiorex", "config"],
-    queryFn: () => apiGet<{ enabled: boolean; edition?: "CLINIC" | "NURSE"; defaultSignIn?: "KIOREX_PASSPORT" | "PASSWORD" }>("/api/v1/auth/kiorex/config"),
-    staleTime: 60_000,
-    retry: false,
-  });
-}
 
 /** KCV-201 — hidden unless the API has KIOREX_OIDC_ISSUER configured (and account.provider_sso is not OFF). */
 export function KiorexPassportButton() {
@@ -63,10 +55,17 @@ export function KiorexCallbackPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
-  const [state, setState] = useState<"working" | "mfa" | "link-required" | "linked" | "error">("working");
+  const callbackMissingParams = !params.get("code") || !params.get("state");
+  const [state, setState] = useState<"working" | "mfa" | "link-required" | "linked" | "error">(
+    callbackMissingParams ? "error" : "working",
+  );
   const [ticket, setTicket] = useState("");
   const [mfa, setMfa] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(() =>
+    callbackMissingParams
+      ? (params.get("error_description") ?? params.get("error") ?? t("kiorex.passport.failed"))
+      : null,
+  );
   const started = useRef(false);
 
   function finish(res: CallbackResult) {
@@ -86,11 +85,7 @@ export function KiorexCallbackPage() {
     started.current = true;
     const code = params.get("code");
     const st = params.get("state");
-    if (!code || !st) {
-      setMessage(params.get("error_description") ?? params.get("error") ?? t("kiorex.passport.failed"));
-      setState("error");
-      return;
-    }
+    if (!code || !st) return;
     apiPost<CallbackResult>("/api/v1/auth/kiorex/callback", { code, state: st, iss: params.get("iss") ?? undefined })
       .then(finish)
       .catch((e: unknown) => {

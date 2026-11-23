@@ -3,13 +3,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-
-export type SortOrder = "asc" | "desc";
-
-export function toggleSort(currentBy: string, currentDir: SortOrder, column: string): { sortBy: string; sortOrder: SortOrder } {
-  if (currentBy === column) return { sortBy: column, sortOrder: currentDir === "asc" ? "desc" : "asc" };
-  return { sortBy: column, sortOrder: "asc" };
-}
+import { type SortOrder } from "@/components/sort-utils";
 
 interface SortableThProps {
   label: ReactNode;

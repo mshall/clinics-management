@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import { apiGet, apiPatch, apiPut } from "@/lib/http";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type Prefs = {
   optOutAll: boolean;
@@ -44,9 +45,9 @@ export function DigestPreferencesCard() {
     queryFn: () => apiGet<Notice[]>("/api/v1/digests/notices?unreadOnly=true"),
   });
   const [prefs, setPrefs] = useState<Prefs | null>(null);
-  useEffect(() => {
+  useSyncOnChange([prefsQ.data], () => {
     if (prefsQ.data) setPrefs(prefsQ.data);
-  }, [prefsQ.data]);
+  });
 
   const save = useMutation({
     mutationFn: (body: Prefs) => apiPut<Prefs>("/api/v1/digests/preferences", body),

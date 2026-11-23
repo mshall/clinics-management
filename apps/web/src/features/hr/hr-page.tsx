@@ -10,7 +10,9 @@ import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { PageHeader, Skeleton, StatCard } from "@/brand/ui-kit";
 import { SectionNav } from "@/components/section-nav";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +88,7 @@ import {
   collectHrProvisionClinicScopeIssues,
   collectLeaveCreateIssues,
 } from "@/lib/create-form-validation";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type Tab = "summary" | "employees" | "attendance" | "leave" | "insights";
 
@@ -136,12 +139,12 @@ export function HrPage() {
   const orgBaseCurrency = useOrgBaseCurrency();
   const [tab, setTab] = useState<Tab>(() => parseHrTab(searchParams.get("tab")));
 
-  useEffect(() => {
+  useSyncOnChange([searchParams], () => {
     setTab(parseHrTab(searchParams.get("tab")));
-  }, [searchParams]);
+  });
   const summary = useHrSummaryQuery();
   const employeesPick = useEmployeesQuery({ page: 1, pageSize: 100, recordStatus: "ACTIVE" });
-  const pickEmployees = employeesPick.data?.items ?? [];
+  const pickEmployees = useMemo(() => employeesPick.data?.items ?? [], [employeesPick.data?.items]);
   const employeePickItems: PickListItem[] = useMemo(
     () => pickEmployees.map((e) => employeeToPickListItem(e, i18n.language)),
     [pickEmployees, i18n.language],
@@ -170,7 +173,7 @@ export function HrPage() {
     sortBy: attSortBy,
     sortOrder: attSortOrder,
   });
-  const attRows = attendance.data?.items ?? [];
+  const attRows = useMemo(() => attendance.data?.items ?? [], [attendance.data?.items]);
   const attTotal = attendance.data?.total ?? 0;
   const attTotalPages = attendance.data?.totalPages ?? 1;
 
@@ -192,7 +195,7 @@ export function HrPage() {
     sortBy: leaveSortBy,
     sortOrder: leaveSortOrder,
   });
-  const leaveRows = leave.data?.items ?? [];
+  const leaveRows = useMemo(() => leave.data?.items ?? [], [leave.data?.items]);
   const leaveTotal = leave.data?.total ?? 0;
   const leaveTotalPages = leave.data?.totalPages ?? 1;
 
@@ -220,9 +223,9 @@ export function HrPage() {
     const tid = window.setTimeout(() => setDebouncedClinicFilter(ecfClinic), 300);
     return () => window.clearTimeout(tid);
   }, [ecfClinic]);
-  useEffect(() => {
+  useSyncOnChange([debouncedNameFilter, debouncedClinicFilter, empView], () => {
     setEmpPage(1);
-  }, [debouncedNameFilter, debouncedClinicFilter, empView]);
+  }, { skipMount: true });
 
   const employees = useEmployeesQuery({
     page: empPage,
@@ -233,7 +236,7 @@ export function HrPage() {
     sortOrder: empSortOrder,
     archived: empView === "archived",
   });
-  const empRows = employees.data?.items ?? [];
+  const empRows = useMemo(() => employees.data?.items ?? [], [employees.data?.items]);
   const empTotal = employees.data?.total ?? 0;
   const empTotalPages = employees.data?.totalPages ?? 1;
 
@@ -306,7 +309,7 @@ export function HrPage() {
     () => clinics.map((c) => ({ value: c.id, label: formatClinicName(c, i18n.language) })),
     [clinics, i18n.language],
   );
-  const assignableClinicIds = hrManageContext.data?.assignableClinicIds ?? [];
+  const assignableClinicIds = useMemo(() => hrManageContext.data?.assignableClinicIds ?? [], [hrManageContext.data?.assignableClinicIds]);
   const provisionClinicItems = useMemo(() => {
     if (!provisionLogin) return [];
     if (assignableClinicIds.length > 0) {
@@ -391,11 +394,11 @@ export function HrPage() {
       : empClinic;
   const provisionClinicNameEn =
     clinics.find((c) => c.id === primaryClinicForCreate)?.nameEn ?? hrManageContext.data?.clinicNameEn ?? "";
-  useEffect(() => {
+  useSyncOnChange([orgBaseCurrency], () => {
     setEmpSalaryCurrency(orgBaseCurrency);
-  }, [orgBaseCurrency]);
+  }, { skipMount: true });
 
-  useEffect(() => {
+  useSyncOnChange([createEmpOpen, provisionLogin], () => {
     if (!createEmpOpen || !provisionLogin) return;
     setEmpClinic("");
     setEmpClinicQuery("");
@@ -403,21 +406,14 @@ export function HrPage() {
     setLoginEmailTouched(false);
     setEmpLoginPassword(defaultEmployeeLoginPassword());
     setEmpLoginEmail(suggestEmployeeLoginEmail("", "", ""));
-  }, [createEmpOpen, provisionLogin]);
+  });
 
-  useEffect(() => {
+  useSyncOnChange([createEmpOpen, provisionLogin, loginEmailTouched, empFn, empLn, provisionClinicNameEn], () => {
     if (!createEmpOpen || !provisionLogin || loginEmailTouched) return;
     setEmpLoginEmail(
       suggestEmployeeLoginEmail(empFn, empLn, provisionClinicNameEn),
     );
-  }, [
-    createEmpOpen,
-    provisionLogin,
-    loginEmailTouched,
-    empFn,
-    empLn,
-    provisionClinicNameEn,
-  ]);
+  });
 
   const empClinicSelectedItem = useMemo(
     (): PickListItem | null =>
@@ -714,7 +710,7 @@ export function HrPage() {
       }
       return true;
     });
-  }, [empRows, ecfNum, ecfTitle, ecfSalary, clinics, locale]);
+  }, [empRows, ecfNum, ecfTitle, ecfSalary, clinics, locale, orgBaseCurrency]);
 
   const filteredAttRows = useMemo(() => {
     return attRows.filter((a) => {
@@ -727,7 +723,7 @@ export function HrPage() {
       if (acfStat.trim() && !columnFilterIncludes(formatAttendanceStatus(a.status, t), acfStat)) return false;
       return true;
     });
-  }, [attRows, acfDate, acfEmp, acfClinic, acfStat]);
+  }, [attRows, acfDate, acfEmp, acfClinic, acfStat, t]);
 
   const filteredLeaveRows = useMemo(() => {
     return leaveRows.filter((l) => {
@@ -739,7 +735,7 @@ export function HrPage() {
       if (lcfStat.trim() && !columnFilterIncludes(formatLeaveStatus(l.status, t), lcfStat)) return false;
       return true;
     });
-  }, [leaveRows, lcfType, lcfDates, lcfStat]);
+  }, [leaveRows, lcfType, lcfDates, lcfStat, t]);
 
   const onEmpSort = (column: string) => {
     const next = toggleSort(empSortBy, empSortOrder, column);

@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPut } from "@/lib/http";
-import { EmptyBlock, ErrorBlock, Field, GateNotice, LoadingBlock, money, PageShell, PatientPicker, StatusPill, todayIso, useIsAgency, useNurseContext, useErrorText, type PatientLite, type RosterItem } from "./nurse-shared";
+import { EmptyBlock, ErrorBlock, Field, GateNotice, LoadingBlock, PageShell, PatientPicker, StatusPill, type PatientLite, type RosterItem } from "./nurse-shared";
+import { money, todayIso, useIsAgency, useNurseContext, useErrorText } from "./nurse-shared-utils";
 
 type Contact = { linkId: string; relation: string; patientId: string; name: string; phone: string; consentGranted: boolean };
 

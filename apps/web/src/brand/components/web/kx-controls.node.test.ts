@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { KX_CONTROL_CLASS, KxControlPair, KxLanguageToggle, KxThemeToggle, withThemeTransition } from "./KxControls";
+import { KX_CONTROL_CLASS, KxControlPair, KxLanguageToggle, KxThemeToggle } from "./KxControls";
+import { withThemeTransition } from "./theme-transition";
 
 (globalThis as { React?: typeof React }).React = React;
 const noop = () => {};

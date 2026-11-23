@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sanitizeReportingRange } from "@/lib/reporting-range";
 import { useDateRangeStore } from "@/stores/date-range-store";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function DateRangeBar() {
   const { t } = useTranslation();
@@ -15,10 +16,14 @@ export function DateRangeBar() {
   const [draftFrom, setDraftFrom] = useState(from);
   const [draftTo, setDraftTo] = useState(to);
 
-  useEffect(() => {
-    setDraftFrom(from);
-    setDraftTo(to);
-  }, [from, to]);
+  useSyncOnChange(
+    [from, to],
+    () => {
+      setDraftFrom(from);
+      setDraftTo(to);
+    },
+    { skipMount: true },
+  );
 
   const apply = () => {
     const next = sanitizeReportingRange(draftFrom, draftTo);

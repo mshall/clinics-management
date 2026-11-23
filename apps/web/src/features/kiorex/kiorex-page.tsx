@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
@@ -11,15 +11,16 @@ import { KiorexPerformanceCard } from "./kiorex-performance-card";
 import { KiorexPolicyCard } from "./kiorex-policy-card";
 import { KiorexRatingsCard } from "./kiorex-ratings-card";
 import type { KiorexSettingsDto } from "./kiorex-types";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function KiorexPage() {
   const { t, i18n } = useTranslation();
   const clinics = useClinicsQuery();
   const [clinicId, setClinicId] = useState("");
 
-  useEffect(() => {
+  useSyncOnChange([clinicId, clinics.data?.[0]?.id], () => {
     if (!clinicId && clinics.data?.length) setClinicId(clinics.data[0]!.id);
-  }, [clinicId, clinics.data]);
+  });
 
   const settings = useQuery({
     queryKey: ["kiorex", "settings", clinicId],

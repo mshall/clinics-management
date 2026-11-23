@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ApiError, apiPatch } from "@/lib/http";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type ClinicCurrencySettingsPanelProps = {
   clinicId: string;
@@ -26,9 +27,9 @@ export function ClinicCurrencySettingsPanel({
   const [currency, setCurrency] = useState(defaultCurrency);
   const inheritsOrgDefault = defaultCurrency === orgBaseCurrency;
 
-  useEffect(() => {
+  useSyncOnChange([defaultCurrency], () => {
     setCurrency(defaultCurrency);
-  }, [defaultCurrency]);
+  }, { skipMount: true });
 
   const saveMut = useMutation({
     mutationFn: () => apiPatch(`/api/v1/clinics/${clinicId}`, { defaultCurrency: currency }),

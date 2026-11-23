@@ -1,11 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import type { PickListItem } from "@/components/searchable-pick-list";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
@@ -55,6 +57,7 @@ import { AdminKiorlyInvoicesPanel } from "./admin-kiorly-invoices-panel";
 import { AdminKiorlyStatementsPanel } from "./admin-kiorly-statements-panel";
 import { AdminKiorexChargesPanel } from "./admin-kiorex-charges-panel";
 import { LiteAdminSettings } from "./lite-admin-settings";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 export function AdminPage() {
   const { t, i18n } = useTranslation();
@@ -158,11 +161,11 @@ export function AdminPage() {
     setAddClinicForm(emptyClinicForm(orgBaseCurrency));
   };
 
-  useEffect(() => {
+  useSyncOnChange([selectedClinicId, selectedClinicDetail.data], () => {
     if (!selectedClinicId || !selectedClinicDetail.data) return;
     setEditClinicForm(clinicDetailToForm(selectedClinicDetail.data, orgBaseCurrency));
     patchClinicValidation.clear();
-  }, [selectedClinicId, selectedClinicDetail.data]);
+  });
 
   const patchClinicMut = useMutation({
     mutationFn: () =>
@@ -208,7 +211,7 @@ export function AdminPage() {
     patchClinicMut.mutate();
   };
 
-  const tenantRows = tenants.data?.items ?? [];
+  const tenantRows = useMemo(() => tenants.data?.items ?? [], [tenants.data?.items]);
   const tTotal = tenants.data?.total ?? 0;
   const tTotalPages = tenants.data?.totalPages ?? 1;
 
@@ -250,10 +253,10 @@ export function AdminPage() {
   const [trnOverride, setTrnOverride] = useState(false);
   const [vatOverride, setVatOverride] = useState(false);
   const [operationAcquisitionRequiredDraft, setOperationAcquisitionRequiredDraft] = useState(false);
-  useEffect(() => {
+  useSyncOnChange([isPlatformSuperAdmin, isGroupAdmin, adminSection], () => {
     if (!isPlatformSuperAdmin && !isGroupAdmin && adminSection === "data") setAdminSection("clinics");
-  }, [isPlatformSuperAdmin, isGroupAdmin, adminSection]);
-  useEffect(() => {
+  });
+  useSyncOnChange([overview.data?.currentTenant], () => {
     const t = overview.data?.currentTenant;
     if (!t) return;
     setFeeOverride(!t.defaultVisitFeeUsesMarketDefault);
@@ -266,20 +269,20 @@ export function AdminPage() {
           : (t.defaultVisitFeeOverride ?? t.defaultVisitFee),
       ),
     );
-  }, [overview.data?.currentTenant]);
-  useEffect(() => {
+  });
+  useSyncOnChange([overview.data?.currentTenant?.baseCurrency], () => {
     const bc = overview.data?.currentTenant?.baseCurrency;
     if (bc) setCurrencyDraft(bc);
-  }, [overview.data?.currentTenant?.baseCurrency]);
-  useEffect(() => {
+  });
+  useSyncOnChange([overview.data?.currentTenant?.operationAcquisitionRequired], () => {
     const t = overview.data?.currentTenant;
     if (!t) return;
     setOperationAcquisitionRequiredDraft(Boolean(t.operationAcquisitionRequired));
-  }, [overview.data?.currentTenant?.operationAcquisitionRequired]);
-  useEffect(() => {
+  });
+  useSyncOnChange([overview.data?.currentTenant], () => {
     const t = overview.data?.currentTenant;
     if (!t) return;
-  const trn = t.defaultTaxRegistrationNumberUsesMarketDefault
+    const trn = t.defaultTaxRegistrationNumberUsesMarketDefault
       ? (t.defaultTaxRegistrationNumber ?? "")
       : (t.defaultTaxRegistrationNumberOverride ?? t.defaultTaxRegistrationNumber ?? "");
     setTrnDraft(trn);
@@ -287,7 +290,7 @@ export function AdminPage() {
       ? (t.marketTaxDefaults?.invoiceVatPercent ?? t.defaultInvoiceVatPercent)
       : (t.defaultInvoiceVatPercentOverride ?? t.defaultInvoiceVatPercent);
     if (Number.isFinite(Number(vat))) setVatDraft(String(vat));
-  }, [overview.data?.currentTenant]);
+  });
   const patchOrgSettingsMut = useMutation({
     mutationFn: () => {
       const vatN = Number.parseFloat(vatDraft);

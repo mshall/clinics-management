@@ -14,6 +14,7 @@ import {
   wasPushPrompted,
 } from "@/lib/pwa";
 import { Button } from "@/components/ui/button";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 /**
  * UX-01 — show install prompt after clinic activation; optionally enable push.
@@ -30,21 +31,6 @@ export function PwaInstallPrompt() {
     retry: false,
   });
 
-  useEffect(() => {
-    const onBip = (e: Event) => {
-      captureInstallPrompt(e);
-      maybeShow();
-    };
-    window.addEventListener("beforeinstallprompt", onBip);
-    return () => window.removeEventListener("beforeinstallprompt", onBip);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    maybeShow();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onboardingQ.data?.activatedAt]);
-
   function maybeShow() {
     if (isStandaloneDisplay() || isInstallDismissed()) {
       setVisible(false);
@@ -56,6 +42,18 @@ export function PwaInstallPrompt() {
       setVisible(true);
     }
   }
+
+  useEffect(() => {
+    const onBip = (e: Event) => {
+      captureInstallPrompt(e);
+      maybeShow();
+    };
+    window.addEventListener("beforeinstallprompt", onBip);
+    return () => window.removeEventListener("beforeinstallprompt", onBip);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useSyncOnChange([onboardingQ.data?.activatedAt], maybeShow);
 
   async function onInstall() {
     const prompt = getDeferredInstallPrompt();

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { downloadOrgBackupFile } from "@/lib/org-backup-download";
 import { DoubleLinkedPatientsPanel } from "@/features/admin/double-linked-patients-panel";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type OrgBackupJob = {
   id: string;
@@ -122,24 +123,24 @@ export function AdminDataExplorerPanel() {
     enabled: Boolean(table) && !isDoubleLinkedTool,
   });
 
-  useEffect(() => {
+  useSyncOnChange([table], () => {
     setPage(1);
-  }, [table]);
+  }, { skipMount: true });
 
-  useEffect(() => {
+  useSyncOnChange([catalogQ.data, table], () => {
     if (!catalogQ.data?.tables.length || table) return;
     setTable(catalogQ.data.tables[0]?.key ?? "");
-  }, [catalogQ.data, table]);
+  });
 
   const exportableTables = useMemo(
     () => (catalogQ.data?.tables ?? []).filter((x) => x.exportable !== false),
     [catalogQ.data?.tables],
   );
 
-  useEffect(() => {
+  useSyncOnChange([exportableTables], () => {
     if (!exportableTables.length) return;
     setExportKeys(new Set(exportableTables.map((x) => x.key)));
-  }, [exportableTables]);
+  });
 
   const allExportSelected =
     exportableTables.length > 0 && exportableTables.every((x) => exportKeys.has(x.key));

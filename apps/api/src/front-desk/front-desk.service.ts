@@ -85,6 +85,23 @@ export class FrontDeskService {
     if (apt.status === AppointmentStatus.CANCELLED || apt.status === AppointmentStatus.COMPLETED) {
       throw new BadRequestException("Cannot check in this appointment");
     }
+    // Idempotent: a repeated check-in (double tap, Kiorly Team offline replay) returns the existing ticket; it never issues a second ticket nor posts the check-in payment / commission again.
+    if (apt.status === AppointmentStatus.CHECKED_IN && apt.queueTicketNumber != null && apt.checkedInAt) {
+      const [enc, clinician] = await Promise.all([
+        this.prisma.encounter.findFirst({ where: { tenantId, appointmentId, status: { in: [EncounterStatus.DRAFT, EncounterStatus.AMENDED] } }, select: { id: true } }),
+        this.prisma.user.findUnique({ where: { id: apt.clinicianId }, select: { displayName: true } }),
+      ]);
+      return {
+        appointmentId: apt.id,
+        queueTicketNumber: apt.queueTicketNumber,
+        checkedInAt: apt.checkedInAt.toISOString(),
+        status: apt.status,
+        patientMrn: apt.patient.mrn,
+        clinicianName: clinician?.displayName ?? "",
+        paymentRecorded: apt.checkInPaymentAmount != null ? Number(apt.checkInPaymentAmount) : null,
+        openEncounterId: enc?.id ?? null,
+      };
+    }
     await assertPatientProfileComplete(this.prisma, tenantId, apt.patientId);
 
     if (body.consentCapture) {

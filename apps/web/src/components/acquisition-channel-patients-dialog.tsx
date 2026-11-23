@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,6 +14,7 @@ import {
   patientAcquisitionDisplay,
   type PatientAcquisitionChannel,
 } from "@/lib/patient-acquisition";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type AcquisitionChannelPatientsDialogProps = {
   open: boolean;
@@ -61,7 +64,7 @@ export function AcquisitionChannelPatientsDialog({
   const debouncedBranch = useDebouncedValue(fBranch, 300);
   const debouncedDetail = useDebouncedValue(fDetail, 300);
 
-  useEffect(() => {
+  useSyncOnChange([open, channel], () => {
     if (!open) return;
     setPage(1);
     setPageSize(10);
@@ -72,11 +75,12 @@ export function AcquisitionChannelPatientsDialog({
     setFPhone("");
     setFBranch("");
     setFDetail("");
-  }, [open, channel]);
+  });
 
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedMrn, debouncedName, debouncedPhone, debouncedBranch, debouncedDetail]);
+  useSyncOnChange(
+    [debouncedMrn, debouncedName, debouncedPhone, debouncedBranch, debouncedDetail],
+    () => setPage(1),
+  );
 
   const query = useReportsPatientAcquisitionPatientsQuery(
     open ? channel : null,

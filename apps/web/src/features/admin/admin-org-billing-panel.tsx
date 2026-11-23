@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useNowMs } from "@/lib/use-now";
 
 type CreditWalletDto = {
   balance: string;
@@ -116,14 +117,15 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
     queryFn: () => apiGet<UsageSummaryDto>("/api/v1/billing/usage"),
   });
 
+  const nowMs = useNowMs();
   const trialCountdown = useMemo(() => {
     const end = subQuery.data?.trialEndsAt;
     if (!end) return null;
-    const ms = new Date(end).getTime() - Date.now();
+    const ms = new Date(end).getTime() - nowMs;
     if (ms <= 0) return t("admin.billing.trialEnded", "Trial ended");
     const days = Math.ceil(ms / 86_400_000);
     return t("admin.billing.trialDaysLeft", "{{count}} day(s) left in trial", { count: days });
-  }, [subQuery.data?.trialEndsAt, t]);
+  }, [subQuery.data?.trialEndsAt, t, nowMs]);
 
   const previewMut = useMutation({
     mutationFn: () =>

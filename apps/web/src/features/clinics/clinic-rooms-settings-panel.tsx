@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DoorOpen, Pencil, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, apiPatch } from "@/lib/http";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const ROOM_LABEL_MAX_LEN = 80;
 const ROOM_LABEL_MAX_COUNT = 50;
@@ -57,14 +58,14 @@ export function ClinicRoomsSettingsPanel({ clinicId, roomLabels, canEdit }: Clin
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  useEffect(() => {
+  useSyncOnChange([roomLabels.join("\u0000")], () => {
     setRooms([...roomLabels]);
     setEditingIndex(null);
     setEditDraft("");
     setNewRoom("");
     setDeleteTarget(null);
     setAddDialogOpen(false);
-  }, [roomLabels]);
+  });
 
   const saveMut = useMutation({
     mutationFn: (payload: string[]) => apiPatch(`/api/v1/clinics/${clinicId}`, { frontDeskRoomLabels: payload }),

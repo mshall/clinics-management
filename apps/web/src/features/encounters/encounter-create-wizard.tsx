@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { appointmentStatusLabel } from "@/components/appointment-status-badge";
+import { appointmentStatusLabel } from "@/components/appointment-status";
 import { CreateActionButton } from "@/components/create-action-button";
+import { PatientAcquisitionFields } from "@/components/patient-acquisition-fields";
 import {
   CreateWizardBody,
   CreateWizardDialogContent,
@@ -14,11 +15,10 @@ import {
 } from "@/components/create-wizard-chrome";
 import {
   emptyPatientAcquisitionFormValues,
-  PatientAcquisitionFields,
   patientAcquisitionFormToBody,
   patientAcquisitionFormValuesFromPatient,
   type PatientAcquisitionFormValues,
-} from "@/components/patient-acquisition-fields";
+} from "@/components/patient-acquisition-form";
 import { PatientAllergiesField } from "@/components/patient-allergies-field";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";

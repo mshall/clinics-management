@@ -5,6 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { MobileAlertsService } from "./mobile-alerts.service";
+import { MobileUpgradeService } from "./mobile-upgrade.service";
 import { MobileService } from "./mobile.service";
 
 const need = (b: Record<string, unknown>, k: string, max = 300): string => {
@@ -14,7 +15,7 @@ const need = (b: Record<string, unknown>, k: string, max = 300): string => {
 };
 
 /**
- * Kiorly Work staff app API. All routes need a staff JWT. Routes other than bootstrap / alerts / DELETE devices need the `mobile_staff_app`
+ * Kiorly Team staff app API. All routes need a staff JWT. Routes other than bootstrap / alerts / DELETE devices need the `mobile_staff_app`
  * entitlement (MobileInterceptor); the alert inbox is a safety control and works on every plan (ADR-025).
  */
 @ApiTags("mobile")
@@ -22,7 +23,7 @@ const need = (b: Record<string, unknown>, k: string, max = 300): string => {
 @Controller("mobile")
 @UseGuards(JwtAuthGuard)
 export class MobileController {
-  constructor(private readonly svc: MobileService, private readonly alerts: MobileAlertsService) {}
+  constructor(private readonly svc: MobileService, private readonly alerts: MobileAlertsService, private readonly upgrade: MobileUpgradeService) {}
 
   @Get("bootstrap") bootstrap(@CurrentUser() u: JwtUser, @Headers("x-kiorly-device") dev?: string) { return this.svc.bootstrap(u, dev); }
 
@@ -47,6 +48,9 @@ export class MobileController {
   @Get("alerts") listAlerts(@CurrentUser() u: JwtUser, @Query("status") status?: string) { requireTenantId(u); return this.alerts.list(u, status === "all" ? "all" : "open"); }
   @Post("alerts/:id/ack") @HttpCode(200) ack(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { note?: string }) { return this.alerts.ack(u, id, typeof b?.note === "string" ? b.note : undefined); }
 
+  /** Exempt from FEATURE_DISABLED (a Basic org must be able to ask). Idempotent: a repeat for the same feature within 24h returns the original. */
+  @Post("upgrade-request") @HttpCode(200) upgradeRequest(@CurrentUser() u: JwtUser, @Body() b: { featureKey?: unknown; note?: unknown }) { return this.upgrade.request(u, b ?? {}); }
+
   @Get("summary") summary(@CurrentUser() u: JwtUser) { return this.svc.summary(u); }
   @Get("schedule") schedule(@CurrentUser() u: JwtUser, @Query() q: { date?: string; clinicId?: string }) { return this.svc.schedule(u, q); }
   @Get("search") search(@CurrentUser() u: JwtUser, @Query("q") q?: string) { return this.svc.search(u, q ?? ""); }
@@ -54,6 +58,6 @@ export class MobileController {
   @Post("prescriptions/:encounterId/sign") @HttpCode(200) sign(@CurrentUser() u: JwtUser, @Param("encounterId") id: string) { return this.svc.signPrescription(u, id); }
   @Get("lab-results") labResults(@CurrentUser() u: JwtUser, @Query("status") s?: string) { return this.svc.labResults(u, s === "reviewed" ? "reviewed" : "pending"); }
   @Post("lab-results/:orderId/approve") @HttpCode(200) approve(@CurrentUser() u: JwtUser, @Param("orderId") id: string, @Body() b: { note?: string }) { return this.svc.approveLabResult(u, id, typeof b?.note === "string" ? b.note : undefined); }
-  @Post("vitals") recordVitals(@CurrentUser() u: JwtUser, @Body() b: Record<string, unknown>) { return this.svc.recordVitals(u, b as never); }
+  @Post("vitals") recordVitals(@CurrentUser() u: JwtUser, @Body() b: Record<string, unknown>, @Headers("idempotency-key") idem?: string) { return this.svc.recordVitals(u, b as never, idem); }
   @Get("revenue/snapshot") revenue(@CurrentUser() u: JwtUser) { return this.svc.revenueSnapshot(u); }
 }

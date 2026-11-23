@@ -7,16 +7,14 @@ import { useAuthStore } from "@/stores/auth-store";
 export function TrialBanner() {
   const { t } = useTranslation();
   const token = useAuthStore((s) => s.accessToken);
-  const [trial, setTrial] = useState<TrialStatus | null>(null);
+  const [fetched, setFetched] = useState<{ token: string; value: TrialStatus | null } | null>(null);
+  const trial = token && fetched?.token === token ? fetched.value : null;
 
   useEffect(() => {
-    if (!token) {
-      setTrial(null);
-      return;
-    }
+    if (!token) return;
     void fetchTrialStatus()
-      .then(setTrial)
-      .catch(() => setTrial(null));
+      .then((value) => setFetched({ token, value }))
+      .catch(() => setFetched({ token, value: null }));
   }, [token]);
 
   if (!trial || trial.status !== "TRIALING" || trial.daysLeft == null) return null;

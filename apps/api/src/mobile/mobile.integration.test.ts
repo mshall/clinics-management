@@ -11,6 +11,7 @@ import { MobileAlertsService } from "./mobile-alerts.service";
 import { MobileEntitlementService } from "./mobile-entitlement.service";
 import { MobilePushService } from "./mobile-push.service";
 import { MobileInterceptor } from "./mobile.interceptor";
+import { MobileUpgradeService } from "./mobile-upgrade.service";
 import { MobileService } from "./mobile.service";
 import { createPrismaClient } from "../prisma/create-prisma-client";
 
@@ -22,7 +23,7 @@ const snaps = new KiorexFlagSnapshotService(p, {} as never);
 const ent = new MobileEntitlementService(p, new EntitlementsService(p), snaps);
 const push = new MobilePushService(p);
 const alerts = new MobileAlertsService(p, audit);
-const svc = new MobileService(p, audit, ent, push, alerts, {} as never, {} as never, {} as never);
+const svc = new MobileService(p, audit, ent, push, alerts, {} as never, {} as never, {} as never, new MobileUpgradeService(p, audit, ent, push));
 const interceptor = new MobileInterceptor(p, ent);
 
 const J = (userId: string, tenantId: string, role: UserRole, owner = false): JwtUser => ({ userId, tenantId, email: `${userId}@x`, role, isTenantOwner: owner });
@@ -38,7 +39,7 @@ async function run(user: JwtUser | undefined, method: string, url: string, heade
 }
 const code = async (fn: () => Promise<unknown>) => { try { await fn(); return null; } catch (e) { const r = (e as { getResponse?: () => { code?: string } }).getResponse?.(); return r?.code ?? "ERR"; } };
 
-describe("Kiorly Work backend (real DB)", () => {
+describe("Kiorly Team backend (real DB)", () => {
   before(async () => {
     await prisma.$connect();
     snaps.setSnapshotForTests(null);
@@ -94,8 +95,8 @@ describe("Kiorly Work backend (real DB)", () => {
     assert.ok(owner.modules.find((m) => m.key === "clinic.revenue")?.enabled);
   });
 
-  it("client enforcement: kiorly-work client without the entitlement is 403 FEATURE_DISABLED, except alerts/bootstrap/auth/sign-out", async () => {
-    const h = { "x-kiorly-client": "kiorly-work/1.0.0" };
+  it("client enforcement: kiorly-team client without the entitlement is 403 FEATURE_DISABLED, except alerts/bootstrap/auth/sign-out", async () => {
+    const h = { "x-kiorly-client": "kiorly-team/1.0.0" };
     assert.equal(await code(() => run(BASIC_OWNER, "GET", "/patients", h)), "FEATURE_DISABLED");
     assert.equal(await code(() => run(BASIC_OWNER, "GET", "/mobile/inbox")), "FEATURE_DISABLED");
     assert.equal(await run(BASIC_OWNER, "GET", "/mobile/alerts", h), true);
@@ -140,7 +141,7 @@ describe("Kiorly Work backend (real DB)", () => {
     assert.equal(r.provider, "mock");
     const inbox = await svc.inbox(doc, { limit: "5" });
     assert.equal(inbox.unread, before + 1);
-    assert.equal(inbox.items[0].title, "Kiorly Work test notification");
+    assert.equal(inbox.items[0].title, "Kiorly Team test notification");
     assert.ok(/[؀-ۿ]/.test(inbox.items[0].titleAr));
     await svc.markRead(doc, inbox.items[0].id);
     assert.equal((await svc.inbox(doc, {})).unread, before);
@@ -207,7 +208,7 @@ describe("Kiorly Work backend (real DB)", () => {
   it("prescriptions: pending list; only a physician signs; sign delegates to the encounter finalize rules; vitals need a clinical role and notify on critical", async () => {
     const finalized: string[] = [];
     const recorded: unknown[] = [];
-    const stub = new MobileService(p, audit, ent, push, alerts, { finalize: async (_t: string, _u: unknown, id: string) => { finalized.push(id); return { status: "FINALIZED" }; } } as never, { recordVitals: async (_t: string, _u: unknown, pid: string, _a: unknown, v: unknown) => { recorded.push([pid, v]); return { id: "vit_stub", flags: { systolic: "CRITICAL_HIGH" }, critical: true }; } } as never, {} as never);
+    const stub = new MobileService(p, audit, ent, push, alerts, { finalize: async (_t: string, _u: unknown, id: string) => { finalized.push(id); return { status: "FINALIZED" }; } } as never, { recordVitals: async (_t: string, _u: unknown, pid: string, _a: unknown, v: unknown) => { recorded.push([pid, v]); return { id: "vit_stub", flags: { systolic: "CRITICAL_HIGH" }, critical: true }; } } as never, {} as never, new MobileUpgradeService(p, audit, ent, push));
     const doc = PRO();
     const pending = await stub.prescriptions(doc, "pending");
     const rx = pending.items.find((i) => i.encounterId === "demo_enc_mobile_rx");

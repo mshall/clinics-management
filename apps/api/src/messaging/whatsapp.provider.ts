@@ -1,4 +1,5 @@
 import { isMock } from "../common/provider-mode";
+import { pickString, providerHttp } from "../common/provider-http";
 import { DevInboxRecorder } from "./dev-inbox.recorder";
 import type { WhatsAppSendResult } from "./whatsapp-provider.types";
 
@@ -44,21 +45,16 @@ export async function sendWhatsAppMessageLegacy(toPhone: string, body: string): 
     }
     return { ok: true, providerMessageId: `dev-legacy-${Date.now()}` };
   }
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ to: toPhone.replace(/\s/g, ""), body, channel: "whatsapp" }),
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      return { ok: false, error: `WhatsApp API ${res.status}: ${text.slice(0, 300)}`, failureClass: "UNKNOWN", retryable: res.status >= 500 };
-    }
-    return { ok: true, providerMessageId: `http-stub-${Date.now()}` };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e), failureClass: "TRANSIENT", retryable: true };
+  const res = await providerHttp({
+    url,
+    headers: { Authorization: `Bearer ${token}` },
+    body: { to: toPhone.replace(/\s/g, ""), body, channel: "whatsapp" },
+    timeoutMs: 10_000,
+    retries: 2,
+    secrets: [token],
+  });
+  if (!res.ok) {
+    return { ok: false, error: `WhatsApp API: ${res.error}`, failureClass: res.failureClass === "AUTH" ? "AUTH" : res.retryable ? "TRANSIENT" : "UNKNOWN", retryable: res.retryable };
   }
+  return { ok: true, providerMessageId: pickString(res.json, "id", "messageId", "message_id", "messages.0.id") ?? `http-${res.idempotencyKey}` };
 }

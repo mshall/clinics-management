@@ -124,3 +124,32 @@ describe("POST /internal/jobs/* key guard", () => {
     assert.equal(g.canActivate(ctx("s3cret-job-key")), true);
   });
 });
+
+import { arrivalCheck, arrivalThresholdM, distanceMeters } from "./home-visit-rules";
+describe("arrival vs address distance (non-blocking off-site flag)", () => {
+  const addr = { lat: 30.0444, lng: 31.2357 };
+  it("haversine: ~0 m at the same point, ~111 km per degree of latitude", () => {
+    assert.equal(distanceMeters(addr, addr), 0);
+    const d = distanceMeters({ lat: 30, lng: 31 }, { lat: 31, lng: 31 });
+    assert.ok(d > 110_500 && d < 111_800, String(d));
+  });
+  it("flags only beyond the threshold (default 500 m)", () => {
+    assert.equal(arrivalThresholdM({}), 500);
+    const near = arrivalCheck({ lat: 30.0454, lng: 31.2357 }, addr); // ~111 m
+    assert.equal(near.arrivedOffSite, false);
+    assert.ok(near.arrivalDistanceM! > 90 && near.arrivalDistanceM! < 130);
+    const far = arrivalCheck({ lat: 30.06, lng: 31.2357 }, addr); // ~1.7 km
+    assert.equal(far.arrivedOffSite, true);
+    assert.ok(far.arrivalDistanceM! > 1500);
+  });
+  it("threshold is configurable; invalid env falls back to 500", () => {
+    assert.equal(arrivalThresholdM({ HOME_VISIT_ARRIVAL_THRESHOLD_M: "2000" } as never), 2000);
+    assert.equal(arrivalThresholdM({ HOME_VISIT_ARRIVAL_THRESHOLD_M: "abc" } as never), 500);
+    assert.equal(arrivalCheck({ lat: 30.06, lng: 31.2357 }, addr, 2000).arrivedOffSite, false);
+  });
+  it("no coordinates on either side: no distance, never flagged (nurses in poor GPS areas)", () => {
+    assert.deepEqual(arrivalCheck({ lat: 1, lng: 1 }, { }), { arrivalDistanceM: null, arrivedOffSite: false });
+    assert.deepEqual(arrivalCheck({}, addr), { arrivalDistanceM: null, arrivedOffSite: false });
+    assert.deepEqual(arrivalCheck(undefined, null), { arrivalDistanceM: null, arrivedOffSite: false });
+  });
+});

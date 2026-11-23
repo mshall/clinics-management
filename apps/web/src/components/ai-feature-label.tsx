@@ -1,11 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
-import {
-  AI_FEATURES,
-  type AiFeatureDefinition,
-  type AiFeatureId,
-} from "@/lib/ai-feature-disclosure";
+import { AI_FEATURES, type AiFeatureId } from "@/lib/ai-feature-disclosure";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -13,10 +9,6 @@ type Props = {
   className?: string;
   showDisclosure?: boolean;
 };
-
-export function aiFeatureDef(featureId: AiFeatureId): AiFeatureDefinition {
-  return AI_FEATURES[featureId];
-}
 
 export function AiFeatureLabel({ featureId, className, showDisclosure = false }: Props) {
   const { t } = useTranslation();

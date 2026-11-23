@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ResponsiveTable } from "@/components/responsive-table";
@@ -22,6 +22,7 @@ import type { AdminIntegrationFailureItemDto } from "@/lib/api-types";
 import { apiDownload, apiGet, apiPatch, apiPost } from "@/lib/http";
 import { localeForLanguage } from "@/lib/locale-display";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const CATEGORIES = ["", "AUTH", "APPOINTMENT", "OPERATION", "WEBHOOK", "FISCAL"] as const;
 const WORKFLOW_STATUSES = ["", "OPEN", "ACKNOWLEDGED", "RESOLVED"] as const;
@@ -194,10 +195,10 @@ export function AdminGovernanceIntegrationFailures() {
     queryFn: () => apiGet<IntegrationClientRow[]>("/api/v1/admin/integration-clients"),
   });
 
-  useEffect(() => {
+  useSyncOnChange([overview.data?.currentTenant?.integrationFailureRetentionDays], () => {
     const d = overview.data?.currentTenant?.integrationFailureRetentionDays;
     if (d != null) setRetentionDraft(String(d));
-  }, [overview.data?.currentTenant?.integrationFailureRetentionDays]);
+  });
 
   const failures = useAdminIntegrationFailuresQuery({
     page,
@@ -275,23 +276,25 @@ export function AdminGovernanceIntegrationFailures() {
   const totalPages = active.data?.totalPages ?? 1;
   const activeDetail = loadDetail.data ?? detail;
 
+  const activeTrace = activeDetail?.trace;
   const traceStr = useMemo(() => {
-    if (!activeDetail?.trace) return "";
+    if (!activeTrace) return "";
     try {
-      return JSON.stringify(activeDetail.trace, null, 2);
+      return JSON.stringify(activeTrace, null, 2);
     } catch {
-      return String(activeDetail.trace);
+      return String(activeTrace);
     }
-  }, [activeDetail?.trace]);
+  }, [activeTrace]);
 
+  const activeRequestContext = activeDetail?.requestContext;
   const requestStr = useMemo(() => {
-    if (!activeDetail?.requestContext) return "";
+    if (!activeRequestContext) return "";
     try {
-      return JSON.stringify(activeDetail.requestContext, null, 2);
+      return JSON.stringify(activeRequestContext, null, 2);
     } catch {
-      return String(activeDetail.requestContext);
+      return String(activeRequestContext);
     }
-  }, [activeDetail?.requestContext]);
+  }, [activeRequestContext]);
 
   const applyFilters = () => {
     setPage(1);

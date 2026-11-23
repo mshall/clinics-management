@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPatch, apiPut } from "@/lib/http";
-import { EmptyBlock, ErrorBlock, Field, LoadingBlock, money, PageShell, StatusPill, useErrorText, useHomeServices, useServiceName, type AppointmentTypeRow } from "./nurse-shared";
+import { EmptyBlock, ErrorBlock, Field, LoadingBlock, PageShell, StatusPill } from "./nurse-shared";
+import { type AppointmentTypeRow } from "./nurse-shared-utils";
+import { money, useErrorText, useHomeServices, useServiceName } from "./nurse-shared-utils";
 
 type Plan = { key: string; nameEn: string; nameAr: string; audienceEn: string; priceStatus: "PROPOSED"; priceMonthlyEgp: number | null; priceAnnualEquivalentEgp: number | null; unit: string; includedNurses: number | null; extraNurseMonthlyEgp: number | null; minimumInvoiceEgp: number | null; includesEn: string };
 type PlansResponse = { priceStatus: "PROPOSED"; note: string; plans: Plan[] };

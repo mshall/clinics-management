@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatEmployeeName } from "@/lib/employee-display";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 type EmployeeReactivateDialogProps = {
   open: boolean;
@@ -30,11 +31,11 @@ export function EmployeeReactivateDialog({
   const { t, i18n } = useTranslation();
   const [startDate, setStartDate] = useState("");
 
-  useEffect(() => {
+  useSyncOnChange([open, employee?.employeeNumber], () => {
     if (open) {
       setStartDate(new Date().toISOString().slice(0, 10));
     }
-  }, [open, employee?.employeeNumber]);
+  });
 
   const minDate = employee?.resignationDate
     ? new Date(`${employee.resignationDate}T12:00:00`)

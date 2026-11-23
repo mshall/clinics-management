@@ -13,7 +13,7 @@ function get(obj: unknown, path: string): unknown {
 
 function nurseFiles(): string[] {
   const dir = import.meta.dirname;
-  return readdirSync(dir).filter((f) => f.endsWith(".tsx")).map((f) => join(dir, f));
+  return readdirSync(dir).filter((f) => /\.tsx?$/.test(f) && !f.endsWith(".test.ts")).map((f) => join(dir, f));
 }
 
 /** Every static `t("nurse.x")` key used by the Nurse web exists in both languages (AR/EN parity), and every dynamic family is fully covered. */

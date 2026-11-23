@@ -9,10 +9,13 @@ import { AppointmentCreateWizard } from "@/features/appointments/appointment-cre
 import { AppointmentDeleteConfirmDialog, type AppointmentDeleteTarget } from "@/features/appointments/appointment-delete-confirm-dialog";
 import { AppointmentsCalendarPanel } from "@/features/appointments/appointments-calendar-panel";
 import { SearchablePickList } from "@/components/searchable-pick-list";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
-import { AppointmentStatusBadge, appointmentStatusLabel } from "@/components/appointment-status-badge";
+import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
+import { appointmentStatusLabel } from "@/components/appointment-status";
 import { PageHeader } from "@/brand/ui-kit";
 import { TableSkeleton } from "@/components/skeleton";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";

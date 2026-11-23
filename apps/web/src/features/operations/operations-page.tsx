@@ -9,17 +9,12 @@ import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
-import {
-  MedicationsPrescriptionDraftPanel,
-  resetMedicationsPrescriptionDraft,
-  type MedTab,
-  type PendingMedication,
-} from "@/components/medications-prescription-draft-panel";
-import {
-  PendingDocumentAttachments,
-  pendingDocumentDescription,
-  type PendingDocumentRow,
-} from "@/components/pending-document-attachments";
+import { MedicationsPrescriptionDraftPanel } from "@/components/medications-prescription-draft-panel";
+import { type MedTab, type PendingMedication } from "@/components/medications-prescription-draft";
+import { resetMedicationsPrescriptionDraft } from "@/components/medications-prescription-draft";
+import { PendingDocumentAttachments } from "@/components/pending-document-attachments";
+import { type PendingDocumentRow } from "@/components/pending-document-utils";
+import { pendingDocumentDescription } from "@/components/pending-document-utils";
 import {
   OPERATION_DOCUMENT_CATEGORIES,
   appendOperationDocumentFormData,
@@ -31,7 +26,9 @@ import {
 } from "@/lib/operation-document-categories";
 import { OperationStatusBadge } from "@/components/operation-status-badge";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
@@ -105,11 +102,9 @@ import {
 } from "@/lib/form-control-styles";
 import { OperationsSummaryBreakdown } from "@/features/operations/operations-summary-cards";
 import { OperationsPeriodStats } from "@/features/operations/operations-period-stats";
-import {
-  PatientAcquisitionFields,
-  emptyPatientAcquisitionFormValues,
-  patientAcquisitionFormToBody,
-} from "@/components/patient-acquisition-fields";
+import { PatientAcquisitionFields } from "@/components/patient-acquisition-fields";
+import { emptyPatientAcquisitionFormValues, patientAcquisitionFormToBody } from "@/components/patient-acquisition-form";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 function toOperationIso(localDatetime: string): string {
   const d = new Date(localDatetime);
@@ -229,7 +224,7 @@ export function OperationsPage() {
     setPage(1);
   };
 
-  const rows = opData?.items ?? [];
+  const rows = useMemo(() => opData?.items ?? [], [opData?.items]);
   const opTotal = opData?.total ?? 0;
   const opTotalPages = opData?.totalPages ?? 1;
 
@@ -244,7 +239,7 @@ export function OperationsPage() {
   }, [clinics]);
 
   const { data: patData } = usePatientsQuery({ page: 1, pageSize: 200 });
-  const patients = patData?.items ?? [];
+  const patients = useMemo(() => patData?.items ?? [], [patData?.items]);
   const patientLabel = useMemo(() => {
     const m = new Map<string, string>();
     for (const p of patients) m.set(p.id, `${p.mrn} — ${p.firstNameEn} ${p.lastNameEn}`);
@@ -294,7 +289,7 @@ export function OperationsPage() {
     pageSize: 100,
     enabled: showCreatePanel,
   });
-  const bookPatients = bookPatData?.items ?? [];
+  const bookPatients = useMemo(() => bookPatData?.items ?? [], [bookPatData?.items]);
   const selectedPatient = useMemo(
     () => bookPatients.find((p) => p.id === patientId) ?? patients.find((p) => p.id === patientId),
     [bookPatients, patients, patientId],
@@ -351,9 +346,9 @@ export function OperationsPage() {
   }, [schedulingClinicId, selectedPatient?.homeBranchId, clinics]);
   const createCurrency = resolveClinicCurrency(selectedClinic?.id);
 
-  useEffect(() => {
+  useSyncOnChange([showCreatePanel, createCurrency], () => {
     if (showCreatePanel) setFeeCurrency(createCurrency);
-  }, [showCreatePanel, createCurrency]);
+  });
 
   const prescriptionContext = useMemo(
     () => ({
@@ -367,7 +362,7 @@ export function OperationsPage() {
         ? physicianToPickListItem(selectedPhysician, i18n.language).label
         : authUser?.displayName ?? null,
     }),
-    [selectedClinic, schedulingClinicId, selectedPatient?.homeBranchId, selectedPatient, selectedPhysician, authUser?.displayName, i18n.language],
+    [selectedClinic, schedulingClinicId, selectedPatient, selectedPhysician, authUser?.displayName, i18n.language],
   );
 
   const resetCreateForm = (opts?: { keepLockedPatient?: boolean }) => {
@@ -606,7 +601,7 @@ export function OperationsPage() {
     onError: (e: unknown) => toast.error(apiErrorMessage(e)),
   });
 
-  useEffect(() => {
+  useSyncOnChange([editIsScheduled, editOpDetail, editDetailLoadedId, editClinicDefaultCurrency], () => {
     if (!editIsScheduled || !editOpDetail || editDetailLoadedId === editOpDetail.id) return;
     const medState = operationDetailToMedState(editOpDetail);
     setEditMedTab(medState.medTab);
@@ -616,7 +611,7 @@ export function OperationsPage() {
     setEditGeneratedPrescriptionFile(null);
     setEditFeeCurrency(editOpDetail.feeCurrency ?? editClinicDefaultCurrency);
     setEditDetailLoadedId(editOpDetail.id);
-  }, [editIsScheduled, editOpDetail, editDetailLoadedId, editClinicDefaultCurrency]);
+  });
 
   const { data: editPhysicians = [], isFetching: editPhysiciansFetching } = useSchedulingPhysiciansQuery({
     clinicId: editClinicId || editOp?.clinicId || undefined,
@@ -629,7 +624,7 @@ export function OperationsPage() {
     pageSize: 100,
     enabled: editOp != null,
   });
-  const editPatients = editPatData?.items ?? [];
+  const editPatients = useMemo(() => editPatData?.items ?? [], [editPatData?.items]);
   const { data: editPatientDetail } = usePatientQuery(editOp ? editPatientId : undefined);
   const editPatientItems: PickListItem[] = useMemo(
     () => editPatients.map((p) => patientToPickListItem(p)),
@@ -654,45 +649,48 @@ export function OperationsPage() {
     }
     return null;
   }, [editPatientId, editPatientItems, editPatientDetail, editOp]);
+  const editOpClinicianName = editOp?.clinicianName;
   const editPhysicianSelectedItem = useMemo((): PickListItem | null => {
     if (!editClinicianId) return null;
     const fromList = editPhysicianItems.find((d) => d.value === editClinicianId);
     if (fromList) return fromList;
-    if (editOp?.clinicianName) return { value: editClinicianId, label: editOp.clinicianName };
+    if (editOpClinicianName) return { value: editClinicianId, label: editOpClinicianName };
     return null;
-  }, [editClinicianId, editPhysicianItems, editOp?.clinicianName]);
+  }, [editClinicianId, editPhysicianItems, editOpClinicianName]);
 
   const editSelectedClinic = useMemo(
     () => clinics.find((c) => c.id === (editClinicId || editOp?.clinicId)),
     [clinics, editClinicId, editOp?.clinicId],
   );
+  const editOpClinicId = editOp?.clinicId;
+  const editOpPatientMrn = editOp?.patientMrn;
   const editPrescriptionContext = useMemo(
     () => ({
-      clinicId: editClinicId || editOp?.clinicId || "",
+      clinicId: editClinicId || editOpClinicId || "",
       clinicName: editSelectedClinic ? formatClinicName(editSelectedClinic, i18n.language) : "—",
       patientName: editPatientSelectedItem?.label ?? "—",
-      patientMrn: editOpDetail?.patientMrn ?? editOp?.patientMrn,
+      patientMrn: editOpDetail?.patientMrn ?? editOpPatientMrn,
       physicianName: editPhysicianSelectedItem?.label ?? null,
     }),
     [
       editSelectedClinic,
       editClinicId,
-      editOp?.clinicId,
+      editOpClinicId,
       editPatientSelectedItem,
       editOpDetail?.patientMrn,
-      editOp?.patientMrn,
+      editOpPatientMrn,
       editPhysicianSelectedItem,
       i18n.language,
     ],
   );
 
-  useEffect(() => {
+  useSyncOnChange([singleManagedClinic?.id, isPhysician], () => {
     if (singleManagedClinic) {
       setClinicId(singleManagedClinic.id);
       // Physicians may perform procedures across branches; do not narrow the list to one clinic.
       if (!isPhysician) setFilterClinicId(singleManagedClinic.id);
     }
-  }, [singleManagedClinic?.id, isPhysician]);
+  });
 
   const filteredRows = useMemo(() => {
     const loc = localeForLanguage(i18n.language);
@@ -716,7 +714,7 @@ export function OperationsPage() {
       if (efStatus.trim() && !columnFilterIncludes(o.status, efStatus)) return false;
       return true;
     });
-  }, [rows, efPatient, efDoctor, efDate, efTotal, efDown, efStatus, i18n.language, patientLabel]);
+  }, [rows, efPatient, efDoctor, efDate, efTotal, efDown, efStatus, i18n.language, patientLabel, showMoneyColumns]);
 
   const openCompleteDialog = (o: OperationDto) => {
     const balance = Math.max(0, o.balanceDue ?? o.totalCost - (o.paidAmount ?? o.downPayment));

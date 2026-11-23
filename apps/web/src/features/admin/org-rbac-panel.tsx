@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SearchablePickList, type PickListItem } from "@/components/searchable-pick-list";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { formatUserRole } from "@/lib/locale-display";
 import type { DemoRole } from "@/lib/roles";
 import { useAuthStore } from "@/stores/auth-store";
 import { canClinicAdminManageUserRbac } from "@/lib/clinic-admin-rbac-policy";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const MANAGEABLE_ROLES: DemoRole[] = [
   "group_admin",
@@ -73,7 +74,7 @@ export function OrgRbacPanel() {
     [roleTarget],
   );
 
-  useEffect(() => {
+  useSyncOnChange([roleTarget, roleGrantFingerprint, roleGrantQ.isSuccess, roleGrantQ.data?.tabKeys, rolePlatformDefaults, organizationOrderedKeys], () => {
     if (!roleTarget) {
       setRoleDraft(new Set());
       return;
@@ -90,7 +91,7 @@ export function OrgRbacPanel() {
     }
     next.add("profile");
     setRoleDraft(next);
-  }, [roleTarget, roleGrantFingerprint, roleGrantQ.isSuccess, roleGrantQ.data?.tabKeys, rolePlatformDefaults, organizationOrderedKeys]);
+  });
 
   const saveRoleMut = useMutation({
     mutationFn: (tabKeys: string[]) =>

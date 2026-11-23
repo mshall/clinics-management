@@ -1,3 +1,4 @@
+import { providerHttp } from "../common/provider-http";
 import type {
   WhatsAppBusinessProvider,
   WhatsAppFailureClass,
@@ -68,39 +69,23 @@ export class MetaCloudWhatsAppProvider implements WhatsAppBusinessProvider {
         components,
       },
     };
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.config.accessToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      const text = await res.text();
-      if (!res.ok) {
-        const { failureClass, retryable } = classifyError(res.status, text);
-        return { ok: false, error: `Meta WhatsApp ${res.status}: ${text.slice(0, 400)}`, failureClass, retryable };
-      }
-      let json: { messages?: { id?: string }[] };
-      try {
-        json = JSON.parse(text) as { messages?: { id?: string }[] };
-      } catch {
-        return { ok: false, error: "Invalid Meta WhatsApp response", failureClass: "UNKNOWN", retryable: false };
-      }
-      const id = json.messages?.[0]?.id;
-      if (!id) {
-        return { ok: false, error: "Meta WhatsApp response missing message id", failureClass: "UNKNOWN", retryable: false };
-      }
-      return { ok: true, providerMessageId: id };
-    } catch (e) {
-      return {
-        ok: false,
-        error: e instanceof Error ? e.message : String(e),
-        failureClass: "TRANSIENT",
-        retryable: true,
-      };
+    const res = await providerHttp({
+      url,
+      headers: { Authorization: `Bearer ${this.config.accessToken}` },
+      body: payload,
+      timeoutMs: Number(process.env.WHATSAPP_TIMEOUT_MS) || 10_000,
+      retries: process.env.WHATSAPP_MAX_RETRIES ? Number(process.env.WHATSAPP_MAX_RETRIES) : 2,
+      secrets: [this.config.accessToken],
+    });
+    if (!res.ok) {
+      const cls = res.retryable || res.status === undefined ? { failureClass: "TRANSIENT" as const, retryable: res.retryable } : classifyError(res.status, res.text);
+      return { ok: false, error: `Meta WhatsApp ${res.status ?? "network"}: ${res.error}`.slice(0, 450), ...cls };
     }
+    const id = (res.json as { messages?: { id?: string }[] } | null)?.messages?.[0]?.id;
+    if (!id) {
+      return { ok: false, error: "Meta WhatsApp response missing message id", failureClass: "UNKNOWN", retryable: false };
+    }
+    return { ok: true, providerMessageId: id };
   }
 }
 

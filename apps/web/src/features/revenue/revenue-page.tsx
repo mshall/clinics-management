@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DoctorStatementsCard } from "./doctor-statements-card";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Area,
@@ -20,7 +20,9 @@ import { ArrowDownLeft, ArrowUpRight, BarChart3, CircleDollarSign, Table2 } from
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
-import { FilterTh, SortableTh, toggleSort, type SortOrder } from "@/components/sortable-th";
+import { FilterTh, SortableTh } from "@/components/sortable-th";
+import { type SortOrder } from "@/components/sort-utils";
+import { toggleSort } from "@/components/sort-utils";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
@@ -64,6 +66,7 @@ import { formatMoneyAmount, formatMultiCurrencyAmounts } from "@/lib/money-displ
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
 import { useOrgBaseCurrency } from "@/lib/use-org-base-currency";
 import { canMutateRevenue } from "@/lib/nav-tab-access-policy";
+import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const CURRENCY_CHART_COLORS = [
   "hsl(221 83% 53%)",
@@ -133,7 +136,7 @@ export function RevenuePage() {
   );
 
   const { data: revData, isPending, isError, error } = useRevenueQuery(revParams);
-  const rows = revData?.items ?? [];
+  const rows = useMemo(() => revData?.items ?? [], [revData?.items]);
   const revTotal = revData?.total ?? 0;
   const revTotalPages = revData?.totalPages ?? 1;
   const totalsQ = useRevenueTotalsQuery({ from, to, clinicId: filterClinicId || undefined });
@@ -144,12 +147,12 @@ export function RevenuePage() {
   const resolveClinicCurrency = useClinicCurrencyResolver();
   const singleManagedClinic = clinics.length === 1 ? clinics[0]! : null;
   const [clinicId, setClinicId] = useState("");
-  useEffect(() => {
+  useSyncOnChange([singleManagedClinic?.id], () => {
     if (singleManagedClinic) {
       setFilterClinicId(singleManagedClinic.id);
       setClinicId(singleManagedClinic.id);
     }
-  }, [singleManagedClinic?.id]);
+  });
   const [category, setCategory] = useState("VISIT_FEE");
   const [operationId, setOperationId] = useState("");
   const [gross, setGross] = useState("");
@@ -183,13 +186,13 @@ export function RevenuePage() {
   const displayCurrency = resolveClinicCurrency(filterClinicId || clinicId || singleManagedClinic?.id);
   const locale = localeForLanguage(i18n.language);
 
-  useEffect(() => {
+  useSyncOnChange([operationId, selectedOperation?.feeCurrency, postClinicDefaultCurrency], () => {
     if (operationId && selectedOperation?.feeCurrency) {
       setRevenueCurrency(selectedOperation.feeCurrency);
       return;
     }
     setRevenueCurrency(postClinicDefaultCurrency);
-  }, [operationId, selectedOperation?.feeCurrency, postClinicDefaultCurrency]);
+  });
 
   const money = (n: number, currency?: string) => formatMoneyAmount(n, currency ?? displayCurrency, locale);
 
