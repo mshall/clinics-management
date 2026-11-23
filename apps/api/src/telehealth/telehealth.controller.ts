@@ -52,6 +52,11 @@ export class TelehealthController {
     return this.svc.putSettings(u, clinicianId, body ?? {});
   }
 
+  @Put("appointment-types/:id")
+  configureType(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { enabled?: boolean; durationMinutes?: number; feeAmount?: number; depositAmount?: number | null; marketplaceBookable?: boolean }) {
+    return this.svc.configureType(u, id, body ?? {});
+  }
+
   @Get("review")
   review(@CurrentUser() u: JwtUser) {
     return this.svc.listNeedingReview(u);

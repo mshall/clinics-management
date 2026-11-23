@@ -45,6 +45,11 @@ import { encryptVisitAddress } from "../home-visits/address-crypto";
 import { HomeVisitRuleException, OutOfCoverageException } from "../home-visits/home-visit.errors";
 import { HomeVisitService } from "../home-visits/home-visit.service";
 import { parseVisitAddress, VisitAddressError, type VisitAddress } from "../home-visits/visit-address";
+import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
+import { EntitlementsService } from "../entitlements/entitlements.service";
+import { assertTelehealthBookable } from "../telehealth/telehealth-availability";
+import { telehealthBlock } from "../telehealth/telehealth-events";
+import { ensureTelehealthSession, syncTelehealthWithAppointment } from "../telehealth/telehealth-sync";
 
 export type MarketplaceBookingBody = {
   clinicId: string;
@@ -82,6 +87,8 @@ export class MarketplaceBookingService {
     private readonly newPatients: NewPatientService,
     private readonly push: PushService,
     @Optional() private readonly homeVisits?: HomeVisitService,
+    @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly entitlements?: EntitlementsService,
   ) {}
 
   async getByExternalRef(client: PlatformIntegrationPrincipal, externalRef: string) {
@@ -176,6 +183,12 @@ export class MarketplaceBookingService {
         },
         update: { granted: true, source: "kiorex_booking" },
       });
+    }
+
+    // ADR-039: a telehealth type needs flag + entitlement + a doctor who offers it; the Appointment and its session are created in ONE transaction.
+    const isVideo = typeRow.serviceLocation === "VIDEO";
+    if (isVideo) {
+      await assertTelehealthBookable({ prisma: this.prisma as never, flags: this.flags, entitlements: this.entitlements }, tenantId, body.clinicianId);
     }
 
     // HVBK01/03 + HVSAF03: HOME visit types need an in-zone address (from the hold, or sent here) and pass every booking rule.
@@ -305,6 +318,7 @@ export class MarketplaceBookingService {
             feeAmount: typeRow.feeAmount,
             // BR56: the home surcharge is its own field; it never enters feeAmount (the base commission / revenue-share fee).
             ...(isHome ? { serviceLocation: "HOME" as const, homeSurchargeAmount: typeRow.homeSurchargeAmount } : {}),
+            ...(isVideo ? { serviceLocation: "VIDEO" as const } : {}),
             status,
             bookingSource,
             attributionJson: (attribution ?? undefined) as Prisma.InputJsonValue | undefined,
@@ -318,6 +332,7 @@ export class MarketplaceBookingService {
         });
 
         if (hold) await tx.slotHold.delete({ where: { id: hold.id } });
+        if (isVideo) await ensureTelehealthSession(tx, appt, null);
 
         if (home && this.homeVisits) {
           await this.homeVisits.createForAppointment(tx, {
@@ -445,6 +460,7 @@ export class MarketplaceBookingService {
           marketplaceConfirmationDueAt: null,
         },
       });
+      await syncTelehealthWithAppointment(tx, row, appt, null);
       await this.appointmentOutbox.emitStatusChange(
         {
           tenantId: row.tenantId,
@@ -615,6 +631,7 @@ export class MarketplaceBookingService {
       },
     });
     for (const row of rows) {
+      await this.prisma.telehealthSession.updateMany({ where: { appointmentId: row.id, status: { notIn: ["ENDED", "CANCELLED"] } }, data: { status: "CANCELLED", endReason: "CANCELLED", endedAt: now } });
       await this.prisma.appointment.update({
         where: { id: row.id },
         data: {
@@ -653,7 +670,7 @@ export class MarketplaceBookingService {
       .slice(0, 3);
   }
 
-  private serializeBooking(row: {
+  private async serializeBooking(row: {
     id: string;
     clinicId: string;
     clinicianId: string;
@@ -671,7 +688,10 @@ export class MarketplaceBookingService {
     rescheduleCount?: number;
     serviceLocation?: "IN_CLINIC" | "HOME" | "VIDEO";
   }) {
+    // ADR-039: additive `telehealth` block (sessionId + patient join URL + window) and derived visitType for VIDEO bookings.
+    const session = row.serviceLocation === "VIDEO" ? await this.prisma.telehealthSession.findUnique({ where: { appointmentId: row.id } }) : null;
     return {
+      ...(session ? { visitType: "TELEHEALTH" as const, telehealth: telehealthBlock(session, { startsAt: row.startsAt, endsAt: row.endsAt }) } : {}),
       appointmentId: row.id,
       serviceLocation: row.serviceLocation ?? "IN_CLINIC",
       clinicId: row.clinicId,

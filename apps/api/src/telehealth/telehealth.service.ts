@@ -7,6 +7,7 @@ import { CLINIC_SCOPE_ROLES } from "../common/clinic-scope";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import { EntitlementsService } from "../entitlements/entitlements.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
+import { requireFeature } from "../feature-flags/require-feature";
 import { PrismaService } from "../prisma/prisma.service";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { APPOINTMENTS_MUTATE_ROLES, APPOINTMENTS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
@@ -460,6 +461,41 @@ export class TelehealthService implements OnModuleInit, OnModuleDestroy {
     });
     await this.audit.recordEvent({ tenantId, actorId: actor.userId, clinicId: null, action: "telehealth.settings.updated", resource: "ClinicianTelehealthSetting", resourceId: clinicianId, metadata: { offersTelehealth: row.offersTelehealth } });
     return { clinicianId, offersTelehealth: row.offersTelehealth, windows: row.windowsJson };
+  }
+
+  /** Manager config: make a service a telehealth visit type (own duration + price) or turn it back into an in-person type. */
+  async configureType(actor: JwtUser, typeId: string, body: { enabled?: boolean; durationMinutes?: number; feeAmount?: number; depositAmount?: number | null; marketplaceBookable?: boolean }) {
+    const tenantId = actor.tenantId;
+    if (!tenantId) throw new ForbiddenException();
+    this.assertSettingsAccess(actor, "-");
+    const type = await this.prisma.appointmentType.findFirst({ where: { id: typeId, tenantId } });
+    if (!type) throw new NotFoundException("Appointment type not found");
+    const data: Prisma.AppointmentTypeUncheckedUpdateInput = {};
+    const num = (v: unknown, name: string, min: number, max: number) => {
+      if (v === undefined || v === null) return undefined;
+      if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw new BadRequestException(`${name} must be ${min}..${max}`);
+      return v;
+    };
+    if (body.enabled === true) {
+      if (type.serviceLocation === ServiceLocation.HOME) throw new BadRequestException("A home visit type cannot become telehealth");
+      if (type.serviceLocation !== ServiceLocation.VIDEO) {
+        await requireFeature(this.flags, tenantId, "telehealth.video");
+        await this.entitlements.requireEntitlement(tenantId, "telehealth_video");
+      }
+      data.serviceLocation = ServiceLocation.VIDEO;
+      data.requiresRoom = false;
+    } else if (body.enabled === false && type.serviceLocation === ServiceLocation.VIDEO) {
+      data.serviceLocation = ServiceLocation.IN_CLINIC;
+    }
+    const duration = num(body.durationMinutes, "durationMinutes", 5, 240);
+    if (duration !== undefined) data.durationMinutes = duration;
+    const fee = num(body.feeAmount, "feeAmount", 0, 1_000_000);
+    if (fee !== undefined) data.feeAmount = new Prisma.Decimal(fee);
+    if (body.depositAmount !== undefined) data.depositAmount = body.depositAmount == null ? null : new Prisma.Decimal(num(body.depositAmount, "depositAmount", 0, 1_000_000)!);
+    if (body.marketplaceBookable !== undefined) data.marketplaceBookable = body.marketplaceBookable;
+    const row = await this.prisma.appointmentType.update({ where: { id: typeId }, data });
+    await this.audit.recordEvent({ tenantId, actorId: actor.userId, clinicId: row.clinicId, action: "telehealth.type.configured", resource: "AppointmentType", resourceId: row.id, metadata: { serviceLocation: row.serviceLocation } });
+    return { id: row.id, serviceLocation: row.serviceLocation, durationMinutes: row.durationMinutes, feeAmount: String(row.feeAmount), depositAmount: row.depositAmount == null ? null : String(row.depositAmount), marketplaceBookable: row.marketplaceBookable };
   }
 
   private assertSettingsAccess(actor: JwtUser, clinicianId: string): void {

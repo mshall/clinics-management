@@ -11,6 +11,9 @@ import { ListingStatus } from "@prisma/client";
 import { SlotService } from "../scheduling/slot.service";
 import { SLOT_CHANNEL } from "../scheduling/slot-channel";
 import { HomeVisitService } from "../home-visits/home-visit.service";
+import { FeatureFlagsService } from "../feature-flags/feature-flags.service";
+import { EntitlementsService } from "../entitlements/entitlements.service";
+import { filterTelehealthSlots, telehealthOfferedBy } from "../telehealth/telehealth-availability";
 
 @Injectable()
 export class MarketplaceApiService {
@@ -21,6 +24,8 @@ export class MarketplaceApiService {
     private readonly prisma: PrismaService,
     private readonly slots: SlotService,
     @Optional() private readonly homeVisits?: HomeVisitService,
+    @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly entitlements?: EntitlementsService,
   ) {}
 
   verify(client: PlatformIntegrationPrincipal) {
@@ -85,9 +90,17 @@ export class MarketplaceApiService {
   ) {
     const base = await this.availability(client, clinicId, clinicianId, typeId, from, to);
     const requested = extra.serviceLocation?.trim().toUpperCase();
-    if (requested && requested !== "HOME" && requested !== "IN_CLINIC") throw new BadRequestException("serviceLocation must be IN_CLINIC or HOME");
+    if (requested && requested !== "HOME" && requested !== "IN_CLINIC" && requested !== "VIDEO") throw new BadRequestException("serviceLocation must be IN_CLINIC, HOME or VIDEO");
     const type = await this.prisma.appointmentType.findFirst({ where: { id: typeId, clinicId }, select: { serviceLocation: true, tenantId: true } });
     const typeIsHome = type?.serviceLocation === "HOME";
+    // ADR-039: VIDEO slots exist only while telehealth.video + entitlement are on and the doctor offers it; telehealth-only windows narrow them.
+    if (type?.serviceLocation === "VIDEO") {
+      if (requested && requested !== "VIDEO") throw new BadRequestException("This visit type is a telehealth visit type");
+      const offered = await telehealthOfferedBy({ prisma: this.prisma as never, flags: this.flags, entitlements: this.entitlements }, type.tenantId, clinicianId);
+      const slots = offered ? await filterTelehealthSlots(this.prisma as never, type.tenantId, clinicId, clinicianId, base.slots) : [];
+      return { ...base, serviceLocation: "VIDEO" as const, slots: slots.map((s) => ({ ...s, serviceLocation: "VIDEO" as const, district: null })) };
+    }
+    if (requested === "VIDEO") throw new BadRequestException("This visit type is not a telehealth visit type");
     // KX-09 §03: HOME slots need a district; coverage is checked (422 OUT_OF_COVERAGE) and each slot carries serviceLocation + district.
     if (requested === "HOME" || typeIsHome) {
       if (requested && requested !== "HOME") throw new BadRequestException("This visit type is a home visit type");

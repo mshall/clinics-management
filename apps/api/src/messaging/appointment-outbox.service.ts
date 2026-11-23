@@ -87,7 +87,8 @@ export class AppointmentOutboxService {
         ? OUTBOX_EVENT.CANCELLED_BY_PATIENT
         : OUTBOX_EVENT.CANCELLED_BY_CLINIC;
     }
-    if (params.nextStatus === AppointmentStatus.CHECKED_IN) return OUTBOX_EVENT.CHECKED_IN;
+    // exactly-once attendance (ADR-039): CHECKED_IN -> CHECKED_IN is not a transition, so a second check-in path emits nothing
+    if (params.nextStatus === AppointmentStatus.CHECKED_IN) return params.previousStatus === AppointmentStatus.CHECKED_IN ? null : OUTBOX_EVENT.CHECKED_IN;
     const prev = params.previousStatus as AppointmentStatus;
     const next = params.nextStatus as AppointmentStatus;
     if (
