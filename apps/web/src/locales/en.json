@@ -1595,7 +1595,7 @@
     "confirmEditCompleteBody": "This will save all changes in the form, then mark the operation as completed. You may be asked to record any remaining balance to collect.",
     "confirmEditCompleteTitle": "Complete this operation?",
     "errorDownNotAllowed": "Down payment is recorded later by clinic staff for your role.",
-    "existingPrescriptionHint": "A prescription is already on file. Upload a new file to replace it.",
+    "existingPrescriptionHint": "Saved prescriptions stay on file. Upload more files anytime — each has view, replace, and delete.",
     "feesAddedLater": "Fees can be added later by clinic staff. You can book the procedure now without payment amounts.",
     "operationDetails": "Operation details",
     "paymentCurrency": "Payment currency",

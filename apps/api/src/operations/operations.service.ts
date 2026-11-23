@@ -1183,6 +1183,7 @@ export class OperationsService {
     description: string | undefined,
     file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
     viewer: JwtUser,
+    options?: { replaceDocumentId?: string | null },
   ): Promise<OperationDocumentDto> {
     const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
     if (!op) throw new NotFoundException("Operation not found");
@@ -1204,8 +1205,20 @@ export class OperationsService {
       throw new BadRequestException("Document description is required");
     }
 
+    const replaceDocumentId = options?.replaceDocumentId?.trim() || null;
+    if (replaceDocumentId) {
+      const existing = await this.prisma.operationDocument.findFirst({
+        where: { id: replaceDocumentId, operationId, tenantId, kind },
+      });
+      if (!existing) throw new NotFoundException("Document to replace not found");
+      await this.prisma.operationDocument.delete({ where: { id: existing.id } });
+      await this.uploads.deleteObject("operations", existing.relativePath).catch(() => undefined);
+      await adjustTenantStorageBytes(this.prisma, tenantId, -existing.sizeBytes);
+    }
+
+    // Prescriptions are additive (multiple files per operation). Only "no medications"
+    // / reset-clinical clears all Rx docs — never wipe siblings on a normal upload.
     if (kind === OperationDocumentKind.PRESCRIPTION) {
-      await this.deletePrescriptionDocuments(tenantId, operationId);
       await this.prisma.operation.update({
         where: { id: operationId },
         data: { noMedications: false },
@@ -1235,6 +1248,26 @@ export class OperationsService {
     await adjustTenantStorageBytes(this.prisma, tenantId, file.size);
     void this.documentProcessing.enqueueProcessDocument(tenantId, "OperationDocument", row.id);
     return this.mapDoc(row);
+  }
+
+  async removeDocument(
+    tenantId: string,
+    operationId: string,
+    documentId: string,
+    viewer: JwtUser,
+  ): Promise<void> {
+    const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
+    if (!op) throw new NotFoundException("Operation not found");
+    await this.assertOperationAccess(viewer, op);
+
+    const doc = await this.prisma.operationDocument.findFirst({
+      where: { id: documentId, operationId, tenantId },
+    });
+    if (!doc) throw new NotFoundException("Document not found");
+    this.assertCanUploadDocument(doc.kind, op.status);
+    await this.prisma.operationDocument.delete({ where: { id: documentId } });
+    await this.uploads.deleteObject("operations", doc.relativePath).catch(() => undefined);
+    await adjustTenantStorageBytes(this.prisma, tenantId, -doc.sizeBytes);
   }
 
   async setNoMedications(tenantId: string, operationId: string, noMedications: boolean, viewer: JwtUser): Promise<void> {

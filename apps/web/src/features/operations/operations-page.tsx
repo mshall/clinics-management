@@ -1,12 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, FileText, Lock } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CreateActionButton } from "@/components/create-action-button";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { DocumentViewerOverlay } from "@/components/document-viewer-overlay";
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import {
   MedicationsPrescriptionDraftPanel,
@@ -49,7 +50,9 @@ import {
   useSchedulingPhysiciansQuery,
 } from "@/lib/api-hooks";
 import type { OperationDetailDto, OperationDocumentDto, OperationDto } from "@/lib/api-types";
-import { ApiError, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
+import { apiErrorMessage } from "@/lib/api-error-message";
+import { resolveViewerContentType } from "@/lib/image-mime";
+import { ApiError, apiDelete, apiFetchBlob, apiGet, apiPatch, apiPost, apiPostFormData } from "@/lib/http";
 import { canAdminEditCompletedOperation } from "@/lib/operation-admin-policy";
 import {
   canCreateOperation,
@@ -119,11 +122,13 @@ function operationDetailToMedState(detail: OperationDetailDto): {
   medications: PendingMedication[];
   hasExistingPrescription: boolean;
   existingAttachments: OperationDocumentDto[];
+  existingPrescriptions: OperationDocumentDto[];
 } {
   const existingAttachments = detail.documents.filter(
     (d) => isOperationClinicalDocumentKind(d.kind) && d.kind !== "PRESCRIPTION",
   );
-  const hasExistingPrescription = detail.documents.some((d) => d.kind === "PRESCRIPTION");
+  const existingPrescriptions = detail.documents.filter((d) => d.kind === "PRESCRIPTION");
+  const hasExistingPrescription = existingPrescriptions.length > 0;
   const medications = detail.medications.map((m) => ({
     id: crypto.randomUUID(),
     drugName: m.drugName,
@@ -131,15 +136,39 @@ function operationDetailToMedState(detail: OperationDetailDto): {
     frequency: m.frequency ?? "",
   }));
   if (detail.noMedications) {
-    return { medTab: "none", medications: [], hasExistingPrescription: false, existingAttachments };
+    return {
+      medTab: "none",
+      medications: [],
+      hasExistingPrescription: false,
+      existingAttachments,
+      existingPrescriptions: [],
+    };
   }
   if (hasExistingPrescription) {
-    return { medTab: "prescription", medications, hasExistingPrescription: true, existingAttachments };
+    return {
+      medTab: "prescription",
+      medications,
+      hasExistingPrescription: true,
+      existingAttachments,
+      existingPrescriptions,
+    };
   }
   if (medications.length > 0) {
-    return { medTab: "manual", medications, hasExistingPrescription: false, existingAttachments };
+    return {
+      medTab: "manual",
+      medications,
+      hasExistingPrescription: false,
+      existingAttachments,
+      existingPrescriptions: [],
+    };
   }
-  return { medTab: "none", medications: [], hasExistingPrescription: false, existingAttachments };
+  return {
+    medTab: "none",
+    medications: [],
+    hasExistingPrescription: false,
+    existingAttachments,
+    existingPrescriptions: [],
+  };
 }
 
 export function OperationsPage() {
@@ -243,7 +272,7 @@ export function OperationsPage() {
   const [docRows, setDocRows] = useState<PendingDocumentRow[]>([]);
   const [medTab, setMedTab] = useState<MedTab>("none");
   const [medications, setMedications] = useState<PendingMedication[]>([]);
-  const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
+  const [prescriptionFiles, setPrescriptionFiles] = useState<File[]>([]);
   const [generatedPrescriptionFile, setGeneratedPrescriptionFile] = useState<File | null>(null);
   const [pinnedPhysicianItem, setPinnedPhysicianItem] = useState<PickListItem | null>(null);
   const [acquisition, setAcquisition] = useState(emptyPatientAcquisitionFormValues);
@@ -362,7 +391,7 @@ export function OperationsPage() {
     const medReset = resetMedicationsPrescriptionDraft();
     setMedTab(medReset.medTab);
     setMedications(medReset.medications);
-    setPrescriptionFile(medReset.prescriptionFile);
+    setPrescriptionFiles(medReset.prescriptionFiles);
     setGeneratedPrescriptionFile(medReset.generatedPrescriptionFile);
     setAcquisition(emptyPatientAcquisitionFormValues());
     setCreateWizardStage(1);
@@ -415,9 +444,17 @@ export function OperationsPage() {
   const [editDocInvalidRowIds, setEditDocInvalidRowIds] = useState<Set<string>>(() => new Set());
   const [editMedTab, setEditMedTab] = useState<MedTab>("none");
   const [editMedications, setEditMedications] = useState<PendingMedication[]>([]);
-  const [editPrescriptionFile, setEditPrescriptionFile] = useState<File | null>(null);
+  const [editPrescriptionFiles, setEditPrescriptionFiles] = useState<File[]>([]);
   const [editGeneratedPrescriptionFile, setEditGeneratedPrescriptionFile] = useState<File | null>(null);
-  const [editHadExistingPrescription, setEditHadExistingPrescription] = useState(false);
+  const [rxDocToDelete, setRxDocToDelete] = useState<OperationDocumentDto | null>(null);
+  const [rxViewer, setRxViewer] = useState<{
+    doc: OperationDocumentDto;
+    url: string;
+    contentType: string;
+  } | null>(null);
+  const rxViewerUrlRef = useRef<string | null>(null);
+  const rxReplaceInputRef = useRef<HTMLInputElement>(null);
+  const pendingRxReplaceIdRef = useRef<string | null>(null);
   const [editExistingAttachments, setEditExistingAttachments] = useState<OperationDocumentDto[]>([]);
   const [editDetailLoadedId, setEditDetailLoadedId] = useState<string | null>(null);
   const editValidation = useValidationIssuesDialog({ intent: "save" });
@@ -427,14 +464,19 @@ export function OperationsPage() {
   const resetEditClinicalForm = () => {
     setEditDocRows([]);
     setEditDocInvalidRowIds(new Set());
-    setEditHadExistingPrescription(false);
     setEditExistingAttachments([]);
     setEditDetailLoadedId(null);
+    setRxDocToDelete(null);
+    if (rxViewerUrlRef.current) {
+      URL.revokeObjectURL(rxViewerUrlRef.current);
+      rxViewerUrlRef.current = null;
+    }
+    setRxViewer(null);
     editValidation.clear();
     const medReset = resetMedicationsPrescriptionDraft();
     setEditMedTab(medReset.medTab);
     setEditMedications(medReset.medications);
-    setEditPrescriptionFile(medReset.prescriptionFile);
+    setEditPrescriptionFiles(medReset.prescriptionFiles);
     setEditGeneratedPrescriptionFile(medReset.generatedPrescriptionFile);
   };
 
@@ -488,16 +530,89 @@ export function OperationsPage() {
   const { data: editOpDetail, isPending: editOpDetailPending } = useOperationQuery(
     editNeedsDetail ? editOp?.id : undefined,
   );
+  const editExistingPrescriptions = useMemo(
+    () => (editOpDetail?.documents ?? []).filter((d) => d.kind === "PRESCRIPTION"),
+    [editOpDetail],
+  );
+  const editHadExistingPrescription = editExistingPrescriptions.length > 0;
   const editClinicDefaultCurrency = resolveClinicCurrency(editClinicId || editOp?.clinicId);
+
+  const invalidateEditOperation = () => {
+    if (!editOp?.id) return;
+    void qc.invalidateQueries({ queryKey: ["operation", editOp.id] });
+    void qc.invalidateQueries({ queryKey: ["operations"] });
+  };
+
+  const closeRxViewer = () => {
+    if (rxViewerUrlRef.current) {
+      URL.revokeObjectURL(rxViewerUrlRef.current);
+      rxViewerUrlRef.current = null;
+    }
+    setRxViewer(null);
+  };
+
+  const openRxDocument = async (doc: OperationDocumentDto) => {
+    if (!editOp?.id) return;
+    try {
+      const { blob, contentType } = await apiFetchBlob(`/api/v1/operations/${editOp.id}/documents/${doc.id}/file`);
+      const url = URL.createObjectURL(blob);
+      if (rxViewerUrlRef.current) URL.revokeObjectURL(rxViewerUrlRef.current);
+      rxViewerUrlRef.current = url;
+      setRxViewer({
+        doc,
+        url,
+        contentType: resolveViewerContentType(contentType, doc.originalFileName, doc.mimeType),
+      });
+    } catch (e: unknown) {
+      toast.error(apiErrorMessage(e));
+    }
+  };
+
+  const uploadEditPrescriptionMutation = useMutation({
+    mutationFn: async ({ files, replaceDocumentId }: { files: File[]; replaceDocumentId?: string }) => {
+      if (!editOp?.id) throw new Error("No operation");
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("kind", "PRESCRIPTION");
+        if (replaceDocumentId) fd.append("replaceDocumentId", replaceDocumentId);
+        await apiPostFormData(`/api/v1/operations/${editOp.id}/documents`, fd);
+      }
+    },
+    onSuccess: (_data, variables) => {
+      setEditMedTab("prescription");
+      toast.success(
+        variables.replaceDocumentId
+          ? t("encounters.docReplaced", "Document replaced")
+          : variables.files.length === 1
+            ? t("encounters.docUploaded")
+            : t("encounters.docsUploaded", "{{count}} documents uploaded.", { count: variables.files.length }),
+      );
+      invalidateEditOperation();
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
+
+  const removeEditPrescriptionMutation = useMutation({
+    mutationFn: (docId: string) => {
+      if (!editOp?.id) throw new Error("No operation");
+      return apiDelete(`/api/v1/operations/${editOp.id}/documents/${docId}`);
+    },
+    onSuccess: () => {
+      setRxDocToDelete(null);
+      toast.success(t("encounters.docDeleted", "Document deleted."));
+      invalidateEditOperation();
+    },
+    onError: (e: unknown) => toast.error(apiErrorMessage(e)),
+  });
 
   useEffect(() => {
     if (!editIsScheduled || !editOpDetail || editDetailLoadedId === editOpDetail.id) return;
     const medState = operationDetailToMedState(editOpDetail);
     setEditMedTab(medState.medTab);
     setEditMedications(medState.medications);
-    setEditHadExistingPrescription(medState.hasExistingPrescription);
     setEditExistingAttachments(medState.existingAttachments);
-    setEditPrescriptionFile(null);
+    setEditPrescriptionFiles([]);
     setEditGeneratedPrescriptionFile(null);
     setEditFeeCurrency(editOpDetail.feeCurrency ?? editClinicDefaultCurrency);
     setEditDetailLoadedId(editOpDetail.id);
@@ -627,7 +742,7 @@ export function OperationsPage() {
             docRows: editDocRows,
             reservedDocCategories: reservedOperationDocumentCategories(editExistingAttachments, t),
             medTab: editMedTab,
-            prescriptionFile: editPrescriptionFile,
+            prescriptionFiles: editPrescriptionFiles,
             generatedPrescriptionFile: editGeneratedPrescriptionFile,
             hasExistingPrescription: editHadExistingPrescription,
             acquisition: emptyPatientAcquisitionFormValues(),
@@ -648,7 +763,7 @@ export function OperationsPage() {
           docRows: editDocRows,
           reservedDocCategories: reservedOperationDocumentCategories(editExistingAttachments, t),
           medTab: editMedTab,
-          prescriptionFile: editPrescriptionFile,
+          prescriptionFiles: editPrescriptionFiles,
           generatedPrescriptionFile: editGeneratedPrescriptionFile,
           hasExistingPrescription: editHadExistingPrescription,
           acquisition: emptyPatientAcquisitionFormValues(),
@@ -723,14 +838,12 @@ export function OperationsPage() {
 
     if (!editIsScheduled) return op;
 
-    const keepExistingPrescription =
-      editMedTab === "prescription" &&
-      editHadExistingPrescription &&
-      !editPrescriptionFile &&
-      !editGeneratedPrescriptionFile;
+    // Keep saved Rx docs unless the user chose "no medications" or manual-only (no generated Rx).
+    const clearPrescription =
+      editMedTab === "none" || (editMedTab === "manual" && !editGeneratedPrescriptionFile);
 
     await apiPost(`/api/v1/operations/${editOp.id}/reset-clinical`, {
-      clearPrescription: !keepExistingPrescription,
+      clearPrescription,
     });
 
     for (const row of editDocRows) {
@@ -756,11 +869,16 @@ export function OperationsPage() {
           frequency: m.frequency.trim() || undefined,
         });
       }
-      const rxFile =
+      const pendingRx =
         editMedTab === "prescription"
-          ? editPrescriptionFile ?? editGeneratedPrescriptionFile
-          : editGeneratedPrescriptionFile;
-      if (rxFile) {
+          ? [
+              ...editPrescriptionFiles,
+              ...(editGeneratedPrescriptionFile ? [editGeneratedPrescriptionFile] : []),
+            ]
+          : editGeneratedPrescriptionFile
+            ? [editGeneratedPrescriptionFile]
+            : [];
+      for (const rxFile of pendingRx) {
         const fd = new FormData();
         fd.append("file", rxFile);
         fd.append("kind", "PRESCRIPTION");
@@ -976,11 +1094,13 @@ export function OperationsPage() {
             frequency: m.frequency.trim() || undefined,
           });
         }
-        const rxFile =
+        const pendingRx =
           medTab === "prescription"
-            ? prescriptionFile ?? generatedPrescriptionFile
-            : generatedPrescriptionFile;
-        if (rxFile) {
+            ? [...prescriptionFiles, ...(generatedPrescriptionFile ? [generatedPrescriptionFile] : [])]
+            : generatedPrescriptionFile
+              ? [generatedPrescriptionFile]
+              : [];
+        for (const rxFile of pendingRx) {
           const fd = new FormData();
           fd.append("file", rxFile);
           fd.append("kind", "PRESCRIPTION");
@@ -1063,7 +1183,7 @@ export function OperationsPage() {
         downPayment,
         docRows,
         medTab,
-        prescriptionFile,
+        prescriptionFiles,
         generatedPrescriptionFile,
         feesOptional: !canEditFees,
         isContract,
@@ -1310,6 +1430,52 @@ export function OperationsPage() {
       </Dialog>
 
       <ValidationIssuesDialog {...editValidation.dialogProps} />
+
+      <ConfirmDialog
+        open={rxDocToDelete != null}
+        onOpenChange={(open) => {
+          if (!removeEditPrescriptionMutation.isPending && !open) setRxDocToDelete(null);
+        }}
+        title={t("encounters.deleteDocTitle", "Delete document?")}
+        description={t("encounters.deleteDocBody", "Delete \"{{name}}\"? This cannot be undone.", {
+          name: rxDocToDelete?.originalFileName ?? "",
+        })}
+        confirmLabel={t("common.remove")}
+        cancelLabel={t("common.cancel", "Cancel")}
+        pending={removeEditPrescriptionMutation.isPending}
+        variant="destructive"
+        onConfirm={() => {
+          if (rxDocToDelete) removeEditPrescriptionMutation.mutate(rxDocToDelete.id);
+        }}
+      />
+
+      {rxViewer ? (
+        <DocumentViewerOverlay
+          fileName={rxViewer.doc.originalFileName}
+          url={rxViewer.url}
+          contentType={rxViewer.contentType}
+          onClose={closeRxViewer}
+          gallery={(() => {
+            const list = editExistingPrescriptions;
+            const index = list.findIndex((d) => d.id === rxViewer.doc.id);
+            if (list.length < 2 || index < 0) return undefined;
+            return {
+              index,
+              total: list.length,
+              canPrevious: index > 0,
+              canNext: index < list.length - 1,
+              onPrevious: () => {
+                const prev = list[index - 1];
+                if (prev) void openRxDocument(prev);
+              },
+              onNext: () => {
+                const next = list[index + 1];
+                if (next) void openRxDocument(next);
+              },
+            };
+          })()}
+        />
+      ) : null}
 
       <ConfirmDialog
         open={editCompleteConfirmOpen}
@@ -1811,24 +1977,50 @@ export function OperationsPage() {
                     </fieldset>
                     <fieldset className="space-y-3 rounded-lg border border-border p-3 sm:p-4 lg:col-span-2">
                       <legend className="px-1 text-sm font-medium">{t("encounters.medications")}</legend>
-                      {editHadExistingPrescription && editMedTab === "prescription" && !editPrescriptionFile ? (
-                        <p className="text-xs text-muted-foreground">
-                          {t(
-                            "operations.existingPrescriptionHint",
-                            "A prescription is already on file. Upload a new file to replace it.",
-                          )}
-                        </p>
-                      ) : null}
+                      <input
+                        ref={rxReplaceInputRef}
+                        type="file"
+                        accept="application/pdf,image/*,text/plain"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          const replaceId = pendingRxReplaceIdRef.current;
+                          pendingRxReplaceIdRef.current = null;
+                          if (!file || !replaceId) return;
+                          uploadEditPrescriptionMutation.mutate({ files: [file], replaceDocumentId: replaceId });
+                        }}
+                      />
                       <MedicationsPrescriptionDraftPanel
                         medTab={editMedTab}
                         onMedTabChange={setEditMedTab}
                         medications={editMedications}
                         onMedicationsChange={setEditMedications}
-                        prescriptionFile={editPrescriptionFile}
-                        onPrescriptionFileChange={setEditPrescriptionFile}
+                        prescriptionFiles={editPrescriptionFiles}
+                        onPrescriptionFilesChange={setEditPrescriptionFiles}
                         generatedPrescriptionFile={editGeneratedPrescriptionFile}
                         onGeneratedPrescriptionFileChange={setEditGeneratedPrescriptionFile}
                         prescriptionContext={editPrescriptionContext}
+                        existingPrescriptions={editExistingPrescriptions}
+                        onPickPrescriptionFiles={(files) =>
+                          uploadEditPrescriptionMutation.mutate({ files })
+                        }
+                        uploadDisabled={uploadEditPrescriptionMutation.isPending}
+                        existingBusy={
+                          uploadEditPrescriptionMutation.isPending || removeEditPrescriptionMutation.isPending
+                        }
+                        onViewExisting={(docId) => {
+                          const doc = editExistingPrescriptions.find((d) => d.id === docId);
+                          if (doc) void openRxDocument(doc);
+                        }}
+                        onReplaceExisting={(docId) => {
+                          pendingRxReplaceIdRef.current = docId;
+                          rxReplaceInputRef.current?.click();
+                        }}
+                        onRemoveExisting={(docId) => {
+                          const doc = editExistingPrescriptions.find((d) => d.id === docId);
+                          if (doc) setRxDocToDelete(doc);
+                        }}
                       />
                     </fieldset>
                   </>
@@ -2280,8 +2472,8 @@ export function OperationsPage() {
                   onMedTabChange={setMedTab}
                   medications={medications}
                   onMedicationsChange={setMedications}
-                  prescriptionFile={prescriptionFile}
-                  onPrescriptionFileChange={setPrescriptionFile}
+                  prescriptionFiles={prescriptionFiles}
+                  onPrescriptionFilesChange={setPrescriptionFiles}
                   generatedPrescriptionFile={generatedPrescriptionFile}
                   onGeneratedPrescriptionFileChange={setGeneratedPrescriptionFile}
                   prescriptionContext={prescriptionContext}
