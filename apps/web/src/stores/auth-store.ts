@@ -119,6 +119,12 @@ export const useAuthStore = create<AuthState>()(
       signOut: () => {
         revokeServerSession(get().accessToken);
         set({ accessToken: null, refreshToken: null, user: null });
+        // A session that started at Kiorex Passport also ends the Passport session (RP-initiated logout with id_token_hint),
+        // otherwise "Sign in with Kiorex Passport" would sign the user straight back in and every other Passport app stays signed in.
+        try {
+          const url = localStorage.getItem("kiorly-passport-logout");
+          if (url) { localStorage.removeItem("kiorly-passport-logout"); if (/^https?:\/\//.test(url)) window.location.assign(url); }
+        } catch { /* ignore */ }
       },
       setHasAvatar: (hasAvatar) =>
         set((state) => (state.user ? { user: { ...state.user, hasAvatar } } : state)),

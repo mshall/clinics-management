@@ -71,6 +71,7 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       const res = await loginRequest(email, password, mfa);
+      try { localStorage.removeItem("kiorly-passport-logout"); } catch { /* ignore */ } // a password session never ends the Passport session
       setSession(res.accessToken, res.user, res.refreshToken);
       const from = (location.state as { from?: string } | null)?.from;
       const { user: signedIn } = useAuthStore.getState();
@@ -112,6 +113,7 @@ export function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error((data as { message?: string }).message ?? t("auth.signIn"));
+      try { localStorage.removeItem("kiorly-passport-logout"); } catch { /* ignore */ }
       setSession(data.accessToken, data.user, data.refreshToken);
       const from = (location.state as { from?: string } | null)?.from;
       const { user: signedIn } = useAuthStore.getState();

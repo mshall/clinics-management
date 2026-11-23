@@ -15,10 +15,16 @@ import { useKiorexConfig } from "@/features/auth/use-kiorex-config";
 
 type Session = { accessToken: string; refreshToken?: string; user: Parameters<ReturnType<typeof useAuthStore.getState>["setSession"]>[1] };
 type CallbackResult =
-  | { status: "SESSION"; session: Session }
+  | { status: "SESSION"; session: Session; endSessionUrl?: string }
   | { status: "MFA_REQUIRED"; ticket: string; mfaWhatsApp: boolean }
   | { status: "LINK_REQUIRED" }
   | { status: "LINKED" };
+
+/** Where sign-out must send the browser so the Kiorex Passport session ends with this one (set only for sessions that started at Passport). */
+export const PASSPORT_LOGOUT_KEY = "kiorly-passport-logout";
+function rememberPassportLogout(url: string | undefined) {
+  try { if (url) localStorage.setItem(PASSPORT_LOGOUT_KEY, url); else localStorage.removeItem(PASSPORT_LOGOUT_KEY); } catch { /* storage blocked: sign-out falls back to local only */ }
+}
 
 /** KCV-201 — hidden unless the API has KIOREX_OIDC_ISSUER configured (and account.provider_sso is not OFF). */
 export function KiorexPassportButton() {
@@ -70,6 +76,7 @@ export function KiorexCallbackPage() {
 
   function finish(res: CallbackResult) {
     if (res.status === "SESSION") {
+      rememberPassportLogout(res.endSessionUrl);
       setSession(res.session.accessToken, res.session.user, res.session.refreshToken);
       const { user } = useAuthStore.getState();
       navigate(resolvePostLoginPath(user?.role, user?.navTabKeys, undefined, user?.roleNavTabKeys), { replace: true });
