@@ -1,8 +1,10 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { KiorexPassportButton } from "@/features/auth/kiorex-passport";
+import { KiorexPassportButton, startKiorexPassportSignIn } from "@/features/auth/kiorex-passport";
+import { currentNavigationType, wantsPassportAutostart } from "@/lib/kiorly-home";
+import { toast } from "sonner";
 import { useKiorexConfig } from "@/features/auth/use-kiorex-config";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -38,6 +40,14 @@ export function LoginPage() {
   // KNED: on the Nurse edition (nurse.kiorly.com) "Sign in with Kiorex Passport" is the primary action; the password form stays below it.
   const kx = useKiorexConfig();
   const nursePrimary = kx.data?.enabled === true && kx.data.defaultSignIn === "KIOREX_PASSPORT";
+  // Kiorly Home sends `?sso=passport[&edition=NURSE]`: start "Sign in with Kiorex Passport" by itself (once per page load; the Passport SSO session makes it silent).
+  const autostarted = useRef(false);
+  useEffect(() => {
+    if (user && token) return;
+    if (autostarted.current || kx.data?.enabled !== true || !wantsPassportAutostart(location.search, currentNavigationType())) return;
+    autostarted.current = true;
+    startKiorexPassportSignIn().catch((e: unknown) => toast.error(e instanceof Error ? e.message : t("kiorex.passport.failed")));
+  }, [user, token, kx.data?.enabled, location.search, t]);
 
   useEffect(() => {
     let cancelled = false;

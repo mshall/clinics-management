@@ -182,6 +182,7 @@
     "password": "Password",
     "mfaPlaceholder": "MFA code (demo — any 6 digits)",
     "signOut": "Sign out",
+    "switchWorkspace": "Switch workspace",
     "startSignup": "Create your clinic account",
     "forgotPassword": "Forgot password?",
     "phoneLogin": "Phone",

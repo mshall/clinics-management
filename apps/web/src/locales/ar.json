@@ -182,6 +182,7 @@
     "password": "كلمة المرور",
     "mfaPlaceholder": "رمز التحقق (تجريبي — أي 6 أرقام)",
     "signOut": "تسجيل الخروج",
+    "switchWorkspace": "تبديل مساحة العمل",
     "startSignup": "إنشاء حساب عيادتك",
     "forgotPassword": "نسيت كلمة المرور؟",
     "phoneLogin": "جوال",

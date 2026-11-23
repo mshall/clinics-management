@@ -1,4 +1,4 @@
-import { CircleHelp, LogOut, Menu, Rows3, Rows4 } from "lucide-react";
+import { ArrowLeftRight, CircleHelp, LogOut, Menu, Rows3, Rows4 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuthStore } from "@/stores/auth-store";
 import { formatUserRole } from "@/lib/locale-display";
+import { homeUrlFromEnv, switchWorkspaceHref } from "@/lib/kiorly-home";
 import { RoleAssistantWidget } from "@/features/assistant/role-assistant-widget";
 import { GlobalPatientSearch } from "@/components/global-patient-search";
 import { DeployVersionBanner } from "@/components/deploy-version-banner";
@@ -55,6 +56,7 @@ export function AppShell() {
   const openHelp = useHelpStore((s) => s.setDrawerOpen);
   useA11yAutoFixes();
   const nurseEdition = useNurseEditionDom();
+  const switchHref = switchWorkspaceHref(homeUrlFromEnv({ VITE_KIORLY_HOME_URL: import.meta.env.VITE_KIORLY_HOME_URL as string | undefined, DEV: import.meta.env.DEV }));
   const density = useDensityStore((s) => s.density);
   const toggleDensity = useDensityStore((s) => s.toggle);
   const orgPlanKey = user?.tenantId && user.plan?.key ? user.plan.key : null;
@@ -139,6 +141,11 @@ export function AppShell() {
             </Button>
             <ThemeSwitcher />
             <LanguageSwitcher />
+            {switchHref ? (
+              <Button asChild variant="ghost" size="icon" className="kx-hdr md:size-9 md:min-h-9 md:min-w-9">
+                <a href={switchHref} data-testid="switch-workspace" title={t("auth.switchWorkspace")} aria-label={t("auth.switchWorkspace")}><ArrowLeftRight className="size-4 rtl-flip" /></a>
+              </Button>
+            ) : null}
             <Button
               variant="ghost"
               size="icon"

@@ -26,6 +26,12 @@ function rememberPassportLogout(url: string | undefined) {
   try { if (url) localStorage.setItem(PASSPORT_LOGOUT_KEY, url); else localStorage.removeItem(PASSPORT_LOGOUT_KEY); } catch { /* storage blocked: sign-out falls back to local only */ }
 }
 
+/** Starts "Sign in with Kiorex Passport": the API builds the authorization URL (PKCE + state live server-side), the browser follows it. */
+export async function startKiorexPassportSignIn(): Promise<void> {
+  const r = await apiPost<{ authorizationUrl: string }>("/api/v1/auth/kiorex/start", {});
+  window.location.assign(r.authorizationUrl);
+}
+
 /** KCV-201 — hidden unless the API has KIOREX_OIDC_ISSUER configured (and account.provider_sso is not OFF). */
 export function KiorexPassportButton() {
   const { t } = useTranslation();
@@ -43,8 +49,7 @@ export function KiorexPassportButton() {
       onClick={async () => {
         setBusy(true);
         try {
-          const r = await apiPost<{ authorizationUrl: string }>("/api/v1/auth/kiorex/start", {});
-          window.location.assign(r.authorizationUrl);
+          await startKiorexPassportSignIn();
         } catch (e) {
           setBusy(false);
           toast.error(e instanceof Error ? e.message : t("kiorex.passport.failed"));

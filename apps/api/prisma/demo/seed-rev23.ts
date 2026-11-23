@@ -207,7 +207,7 @@ export async function seedRev23(prisma: PrismaClient, opts: { at: (off: number, 
   }
   // Nile Care staff who also exist as Passport demo accounts (TEST_DATA.md): their employee record carries the same verified phone, so the Kiorly staff app's
   // Passport sign-in works out of the box (link seeded) and the phone-match link path (KiorexBearerService) is exercised for any other staff whose phone matches.
-  const NILE_PASSPORT: Record<string, number> = { "owner.na@demo.kiorex.test": 2001, "frontdesk1.na@demo.kiorex.test": 2002, "nadia.na@demo.kiorex.test": 2006 };
+  const NILE_PASSPORT: Record<string, number> = { "owner.na@demo.kiorex.test": 2001, "frontdesk1.na@demo.kiorex.test": 2002, "nadia.na@demo.kiorex.test": 2006, "nurse.na@demo.kiorex.test": 2031 /* multi-workspace demo persona (Kiorly Home): Clinic + Pharmacy + Lab */ };
   for (const [email, n] of Object.entries(NILE_PASSPORT)) {
     const u = await prisma.user.findFirst({ where: { email, tenantId: T.na } });
     if (!u) continue;
