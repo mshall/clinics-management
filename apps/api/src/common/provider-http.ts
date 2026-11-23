@@ -12,6 +12,8 @@ export type ProviderHttpRequest = {
   method?: "POST" | "GET" | "PUT" | "DELETE";
   headers?: Record<string, string>;
   body?: unknown;
+  /** application/x-www-form-urlencoded body (Twilio); wins over `body`. */
+  form?: Record<string, string>;
   timeoutMs?: number;
   /** Retries AFTER the first attempt (default 2). */
   retries?: number;
@@ -70,12 +72,12 @@ export async function providerHttp(req: ProviderHttpRequest): Promise<ProviderHt
   const backoff = req.backoffMs ?? 300;
   const idempotencyKey = req.idempotencyKey ?? randomUUID();
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    "Content-Type": req.form ? "application/x-www-form-urlencoded" : "application/json",
     Accept: "application/json",
     ...(req.headers ?? {}),
     [req.idempotencyHeader ?? "Idempotency-Key"]: idempotencyKey,
   };
-  const body = req.body === undefined ? undefined : JSON.stringify(req.body);
+  const body = req.form ? new URLSearchParams(req.form).toString() : req.body === undefined ? undefined : JSON.stringify(req.body);
 
   let last: ProviderHttpResult | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {

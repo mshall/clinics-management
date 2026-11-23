@@ -1,5 +1,6 @@
 import { isMock } from "../../common/provider-mode";
-import { smsConfig, type SmsConfig } from "../../common/provider-env";
+import { smsConfig, smsVendor, type SmsConfig } from "../../common/provider-env";
+import { parseTwilioSend, twilioAuth, twilioForm, twilioPath } from "../../common/vendors/twilio-sms";
 import { providerHttp, type ProviderHttpRequest } from "../../common/provider-http";
 import { DevInboxRecorder } from "../dev-inbox.recorder";
 import { authHeaders, smsMessageIdFromResponse, toSmsRequestBody } from "./sms.mapping";
@@ -33,10 +34,11 @@ export class HttpSmsProvider implements SmsProvider {
   ) {}
 
   async send(input: SmsSendInput): Promise<SmsSendResult> {
+    const twilio = smsVendor() === "twilio";
     const res = await providerHttp({
-      url: this.cfg.apiUrl,
-      headers: authHeaders(this.cfg.apiKey),
-      body: toSmsRequestBody(input, this.cfg),
+      url: twilio ? `${this.cfg.apiUrl.replace(/\/$/, "")}${twilioPath(this.cfg.apiKey)}` : this.cfg.apiUrl,
+      headers: twilio ? twilioAuth(this.cfg.apiKey) : authHeaders(this.cfg.apiKey),
+      ...(twilio ? { form: twilioForm({ to: input.to.replace(/\s/g, ""), from: this.cfg.senderId, body: input.body, statusCallback: process.env.SMS_WEBHOOK_PUBLIC_URL?.trim() || undefined }) } : { body: toSmsRequestBody(input, this.cfg) }),
       timeoutMs: this.cfg.timeoutMs,
       retries: this.cfg.maxRetries,
       backoffMs: this.cfg.backoffMs,
@@ -48,7 +50,7 @@ export class HttpSmsProvider implements SmsProvider {
       const failureClass: SmsFailureClass = res.failureClass === "AUTH" ? "AUTH" : res.retryable ? "TRANSIENT" : res.status === 400 || res.status === 422 ? "POLICY" : "UNKNOWN";
       return { ok: false, error: `SMS provider: ${res.error}`, failureClass, retryable: res.retryable };
     }
-    const id = smsMessageIdFromResponse(res.json);
+    const id = twilio ? ((): string | null => { try { return parseTwilioSend(res.json).providerRef; } catch { return null; } })() : smsMessageIdFromResponse(res.json);
     if (!id) return { ok: false, error: "SMS provider response missing message id", failureClass: "UNKNOWN", retryable: false };
     return { ok: true, providerMessageId: id };
   }
