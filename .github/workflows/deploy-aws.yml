@@ -1,55 +1,25 @@
 # Deploys the CDK stack (eu-central-1): VPC, RDS, App Runner API, S3 + CloudFront web.
 #
+# Path-scoped deploys (main pushes):
+#   web  — SPA only (S3 + CloudFront); skips API Docker / App Runner
+#   api  — API/CDK; restores current SPA from S3 so WebDeploy stays stable
+#   full — API + web via CDK (default for mixed / infra / lockfile changes)
+#   skip — Docs/cursor-only: CI+deploy jobs are skipped
+#
 # --- One-time AWS setup (OIDC, recommended) ---
 # 1) IAM > Identity providers > Add: provider URL https://token.actions.githubusercontent.com,
 #    Audience: sts.amazonaws.com
 # 2) IAM > Roles > Create role > Web identity > GitHub > authorize your org/repo.
-#    Or create a role with custom trust (replace OWNER, REPO, ACCOUNT_ID):
-#      "Principal": { "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com" }
-#      "Action": "sts:AssumeRoleWithWebIdentity"
-#      "Condition": {
-#        "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
-#        "StringLike": { "token.actions.githubusercontent.com:sub": "repo:OWNER/REPO:*" }
-#      }
 # 3) Attach a policy that allows CDK deploy (e.g. AdministratorAccess for simplicity, or scoped CDK policy).
-#    Post-failure diagnostics also call `aws apprunner describe-service`, `list-operations`, and CloudWatch Logs
-#    (`logs:FilterLogEvents`, `logs:DescribeLogGroups`, `logs:Tail*`) — include those if you scope IAM tightly.
 # 4) GitHub repo > Settings > Secrets and variables > Actions > New repository secret:
 #      Name:  AWS_DEPLOY_ROLE_ARN
 #      Value: arn:aws:iam::990597228737:role/GitHubAction-AssumeRole
-#    (Trust policy must allow this repo, e.g. repo:mshall/clinics-management:* — see IAM OIDC role.)
-#    The deploy role also needs lambda:InvokeFunction on the stack's DbSeedFn (or lambda:InvokeFunction on *).
-#
 # 5) Post-deploy cicd-post-deploy-seed.sh invokes DbSeedFn (idempotent demo users on RDS).
 # 6) Post-deploy cicd-post-deploy-smoke.sh — /health/ready + demo login (not /health/live alone).
-#    See Docs/AWS_Cloud_Deployment_Guide.md §7 (entrypoint), §9 (DbSeed bundle), §16 (troubleshooting).
-#
-# 6) Optional — Cursor cloud agent after a failed deploy (opens a PR; same Cursor billing as other agent runs):
-#      Name:  CURSOR_API_KEY
-#      Value: https://cursor.com/dashboard/integrations (or team service account).
-# 6) Optional — if `github.token` cannot push branches (org policy), add a classic PAT or fine-grained token:
-#      Name:  CURSOR_CLOUD_GITHUB_TOKEN
-#      Scopes: repo contents + pull requests (write) for this repository only.
-#    The "Cursor cloud agent" job uses `github.token` when this secret is empty. It does not auto-merge PRs.
-#    To force the old local-only analysis (no PR), set env CURSOR_SDK_RUNTIME=local on that job.
+#    See Docs/AWS_Cloud_Deployment_Guide.md.
 #
 # --- One-time CDK bootstrap (run locally once per account/region) ---
 #   npx cdk bootstrap aws://ACCOUNT/eu-central-1
-#
-# If stack kiorly-clinics-management is ROLLBACK_COMPLETE, delete it in CloudFormation before the next deploy.
-#
-# If the job shows only "exit code 1", open the "Deploy CDK stack" step log — the real error
-# is usually npm/cdk/docker or a CloudFormation event (e.g. App Runner NotStabilized).
-# On PRs, `.github/workflows/pr-synth-build.yml` runs `npm run infra:synth` (no AWS deploy) for early feedback.
-#
-# --- Why CI cannot "pause, let Cursor fix, resume this CloudFormation step" ---
-# CloudFormation/CDK is not a resumable workflow engine: a failed resource (e.g. ApiService
-# NotStabilized) fails the whole stack change; AWS rolls back or leaves ROLLBACK_COMPLETE.
-# There is no supported "continue from Aws::AppRunner::Service" API. Keeping healthy siblings
-# without rollback means splitting stacks (e.g. network+RDS in stack A, App Runner in stack B)
-# or accepting partial manual cleanup. For AI-assisted fixes from CI, use an out-of-band step
-# (e.g. Cursor TypeScript SDK / Cloud Agent opening a PR) after this workflow fails — not
-# inside the same CFN transaction.
 
 name: Deploy to AWS
 
@@ -58,6 +28,13 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      deploy_scope:
+        description: "Override deploy scope (auto | web | api | full)"
+        required: false
+        default: auto
+        type: choice
+        options: [auto, web, api, full]
 
 permissions:
   id-token: write
@@ -65,36 +42,126 @@ permissions:
 
 concurrency:
   group: deploy-aws-${{ github.ref }}
-  # Avoid a stale deploy (pre stack-scoped connector name) racing a newer main push.
+  # Avoid a stale deploy racing a newer main push.
   cancel-in-progress: true
 
 env:
   AWS_REGION: eu-central-1
 
 jobs:
+  changes:
+    name: Detect deploy scope
+    runs-on: ubuntu-latest
+    outputs:
+      scope: ${{ steps.scope.outputs.scope }}
+      api: ${{ steps.scope.outputs.api }}
+      web: ${{ steps.scope.outputs.web }}
+      infra: ${{ steps.scope.outputs.infra }}
+      deploy: ${{ steps.scope.outputs.deploy }}
+      run_integration: ${{ steps.scope.outputs.run_integration }}
+      run_e2e: ${{ steps.scope.outputs.run_e2e }}
+      run_web_build: ${{ steps.scope.outputs.run_web_build }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: scope
+        name: Classify changed paths
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+          OVERRIDE: ${{ github.event.inputs.deploy_scope || 'auto' }}
+        run: |
+          set -euo pipefail
+          if [ "${OVERRIDE}" != "auto" ] && [ -n "${OVERRIDE}" ]; then
+            case "${OVERRIDE}" in
+              web)
+                echo "scope=web" >> "$GITHUB_OUTPUT"
+                echo "api=false" >> "$GITHUB_OUTPUT"
+                echo "web=true" >> "$GITHUB_OUTPUT"
+                echo "infra=false" >> "$GITHUB_OUTPUT"
+                echo "deploy=true" >> "$GITHUB_OUTPUT"
+                echo "run_integration=false" >> "$GITHUB_OUTPUT"
+                echo "run_e2e=false" >> "$GITHUB_OUTPUT"
+                echo "run_web_build=true" >> "$GITHUB_OUTPUT"
+                ;;
+              api)
+                echo "scope=api" >> "$GITHUB_OUTPUT"
+                echo "api=true" >> "$GITHUB_OUTPUT"
+                echo "web=false" >> "$GITHUB_OUTPUT"
+                echo "infra=false" >> "$GITHUB_OUTPUT"
+                echo "deploy=true" >> "$GITHUB_OUTPUT"
+                echo "run_integration=true" >> "$GITHUB_OUTPUT"
+                echo "run_e2e=true" >> "$GITHUB_OUTPUT"
+                echo "run_web_build=true" >> "$GITHUB_OUTPUT"
+                ;;
+              full)
+                echo "scope=full" >> "$GITHUB_OUTPUT"
+                echo "api=true" >> "$GITHUB_OUTPUT"
+                echo "web=true" >> "$GITHUB_OUTPUT"
+                echo "infra=true" >> "$GITHUB_OUTPUT"
+                echo "deploy=true" >> "$GITHUB_OUTPUT"
+                echo "run_integration=true" >> "$GITHUB_OUTPUT"
+                echo "run_e2e=true" >> "$GITHUB_OUTPUT"
+                echo "run_web_build=true" >> "$GITHUB_OUTPUT"
+                ;;
+              *)
+                echo "::error::Unknown deploy_scope=${OVERRIDE}"
+                exit 1
+                ;;
+            esac
+            echo "Manual override: scope=${OVERRIDE}"
+          else
+            bash scripts/detect-deploy-scope.sh
+          fi
+          {
+            echo "### Deploy scope"
+            echo "- **scope:** \`$(grep '^scope=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)\`"
+            echo "- **deploy:** \`$(grep '^deploy=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)\`"
+            echo "- **integration:** \`$(grep '^run_integration=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)\`"
+            echo "- **e2e:** \`$(grep '^run_e2e=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Full gate (Postgres + optional integration/E2E) for api | full.
   ci_test:
     name: CI test
+    needs: changes
+    if: ${{ needs.changes.outputs.deploy == 'true' && needs.changes.outputs.scope != 'web' }}
     uses: ./.github/workflows/ci-test-reusable.yml
+    with:
+      run_integration: ${{ needs.changes.outputs.run_integration == 'true' }}
+      run_e2e: ${{ needs.changes.outputs.run_e2e == 'true' }}
+      run_web_unit: ${{ needs.changes.outputs.web == 'true' || needs.changes.outputs.scope == 'full' || needs.changes.outputs.run_e2e == 'true' }}
+      run_api_unit: true
 
-  # Fail fast before OIDC/CDK when TypeScript rejects the web bundle (e.g. TS6133 unused locals).
-  # Same command as scripts/cicd-deploy.sh; avoids mislabeling the failure as App Runner NotStabilized.
-  web-build:
-    needs: ci_test
+  # Web-only: no Postgres / Docker / App Runner — typecheck + web unit only.
+  ci_web:
+    name: CI web
+    needs: changes
+    if: ${{ needs.changes.outputs.scope == 'web' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-
       - name: Setup Node.js dependencies
         uses: ./.github/actions/setup-node-deps
-
-      - name: Build web (tsc + vite)
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-        run: npm run build -w web
+        with:
+          cache-key-prefix: workspace-web
+      - name: Block tracked OpenAI API keys in repo
+        run: bash scripts/check-no-openai-secrets-in-git.sh
+      - name: Typecheck (web)
+        run: npm run typecheck -w web
+      - name: Unit tests (web)
+        run: npm run test:unit -w web
 
   deploy:
-    needs: [ci_test, web-build]
+    needs: [changes, ci_test, ci_web]
+    if: |
+      always()
+      && needs.changes.outputs.deploy == 'true'
+      && (needs.ci_test.result == 'success' || needs.ci_test.result == 'skipped')
+      && (needs.ci_web.result == 'success' || needs.ci_web.result == 'skipped')
+      && !(needs.ci_test.result == 'skipped' && needs.ci_web.result == 'skipped')
     permissions:
       id-token: write
       contents: read
@@ -106,15 +173,11 @@ jobs:
       - name: Block tracked OpenAI API keys in repo
         run: bash scripts/check-no-openai-secrets-in-git.sh
 
-      # Host npm download cache only — cicd-deploy.sh always runs a fresh npm ci for CDK.
-      # Do not restore/skip node_modules here: AWS image builds still npm ci inside Dockerfiles.
-      - uses: actions/setup-node@v7
+      - name: Setup Node.js dependencies (workspace + infra)
+        uses: ./.github/actions/setup-node-deps
         with:
-          node-version: "26"
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            infra/package-lock.json
+          include-infra: ${{ needs.changes.outputs.scope != 'web' && 'true' || 'false' }}
+          cache-key-prefix: ${{ needs.changes.outputs.scope == 'web' && 'workspace-web-deploy' || 'workspace-infra' }}
 
       - name: Check GitHub secret
         run: |
@@ -129,14 +192,17 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # CDK DockerImageAsset runs `docker build` during deploy; Buildx avoids flaky default builder.
+      # Needed for API/full Docker image builds; harmless for web-only.
       - name: Set up Docker Buildx
+        if: ${{ needs.changes.outputs.scope != 'web' }}
         uses: docker/setup-buildx-action@v4
 
       - id: deploy
-        name: Deploy CDK stack (full log capture, CDK verbose in CI)
+        name: Deploy (${{ needs.changes.outputs.scope }})
         env:
           CI: true
+          DEPLOY_SCOPE: ${{ needs.changes.outputs.scope }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           set -o pipefail
           bash -x scripts/cicd-deploy.sh 2>&1 | tee deploy-full.log
@@ -151,12 +217,12 @@ jobs:
           if-no-files-found: warn
 
       - name: Post-deploy seed (demo users)
-        if: always() && steps.deploy.outcome != 'skipped'
+        if: ${{ always() && steps.deploy.outcome != 'skipped' && needs.changes.outputs.scope != 'web' }}
         env:
           CI: true
         run: |
           if grep -q 'OK  post-deploy idempotent seed' deploy-full.log 2>/dev/null; then
-            echo "Seed already completed inside Deploy CDK stack step"
+            echo "Seed already completed inside Deploy step"
             exit 0
           fi
           bash scripts/cicd-post-deploy-seed.sh
@@ -169,17 +235,14 @@ jobs:
   # Runs only when deploy fails: pulls CFN + App Runner log context into the job log (no auto-fix).
   post_deploy_diagnostics:
     name: Post-failure AWS diagnostics
-    needs: deploy
-    # Use needs.deploy.result — bare `failure()` can skip this job if another job state confuses the graph.
+    needs: [changes, deploy]
     if: ${{ always() && needs.deploy.result == 'failure' }}
     permissions:
       id-token: write
       contents: read
     runs-on: ubuntu-latest
-    # Backstop if AWS CLI hangs; script uses `aws logs tail --no-follow` + SIGTERM trap for prompt cancel.
     timeout-minutes: 20
     env:
-      # Wider CloudWatch window + more groups (see scripts/cicd-diagnostics-on-failure.sh).
       LOG_LOOKBACK_MS: "10800000"
       LOG_GROUPS_MAX: "40"
       LINES_PER_GROUP: "280"
@@ -212,14 +275,13 @@ jobs:
             {
               echo ""
               echo "================================================================================"
-              echo "FULL DEPLOY JOB LOG (bash -x scripts/cicd-deploy.sh; CDK_DEBUG + cdk --verbose when CI=true)"
+              echo "FULL DEPLOY JOB LOG"
               echo "================================================================================"
-              # Keep artifact under ~1 MiB text for upload / agent context
               tail -c 950000 deploy-full.log
             } >> diagnostics.log
           else
             echo "" >> diagnostics.log
-            echo "(deploy-full.log artifact missing — deploy step may have failed before tee created the file)" >> diagnostics.log
+            echo "(deploy-full.log artifact missing)" >> diagnostics.log
           fi
 
       - name: Upload diagnostics artifact
@@ -230,10 +292,6 @@ jobs:
           path: diagnostics.log
           if-no-files-found: warn
 
-  # Optional: Cursor cloud agent clones repo, applies fix, opens PR (needs CURSOR_API_KEY + write token).
-  # Cancelling the workflow sends SIGTERM; scripts/cursor-investigate-deploy-failure.mjs calls run.cancel()
-  # so this job stops without a second "force cancel". Job timeout is a backstop if the SDK hangs.
-  # @see https://cursor.com/docs/sdk/typescript
   cursor_investigate_deploy:
     name: Cursor cloud agent (fix PR, optional)
     needs: [deploy, post_deploy_diagnostics]

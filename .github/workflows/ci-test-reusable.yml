@@ -1,8 +1,29 @@
-# Reusable quality gate: typecheck, unit tests, DB integration tests (Postgres service).
+# Reusable quality gate: typecheck, unit tests, optional DB integration + E2E.
 name: CI test (reusable)
 
 on:
   workflow_call:
+    inputs:
+      run_integration:
+        description: Run API integration + money-coverage suites (needs Postgres)
+        type: boolean
+        required: false
+        default: true
+      run_e2e:
+        description: Build apps and run Playwright golden flow
+        type: boolean
+        required: false
+        default: true
+      run_web_unit:
+        description: Run web unit tests
+        type: boolean
+        required: false
+        default: true
+      run_api_unit:
+        description: Run API unit tests
+        type: boolean
+        required: false
+        default: true
 
 jobs:
   ci_test:
@@ -44,35 +65,45 @@ jobs:
         run: npm run prisma:generate -w api
 
       - name: Migrate database
+        if: ${{ inputs.run_integration || inputs.run_e2e }}
         run: npm run db:deploy -w api
 
       - name: Seed database
+        if: ${{ inputs.run_integration || inputs.run_e2e }}
         run: npm run db:seed -w api
 
       - name: Seed demo + mobile fixtures (Kiorly Team integration tests)
+        if: ${{ inputs.run_integration }}
         run: |
           npm run db:seed:demo -w api
           npm run db:seed:mobile -w api
 
       - name: Typecheck (api + web)
+        # Keep both workspaces green before any deploy that can touch the API image.
         run: npm run typecheck
 
       - name: Unit tests (web)
+        if: ${{ inputs.run_web_unit }}
         run: npm run test:unit -w web
 
       - name: Unit tests (api)
+        if: ${{ inputs.run_api_unit }}
         run: npm run test:unit -w api
 
       - name: Integration tests (api)
+        if: ${{ inputs.run_integration }}
         run: npm run test:integration -w api
 
       - name: Money-path coverage gate (QA-02)
+        if: ${{ inputs.run_integration }}
         run: npm run test:money-coverage -w api
 
       - name: Build API and web for E2E
+        if: ${{ inputs.run_e2e }}
         run: npm run build -w api && npm run build -w web
 
       - name: Resolve Playwright cache key
+        if: ${{ inputs.run_e2e }}
         id: pw
         run: |
           set -euo pipefail
@@ -81,6 +112,7 @@ jobs:
           echo "version=${ver}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
+        if: ${{ inputs.run_e2e }}
         id: cache-playwright
         uses: actions/cache@v6
         with:
@@ -88,6 +120,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
 
       - name: Install Playwright (Chromium)
+        if: ${{ inputs.run_e2e }}
         run: |
           if [ "${{ steps.cache-playwright.outputs.cache-hit }}" = "true" ]; then
             npx playwright install-deps chromium
@@ -97,6 +130,7 @@ jobs:
         working-directory: apps/web
 
       - name: E2E golden flow (Playwright)
+        if: ${{ inputs.run_e2e }}
         run: npm run test:e2e:golden -w web
         env:
           SEED_PILOT_TENANTS: "true"
