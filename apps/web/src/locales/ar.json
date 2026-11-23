@@ -3578,6 +3578,8 @@
     "close": "إغلاق",
     "back": "رجوع",
     "remove": "إزالة",
+    "download": "تنزيل",
+    "openInNewTab": "فتح في تبويب جديد",
     "error": "حدث خطأ.",
     "optional": "اختياري",
     "comingSoon": "البيانات من الخادم ستُضاف مع واجهة NestJS.",

@@ -107,7 +107,7 @@ Become the operating system for clinic groups in bilingual markets — clinicall
 **Clinical & patients (implemented on `main`)**
 - Patient registry with bilingual names, optional DOB (**calculated age on profile**), **unique phone per tenant**, national ID, acquisition tracking, registration documents (camera capture), edit/delete (role-gated — includes **Call Center** and **Group Supervisor**).
 - Patient profile: vitals history, encounters, **clinical document sections** (labs, radiology, prescriptions, other) with **in-app viewer** (pinch zoom, swipe/gallery navigation), **crop** (confirm before replace), and **delete** (confirm dialog); national ID / SSN / passport scan surfaced in **Other documents**.
-- Encounters: SOAP, vitals, ICD-10 diagnoses, medications, lab/radiology/Rx uploads, generate prescription image, finalize workflow.
+- Encounters: SOAP, vitals, ICD-10 diagnoses, medications, lab/radiology/**multi-file Rx** uploads (additive; per-file view/replace/delete with image zoom + PDF viewer), generate prescription image, finalize workflow.
 - Appointments: schedule, status lifecycle, physician/clinic scope.
 - Surgical **operations** module (schedule, balance, documents, medications, revenue linkage, **full scheduled edit** parity with create form).
 
