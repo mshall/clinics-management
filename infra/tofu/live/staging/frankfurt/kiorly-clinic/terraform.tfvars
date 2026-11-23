@@ -87,3 +87,6 @@ enable_home_visit_address_key = true
 # AWS-only needs (SES API, logs) can use extra_interface_endpoints = ["email"] instead. See Docs/HB07_EGRESS.md.
 egress_mode               = "none"
 extra_interface_endpoints = []
+
+# ADR-039 telehealth: empty /kiorly-clinic/staging/cloudflare-turn container (value via scripts/setup-telehealth-turn.sh staging)
+telehealth_turn_secret = true
