@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
@@ -14,6 +14,10 @@ import { apiUrl } from "@/lib/api-url";
 import { loginRequest } from "@/lib/auth-api";
 import { resolvePostLoginPath } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
+
+// DEV ONLY quick-pick test users. Keep the condition inline: Vite folds `import.meta.env.DEV` to false in production builds, which drops the
+// dynamic import and the whole ../../dev folder (asserted by scripts/check-no-dev-test-users.mjs).
+const DevTestUsers = import.meta.env.DEV && import.meta.env.VITE_DEV_TEST_USERS !== "false" ? lazy(() => import("@/dev/dev-test-users")) : null;
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -67,10 +71,14 @@ export function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    await signInWith(email, password, mfa);
+  }
+
+  async function signInWith(emailValue: string, passwordValue: string, mfaValue: string) {
     setError(null);
     setSubmitting(true);
     try {
-      const res = await loginRequest(email, password, mfa);
+      const res = await loginRequest(emailValue, passwordValue, mfaValue);
       try { localStorage.removeItem("kiorly-passport-logout"); } catch { /* ignore */ } // a password session never ends the Passport session
       setSession(res.accessToken, res.user, res.refreshToken);
       const from = (location.state as { from?: string } | null)?.from;
@@ -138,7 +146,7 @@ export function LoginPage() {
           <LanguageSwitcher />
         </div>
       </header>
-      <div className="flex flex-1 items-center justify-center p-4">
+      <div className="flex flex-1 flex-col items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-lg">
           <CardHeader>
             <CardTitle>{t("auth.signIn")}</CardTitle>
@@ -242,6 +250,7 @@ export function LoginPage() {
             )}
           </CardContent>
         </Card>
+        {DevTestUsers ? <Suspense fallback={null}><DevTestUsers busy={submitting} onPick={(e, p) => { setEmail(e); setPassword(p); void signInWith(e, p, ""); }} /></Suspense> : null}
       </div>
     </div>
   );

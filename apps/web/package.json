@@ -9,6 +9,7 @@
     "dev": "vite",
     "codegen": "openapi-typescript ../api/openapi/openapi.json -o src/lib/openapi-types.gen.ts",
     "typecheck": "tsc -b --noEmit",
+    "check:dev-test-users": "node scripts/check-no-dev-test-users.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
