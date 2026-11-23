@@ -1,5 +1,5 @@
 import { ArrowLeftRight, CircleHelp, LogOut, Menu, Rows3, Rows4 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { showReportingPeriodBar } from "@/lib/permissions";
@@ -10,6 +10,7 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { OrgIdentityBar } from "@/components/org-identity-bar";
 import { useAuthStore } from "@/stores/auth-store";
 import { formatUserRole } from "@/lib/locale-display";
 import { homeUrlFromEnv, switchWorkspaceHref } from "@/lib/kiorly-home";
@@ -47,7 +48,7 @@ function orgPlanLabel(planKey: string, t: (key: string, fallback: string) => str
 }
 
 export function AppShell() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -60,6 +61,19 @@ export function AppShell() {
   const density = useDensityStore((s) => s.density);
   const toggleDensity = useDensityStore((s) => s.toggle);
   const orgPlanKey = user?.tenantId && user.plan?.key ? user.plan.key : null;
+  const orgName = useMemo(() => {
+    if (!user?.tenantId) return null;
+    const ar = i18n.language?.startsWith("ar");
+    const nameAr = user.tenantNameAr?.trim();
+    const nameEn = user.tenantName?.trim();
+    if (ar && nameAr) return nameAr;
+    return nameEn || nameAr || null;
+  }, [user?.tenantId, user?.tenantName, user?.tenantNameAr, i18n.language]);
+  const orgSpecialtyLabel = useMemo(() => {
+    const key = user?.clinicalSpecialty?.trim();
+    if (!key) return null;
+    return t(`clinicalSpecialties.${key}`, key.replaceAll("_", " ").toLowerCase());
+  }, [user?.clinicalSpecialty, t]);
 
   useEffect(() => {
     const syncNav = () => {
@@ -83,7 +97,7 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
-        <header className="sticky top-0 z-10 flex min-h-14 flex-nowrap items-center gap-1 border-b border-border bg-card/95 px-3 py-2 backdrop-blur-sm supports-backdrop-filter:bg-card/80 sm:gap-3 sm:px-4 md:h-14 md:flex-nowrap md:py-0 md:ps-6">
+        <header className="sticky top-0 z-10 flex min-h-14 flex-nowrap items-center gap-1 border-b border-border bg-card/95 px-3 py-2 backdrop-blur-sm supports-backdrop-filter:bg-card/80 sm:gap-3 sm:px-4 md:h-14 md:flex-nowrap md:ps-6">
           <div className="flex min-w-0 items-center gap-1.5 md:hidden">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
@@ -101,14 +115,26 @@ export function AppShell() {
               </SheetContent>
             </Sheet>
             <span className="shrink-0 sm:hidden"><KiorlyMark size={30} nurse={nurseEdition} /></span>
-            <span className="hidden min-w-0 overflow-hidden sm:block"><BrandLockup height={24} tagline={false} /></span>
+            {/* When org identity is shown, skip brand wordmark on narrow screens to free space */}
+            {!orgName ? (
+              <span className="hidden min-w-0 overflow-hidden sm:block">
+                <BrandLockup height={24} tagline={false} />
+              </span>
+            ) : null}
           </div>
+          {orgName ? (
+            <div className="ms-1 min-w-0 flex-1 basis-0 md:ms-0 md:max-w-md lg:max-w-xl xl:max-w-2xl">
+              <OrgIdentityBar name={orgName} specialtyLabel={orgSpecialtyLabel} />
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1" aria-hidden />
+          )}
           <div className="ms-auto flex min-w-0 shrink-0 items-center justify-end gap-0.5 sm:gap-1.5">
             <GlobalPatientSearch />
             {orgPlanKey ? (
               <Badge
                 variant="outline"
-                className="max-w-36 shrink-0 gap-1 border-sky-500/30 bg-sky-500/10 font-semibold text-sky-800 dark:text-sky-300 sm:max-w-40"
+                className="hidden max-w-36 shrink-0 gap-1 border-sky-500/30 bg-sky-500/10 font-semibold text-sky-800 sm:inline-flex dark:text-sky-300 sm:max-w-40"
                 data-testid="header-org-plan"
                 title={t("app.orgPlanHint", "Your organization's current Kiorly plan")}
               >
@@ -119,7 +145,7 @@ export function AppShell() {
               </Badge>
             ) : null}
             {user ? (
-              <span className="hidden max-w-[16rem] items-center gap-2 truncate border-s border-border/70 ps-3 text-sm leading-tight sm:inline-flex">
+              <span className="hidden max-w-[16rem] items-center gap-2 truncate border-s border-border/70 ps-3 text-sm leading-tight lg:inline-flex">
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground" aria-hidden>{user.displayName.trim().charAt(0).toUpperCase()}</span>
                 <span className="flex min-w-0 flex-col"><span className="truncate font-medium">{user.displayName}</span><span className="truncate text-xs text-muted-foreground">{formatUserRole(user.role, t)}</span></span>
               </span>

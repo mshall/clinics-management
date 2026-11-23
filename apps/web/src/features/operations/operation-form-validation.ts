@@ -53,7 +53,7 @@ export type OperationCreateValidationInput = {
   /** Categories already present on the saved operation. */
   reservedDocCategories?: readonly string[];
   medTab: MedTab;
-  prescriptionFile: File | null;
+  prescriptionFiles: File[];
   generatedPrescriptionFile: File | null;
   hasExistingPrescription?: boolean;
   acquisition: OperationAcquisitionFormValues;
@@ -144,7 +144,12 @@ export function collectOperationCreateValidationIssues(
     invalidDocRowIds = docValidation.invalidRowIds;
   }
 
-  if (input.medTab === "prescription" && !input.prescriptionFile && !input.generatedPrescriptionFile && !input.hasExistingPrescription) {
+  if (
+    input.medTab === "prescription" &&
+    input.prescriptionFiles.length === 0 &&
+    !input.generatedPrescriptionFile &&
+    !input.hasExistingPrescription
+  ) {
     issues.push(
       t(
         "operations.errorPrescriptionRequired",

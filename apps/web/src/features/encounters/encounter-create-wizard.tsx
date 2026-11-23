@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, HeartPulse } from "lucide-react";
+import { HeartPulse } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +7,12 @@ import { toast } from "sonner";
 import { appointmentStatusLabel } from "@/components/appointment-status";
 import { CreateActionButton } from "@/components/create-action-button";
 import { PatientAcquisitionFields } from "@/components/patient-acquisition-fields";
+import {
+  CreateWizardBody,
+  CreateWizardDialogContent,
+  CreateWizardFooter,
+  CreateWizardHeader,
+} from "@/components/create-wizard-chrome";
 import {
   emptyPatientAcquisitionFormValues,
   patientAcquisitionFormToBody,
@@ -18,16 +24,10 @@ import { SearchablePickList, type PickListItem } from "@/components/searchable-p
 import { ValidationIssuesDialog } from "@/components/validation-issues-dialog";
 import { VisitCollectionFields } from "@/components/visit-collection-fields";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { useValidationIssuesDialog } from "@/hooks/use-validation-issues-dialog";
 import {
   useAdminOverviewQuery,
@@ -48,7 +48,6 @@ import { patientToPickListItem, resolvePatientListLabel } from "@/lib/patient-di
 import { physicianToPickListItem } from "@/lib/physician-display";
 import { useDebouncedPickListSearch, usePickListValueBinding } from "@/lib/pick-list-utils";
 import { useClinicCurrencyResolver } from "@/lib/use-clinic-currency-resolver";
-import { cn } from "@/lib/utils";
 import {
   DEFAULT_ENCOUNTER_VISIT_TYPE,
   ENCOUNTER_VISIT_TYPES,
@@ -458,79 +457,29 @@ export function EncounterCreateWizard({
           onOpenChange(next);
         }}
       >
-        <DialogContent
-          className="flex max-h-[min(92dvh,46rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
-          aria-describedby={undefined}
-        >
-          <DialogHeader className="space-y-3 border-b border-border bg-linear-to-br from-emerald-600/10 via-background to-background px-4 py-4 sm:px-6 sm:py-5">
-            <div className="flex items-start gap-3 pe-8">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-kx-1">
-                <HeartPulse className="size-5" aria-hidden />
-              </span>
-              <div className="min-w-0 space-y-1">
-                <DialogTitle className="text-lg">
-                  {t("encounters.createEncounterTitle", "Create encounter")}
-                </DialogTitle>
-                <DialogDescription>
-                  {t(
-                    "encounters.wizardSubtitle",
-                    "Start a clinical visit in a few guided steps. Required fields are marked.",
-                  )}
-                </DialogDescription>
-              </div>
-            </div>
-            <ol
-              className="grid grid-cols-1 gap-2 sm:grid-cols-3"
-              aria-label={t("encounters.wizardAria", "Encounter create steps")}
-            >
-              {steps.map((s) => {
-                const active = step === s.n;
-                const done = step > s.n;
-                return (
-                  <li key={s.n}>
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex w-full flex-col gap-0.5 rounded-lg border px-3 py-2 text-start transition-colors",
-                        active
-                          ? "border-emerald-600/50 bg-emerald-600/5 ring-1 ring-emerald-600/25"
-                          : done
-                            ? "border-emerald-600/25 bg-emerald-600/5"
-                            : "border-border bg-muted/20",
-                      )}
-                      aria-current={active ? "step" : undefined}
-                      onClick={() => {
-                        if (s.n < step) {
-                          validation.clear();
-                          setStep(s.n);
-                        } else if (s.n === step + 1) {
-                          goNext();
-                        }
-                      }}
-                    >
-                      <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        <span
-                          className={cn(
-                            "flex size-5 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums",
-                            done || active
-                              ? "bg-emerald-600 text-white"
-                              : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {done ? <Check className="size-3" aria-hidden /> : s.n}
-                        </span>
-                        {t("encounters.wizardStepLabel", "Step {{n}}", { n: s.n })}
-                      </span>
-                      <span className="text-sm font-semibold text-foreground">{s.title}</span>
-                      <span className="hidden text-xs text-muted-foreground md:block">{s.hint}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </DialogHeader>
+        <CreateWizardDialogContent>
+          <CreateWizardHeader
+            icon={<HeartPulse className="size-5" aria-hidden />}
+            title={t("encounters.createEncounterTitle", "Create encounter")}
+            subtitle={t(
+              "encounters.wizardSubtitle",
+              "Start a clinical visit in a few guided steps. Required fields are marked.",
+            )}
+            steps={steps}
+            step={step}
+            stepsAriaLabel={t("encounters.wizardAria", "Encounter create steps")}
+            stepLabel={(n) => t("encounters.wizardStepLabel", "Step {{n}}", { n })}
+            onStepSelect={(n) => {
+              if (n < step) {
+                validation.clear();
+                setStep(n as 1 | 2 | 3);
+              } else if (n === step + 1) {
+                goNext();
+              }
+            }}
+          />
 
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-visible px-4 py-4 sm:px-6">
+          <CreateWizardBody>
             {validation.formErr ? <p className="text-sm text-destructive">{validation.formErr}</p> : null}
 
             {step === 1 ? (
@@ -766,55 +715,25 @@ export function EncounterCreateWizard({
                 <PatientAcquisitionFields values={acquisitionValues} onChange={setAcquisitionValues} />
               </div>
             ) : null}
-          </div>
+          </CreateWizardBody>
 
-          <DialogFooter
-            className={cn(
-              "static m-0 shrink-0 w-full flex-col gap-3 border-t border-border bg-muted/10 p-4",
-              "sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-6",
-              "[&>button]:min-h-11 sm:[&>button]:min-h-10",
-            )}
-          >
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() => onOpenChange(false)}
-              disabled={createMut.isPending}
-            >
-              {t("common.cancel", "Cancel")}
-            </Button>
-            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
-              {step > 1 ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                  onClick={goBack}
-                  disabled={createMut.isPending}
-                >
-                  <ChevronLeft className="size-4" aria-hidden />
-                  {t("encounters.wizardBack", "Back")}
-                </Button>
-              ) : null}
-              {step < 3 ? (
-                <Button type="button" className="w-full sm:w-auto" onClick={goNext}>
-                  {t("encounters.wizardNext", "Continue")}
-                  <ChevronRight className="size-4" aria-hidden />
-                </Button>
-              ) : (
-                <CreateActionButton
-                  type="button"
-                  className="w-full sm:w-auto"
-                  disabled={createMut.isPending}
-                  onClick={handleSubmit}
-                >
-                  {t("encounters.createAndOpen", "Create & open")}
-                </CreateActionButton>
-              )}
-            </div>
-          </DialogFooter>
-        </DialogContent>
+          <CreateWizardFooter
+            cancelLabel={t("common.cancel", "Cancel")}
+            backLabel={t("encounters.wizardBack", "Back")}
+            continueLabel={t("encounters.wizardNext", "Continue")}
+            step={step}
+            maxStep={3}
+            pending={createMut.isPending}
+            onCancel={() => onOpenChange(false)}
+            onBack={goBack}
+            onContinue={goNext}
+            submit={
+              <CreateActionButton type="button" disabled={createMut.isPending} onClick={handleSubmit}>
+                {t("encounters.createAndOpen", "Create & open")}
+              </CreateActionButton>
+            }
+          />
+        </CreateWizardDialogContent>
       </Dialog>
       <ValidationIssuesDialog {...validation.dialogProps} />
     </>

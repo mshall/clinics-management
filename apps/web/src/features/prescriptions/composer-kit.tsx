@@ -124,15 +124,25 @@ export function RxFileRow({ name, onView, onReplace, onRemove, viewLabel, replac
     <li className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5 shadow-kx-1" data-testid="rx-file-row">
       <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"><FileText className="h-4 w-4" /></span>
       <span className="min-w-0 flex-1 truncate text-sm font-medium" dir="auto">{name}</span>
-      <div className="flex shrink-0 gap-1">
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
         {onView ? (
           <Button type="button" variant="outline" size="sm" className="gap-1" onClick={onView} aria-label={`${viewLabel}: ${name}`}>
             <Eye className="h-4 w-4" aria-hidden />
             <span className="hidden sm:inline">{viewLabel}</span>
           </Button>
         ) : null}
-        {onReplace ? <Button type="button" variant="ghost" size="sm" onClick={onReplace} aria-label={`${replaceLabel}: ${name}`}><Upload className="h-4 w-4" aria-hidden /></Button> : null}
-        {onRemove ? <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={onRemove} disabled={busy} aria-label={`${removeLabel}: ${name}`}><Trash2 className="h-4 w-4" aria-hidden /></Button> : null}
+        {onReplace ? (
+          <Button type="button" variant="outline" size="sm" className="gap-1" onClick={onReplace} aria-label={`${replaceLabel}: ${name}`}>
+            <Upload className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">{replaceLabel}</span>
+          </Button>
+        ) : null}
+        {onRemove ? (
+          <Button type="button" variant="ghost" size="sm" className="gap-1 text-destructive hover:text-destructive" onClick={onRemove} disabled={busy} aria-label={`${removeLabel}: ${name}`}>
+            <Trash2 className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">{removeLabel}</span>
+          </Button>
+        ) : null}
       </div>
     </li>
   );

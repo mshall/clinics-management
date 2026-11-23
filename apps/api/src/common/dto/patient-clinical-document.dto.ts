@@ -27,6 +27,18 @@ export class PatientClinicalDocumentItemDto {
 
   @ApiProperty()
   createdAt!: string;
+
+  @ApiPropertyOptional({ description: "ORIGINAL_KEPT | LOSSLESS | REDUCED | FLOOR_REACHED" })
+  qualityNote?: string | null;
+
+  @ApiPropertyOptional()
+  originalSizeBytes?: number | null;
+
+  @ApiPropertyOptional()
+  qualityUsed?: number | null;
+
+  @ApiPropertyOptional()
+  originalAvailable?: boolean;
 }
 
 export class PatientClinicalDocumentsDto {

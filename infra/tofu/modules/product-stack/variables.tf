@@ -197,11 +197,25 @@ variable "db" {
 }
 
 variable "uploads" {
-  description = "Uploads bucket settings."
+  description = "Uploads bucket settings (Phase 1 storage lifecycle + hygiene)."
   type = object({
-    versioning             = optional(bool, true)
-    kms                    = optional(bool, true)
-    prefix_expiration_days = optional(map(number), {})
+    versioning = optional(bool, true)
+    kms        = optional(bool, true)
+    # PROPOSAL defaults — clinical current versions are never expired via lifecycle.
+    noncurrent_expiration_days     = optional(number, 90)
+    newer_noncurrent_versions      = optional(number, 3)
+    intelligent_tiering_after_days = optional(number, 30)
+    intelligent_tiering_min_bytes  = optional(number, 131072)
+    intelligent_tiering_prefixes   = optional(list(string), ["patients/", "encounters/", "operations/", "imports/"])
+    # imports staging + Phase 5 pending uploads (current-version expiry only).
+    prefix_expiration_days = optional(map(number), {
+      "imports/" = 30
+      "pending/" = 1
+    })
+    allowed_origins              = optional(list(string), [])
+    enable_inventory             = optional(bool, false)
+    enable_storage_growth_alarm  = optional(bool, true)
+    storage_growth_alarm_percent = optional(number, 30)
   })
   default = {}
 }

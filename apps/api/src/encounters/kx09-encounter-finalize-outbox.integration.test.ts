@@ -71,6 +71,7 @@ describe("KX-09 finalizing the encounter completes the visit and emits COMPLETED
       { onComplete: async () => undefined } as never,
       { shareAfterSignOff: async () => null } as never,
       new AppointmentOutboxService(new OutboxEventService(prismaSvc)),
+      { enqueueProcessDocument: async () => undefined } as never,
     );
     await svc.finalize(tenantId, doctor, encounterId);
     const apt = await prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId } });

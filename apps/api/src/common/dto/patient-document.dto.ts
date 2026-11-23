@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class PatientDocumentDto {
   @ApiProperty()
@@ -18,4 +18,16 @@ export class PatientDocumentDto {
 
   @ApiProperty()
   createdAt!: string;
+
+  @ApiPropertyOptional({ description: "ORIGINAL_KEPT | LOSSLESS | REDUCED | FLOOR_REACHED" })
+  qualityNote?: string | null;
+
+  @ApiPropertyOptional()
+  originalSizeBytes?: number | null;
+
+  @ApiPropertyOptional()
+  qualityUsed?: number | null;
+
+  @ApiPropertyOptional({ description: "True when an untouched original was retained under …/orig/" })
+  originalAvailable?: boolean;
 }

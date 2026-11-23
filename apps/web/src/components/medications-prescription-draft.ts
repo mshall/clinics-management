@@ -1,4 +1,3 @@
-
 export function emptyPendingMedication(): PendingMedication {
   return { id: crypto.randomUUID(), drugName: "", dosage: "", frequency: "" };
 }
@@ -7,7 +6,7 @@ export function resetMedicationsPrescriptionDraft() {
   return {
     medTab: "none" as MedTab,
     medications: [] as PendingMedication[],
-    prescriptionFile: null as File | null,
+    prescriptionFiles: [] as File[],
     generatedPrescriptionFile: null as File | null,
   };
 }

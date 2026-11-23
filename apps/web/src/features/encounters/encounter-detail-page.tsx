@@ -158,7 +158,12 @@ export function EncounterDetailPage() {
   const [noMedsConfirmOpen, setNoMedsConfirmOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
-  const [viewer, setViewer] = useState<{ doc: EncounterDocumentDto; url: string; contentType: string } | null>(null);
+  const [viewer, setViewer] = useState<{
+    doc: EncounterDocumentDto;
+    url: string;
+    contentType: string;
+    galleryKind: DocKind;
+  } | null>(null);
   const [docToDelete, setDocToDelete] = useState<EncounterDocumentDto | null>(null);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   const viewerUrlRef = useRef<string | null>(null);
@@ -473,14 +478,14 @@ export function EncounterDetailPage() {
     onError: (e: unknown) => toast.error(apiErrorMessage(e)),
   });
 
-  const openDocument = async (doc: EncounterDocumentDto) => {
+  const openDocument = async (doc: EncounterDocumentDto, galleryKind: DocKind = doc.kind as DocKind) => {
     if (!id) return;
     try {
       const { blob, contentType } = await apiFetchBlob(`/api/v1/encounters/${id}/documents/${doc.id}/file`);
       const url = URL.createObjectURL(blob);
       if (viewerUrlRef.current) URL.revokeObjectURL(viewerUrlRef.current);
       viewerUrlRef.current = url;
-      setViewer({ doc, url, contentType });
+      setViewer({ doc, url, contentType, galleryKind });
     } catch (e: unknown) {
       toast.error(apiErrorMessage(e));
     }
@@ -498,10 +503,10 @@ export function EncounterDetailPage() {
     pendingReplaceRef.current = null;
     if (!file || !id || !pending) return;
     try {
-      await apiDelete(`/api/v1/encounters/${id}/documents/${pending.docId}`);
       const fd = new FormData();
       fd.set("file", file);
       fd.set("kind", pending.kind);
+      fd.set("replaceDocumentId", pending.docId);
       await apiPostFormData<EncounterDocumentDto>(`/api/v1/encounters/${id}/documents`, fd);
       toast.success(t("encounters.docReplaced", "Document replaced"));
       invalidate();
@@ -1039,7 +1044,7 @@ export function EncounterDetailPage() {
                   <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-2 py-1.5">
                     <span className="truncate font-medium">{d.originalFileName}</span>
                     <div className="flex gap-1">
-                      <Button type="button" variant="outline" size="sm" onClick={() => void openDocument(d)}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => void openDocument(d, "LAB")}>
                         <Eye className="h-4 w-4" />
                         <span className="ms-1">{documentViewActionLabel(d.originalFileName, d.mimeType, t)}</span>
                       </Button>
@@ -1100,7 +1105,7 @@ export function EncounterDetailPage() {
                   <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-2 py-1.5">
                     <span className="truncate font-medium">{d.originalFileName}</span>
                     <div className="flex gap-1">
-                      <Button type="button" variant="outline" size="sm" onClick={() => void openDocument(d)}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => void openDocument(d, "RADIOLOGY")}>
                         <Eye className="h-4 w-4" />
                         <span className="ms-1">{documentViewActionLabel(d.originalFileName, d.mimeType, t)}</span>
                       </Button>
@@ -1271,7 +1276,7 @@ export function EncounterDetailPage() {
                       </>
                     ) : null}
                     {prescriptions.length > 0 ? (
-                      <ul className="space-y-2">
+                      <ul className="space-y-2" data-testid="encounter-prescription-list">
                         {prescriptions.map((d) => (
                           <RxFileRow
                             key={d.id}
@@ -1280,7 +1285,7 @@ export function EncounterDetailPage() {
                             replaceLabel={t("encounters.replaceDoc", "Replace")}
                             removeLabel={t("common.remove")}
                             busy={removeDocMutation.isPending}
-                            onView={() => void openDocument(d)}
+                            onView={() => void openDocument(d, "PRESCRIPTION")}
                             onReplace={draft && medsPanelActive ? () => startReplace(d.id, "PRESCRIPTION") : undefined}
                             onRemove={draft && medsPanelActive ? () => setDocToDelete(d) : undefined}
                           />
@@ -1303,6 +1308,30 @@ export function EncounterDetailPage() {
           url={viewer.url}
           contentType={viewer.contentType}
           onClose={closeViewer}
+          gallery={(() => {
+            const list =
+              viewer.galleryKind === "LAB"
+                ? labs
+                : viewer.galleryKind === "RADIOLOGY"
+                  ? radiology
+                  : prescriptions;
+            const index = list.findIndex((d) => d.id === viewer.doc.id);
+            if (list.length < 2 || index < 0) return undefined;
+            return {
+              index,
+              total: list.length,
+              canPrevious: index > 0,
+              canNext: index < list.length - 1,
+              onPrevious: () => {
+                const prev = list[index - 1];
+                if (prev) void openDocument(prev, viewer.galleryKind);
+              },
+              onNext: () => {
+                const next = list[index + 1];
+                if (next) void openDocument(next, viewer.galleryKind);
+              },
+            };
+          })()}
           headerActions={
             draft ? (
               <Button

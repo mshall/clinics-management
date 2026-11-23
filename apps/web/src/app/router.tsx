@@ -54,6 +54,7 @@ import {
   HrPage,
   OperationsPage,
   PatientDetailPage,
+  DuplicatePatientsPage,
   PatientsPage,
   PlatformClinicsTab,
   PlatformDrugDatasetsTab,
@@ -154,6 +155,7 @@ export const router = createBrowserRouter([
       { path: "offline/today", element: <OfflineTodayPage /> },
       { path: "team", element: <TeamPage /> },
       { path: "patients", element: <NavGate tab="patients">{defer(PatientsPage)}</NavGate> },
+      { path: "patients/duplicates", element: <NavGate tab="patients">{defer(DuplicatePatientsPage)}</NavGate> },
       { path: "patients/:id", element: <NavGate tab="patients">{defer(PatientDetailPage)}</NavGate> },
       { path: "encounters", element: <NavGate tab="encounters">{defer(EncountersListPage)}</NavGate> },
       {

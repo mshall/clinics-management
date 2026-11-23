@@ -7,9 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { AddMedForm, ComposerEmpty, ComposerHint, ComposerModeTabs, ComposerPanel, GenerateBar, MedLine, RxDropzone, RxFileRow, RxPreview } from "@/features/prescriptions/composer-kit";
+import { documentViewActionLabel } from "@/lib/document-view-label";
 import { generatePrescriptionPng } from "@/lib/prescription-image";
 import { loadPrescriptionBranding } from "@/lib/prescription-branding";
-import { type PendingMedication, type MedTab } from "@/components/medications-prescription-draft";
+import { type MedTab, type PendingMedication } from "@/components/medications-prescription-draft";
+
+export type ExistingPrescriptionDoc = {
+  id: string;
+  originalFileName: string;
+  mimeType?: string | null;
+};
 
 export type PrescriptionContext = {
   clinicId: string;
@@ -24,11 +31,21 @@ type MedicationsPrescriptionDraftPanelProps = {
   onMedTabChange: (tab: MedTab) => void;
   medications: PendingMedication[];
   onMedicationsChange: (meds: PendingMedication[]) => void;
-  prescriptionFile: File | null;
-  onPrescriptionFileChange: (file: File | null) => void;
+  /** Pending prescription files not yet saved to the server (create flow, or edit before upload). */
+  prescriptionFiles: File[];
+  onPrescriptionFilesChange: (files: File[]) => void;
   generatedPrescriptionFile: File | null;
   onGeneratedPrescriptionFileChange: (file: File | null) => void;
   prescriptionContext: PrescriptionContext;
+  /** Already-saved prescription documents (edit flow). */
+  existingPrescriptions?: ExistingPrescriptionDoc[];
+  onViewExisting?: (docId: string) => void;
+  onReplaceExisting?: (docId: string) => void;
+  onRemoveExisting?: (docId: string) => void;
+  existingBusy?: boolean;
+  /** When set, picking files calls this instead of only buffering locally (immediate upload on edit). */
+  onPickPrescriptionFiles?: (files: File[]) => void;
+  uploadDisabled?: boolean;
   className?: string;
 };
 
@@ -48,11 +65,18 @@ export function MedicationsPrescriptionDraftPanel({
   onMedTabChange,
   medications,
   onMedicationsChange,
-  prescriptionFile,
-  onPrescriptionFileChange,
+  prescriptionFiles,
+  onPrescriptionFilesChange,
   generatedPrescriptionFile,
   onGeneratedPrescriptionFileChange,
   prescriptionContext,
+  existingPrescriptions = [],
+  onViewExisting,
+  onReplaceExisting,
+  onRemoveExisting,
+  existingBusy,
+  onPickPrescriptionFiles,
+  uploadDisabled,
   className,
 }: MedicationsPrescriptionDraftPanelProps) {
   const { t, i18n } = useTranslation();
@@ -63,10 +87,14 @@ export function MedicationsPrescriptionDraftPanel({
   const [generatedPreview, setGeneratedPreview] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
+  const pendingRxCount =
+    prescriptionFiles.length + (generatedPrescriptionFile && medTab === "prescription" ? 1 : 0);
+  const rxCount = existingPrescriptions.length + pendingRxCount;
+
   const selectMedTab = (tab: MedTab) => {
     if (tab === medTab) return;
     if (tab === "none") {
-      onPrescriptionFileChange(null);
+      onPrescriptionFilesChange([]);
       onGeneratedPrescriptionFileChange(null);
       if (generatedPreview) URL.revokeObjectURL(generatedPreview);
       setGeneratedPreview(null);
@@ -126,18 +154,30 @@ export function MedicationsPrescriptionDraftPanel({
       if (generatedPreview) URL.revokeObjectURL(generatedPreview);
       setGeneratedPreview(URL.createObjectURL(blob));
       onGeneratedPrescriptionFileChange(file);
-      onPrescriptionFileChange(null);
       onMedTabChange("prescription");
     } finally {
       setGenerating(false);
     }
   };
 
+  const onFilesPicked = (list: FileList | null) => {
+    const picked = list ? [...list] : [];
+    if (!picked.length) return;
+    if (onPickPrescriptionFiles) {
+      onPickPrescriptionFiles(picked);
+      return;
+    }
+    onPrescriptionFilesChange([...prescriptionFiles, ...picked]);
+    onGeneratedPrescriptionFileChange(null);
+    if (generatedPreview) URL.revokeObjectURL(generatedPreview);
+    setGeneratedPreview(null);
+  };
+
   return (
     <div className={className}>
       <Label className="mb-2 block">{t("encounters.medications")}</Label>
       <Tabs value={medTab} onValueChange={(v) => selectMedTab(v as MedTab)}>
-        <ComposerModeTabs medCount={medications.length} rxCount={(prescriptionFile || generatedPrescriptionFile) && medTab === "prescription" ? 1 : 0} />
+        <ComposerModeTabs medCount={medications.length} rxCount={rxCount} />
 
         <TabsContent value="none">
           <ComposerPanel>
@@ -206,36 +246,59 @@ export function MedicationsPrescriptionDraftPanel({
             <input
               ref={prescriptionFileRef}
               type="file"
+              multiple
               accept="application/pdf,image/*,text/plain"
               className="hidden"
               onChange={(e) => {
-                const f = e.target.files?.[0] ?? null;
+                onFilesPicked(e.target.files);
                 e.target.value = "";
-                onPrescriptionFileChange(f);
-                if (f) {
-                  onGeneratedPrescriptionFileChange(null);
-                  if (generatedPreview) URL.revokeObjectURL(generatedPreview);
-                  setGeneratedPreview(null);
-                }
               }}
             />
-            <RxDropzone onPick={() => prescriptionFileRef.current?.click()} title={t("encounters.uploadPrescription", "Upload prescription")} hint={t("encounters.prescriptionUploadHint")} />
-            {prescriptionFile || generatedPrescriptionFile ? (
-              <ul className="space-y-2">
-                <RxFileRow
-                  name={(prescriptionFile ?? generatedPrescriptionFile)!.name}
-                  viewLabel={t("encounters.viewDoc")}
-                  replaceLabel={t("encounters.replaceDoc", "Replace")}
-                  removeLabel={t("common.remove")}
-                  onRemove={() => {
-                    if (prescriptionFile) onPrescriptionFileChange(null);
-                    else {
+            <RxDropzone
+              disabled={uploadDisabled}
+              onPick={() => prescriptionFileRef.current?.click()}
+              title={t("encounters.uploadPrescription", "Upload prescription")}
+              hint={t("encounters.prescriptionUploadHint")}
+            />
+            {existingPrescriptions.length > 0 || prescriptionFiles.length > 0 || generatedPrescriptionFile ? (
+              <ul className="space-y-2" data-testid="operation-prescription-list">
+                {existingPrescriptions.map((d) => (
+                  <RxFileRow
+                    key={d.id}
+                    name={d.originalFileName}
+                    viewLabel={documentViewActionLabel(d.originalFileName, d.mimeType, t)}
+                    replaceLabel={t("encounters.replaceDoc", "Replace")}
+                    removeLabel={t("common.remove")}
+                    busy={existingBusy}
+                    onView={onViewExisting ? () => onViewExisting(d.id) : undefined}
+                    onReplace={onReplaceExisting ? () => onReplaceExisting(d.id) : undefined}
+                    onRemove={onRemoveExisting ? () => onRemoveExisting(d.id) : undefined}
+                  />
+                ))}
+                {prescriptionFiles.map((file, index) => (
+                  <RxFileRow
+                    key={`pending-${file.name}-${file.size}-${index}`}
+                    name={file.name}
+                    viewLabel={t("encounters.viewDoc")}
+                    replaceLabel={t("encounters.replaceDoc", "Replace")}
+                    removeLabel={t("common.remove")}
+                    onRemove={() => onPrescriptionFilesChange(prescriptionFiles.filter((_, i) => i !== index))}
+                  />
+                ))}
+                {generatedPrescriptionFile ? (
+                  <RxFileRow
+                    key="generated"
+                    name={generatedPrescriptionFile.name}
+                    viewLabel={t("encounters.viewDoc")}
+                    replaceLabel={t("encounters.replaceDoc", "Replace")}
+                    removeLabel={t("common.remove")}
+                    onRemove={() => {
                       onGeneratedPrescriptionFileChange(null);
                       if (generatedPreview) URL.revokeObjectURL(generatedPreview);
                       setGeneratedPreview(null);
-                    }
-                  }}
-                />
+                    }}
+                  />
+                ) : null}
               </ul>
             ) : (
               <ComposerEmpty icon={<FileUp className="h-5 w-5" />}>{t("encounters.noPrescriptionYet")}</ComposerEmpty>
@@ -246,3 +309,4 @@ export function MedicationsPrescriptionDraftPanel({
     </div>
   );
 }
+

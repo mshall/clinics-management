@@ -32,6 +32,12 @@ export interface AuthUser {
   tenantBaseCurrency?: string | null;
   /** When true, creating an operation requires How did they find us? */
   operationAcquisitionRequired?: boolean;
+  /** Organization display name (English) for top-bar identity */
+  tenantName?: string | null;
+  /** Organization display name (Arabic) for top-bar identity */
+  tenantNameAr?: string | null;
+  /** Org clinical specialty derived from clinics (for top-bar identity) */
+  clinicalSpecialty?: string | null;
   mfaEnabled?: boolean;
   moneyVisibilityOverrides?: MoneyVisibilityOverrides | null;
   plan?: { key: string; status: string } | null;
@@ -110,6 +116,9 @@ export const useAuthStore = create<AuthState>()(
             hasAvatar: Boolean(raw.hasAvatar),
             tenantBaseCurrency: raw.tenantBaseCurrency ?? null,
             operationAcquisitionRequired: Boolean(raw.operationAcquisitionRequired),
+            tenantName: raw.tenantName ?? null,
+            tenantNameAr: raw.tenantNameAr ?? null,
+            clinicalSpecialty: raw.clinicalSpecialty ?? null,
             mfaEnabled: Boolean(raw.mfaEnabled),
             moneyVisibilityOverrides: raw.moneyVisibilityOverrides ?? undefined,
             plan: raw.plan ?? undefined,
@@ -157,6 +166,9 @@ export const useAuthStore = create<AuthState>()(
             operationAcquisitionRequired: Boolean(
               (me as AuthUserDto & { operationAcquisitionRequired?: boolean }).operationAcquisitionRequired,
             ),
+            tenantName: (me as AuthUserDto).tenantName ?? null,
+            tenantNameAr: (me as AuthUserDto).tenantNameAr ?? null,
+            clinicalSpecialty: (me as AuthUserDto).clinicalSpecialty ?? null,
             mfaEnabled: Boolean((me as AuthUserDto).mfaEnabled),
             moneyVisibilityOverrides: (me as AuthUserDto & { moneyVisibilityOverrides?: MoneyVisibilityOverrides | null })
               .moneyVisibilityOverrides ?? undefined,

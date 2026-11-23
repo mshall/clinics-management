@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Crop } from "lucide-react";
+import { Crop, Download, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ZoomableImage } from "@/components/zoomable-image";
@@ -92,7 +92,30 @@ export function DocumentViewerOverlay({
               canNext={gallery?.canNext}
             />
           ) : showPdf ? (
-            <iframe title={fileName} src={url} className="h-[70vh] w-full rounded border" />
+            <div className="space-y-3" data-testid="document-pdf-viewer">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+                  <a href={url} download={fileName}>
+                    <Download className="size-3.5" aria-hidden />
+                    {t("common.download", "Download")}
+                  </a>
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+                  <a href={url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="size-3.5" aria-hidden />
+                    {t("common.openInNewTab", "Open in new tab")}
+                  </a>
+                </Button>
+                {slideLabel ? (
+                  <span className="ms-auto text-xs tabular-nums text-muted-foreground">{slideLabel}</span>
+                ) : null}
+              </div>
+              <iframe
+                title={fileName}
+                src={`${url}#toolbar=1&navpanes=0&scrollbar=1`}
+                className="h-[min(70vh,40rem)] w-full rounded-lg border border-border bg-muted/30"
+              />
+            </div>
           ) : (
             <a href={url} download={fileName} className="text-primary underline">
               {t("encounters.downloadFile", "Download file")}

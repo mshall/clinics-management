@@ -27,6 +27,8 @@ import {
   validatePatientAcquisition,
 } from "../common/patient-acquisition";
 import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-blob.storage";
+import { DocumentProcessingService } from "../storage/processing/document-processing.service";
+import { adjustTenantStorageBytes } from "../storage/processing/storage-usage";
 import { PatientAllergyDto } from "../common/dto/patient-allergy.dto";
 import { normalizePatientAllergyInputs } from "../common/patient-allergies";
 import type { CreatePatientDto } from "./dto/create-patient.dto";
@@ -42,6 +44,8 @@ import { MIN_PHONE_DIGITS, normalizePhoneDigits } from "./patient-phone";
 import { normalizePhoneToE164 } from "../common/phone-e164";
 import {
   assertUploadSizeBytes,
+  maxUploadBytesForMime,
+  MAX_UPLOAD_BYTES,
   throwUploadDescriptionRequired,
   throwUploadFileRequired,
   throwUploadImagesOnly,
@@ -53,7 +57,7 @@ import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { PATIENT_MUTATE_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import { assertEncounterWritable } from "../common/encounter-lock";
 
-const MAX_PATIENT_DOC_BYTES = 15 * 1024 * 1024;
+const MAX_PATIENT_DOC_BYTES = MAX_UPLOAD_BYTES;
 const ALLOWED_PATIENT_DOC_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 type PatientDocFile = { buffer: Buffer; originalname: string; mimetype: string; size: number };
@@ -84,6 +88,7 @@ export class PatientsService {
     private readonly prisma: PrismaService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
     private readonly navTabAccess: NavTabAccessService,
+    private readonly documentProcessing: DocumentProcessingService,
   ) {}
 
   private mapDoc(d: {
@@ -93,6 +98,10 @@ export class PatientsService {
     mimeType: string;
     sizeBytes: number;
     createdAt: Date;
+    qualityNote?: string | null;
+    originalSizeBytes?: number | null;
+    qualityUsed?: number | null;
+    originalRelativePath?: string | null;
   }): PatientDocumentDto {
     const dto = new PatientDocumentDto();
     dto.id = d.id;
@@ -101,6 +110,10 @@ export class PatientsService {
     dto.mimeType = d.mimeType;
     dto.sizeBytes = d.sizeBytes;
     dto.createdAt = d.createdAt.toISOString();
+    dto.qualityNote = d.qualityNote ?? null;
+    dto.originalSizeBytes = d.originalSizeBytes ?? null;
+    dto.qualityUsed = d.qualityUsed ?? null;
+    dto.originalAvailable = Boolean(d.originalRelativePath);
     return dto;
   }
 
@@ -694,7 +707,7 @@ export class PatientsService {
   ): Promise<PatientDto> {
     await this.getById(tenantId, patientId, user);
     if (!file?.buffer?.length) throw new BadRequestException("File is required");
-    if (file.size > MAX_PATIENT_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    assertUploadSizeBytes(file.size, maxUploadBytesForMime(file.mimetype || "application/octet-stream"));
     const mime = file.mimetype || "application/octet-stream";
     if (!ALLOWED_PATIENT_DOC_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
     const docId = randomUUID();
@@ -748,7 +761,7 @@ export class PatientsService {
     const desc = description?.trim();
     if (!desc) throwUploadDescriptionRequired();
     if (!file?.buffer?.length) throwUploadFileRequired();
-    assertUploadSizeBytes(file.size, MAX_PATIENT_DOC_BYTES);
+    assertUploadSizeBytes(file.size, maxUploadBytesForMime(file.mimetype || "application/octet-stream"));
     const mime = file.mimetype || "application/octet-stream";
     if (!ALLOWED_PATIENT_DOC_MIME.has(mime)) throwUploadUnsupportedType(mime);
 
@@ -767,8 +780,12 @@ export class PatientsService {
         mimeType: mime,
         sizeBytes: file.size,
         relativePath,
+        originalSizeBytes: file.size,
+        processingStatus: "NONE",
       },
     });
+    await adjustTenantStorageBytes(this.prisma, tenantId, file.size);
+    void this.documentProcessing.enqueueProcessDocument(tenantId, "PatientDocument", row.id);
     return this.mapDoc(row);
   }
 
@@ -825,6 +842,19 @@ export class PatientsService {
     if (!doc) throw new NotFoundException("Document not found");
     await this.prisma.patientDocument.delete({ where: { id: documentId } });
     await this.uploads.deleteObject("patients", doc.relativePath).catch(() => undefined);
+    if (doc.originalRelativePath) {
+      await this.uploads.deleteObject("patients", doc.originalRelativePath).catch(() => undefined);
+    }
+    if (doc.thumbSmallRelativePath) {
+      await this.uploads.deleteObject("patients", doc.thumbSmallRelativePath).catch(() => undefined);
+    }
+    if (doc.thumbLargeRelativePath) {
+      await this.uploads.deleteObject("patients", doc.thumbLargeRelativePath).catch(() => undefined);
+    }
+    const billed =
+      doc.sizeBytes +
+      (doc.originalRelativePath ? doc.originalSizeBytes ?? 0 : 0);
+    await adjustTenantStorageBytes(this.prisma, tenantId, -billed);
     return { ok: true };
   }
 
@@ -861,7 +891,7 @@ export class PatientsService {
     await this.assertCanManagePatient(user);
     await this.getById(tenantId, patientId, user);
     if (!file?.buffer?.length) throw new BadRequestException("File is required");
-    if (file.size > MAX_PATIENT_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    assertUploadSizeBytes(file.size, maxUploadBytesForMime(file.mimetype || "application/octet-stream"));
     const mime = file.mimetype || "application/octet-stream";
     if (!mime.startsWith("image/")) throw new BadRequestException("Only image documents can be cropped");
 
@@ -873,8 +903,9 @@ export class PatientsService {
     await this.uploads.put("patients", doc.relativePath, file.buffer, mime);
     const updated = await this.prisma.patientDocument.update({
       where: { id: documentId },
-      data: { mimeType: mime, sizeBytes: file.size },
+      data: { mimeType: mime, sizeBytes: file.size, processingStatus: "NONE" },
     });
+    void this.documentProcessing.enqueueProcessDocument(tenantId, "PatientDocument", updated.id);
     return {
       ok: true,
       id: updated.id,
@@ -895,7 +926,7 @@ export class PatientsService {
     await this.assertCanManagePatient(user);
     await this.getById(tenantId, patientId, user);
     if (!file?.buffer?.length) throw new BadRequestException("File is required");
-    if (file.size > MAX_PATIENT_DOC_BYTES) throw new BadRequestException("File too large (max 15MB)");
+    assertUploadSizeBytes(file.size, maxUploadBytesForMime(file.mimetype || "application/octet-stream"));
     const mime = file.mimetype || "application/octet-stream";
     if (!mime.startsWith("image/")) throw new BadRequestException("Only image documents can be cropped");
 
@@ -912,8 +943,9 @@ export class PatientsService {
     await this.uploads.put("encounters", doc.relativePath, file.buffer, mime);
     const updated = await this.prisma.encounterDocument.update({
       where: { id: documentId },
-      data: { mimeType: mime, sizeBytes: file.size },
+      data: { mimeType: mime, sizeBytes: file.size, processingStatus: "NONE" },
     });
+    void this.documentProcessing.enqueueProcessDocument(tenantId, "EncounterDocument", updated.id);
     return {
       ok: true,
       id: updated.id,
@@ -965,6 +997,10 @@ export class PatientsService {
         mimeType: doc.mimeType,
         sizeBytes: doc.sizeBytes,
         createdAt: doc.createdAt.toISOString(),
+        qualityNote: doc.qualityNote,
+        originalSizeBytes: doc.originalSizeBytes,
+        qualityUsed: doc.qualityUsed,
+        originalAvailable: Boolean(doc.originalRelativePath),
       };
       if (!category) {
         other.push(item);
@@ -1026,6 +1062,10 @@ export class PatientsService {
           mimeType: doc.mimeType,
           sizeBytes: doc.sizeBytes,
           createdAt: doc.createdAt.toISOString(),
+          qualityNote: doc.qualityNote,
+          originalSizeBytes: doc.originalSizeBytes,
+          qualityUsed: doc.qualityUsed,
+          originalAvailable: Boolean(doc.originalRelativePath),
         });
       }
     }

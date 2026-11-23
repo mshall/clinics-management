@@ -60,6 +60,56 @@ describe("SC-01 CDK cell tagging", { skip: skipCdkSynth }, () => {
     assert.equal(outputs.DataRegion?.Value, "eu-central-1");
   });
 
+  it("ApiUploadsBucket retains live clinic blobs (Dr Ahmed Shall) — no clinical current-version expiry", () => {
+    const template = synthTemplate("frankfurt");
+    const resources = template.Resources as Record<
+      string,
+      {
+        Type?: string;
+        DeletionPolicy?: string;
+        UpdateReplacePolicy?: string;
+        Properties?: {
+          VersioningConfiguration?: { Status?: string };
+          LifecycleConfiguration?: {
+            Rules?: Array<{
+              Id?: string;
+              Prefix?: string;
+              ExpirationInDays?: number;
+              Transitions?: unknown[];
+              NoncurrentVersionExpiration?: unknown;
+            }>;
+          };
+        };
+      }
+    >;
+    const uploadsId = Object.keys(resources).find((id) => id.startsWith("ApiUploadsBucket") && resources[id]?.Type === "AWS::S3::Bucket");
+    assert.ok(uploadsId, "ApiUploadsBucket must exist");
+    const bucket = resources[uploadsId!]!;
+    assert.equal(bucket.DeletionPolicy, "Retain", "uploads bucket must RETAIN (never destroy clinic docs)");
+    assert.equal(bucket.UpdateReplacePolicy, "Retain");
+    assert.equal(bucket.Properties?.VersioningConfiguration?.Status, "Enabled");
+    const rules = bucket.Properties?.LifecycleConfiguration?.Rules ?? [];
+    const clinicalPrefixes = ["patients/", "encounters/", "operations/"];
+    for (const prefix of clinicalPrefixes) {
+      const expiring = rules.filter((r) => r.Prefix === prefix && typeof r.ExpirationInDays === "number");
+      assert.equal(
+        expiring.length,
+        0,
+        `must not expire current versions under ${prefix} (would delete Dr Ahmed Shall / clinic documents)`,
+      );
+      const tiering = rules.filter((r) => r.Prefix === prefix && (r.Transitions?.length ?? 0) > 0);
+      assert.ok(tiering.length >= 1, `expected Intelligent-Tiering transition for ${prefix}`);
+    }
+    assert.ok(
+      rules.some((r) => r.Id === "expire-imports" && r.Prefix === "imports/" && r.ExpirationInDays === 30),
+      "imports/ staging may expire",
+    );
+    assert.ok(
+      rules.some((r) => r.Id === "expire-noncurrent-versions" && r.NoncurrentVersionExpiration),
+      "noncurrent version cleanup must remain (does not delete current objects)",
+    );
+  });
+
   it("cairo stack synthesizes separate stack id and me-south-1 region", () => {
     execFileSync("npm", ["run", "build"], { cwd: infraDir, stdio: "pipe" });
     const synthEnv = {

@@ -4,10 +4,13 @@ import * as path from "node:path";
 import { LocalUploadBlobStorage } from "./local-upload-blob.storage";
 import { S3UploadBlobStorage } from "../platform/adapters";
 import { UPLOAD_BLOB_STORAGE } from "./upload-blob.storage";
+import { DocumentProcessingService } from "./processing/document-processing.service";
+import { StorageProcessingWorker } from "./processing/processing.worker";
+import { PrismaModule } from "../prisma/prisma.module";
 
 @Global()
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, PrismaModule],
   providers: [
     {
       provide: UPLOAD_BLOB_STORAGE,
@@ -26,7 +29,9 @@ import { UPLOAD_BLOB_STORAGE } from "./upload-blob.storage";
       },
       inject: [ConfigService],
     },
+    DocumentProcessingService,
+    StorageProcessingWorker,
   ],
-  exports: [UPLOAD_BLOB_STORAGE],
+  exports: [UPLOAD_BLOB_STORAGE, DocumentProcessingService],
 })
 export class StorageModule {}

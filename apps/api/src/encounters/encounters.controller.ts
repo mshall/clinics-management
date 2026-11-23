@@ -39,7 +39,7 @@ import { ENCOUNTERS_MUTATE_ROLES, ENCOUNTERS_VIEW_ROLES } from "../user-nav-tabs
 import { EncountersService } from "./encounters.service";
 import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
 
-const UPLOAD_LIMIT = 15 * 1024 * 1024;
+const UPLOAD_LIMIT = 25 * 1024 * 1024;
 
 @ApiTags("encounters")
 @ApiBearerAuth("bearer")
@@ -140,7 +140,10 @@ export class EncountersController {
   }
 
   @Post(":id/documents")
-  @ApiOperation({ summary: "Upload lab, radiology, or prescription document (multipart field: file, kind=LAB|RADIOLOGY|PRESCRIPTION)" })
+  @ApiOperation({
+    summary:
+      "Upload lab, radiology, or prescription document (multipart: file, kind=LAB|RADIOLOGY|PRESCRIPTION; optional replaceDocumentId for single-file replace)",
+  })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
@@ -149,6 +152,10 @@ export class EncountersController {
       properties: {
         file: { type: "string", format: "binary" },
         kind: { type: "string", enum: ["LAB", "RADIOLOGY", "PRESCRIPTION"] },
+        replaceDocumentId: {
+          type: "string",
+          description: "When set, replace only this existing document of the same kind (others are kept)",
+        },
       },
     },
   })
@@ -163,7 +170,8 @@ export class EncountersController {
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
-    @Body("kind") kindRaw?: string
+    @Body("kind") kindRaw?: string,
+    @Body("replaceDocumentId") replaceDocumentId?: string,
   ): Promise<EncounterDocumentDto> {
     if (!file) throw new BadRequestException("file is required");
     const kind =
@@ -176,7 +184,9 @@ export class EncountersController {
             : null;
     if (!kind) throw new BadRequestException("kind must be LAB, RADIOLOGY, or PRESCRIPTION");
     await this.assertMutate(user);
-    return this.encounters.uploadDocument(requireTenantId(user), id, kind, file, user);
+    return this.encounters.uploadDocument(requireTenantId(user), id, kind, file, user, {
+      replaceDocumentId,
+    });
   }
 
   @Delete(":id/documents/:docId")

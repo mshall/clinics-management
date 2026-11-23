@@ -20,6 +20,7 @@ import { EntitlementsService } from "../entitlements/entitlements.service";
 import { applyPlanNavPipeline } from "../entitlements/plan-nav-preset";
 import { loginEmailLookupVariants, normalizeLoginEmail } from "./auth-email.util";
 import { AuthSessionService } from "./auth-session.service";
+import { resolveOrgClinicalSpecialty, type TenantOrgIdentity } from "./org-identity";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -87,6 +88,7 @@ export class AuthService {
     navTabAccessModes: Record<string, "read" | "write"> | null = null,
     tenantBaseCurrency: string | null = null,
     operationAcquisitionRequired = false,
+    orgIdentity: TenantOrgIdentity | null = null,
   ) {
     const employeePrivilegeGrants =
       user.tenantId != null
@@ -132,6 +134,9 @@ export class AuthService {
       navTabAccessModes: navTabAccessModes ?? undefined,
       tenantBaseCurrency,
       operationAcquisitionRequired,
+      tenantName: orgIdentity?.tenantName ?? null,
+      tenantNameAr: orgIdentity?.tenantNameAr ?? null,
+      clinicalSpecialty: orgIdentity?.clinicalSpecialty ?? null,
       platformSuperAdmin,
       hasAvatar: Boolean(user.avatarRelativePath),
       mfaEnabled,
@@ -333,14 +338,9 @@ export class AuthService {
       user.tenantId != null
         ? await this.tenantRoleNav.effectiveRoleNavTabKeysForPrincipal(user.tenantId, user)
         : null;
-    const tenantRow = user.tenantId
-      ? await this.prisma.tenant.findUnique({
-          where: { id: user.tenantId },
-          select: { baseCurrency: true, operationAcquisitionRequired: true },
-        })
-      : null;
-    const tenantBaseCurrency = tenantRow?.baseCurrency ?? null;
-    const operationAcquisitionRequired = Boolean(tenantRow?.operationAcquisitionRequired);
+    const orgIdentity = user.tenantId ? await this.loadOrgIdentity(user.tenantId) : null;
+    const tenantBaseCurrency = orgIdentity?.tenantBaseCurrency ?? null;
+    const operationAcquisitionRequired = Boolean(orgIdentity?.operationAcquisitionRequired);
 
     void this.audit.recordLogin(user, user.email);
 
@@ -352,11 +352,32 @@ export class AuthService {
       navTabAccessModes,
       tenantBaseCurrency,
       operationAcquisitionRequired,
+      orgIdentity,
     );
     return {
       ...base,
       refreshToken: session.refreshToken,
       sessionId: session.sessionId,
+    };
+  }
+
+  private async loadOrgIdentity(tenantId: string): Promise<TenantOrgIdentity> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        name: true,
+        nameAr: true,
+        baseCurrency: true,
+        operationAcquisitionRequired: true,
+        clinics: { select: { clinicalSpecialty: true }, take: 50 },
+      },
+    });
+    return {
+      tenantName: tenant?.name?.trim() || null,
+      tenantNameAr: tenant?.nameAr?.trim() || null,
+      clinicalSpecialty: resolveOrgClinicalSpecialty(tenant?.clinics.map((c) => c.clinicalSpecialty) ?? []),
+      tenantBaseCurrency: tenant?.baseCurrency ?? null,
+      operationAcquisitionRequired: Boolean(tenant?.operationAcquisitionRequired),
     };
   }
 
@@ -378,6 +399,7 @@ export class AuthService {
     navTabAccessModes: Record<string, "read" | "write"> | null,
     tenantBaseCurrency: string | null,
     operationAcquisitionRequired = false,
+    orgIdentity: TenantOrgIdentity | null = null,
   ) {
     return {
       accessToken,
@@ -388,6 +410,7 @@ export class AuthService {
         navTabAccessModes,
         tenantBaseCurrency,
         operationAcquisitionRequired,
+        orgIdentity,
       ),
     };
   }
@@ -430,19 +453,15 @@ export class AuthService {
       user.tenantId != null
         ? await this.tenantRoleNav.effectiveRoleNavTabKeysForPrincipal(user.tenantId, user)
         : null;
-    const tenantRow = user.tenantId
-      ? await this.prisma.tenant.findUnique({
-          where: { id: user.tenantId },
-          select: { baseCurrency: true, operationAcquisitionRequired: true },
-        })
-      : null;
+    const orgIdentity = user.tenantId ? await this.loadOrgIdentity(user.tenantId) : null;
     return await this.mapAuthUser(
       user,
       navTabKeys,
       roleNavTabKeys,
       navTabAccessModes,
-      tenantRow?.baseCurrency ?? null,
-      Boolean(tenantRow?.operationAcquisitionRequired),
+      orgIdentity?.tenantBaseCurrency ?? null,
+      Boolean(orgIdentity?.operationAcquisitionRequired),
+      orgIdentity,
     );
   }
 
