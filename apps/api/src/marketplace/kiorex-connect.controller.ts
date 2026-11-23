@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -22,10 +22,12 @@ export class KiorexConnectController {
   consent(@CurrentUser() user: JwtUser, @Body() body: { clinicId: string; termsVersion: string; feeAcknowledged: boolean }) { return this.connect.acceptTerms(user, body); }
 
   @Post("request")
+  @HttpCode(200)
   @ApiOperation({ summary: "Request to go live: listings DRAFT -> PENDING_VERIFICATION, then LIVE once Kiorex ops approves" })
   request(@CurrentUser() user: JwtUser, @Body() body: { clinicId: string }) { return this.connect.requestLive(user, body.clinicId); }
 
   @Post("refresh")
+  @HttpCode(200)
   @ApiOperation({ summary: "Refresh the Kiorex decision now" })
   refresh(@CurrentUser() user: JwtUser, @Body() body: { clinicId: string }) { return this.connect.get(user, body.clinicId); }
 }

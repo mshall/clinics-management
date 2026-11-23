@@ -63,7 +63,7 @@ export class KiorexConnectService {
 
   private async loadClinic(user: JwtUser, clinicId: string) {
     if (!clinicId) throw new BadRequestException("clinicId is required");
-    const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId: user.tenantId ?? undefined }, select: { id: true, tenantId: true, latitude: true, longitude: true, addressEn: true, addressAr: true, tenant: { select: { id: true, edition: true, nameEn: true, name: true, nameAr: true, providerSettings: true, market: { select: { code: true, clinicalConfig: true } } } } } });
+    const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId: user.tenantId ?? undefined }, select: { id: true, tenantId: true, latitude: true, longitude: true, addressEn: true, addressAr: true, tenant: { select: { id: true, edition: true, name: true, nameAr: true, providerSettings: true, market: { select: { code: true, clinicalConfig: true } } } } } });
     if (!clinic) throw new NotFoundException("Clinic not found");
     this.listings.assertClinicManage(user, clinic.tenantId);
     return clinic;
@@ -171,7 +171,7 @@ export class KiorexConnectService {
     if (!base || !secret) throw new ConflictException({ code: "KIOREX_NOT_CONFIGURED", message: "Kiorex connection is not configured for this deployment" });
     const ready = state.doctors.filter((d) => d.ready).length;
     const body = JSON.stringify({
-      kind: clinic.tenant.edition === "NURSE" ? "NURSE" : "CLINIC", orgRef: clinic.tenantId, name: clinic.tenant.nameEn ?? clinic.tenant.name, nameAr: clinic.tenant.nameAr ?? undefined, market: state.market,
+      kind: clinic.tenant.edition === "NURSE" ? "NURSE" : "CLINIC", orgRef: clinic.tenantId, name: clinic.tenant.name, nameAr: clinic.tenant.nameAr ?? undefined, market: state.market,
       locale: "en",
       readiness: { counts: { doctors: state.doctors.length, ready, verified: state.doctors.filter((d) => d.verification === "VERIFIED").length }, documents: { doctorCredentials: state.doctors.some((d) => d.verification === "VERIFIED") }, termsAcceptedAt: doc.consent?.at, termsVersion: doc.consent?.termsVersion, steps: state.steps.map((s) => ({ key: s.key, status: s.status })) },
     });
