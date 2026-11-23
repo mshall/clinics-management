@@ -406,6 +406,7 @@
     }
   },
   "verification": {
+    "notApplicable": "Verification applies to clinicians (doctors, nurses and therapists) who are listed on Kiorex. Your role does not need it.",
     "title": "Doctor verification",
     "subtitle": "Syndicate credentials and documents for Kiorex. Files are private and served only through Kiorly.",
     "details": "Professional details",

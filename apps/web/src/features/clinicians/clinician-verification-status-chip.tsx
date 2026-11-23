@@ -15,10 +15,14 @@ const tone: Record<string, string> = {
   EXPIRED: "bg-orange-500/15 text-[hsl(var(--warning))]",
 };
 
+// Stable reference: a fresh [] from the zustand selector breaks useSyncExternalStore (infinite render loop).
+const NO_ROLES: readonly string[] = [];
+
 export function ClinicianVerificationStatusChip() {
   const { t, i18n } = useTranslation();
   const role = useAuthStore((s) => s.user?.role);
-  const additional = useAuthStore((s) => s.user?.additionalRoles ?? []);
+  const additionalRaw = useAuthStore((s) => s.user?.additionalRoles);
+  const additional = additionalRaw ?? NO_ROLES;
   const isPhysician =
     mapApiRole(role ?? "") === "physician" || additional.some((r) => mapApiRole(r) === "physician");
   const q = useQuery({

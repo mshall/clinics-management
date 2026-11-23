@@ -1,3 +1,4 @@
+import { useEntitlement } from "@/hooks/use-entitlement";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DoctorStatementsCard } from "./doctor-statements-card";
 import { useMemo, useState } from "react";
@@ -175,7 +176,9 @@ export function RevenuePage() {
     setPage(1);
   };
 
-  const { data: payableOps = [] } = usePayableOperationsQuery(clinicId || filterClinicId || undefined);
+  // Payable operations are a Pro+ module (mod_operations): the API answers 402 on plans without it, so don't ask.
+  const hasOperationsModule = useEntitlement("mod_operations");
+  const { data: payableOps = [] } = usePayableOperationsQuery(clinicId || filterClinicId || undefined, hasOperationsModule);
   const selectedOperation = useMemo(
     () => payableOps.find((o) => o.id === operationId) ?? null,
     [payableOps, operationId],

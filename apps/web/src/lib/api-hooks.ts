@@ -933,12 +933,18 @@ export function useUsersQuery(params: PagedRangeParams & { enabled?: boolean } =
   });
 }
 
-export function useAdminOverviewQuery() {
+/** The API allows the admin overview for GROUP_ADMIN / CLINIC_ADMIN / BRANCH_MANAGER only; other roles get 403, so skip the call. */
+const ADMIN_OVERVIEW_ROLES = new Set(["GROUP_ADMIN", "CLINIC_ADMIN", "BRANCH_MANAGER", "group_admin", "clinic_admin", "branch_manager", "admin"]);
+
+export function useAdminOverviewQuery(opts?: { enabled?: boolean }) {
   const hasToken = useHasAuthToken();
+  const role = useAuthStore((s) => s.user?.role ?? "");
+  const extra = useAuthStore((s) => s.user?.additionalRoles);
+  const roleOk = ADMIN_OVERVIEW_ROLES.has(role) || (extra ?? []).some((r) => ADMIN_OVERVIEW_ROLES.has(r));
   return useQuery({
     queryKey: ["admin", "overview"],
     queryFn: () => apiGet<AdminOverviewDto>("/api/v1/admin/overview"),
-    enabled: hasToken,
+    enabled: hasToken && roleOk && (opts?.enabled ?? true),
     staleTime: QUERY_STALE.summary,
   });
 }

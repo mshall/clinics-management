@@ -18,9 +18,10 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HT
 );
 CardTitle.displayName = "CardTitle";
 
-const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+// Rendered as a div (not <p>) so descriptions can hold badges/blocks without invalid-DOM hydration warnings.
+const CardDescription = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
+    <div ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
   )
 );
 CardDescription.displayName = "CardDescription";
