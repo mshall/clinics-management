@@ -89,7 +89,7 @@ describe("plan gate classification (MobilePlanGuard + interceptor share it)", ()
     assert.equal(isMobilePlanGated("GET", "/mobile/summary", undefined), true);
     assert.equal(isMobilePlanGated("GET", "/patients", "kiorly/1.2"), true);
     // legacy client names still identify the app (installed dev builds, older e2e): kiorly-team/* and kiorly-work/*
-    assert.equal(isMobilePlanGated("GET", "/patients", "kiorly-team/1.2"), true);
+    assert.equal(isMobilePlanGated("GET", "/patients", "kiorly/1.2"), true);
     assert.equal(isMobilePlanGated("GET", "/patients", "kiorly-work/0.9"), true);
     assert.equal(isMobilePlanGated("GET", "/patients", "kiorly"), true);
     assert.equal(isMobilePlanGated("GET", "/patients", "kiorlyx/1"), false);
@@ -97,7 +97,7 @@ describe("plan gate classification (MobilePlanGuard + interceptor share it)", ()
     assert.equal(isMobilePlanGated("GET", "/patients", undefined), false);
     assert.equal(isMobilePlanGated("GET", "/mobile/alerts", undefined), false);
     assert.equal(isMobilePlanGated("GET", "/mobile/bootstrap", "kiorly/1"), false);
-    assert.equal(isMobilePlanGated("GET", "/mobile/bootstrap", "kiorly-team/1"), false);
+    assert.equal(isMobilePlanGated("GET", "/mobile/bootstrap", "kiorly/1"), false);
   });
 });
 

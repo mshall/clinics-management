@@ -29,7 +29,7 @@ export function readBearerConfig(env: NodeJS.ProcessEnv = process.env): BearerCo
     issuer,
     jwksUrl: env.KIOREX_OIDC_JWKS_URL?.trim() || `${issuer}/jwks`,
     audiences: list(env.KIOREX_OIDC_BEARER_AUDIENCE, ["kiorex-api", "kiorly-clinic"]),
-    allowedClients: list(env.KIOREX_OIDC_BEARER_CLIENTS, ["kiorly", "kiorly-team"]),
+    allowedClients: list(env.KIOREX_OIDC_BEARER_CLIENTS, ["kiorly", "kiorly"]),
     phoneLink: env.KIOREX_OIDC_PHONE_LINK ? env.KIOREX_OIDC_PHONE_LINK === "true" : !prod,
   };
 }

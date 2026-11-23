@@ -9,7 +9,7 @@ afterEach(() => { process.env = { ...env }; });
 
 let server: http.Server; let issuer = ""; let priv: CryptoKey; let jwk: JWK;
 const sign = (claims: Record<string, unknown>, aud = "kiorex-api", over: { iss?: string; sub?: string } = {}) =>
-  new SignJWT({ client_id: "kiorly-team", phone_number: "+201000002001", phone_number_verified: true, ...claims })
+  new SignJWT({ client_id: "kiorly", phone_number: "+201000002001", phone_number_verified: true, ...claims })
     .setProtectedHeader({ alg: "RS256", kid: "k1" }).setIssuer(over.iss ?? issuer).setAudience(aud).setSubject(over.sub ?? "SUB-1").setIssuedAt().setExpirationTime("10m").sign(priv);
 
 before(async () => {
