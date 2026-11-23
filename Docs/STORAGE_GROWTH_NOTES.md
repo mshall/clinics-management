@@ -53,10 +53,14 @@ Phase 1 **does not delete** live clinic documents in S3:
 | CORS `allowed_origins` | `[]` (no CORS resource until Phase 5 origins set) |
 | `enable_inventory` | false |
 
+## Quality pipeline decisions (confirmed 2026-11)
+
+1. **Threshold 4 MB** — at or under: KEEP pixel-identical; over: REDUCE ladder (images) / lossless then lossy PDF.
+2. **`keepOriginalUploads` default `false`** — files ≤4 MB are already originals; reduced files do not keep a separate `…/orig/` copy unless the tenant opts in.
+3. **Lossy PDF on** for PDFs over 4 MB (`STORAGE_PDF_LOSSY` default on; clinic can disable via env).
+
 ## NEEDS_HUMAN (ask before changing)
 
 1. Confirm retention years / document classes (Phase 4) — DPO/legal.
 2. Confirm plan storage limits (Phase 2 PROPOSAL: 2 GB / 20 GB / 100 GB / 1 TB).
-3. Confirm `keepOriginalUploads` default `false` (Phase 3).
-4. Confirm lossy PDF (`storage.pdf.lossy`) stays off.
-5. GuardDuty Malware Protection for S3 — when to enable (Phase 5 hook only for now).
+3. GuardDuty Malware Protection for S3 — when to enable (Phase 5 hook only for now).

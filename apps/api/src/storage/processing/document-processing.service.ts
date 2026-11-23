@@ -48,14 +48,6 @@ export class DocumentProcessingService {
   /** Enqueue after upload when pipeline is enabled. Never blocks the upload response path beyond the insert. */
   async enqueueProcessDocument(tenantId: string, refModel: DocumentRefModel, refId: string): Promise<void> {
     if (!(await this.isEnabledForTenant(tenantId))) return;
-    const cfg = loadQualityPolicyConfig();
-    // First enable → start two-week shadow window (keep originals of reduced files).
-    await this.prisma.tenant.updateMany({
-      where: { id: tenantId, storageQualityShadowUntil: null },
-      data: {
-        storageQualityShadowUntil: new Date(Date.now() + cfg.shadowModeDays * 24 * 60 * 60_000),
-      },
-    });
     await this.prisma.storageJob.create({
       data: {
         id: randomUUID(),
@@ -113,11 +105,11 @@ export class DocumentProcessingService {
 
       const tenant = await this.prisma.tenant.findUnique({
         where: { id: job.tenantId },
-        select: { keepOriginalUploads: true, storageQualityShadowUntil: true },
+        select: { keepOriginalUploads: true },
       });
-      const shadow =
-        tenant?.storageQualityShadowUntil != null && tenant.storageQualityShadowUntil.getTime() > Date.now();
-      const keepOrig = Boolean(tenant?.keepOriginalUploads) || shadow;
+      // ≤4 MB files are already originals (KEEP path). Separate …/orig/ copies for reduced
+      // files only when the tenant opts in (default false — founder confirm).
+      const keepOrig = Boolean(tenant?.keepOriginalUploads);
 
       let nextBody: Buffer = original;
       let nextMime = mime;

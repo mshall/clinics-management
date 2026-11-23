@@ -22,6 +22,7 @@ export const PLAN_NAV_TAB_PRESETS = {
     "reports",
     "clinics",
     "expenses",
+    "hr",
   ],
   CLINIC: [
     "dashboard",

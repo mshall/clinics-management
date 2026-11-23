@@ -595,7 +595,7 @@ export class Patient360Service {
     };
   }
 
-  async listDoubleLinkedPatients(tenantId: string) {
+  async listDoubleLinkedPatients(tenantId: string, opts?: { reason?: "phone" | "nationalId" | "name_dob" }) {
     const rows = await this.prisma.patient.findMany({
       where: { tenantId, deletedAt: null, isSample: false },
       select: {
@@ -616,20 +616,118 @@ export class Patient360Service {
       take: 5000,
       orderBy: { createdAt: "desc" },
     });
-    const clusters = clusterDoubleLinkedPatients(rows);
-    return {
-      clusters: clusters.map((c) => ({
-        reason: c.reason,
-        matchKey: c.matchKey,
-        patients: c.patients.map((p) => ({
-          ...p,
-          dob: p.dob?.toISOString() ?? null,
-          createdAt: p.createdAt.toISOString(),
-        })),
+    let clusters = clusterDoubleLinkedPatients(rows);
+    if (opts?.reason) {
+      clusters = clusters.filter((c) => c.reason === opts.reason);
+    }
+    const mapped = clusters.map((c) => ({
+      reason: c.reason,
+      matchKey: c.matchKey,
+      patients: c.patients.map((p) => ({
+        ...p,
+        dob: p.dob?.toISOString() ?? null,
+        createdAt: p.createdAt.toISOString(),
       })),
-      totalClusters: clusters.length,
+      safeToAutoMerge: isSafeAutoMergeCluster(c),
+    }));
+    const duplicatePatientCount = mapped.reduce((n, c) => n + c.patients.length, 0);
+    return {
+      clusters: mapped,
+      totalClusters: mapped.length,
+      duplicatePatientCount,
       scannedPatients: rows.length,
     };
+  }
+
+  /** Phone-only duplicate summary for the patients registry badge. */
+  async phoneDuplicateSummary(tenantId: string) {
+    const listed = await this.listDoubleLinkedPatients(tenantId, { reason: "phone" });
+    return {
+      totalClusters: listed.totalClusters,
+      duplicatePatientCount: listed.duplicatePatientCount,
+      safeAutoMergeClusters: listed.clusters.filter((c) => c.safeToAutoMerge).length,
+    };
+  }
+
+  /** Merge only safe phone duplicate clusters (same phone + compatible names). */
+  async mergeSafePhoneDuplicatePatients(tenantId: string, user: JwtUser) {
+    const listed = await this.listDoubleLinkedPatients(tenantId, { reason: "phone" });
+    const merges: Array<{
+      reason: string;
+      matchKey: string;
+      targetPatientId: string;
+      mergedPatientIds: string[];
+    }> = [];
+    const skipped: Array<{ reason: string; matchKey: string; patientIds: string[]; why: string }> = [];
+
+    for (const cluster of listed.clusters) {
+      if (!cluster.safeToAutoMerge) {
+        skipped.push({
+          reason: cluster.reason,
+          matchKey: cluster.matchKey,
+          patientIds: cluster.patients.map((p) => p.id),
+          why: "not_safe_auto_merge",
+        });
+        continue;
+      }
+      const scored = await Promise.all(
+        cluster.patients.map(async (p) => {
+          const full = await this.prisma.patient.findFirstOrThrow({
+            where: { id: p.id, tenantId, deletedAt: null },
+          });
+          const [documents, encounters, appointments, operations] = await Promise.all([
+            this.prisma.patientDocument.count({ where: { tenantId, patientId: p.id } }),
+            this.prisma.encounter.count({ where: { tenantId, patientId: p.id } }),
+            this.prisma.appointment.count({ where: { tenantId, patientId: p.id } }),
+            this.prisma.operation.count({ where: { tenantId, patientId: p.id } }),
+          ]);
+          const snapshot: PatientMergeSnapshot = {
+            firstNameEn: full.firstNameEn,
+            lastNameEn: full.lastNameEn,
+            firstNameAr: full.firstNameAr,
+            lastNameAr: full.lastNameAr,
+            phone: full.phone,
+            email: full.email,
+            nationalId: full.nationalId,
+            dob: full.dob,
+            gender: full.gender,
+            homeBranchId: full.homeBranchId,
+            acquisitionChannel: full.acquisitionChannel,
+            acquisitionReferralName: full.acquisitionReferralName,
+            acquisitionOtherDetail: full.acquisitionOtherDetail,
+            isVip: full.isVip,
+            needsChaperone: full.needsChaperone,
+          };
+          return {
+            id: p.id,
+            score: patientMergeRichnessScore(snapshot, { documents, encounters, appointments, operations }),
+            createdAt: full.createdAt.getTime(),
+          };
+        }),
+      );
+      scored.sort((a, b) => b.score - a.score || a.createdAt - b.createdAt);
+      const targetId = scored[0]!.id;
+      const mergedPatientIds: string[] = [];
+      for (const src of scored.slice(1)) {
+        const stillThere = await this.prisma.patient.findFirst({
+          where: { id: src.id, tenantId, deletedAt: null },
+          select: { id: true },
+        });
+        if (!stillThere) continue;
+        await this.mergePatients(tenantId, user, targetId, src.id);
+        mergedPatientIds.push(src.id);
+      }
+      if (mergedPatientIds.length) {
+        merges.push({
+          reason: cluster.reason,
+          matchKey: cluster.matchKey,
+          targetPatientId: targetId,
+          mergedPatientIds,
+        });
+      }
+    }
+
+    return { ok: true, mergedClusters: merges.length, merges, skipped };
   }
 
   async listClinicalPhotos(tenantId: string, patientId: string) {

@@ -237,6 +237,8 @@ export const PLAN_NAV_TAB_PRESETS: Record<PlanKey, readonly string[]> = {
     "reports",
     "clinics",
     "expenses",
+    // mod_hr is true on Pro — sidebar must expose HR (was Clinic-only; admins lost the tab).
+    "hr",
   ],
   [PlanKey.CLINIC]: [
     "dashboard",
