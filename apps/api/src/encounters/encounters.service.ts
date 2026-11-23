@@ -1033,7 +1033,8 @@ export class EncountersService {
     encounterId: string,
     kind: EncounterDocumentKind,
     file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
-    viewer?: JwtUser
+    viewer?: JwtUser,
+    options?: { replaceDocumentId?: string | null },
   ): Promise<EncounterDocumentDto> {
     const enc = await this.prisma.encounter.findFirst({ where: { id: encounterId, tenantId } });
     if (!enc) throw new NotFoundException("Encounter not found");
@@ -1046,8 +1047,20 @@ export class EncountersService {
     const mime = file.mimetype || "application/octet-stream";
     if (!ALLOWED_MIME.has(mime)) throw new BadRequestException(`Unsupported file type: ${mime}`);
 
+    const replaceDocumentId = options?.replaceDocumentId?.trim() || null;
+    if (replaceDocumentId) {
+      const existing = await this.prisma.encounterDocument.findFirst({
+        where: { id: replaceDocumentId, encounterId, tenantId, kind },
+      });
+      if (!existing) throw new NotFoundException("Document to replace not found");
+      await this.prisma.encounterDocument.delete({ where: { id: existing.id } });
+      await this.uploads.deleteObject("encounters", existing.relativePath);
+      await adjustTenantStorageBytes(this.prisma, tenantId, -existing.sizeBytes);
+    }
+
+    // Prescriptions are additive (multiple files per encounter). Only "no medications"
+    // clears all Rx docs — never wipe siblings on a normal upload.
     if (kind === EncounterDocumentKind.PRESCRIPTION) {
-      await this.deletePrescriptionDocuments(tenantId, encounterId);
       await this.prisma.encounter.update({
         where: { id: encounterId },
         data: { noMedications: false },

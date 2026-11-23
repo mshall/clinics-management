@@ -3578,6 +3578,8 @@
     "close": "Close",
     "back": "Back",
     "remove": "Remove",
+    "download": "Download",
+    "openInNewTab": "Open in new tab",
     "error": "Something went wrong.",
     "optional": "optional",
     "comingSoon": "API-backed data coming with the NestJS backend.",
