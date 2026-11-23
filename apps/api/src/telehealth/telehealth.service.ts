@@ -21,6 +21,7 @@ import { TelehealthException } from "./telehealth.errors";
 import { SIGNALING_TRANSPORT, type SignalingTransport } from "./signaling/signaling-transport";
 import { VIDEO_PROVIDER, type VideoProvider } from "./video/video-provider";
 import { TelehealthNotifier } from "./telehealth-notifier.service";
+import { buildIcs } from "./telehealth-messages";
 
 const sessionInclude = {
   appointment: {
@@ -432,6 +433,17 @@ export class TelehealthService implements OnModuleInit, OnModuleDestroy {
     if (ws === "EXPIRED") return { state: "EXPIRED" as const, ...base };
     const dep = await this.prisma.patientDeposit.findFirst({ where: { tenantId: s.tenantId, appointmentId: s.appointmentId }, orderBy: { createdAt: "desc" }, select: { status: true } });
     return { state: dep?.status === "PENDING" ? ("PAYMENT_REQUIRED" as const) : ("OPEN" as const), ...base };
+  }
+
+  async calendarFor(token: string): Promise<string> {
+    const s = await this.resolvePatient(token);
+    this.assertJoinableOrFuture(s);
+    const w = this.windowOf(s);
+    return buildIcs({ uid: s.id, startsAt: s.appointment.startsAt, endsAt: w.scheduledEnd, summary: `Video visit with ${s.appointment.clinician.displayName}`, link: patientJoinUrl(s) });
+  }
+
+  private assertJoinableOrFuture(s: SessionRow): void {
+    if (s.status === TelehealthSessionStatus.CANCELLED || s.status === TelehealthSessionStatus.ENDED) throw new TelehealthException("TELEHEALTH_CANCELLED");
   }
 
   private wasMoved(s: SessionRow): boolean {

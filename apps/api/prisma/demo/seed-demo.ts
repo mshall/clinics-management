@@ -9,6 +9,7 @@
  * No tax-authority anything: VAT is a plain configurable % line on invoices.
  * Names, phones (+20100000xxxx), e-mails (@demo.kiorex.test) are fictional.
  */
+import { seedTelehealthDemo } from "./seed-telehealth";
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { createHash } from "node:crypto";
@@ -348,6 +349,7 @@ async function main() {
   }
   // Rev 2.3: Nurse edition tenants, physio, registrations, home visits, care plans, MAR (needs the three tenants above)
   summary.push("Rev 2.3: " + (await seedRev23(prisma, { at, reset: RESET })));
+  await seedTelehealthDemo(prisma, { appointment: false }).catch((e) => console.warn("telehealth demo skipped:", e instanceof Error ? e.message : e));
   console.log("Kiorly demo seed OK\n  " + summary.join("\n  ") + `\n  logins: <role>.<na|df|ss|sp>@demo.kiorex.test (sp doctors: <key>.sp@) / ${DEMO_PASSWORD} (DEV ONLY) — see /TEST_DATA.md`);
 }
 

@@ -30,6 +30,16 @@ export class TelehealthPublicController {
     return this.svc.publicInfo(token);
   }
 
+  @Get("calendar.ics")
+  @ApiOperation({ summary: "Optional .ics for the visit (device calendar)" })
+  async ics(@Param("token") token: string, @Req() req: { ip?: string }, @Res() res: { setHeader: (k: string, v: string) => void; send: (b: string) => void }) {
+    this.guard(token, req.ip, "ics", 10);
+    this.noStore(res);
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="video-visit.ics"');
+    res.send(await this.svc.calendarFor(token));
+  }
+
   @Post("join")
   @HttpCode(200)
   async join(@Param("token") token: string, @Req() req: { ip?: string }, @Res({ passthrough: true }) res: { setHeader: (k: string, v: string) => void }) {

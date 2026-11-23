@@ -5,7 +5,9 @@ import { EntitlementsModule } from "../entitlements/entitlements.module";
 import { FeatureFlagsModule } from "../feature-flags/feature-flags.module";
 import { InternalJobKeyGuard } from "../home-visits/internal-job-key.guard";
 import { MessagingModule } from "../messaging/messaging.module";
+import { PatientsModule } from "../patients/patients.module";
 import { providerMode } from "../common/provider-mode";
+import { SubscriptionsModule } from "../subscriptions/subscriptions.module";
 import { UserNavTabsModule } from "../user-nav-tabs/user-nav-tabs.module";
 import { PrismaService } from "../prisma/prisma.service";
 import { HttpPollingSignaling } from "./signaling/http-polling.signaling";
@@ -24,7 +26,7 @@ import { VIDEO_PROVIDER } from "./video/video-provider";
 
 /** ADR-039 telehealth: Clinic owns the session; media is browser-to-browser WebRTC (no vendor, no recording). */
 @Module({
-  imports: [AppointmentsModule, AuditModule, EntitlementsModule, FeatureFlagsModule, MessagingModule, UserNavTabsModule],
+  imports: [AppointmentsModule, AuditModule, EntitlementsModule, FeatureFlagsModule, MessagingModule, PatientsModule, SubscriptionsModule, UserNavTabsModule],
   controllers: [TelehealthController, TelehealthPublicController, TelehealthInternalController],
   providers: [
     InternalJobKeyGuard,
