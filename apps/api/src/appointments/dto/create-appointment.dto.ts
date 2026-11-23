@@ -5,6 +5,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -17,6 +18,11 @@ import { ScheduledFeeCollectionDto } from "../../common/dto/scheduled-fee-collec
 import { ProvisionalPatientDto } from "./provisional-patient.dto";
 
 export class CreateAppointmentDto {
+  @ApiPropertyOptional({ enum: ["IN_CLINIC", "TELEHEALTH"], description: "ADR-039: TELEHEALTH creates the linked video session (flag telehealth.video + doctor offers telehealth)" })
+  @IsOptional()
+  @IsIn(["IN_CLINIC", "TELEHEALTH"])
+  visitMode?: "IN_CLINIC" | "TELEHEALTH";
+
   @ApiProperty()
   @IsString()
   clinicId!: string;

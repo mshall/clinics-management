@@ -28,7 +28,7 @@ describe("provider mode: every integration is MOCK by default", () => {
     for (const k of KEYS) if (k !== "NODE_ENV") delete process.env[k];
     for (const env of ["test", "development", "production"]) {
       process.env.NODE_ENV = env;
-      assert.deepEqual(Object.values(providerModes()), ["mock", "mock", "mock", "mock", "mock", "mock"], env);
+      assert.deepEqual(Object.values(providerModes()), ["mock", "mock", "mock", "mock", "mock", "mock", "mock"], env);
     }
   });
 

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AppointmentStatusBadge } from "@/components/appointment-status-badge";
+import { VideoVisitBadge } from "@/features/telehealth/telehealth-panel";
 import { appointmentCalendarEventChipClassName, statusDotClass } from "@/components/appointment-status";
 import { NoShowRiskChip } from "@/components/no-show-risk-chip";
 import { Button } from "@/components/ui/button";
@@ -471,6 +472,7 @@ export function AppointmentsCalendarPanel() {
                             </div>
                             <div className="flex shrink-0 flex-col items-end gap-1">
                               <AppointmentStatusBadge status={a.status} className="hidden sm:inline-flex" />
+                              <VideoVisitBadge serviceLocation={a.serviceLocation} />
                               <NoShowRiskChip risk={a.noShowRisk} interactive={false} />
                             </div>
                           </button>

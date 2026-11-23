@@ -25,7 +25,7 @@ const KX_SUBJECT_DELETED = "https://schemas.kiorex.com/event/subject.deleted";
 const SSO_FLAG = "account.provider_sso";
 
 export type KiorexCallbackResult =
-  | { status: "SESSION"; session: Awaited<ReturnType<AuthService["issueSsoSession"]>> }
+  | { status: "SESSION"; session: Awaited<ReturnType<AuthService["issueSsoSession"]>>; /** Passport RP-initiated logout URL (id_token_hint): the web app navigates here on sign-out so Passport does not stay signed in. */ endSessionUrl?: string }
   | { status: "MFA_REQUIRED"; ticket: string; mfaWhatsApp: boolean }
   | { status: "LINK_REQUIRED" }
   | { status: "LINKED" };
@@ -158,7 +158,15 @@ export class KiorexOidcService {
     });
     // Never auto-merge or auto-create: an unlinked subject must link explicitly from a signed-in session.
     if (!link) return { status: "LINK_REQUIRED" };
-    return this.finishLogin(link.userId, claims.sid, undefined, meta, state);
+    return this.finishLogin(link.userId, claims.sid, undefined, meta, state, this.endSessionUrlFor(port, claims.idToken, txn.edition));
+  }
+
+  /** Where the web app sends the browser on sign-out. Only the registered post-logout URI (the web root) is ever requested. */
+  private endSessionUrlFor(port: KiorexOidcPort, idToken: string | undefined, edition: string | null | undefined): string | undefined {
+    if (!idToken || !port.endSessionUrl) return undefined;
+    // Clinic edition: the web root is the registered post-logout URI. Nurse edition has no registered local one, so Passport shows its own signed-out page.
+    const web = edition === "NURSE" ? undefined : readKiorexOidcConfig()?.redirectUri;
+    return port.endSessionUrl({ idTokenHint: idToken, postLogoutRedirectUri: web ? `${new URL(web).origin}/` : undefined });
   }
 
   private async completeLink(
@@ -196,13 +204,14 @@ export class KiorexOidcService {
     mfaCode: string | undefined,
     meta: LoginSessionMeta,
     ticketState?: string,
+    endSessionUrl?: string,
   ): Promise<KiorexCallbackResult> {
     try {
       const session = await this.auth.issueSsoSession(userId, mfaCode, meta);
       if (sid) {
         await this.prisma.userSession.update({ where: { id: session.sessionId }, data: { kiorexSid: sid } });
       }
-      return { status: "SESSION", session };
+      return { status: "SESSION", session, ...(endSessionUrl ? { endSessionUrl } : {}) };
     } catch (e) {
       const body = (e as { getResponse?: () => unknown }).getResponse?.() as
         | { errorCode?: string; mfaWhatsApp?: boolean }
@@ -213,7 +222,8 @@ export class KiorexOidcService {
           data: {
             state: ticketState,
             nonce: "-",
-            codeVerifier: "-",
+            // MFA_TICKET rows never use the PKCE verifier: the (5-minute) ticket carries the logout URL to the second step instead
+            codeVerifier: endSessionUrl ?? "-",
             mode: "MFA_TICKET",
             userId,
             sid: sid ?? null,
@@ -231,7 +241,7 @@ export class KiorexOidcService {
     if (!txn || txn.mode !== "MFA_TICKET" || !txn.userId || txn.expiresAt.getTime() < Date.now()) {
       throw new UnauthorizedException("Unknown or expired sign-in ticket");
     }
-    const res = await this.finishLogin(txn.userId, txn.sid ?? undefined, mfaCode, meta);
+    const res = await this.finishLogin(txn.userId, txn.sid ?? undefined, mfaCode, meta, undefined, txn.codeVerifier.startsWith("http") ? txn.codeVerifier : undefined);
     if (res.status === "SESSION") await this.prisma.kiorexOidcTransaction.delete({ where: { state: ticket } }).catch(() => undefined);
     return res;
   }
@@ -250,6 +260,7 @@ export class KiorexOidcService {
         issuer: port.issuer,
         audience: port.clientId,
         algorithms: ["RS256"],
+        typ: "logout+jwt",
         clockTolerance: 5,
       }));
     } catch (e) {

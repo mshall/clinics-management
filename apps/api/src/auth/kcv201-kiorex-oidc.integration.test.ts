@@ -51,6 +51,8 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
       lastChecks = checks;
       return nextClaims;
     },
+    endSessionUrl: ({ idTokenHint, postLogoutRedirectUri }) =>
+      `${ISSUER}/session/end?id_token_hint=${idTokenHint}${postLogoutRedirectUri ? `&post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}` : ""}`,
     logoutKeys: () => createLocalJWKSet({ keys: jwks }),
   });
 
@@ -143,6 +145,19 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
     const row = await prisma.userSession.findFirstOrThrow({ where: { kiorexSid: "sid-A" } });
     assert.equal(row.userId, userId);
     assert.equal(row.revokedAt, null);
+
+    // sign-out must end the Passport session too: the callback hands the web app the RP-initiated logout URL (id_token_hint)
+    nextClaims = { sub: "kx-sub-1", sid: "sid-B", idToken: "id.token.jwt" };
+    const withHint = await svc.handleCallback({ code: "c", state: await startAndState() }, {});
+    assert.equal(withHint.status, "SESSION");
+    const url = new URL((withHint as { endSessionUrl?: string }).endSessionUrl!);
+    assert.equal(url.pathname, "/session/end");
+    assert.equal(url.searchParams.get("id_token_hint"), "id.token.jwt");
+    assert.equal(url.searchParams.get("post_logout_redirect_uri"), "http://localhost:5174/");
+    // no ID token (should never happen against Passport) => no logout URL, sign-out stays local
+    nextClaims = { sub: "kx-sub-1", sid: "sid-C" };
+    const bare = await svc.handleCallback({ code: "c", state: await startAndState() }, {});
+    assert.equal((bare as { endSessionUrl?: string }).endSessionUrl, undefined);
   });
 
   it("a Kiorex subject can't be linked to two users, nor a user to two subjects", async () => {

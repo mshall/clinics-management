@@ -1,3 +1,4 @@
+import { shouldShowMarketSelector } from "@/lib/market-selector-policy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -282,30 +283,32 @@ export function PlatformOrganizationsTab() {
               <Label required>{t("admin.nameAr", "Name (AR)")}</Label>
               <Input value={tenantNameAr} onChange={(e) => setTenantNameAr(e.target.value)} dir="rtl" />
             </div>
-            <div className="space-y-2">
-              <Label required>{t("platform.marketPack", "Country (launched market)")}</Label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={tenantMarketId}
-                required
-                onChange={(e) => {
-                  const id = e.target.value;
-                  setTenantMarketId(id);
-                  const m = liveMarkets.find((x) => x.id === id);
-                  if (m?.defaultCurrency) setTenantCurrency(m.defaultCurrency);
-                }}
-              >
-                {liveMarkets.length === 0 ? (
-                  <option value="">{t("platform.noLiveMarkets", "No live markets — launch Egypt first")}</option>
-                ) : (
-                  liveMarkets.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.code} — {m.nameEn} ({m.hostCell})
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
+            {shouldShowMarketSelector(liveMarkets) && (
+              <div className="space-y-2">
+                <Label required>{t("platform.marketPack", "Country (launched market)")}</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={tenantMarketId}
+                  required
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setTenantMarketId(id);
+                    const m = liveMarkets.find((x) => x.id === id);
+                    if (m?.defaultCurrency) setTenantCurrency(m.defaultCurrency);
+                  }}
+                >
+                  {liveMarkets.length === 0 ? (
+                    <option value="">{t("platform.noLiveMarkets", "No live markets — launch Egypt first")}</option>
+                  ) : (
+                    liveMarkets.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.code} — {m.nameEn} ({m.hostCell})
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>{t("platform.orgDefaultTax", "Tax registration (optional)")}</Label>
               <Input

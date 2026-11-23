@@ -9,6 +9,20 @@ test.describe("Theme switcher", () => {
     await expect(page.locator("html")).toHaveClass(/theme-clinical-os/);
   });
 
+  test("light stays the default on a dark OS; an explicit dark choice is restored in a later visit (same browser profile)", async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: "dark" });
+    const page = await ctx.newPage();
+    await page.goto("/login");
+    await expectThemeApplied(page, "clinical-os-light");
+    await toggleTheme(page);
+    await expectThemeApplied(page, "clinical-os-dark");
+    await page.close();
+    const next = await ctx.newPage(); // new tab = new session storage: only the persisted choice can restore it
+    await next.goto("/login");
+    await expectThemeApplied(next, "clinical-os-dark");
+    await ctx.close();
+  });
+
   test("login page applies Material Light", async ({ page }) => {
     await page.goto("/login");
     await selectTheme(page, /material — light/i);

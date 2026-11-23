@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { AuthUserDto } from "@/lib/api-schema";
 import { apiUrl } from "@/lib/api-url";
+import { sessionIdFromAccessToken } from "@/lib/session-id";
 import { mapApiRole } from "@/lib/roles";
 import type { MoneyVisibilityOverrides } from "@/lib/money-visibility-policy";
 import type { DemoRole } from "@/lib/roles";
@@ -73,6 +74,21 @@ interface AuthState {
   setHasAvatar: (hasAvatar: boolean) => void;
 }
 
+/** Best-effort server-side revoke so the refresh token dies with the sign-out (never blocks or throws). */
+function revokeServerSession(accessToken: string | null): void {
+  const sid = sessionIdFromAccessToken(accessToken);
+  if (!accessToken || !sid || typeof fetch !== "function") return;
+  try {
+    void fetch(apiUrl(`/api/v1/auth/sessions/${encodeURIComponent(sid)}`), {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    /* offline or blocked: the local sign-out still happens */
+  }
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -109,7 +125,16 @@ export const useAuthStore = create<AuthState>()(
             entitlements: raw.entitlements ?? undefined,
           },
         }),
-      signOut: () => set({ accessToken: null, refreshToken: null, user: null }),
+      signOut: () => {
+        revokeServerSession(get().accessToken);
+        set({ accessToken: null, refreshToken: null, user: null });
+        // A session that started at Kiorex Passport also ends the Passport session (RP-initiated logout with id_token_hint),
+        // otherwise "Sign in with Kiorex Passport" would sign the user straight back in and every other Passport app stays signed in.
+        try {
+          const url = localStorage.getItem("kiorly-passport-logout");
+          if (url) { localStorage.removeItem("kiorly-passport-logout"); if (/^https?:\/\//.test(url)) window.location.assign(url); }
+        } catch { /* ignore */ }
+      },
       setHasAvatar: (hasAvatar) =>
         set((state) => (state.user ? { user: { ...state.user, hasAvatar } } : state)),
       refreshSessionFromServer: async () => {

@@ -19,6 +19,8 @@ export type KiorexIdentityClaims = {
   phone_number?: string;
   phone_number_verified?: boolean;
   name?: string;
+  /** Raw ID token: kept only to build the RP-initiated logout `id_token_hint` (never stored server-side, never logged). */
+  idToken?: string;
 };
 
 export interface KiorexOidcPort {
@@ -29,6 +31,8 @@ export interface KiorexOidcPort {
     checks: { state: string; nonce: string; codeVerifier: string },
     opts?: { redirectUri?: string },
   ): Promise<KiorexIdentityClaims>;
+  /** RP-initiated logout URL. With a verified `id_token_hint` Passport ends its session without a confirmation page. */
+  endSessionUrl?(p: { idTokenHint: string; postLogoutRedirectUri?: string }): string;
   logoutKeys(): JWTVerifyGetKey;
   readonly issuer: string;
   readonly clientId: string;
@@ -101,8 +105,11 @@ export async function createOpenIdClientPort(cfg: KiorexOidcConfig): Promise<Kio
         phone_number: c.phone_number as string | undefined,
         phone_number_verified: c.phone_number_verified as boolean | undefined,
         name: c.name as string | undefined,
+        idToken: tokens.id_token,
       };
     },
+    endSessionUrl: ({ idTokenHint, postLogoutRedirectUri }) =>
+      oidc.buildEndSessionUrl(config, { id_token_hint: idTokenHint, client_id: cfg.clientId, ...(postLogoutRedirectUri ? { post_logout_redirect_uri: postLogoutRedirectUri } : {}) }).href,
     logoutKeys: () => keys,
   };
 }

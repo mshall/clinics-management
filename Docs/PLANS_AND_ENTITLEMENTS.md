@@ -50,6 +50,7 @@ Boolean module keys by plan (`Yes` = entitled). Limits use numeric cells.
 | `ai_assistant` | No | Yes | Yes | Yes |
 | `ai_scribe` | No | No | Yes | Yes |
 | `deposits` | No | Yes | Yes | Yes |
+| `telehealth_video` | Yes | Yes | Yes | Yes |
 | `multi_branch` | No | No | Yes | Yes |
 | `whatsapp_reminders` | No | Yes | Yes | Yes |
 | `card_payments` | No | Yes | Yes | Yes |

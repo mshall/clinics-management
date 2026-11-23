@@ -17,6 +17,7 @@ import { avatarGradient, profileInitials } from "@/lib/profile-avatar";
 import { useAuthenticatedImage } from "@/lib/use-authenticated-image";
 import { useAuthStore } from "@/stores/auth-store";
 import { DigestPreferencesCard } from "@/features/profile/digest-preferences-card";
+import { TelehealthSettingsCard } from "@/features/telehealth/telehealth-settings-card";
 import { KiorexLinkPanel } from "@/features/auth/kiorex-passport";
 import { ProfileMfaPanel } from "@/features/profile/profile-mfa-panel";
 import { ProfileSessionsPanel } from "@/features/profile/profile-sessions-panel";
@@ -273,6 +274,8 @@ export function ProfilePage() {
 
         <ProfileSessionsPanel />
 
+        {user?.tenantId && user?.role === "physician" ? <TelehealthSettingsCard clinicianId={user.id} /> : null}
+        {user?.tenantId && user?.role !== "physician" && ["group_admin", "clinic_admin", "branch_manager"].includes(String(user?.role)) ? <TelehealthSettingsCard clinicianId={user.id} canManageServices servicesOnly /> : null}
         {user?.tenantId ? <DigestPreferencesCard /> : null}
 
         <Card>

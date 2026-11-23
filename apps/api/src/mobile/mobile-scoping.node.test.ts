@@ -19,7 +19,7 @@ function svc(opts: { edition?: string; profession?: string | null; totals?: (fro
 }
 const code = async (fn: () => Promise<unknown>) => { try { await fn(); return null; } catch (e) { return (e as { getResponse?: () => { code?: string } }).getResponse?.().code ?? "ERR"; } };
 
-describe("Kiorly Team: endpoint role scoping matches the module a role gets", () => {
+describe("Kiorly: endpoint role scoping matches the module a role gets", () => {
   it("accountant, front desk and call centre cannot read prescriptions or lab results; accountant cannot search patients", async () => {
     for (const role of [UserRole.FINANCE_OFFICER, UserRole.RECEPTIONIST, UserRole.CALL_CENTER]) {
       assert.equal(await code(() => svc().prescriptions(user(role) as never)), "MODULE_NOT_ALLOWED", `${role} prescriptions`);
@@ -33,7 +33,7 @@ describe("Kiorly Team: endpoint role scoping matches the module a role gets", ()
   });
 });
 
-describe("Kiorly Team: revenue snapshot uses the web ledger calendar", () => {
+describe("Kiorly: revenue snapshot uses the web ledger calendar", () => {
   it("asks the ledger for server-local YYYY-MM-DD days (same as /revenue/totals), 7 daily + 30-day window", async () => {
     const asked: [string, string][] = [];
     const s = svc({ totals: (from, to) => { asked.push([from, to]); return { netTotal: 10, grossTotal: 12 }; } });
@@ -46,7 +46,7 @@ describe("Kiorly Team: revenue snapshot uses the web ledger calendar", () => {
   });
 });
 
-describe("Kiorly Team: vitals are idempotent per Idempotency-Key (offline replay)", () => {
+describe("Kiorly: vitals are idempotent per Idempotency-Key (offline replay)", () => {
   it("derives a stable row id from tenant + user + key, and not from other keys or users", async () => {
     const ids: unknown[] = [];
     const s = svc({ recordVitals: (...a) => { ids.push((a[5] as { id?: string })?.id); return { id: "v", critical: false, replayed: false }; } });

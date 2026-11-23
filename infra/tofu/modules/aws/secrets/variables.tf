@@ -37,6 +37,16 @@ variable "placeholder_secrets" {
   default     = []
 }
 
+variable "named_placeholder_secrets" {
+  description = "Like placeholder_secrets but with an EXPLICIT full secret name (not prefixed with var.name), for paths other systems/scripts expect, e.g. /kiorly-clinic/staging/cloudflare-turn (ADR-039). Empty container, populated by a human or script; always a 30-day recovery window; product CMK when one exists. Values never pass through OpenTofu."
+  type        = set(string)
+  default     = []
+  validation {
+    condition     = alltrue([for n in var.named_placeholder_secrets : can(regex("^/[A-Za-z0-9/_+=.@-]+$", n))])
+    error_message = "named_placeholder_secrets must be absolute secret names such as /kiorly-clinic/staging/cloudflare-turn."
+  }
+}
+
 variable "openai_secret_name" {
   description = "Name of an EXISTING Secrets Manager secret holding {apiKey} (created by scripts/configure-apprunner-openai.sh). null = none."
   type        = string

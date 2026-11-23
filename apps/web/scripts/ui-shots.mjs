@@ -38,6 +38,7 @@ for (const s of sets) {
     await page.evaluate(([l, d]) => { try { localStorage.setItem("cms_locale", l); localStorage.setItem("cms-theme", JSON.stringify({ state: { themeId: d ? "clinical-os-dark" : "clinical-os-light", persistDefault: true }, version: 0 })); } catch {} }, [mode.lang, mode.dark]);
     await page.reload({ waitUntil: "domcontentloaded" });
     if (mode.n === "en-light") await page.screenshot({ path: `${out}/${s.dir}/${phase}-${s.prefix ?? ""}login-${mode.n}.png` });
+    { const t = page.getByTestId("signin-method-password"); await t.waitFor({ state: "visible", timeout: 8000 }).then(() => t.click()).catch(() => {}); }
     await page.locator("#email").fill(s.email);
     await page.locator("#password").fill("Demo@12345");
     await page.locator("button[type=submit]").first().click();

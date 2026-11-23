@@ -34,6 +34,8 @@ import { NurseModule } from "../nurse/nurse.module";
 import { RecordShareModule } from "./record-share.module";
 import { SlotCapacityService } from "./slot-capacity.service";
 import { MarketplaceWaitlistService } from "./marketplace-waitlist.service";
+import { KiorexImportController } from "./kiorex-import.controller";
+import { KiorexImportService } from "./kiorex-import.service";
 
 @Module({
   imports: [
@@ -59,6 +61,7 @@ import { MarketplaceWaitlistService } from "./marketplace-waitlist.service";
     MarketplaceListingsProfileController,
     KiorexSettingsController,
     PublicBookingPageController,
+    KiorexImportController,
   ],
   providers: [
     KiorexSettingsService,
@@ -77,6 +80,7 @@ import { MarketplaceWaitlistService } from "./marketplace-waitlist.service";
     SlotHoldExpiryScheduler,
     SlotCapacityService,
     MarketplaceWaitlistService,
+    KiorexImportService,
   ],
   exports: [MarketplaceListingService, PlatformIntegrationClientService, MarketplaceProviderProfileService],
 })

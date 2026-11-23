@@ -1,4 +1,4 @@
-import { Module, forwardRef } from "@nestjs/common";
+import { Global, Module, forwardRef } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
@@ -18,7 +18,10 @@ import { AuthPasswordResetService } from "./auth-password-reset.service";
 import { AuthOtpLoginService } from "./auth-otp-login.service";
 import { KiorexOidcController } from "./kiorex-oidc.controller";
 import { KiorexOidcService } from "./kiorex-oidc.service";
+import { PrismaHandoffStore } from "./handoff.store";
+import { KiorexBearerService } from "./kiorex-bearer.service";
 
+@Global()
 @Module({
   imports: [
     PrismaModule,
@@ -46,7 +49,9 @@ import { KiorexOidcService } from "./kiorex-oidc.service";
     AuthPasswordResetService,
     AuthOtpLoginService,
     KiorexOidcService,
+    KiorexBearerService,
+    PrismaHandoffStore,
   ],
-  exports: [AuthService, MfaService, PrivilegedMfaGuard, AuthSessionService],
+  exports: [AuthService, MfaService, PrivilegedMfaGuard, AuthSessionService, KiorexBearerService],
 })
 export class AuthModule {}

@@ -16,6 +16,8 @@ import { AcceptInvitationPage } from "@/features/auth/accept-invitation-page";
 import { RepConsolePage } from "@/features/rep/rep-console-page";
 import { OnboardingPage } from "@/features/onboarding/onboarding-page";
 import { OfflineTodayPage } from "@/features/pwa/offline-today-page";
+import { PatientJoinPage } from "@/features/telehealth/patient-join-page";
+import { TelehealthCallPage } from "@/features/telehealth/telehealth-call-page";
 import { AppointmentReschedulePage } from "@/features/appointments/appointment-reschedule-page";
 import { DepositPayPage } from "@/features/appointments/deposit-pay-page";
 import { PublicBookingPage } from "@/features/kiorex/public-booking-page";
@@ -108,6 +110,8 @@ export const router = createBrowserRouter([
   { path: "/pricing", element: <MarketingHomePage /> },
   { path: "/legal/:docId", element: <LegalDocumentPage /> },
   { path: "/r/:token", element: <AppointmentReschedulePage /> },
+  // ADR-039 — public patient video-visit page (token link, works in a mobile WebView).
+  { path: "/v/:token", element: <PatientJoinPage /> },
   { path: "/pay/:token", element: <DepositPayPage /> },
   { path: "/b/:slug", element: <PublicBookingPage /> },
   { path: "/rx/:token", element: <PublicRxVerifyPage /> },
@@ -118,6 +122,17 @@ export const router = createBrowserRouter([
   { path: "/invite/:token", element: <AcceptInvitationPage /> },
   { path: "/forgot-password", element: <ForgotPasswordPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
+  // ADR-039 — clinician call page (full-viewport, authenticated).
+  {
+    path: "/telehealth/:sessionId",
+    element: (
+      <ProtectedRoute>
+        <NavGate tab="appointments">
+          <TelehealthCallPage />
+        </NavGate>
+      </ProtectedRoute>
+    ),
+  },
   {
     path: "/rep",
     element: (

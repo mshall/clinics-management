@@ -1,3 +1,5 @@
+import { EntitlementsService } from "../entitlements/entitlements.service";
+import { telehealthOfferedBy } from "../telehealth/telehealth-availability";
 import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { ListingStatus, Prisma, VerificationStatus } from "@prisma/client";
 import path from "node:path";
@@ -29,7 +31,8 @@ export type PublishedFee = {
   /** KXM-PAY-01: the clinic's deposit for this visit type (null = none). Kiorex requires it before confirming payment. */
   depositAmount: number | null;
   /** Rev 2.3 (contracts 1.5.0): only present for HOME visit types. */
-  serviceLocation?: "HOME";
+  /** ADR-039: VIDEO types are published only while telehealth is on and the doctor offers it. */
+  serviceLocation?: "HOME" | "VIDEO";
   /** BR56: separate from `amount`; Kiorex shows amount + homeSurcharge; Kiorly never lets it enter commission (S) or the settlement base (C). */
   homeSurcharge?: number;
 };
@@ -48,6 +51,7 @@ export function publishedFee(
     currency,
     depositAmount: dep != null && dep > 0 ? dep : null,
     ...(t.serviceLocation === "HOME" ? { serviceLocation: "HOME" as const, homeSurcharge: t.homeSurchargeAmount == null ? 0 : Number(t.homeSurchargeAmount) } : {}),
+    ...(t.serviceLocation === "VIDEO" ? { serviceLocation: "VIDEO" as const } : {}),
   };
 }
 
@@ -78,7 +82,7 @@ export type PublishedProviderDto = {
   /** Rev 2.3 (KX-09 §03, contracts 1.5.0): additive provider-sync fields. */
   profession?: string;
   edition?: "CLINIC" | "NURSE";
-  serviceLocations?: ("IN_CLINIC" | "HOME")[];
+  serviceLocations?: ("IN_CLINIC" | "HOME" | "VIDEO")[];
   /** District codes only; no polygons or coordinates. */
   coverageDistricts?: string[];
   verification?: { register: string };
@@ -121,6 +125,7 @@ export class MarketplaceProviderProfileService {
     private readonly audit: AuditService,
     @Inject(UPLOAD_BLOB_STORAGE) private readonly uploads: UploadBlobStorage,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly entitlements?: EntitlementsService,
   ) {}
 
   async getEditor(user: JwtUser, listingId: string): Promise<ProviderProfileEditorDto> {
@@ -303,7 +308,7 @@ export class MarketplaceProviderProfileService {
     const completenessPercent = await this.completenessForListing(row);
     // HOME is offered only while clinic.home_visits is effective and the clinician takes home visits ("Home visit types hidden for new bookings").
     const v23 = await this.v23Fields(row.tenantId, row.clinicianId, types.map((t) => t.serviceLocation));
-    const offered = types.filter((t) => t.serviceLocation !== "HOME" || v23.homeOffered);
+    const offered = types.filter((t) => (t.serviceLocation !== "HOME" || v23.homeOffered) && (t.serviceLocation !== "VIDEO" || v23.telehealthOffered));
     const fees = offered.map((t) => publishedFee(t, profile.feesByAppointmentTypeId?.[t.id], clinic.defaultCurrency));
 
     return {
@@ -348,17 +353,20 @@ export class MarketplaceProviderProfileService {
     const profession = user ? effectiveProfession(user) : null;
     const homeFlag = this.flags ? (await this.flags.evaluate(tenantId, "clinic.home_visits")).effective : false;
     const homeOffered = Boolean(hasHomeTypes && homeFlag && settings?.acceptsHomeVisits);
+    const hasVideoTypes = typeLocations.includes("VIDEO");
+    // ADR-039: VIDEO is offered only while flag + entitlement are on AND the doctor switched "Offers telehealth" on.
+    const telehealthOffered = hasVideoTypes && (await telehealthOfferedBy({ prisma: this.prisma as never, flags: this.flags, entitlements: this.entitlements }, tenantId, clinicianId));
     const pack = resolveProfessionPack(tenant?.market);
     const register = profession ? pack.verification[profession]?.registers.find((r) => r.isSyndicate)?.code : undefined;
     const fields: Pick<PublishedProviderDto, "profession" | "edition" | "serviceLocations" | "coverageDistricts" | "verification" | "assignsClinician"> = {
       ...(profession ? { profession } : {}),
       edition: tenant?.edition ?? "CLINIC",
-      serviceLocations: [...(typeLocations.some((l) => l !== "HOME") || typeLocations.length === 0 ? (["IN_CLINIC"] as const) : []), ...(homeOffered ? (["HOME"] as const) : [])],
+      serviceLocations: [...(typeLocations.some((l) => l !== "HOME" && l !== "VIDEO") || typeLocations.length === 0 ? (["IN_CLINIC"] as const) : []), ...(homeOffered ? (["HOME"] as const) : []), ...(telehealthOffered ? (["VIDEO"] as const) : [])],
       coverageDistricts: homeOffered ? settings?.coverageDistrictIds ?? [] : [],
       ...(register ? { verification: { register } } : {}),
       ...(tenant?.nurseTenantKind === "AGENCY" ? { assignsClinician: true } : {}),
     };
-    return { fields, homeOffered };
+    return { fields, homeOffered, telehealthOffered };
   }
 
   private async buildEditorDto(row: Prisma.MarketplaceListingGetPayload<object>): Promise<ProviderProfileEditorDto> {

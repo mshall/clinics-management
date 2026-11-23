@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { AppointmentStatus, BookingSource, EncounterStatus, Prisma, UserRole, VisitCollectionMode } from "@prisma/client";
+import { AppointmentStatus, BookingSource, EncounterStatus, Prisma, ServiceLocation, UserRole, VisitCollectionMode } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { findActiveSchedulingPhysician } from "../common/active-scheduling-physician";
 import {
@@ -55,6 +55,10 @@ import { AppointmentOutboxService } from "../messaging/appointment-outbox.servic
 import { DepositSettlementService } from "../billing/deposit-settlement.service";
 import { auditClinicCancellation, clinicCancellationEventMetadata, clinicCancellationPatch } from "./kiorex-clinic-cancel";
 import { syncHomeVisitWithAppointmentStatus } from "../home-visits/home-visit-sync";
+import { assertTelehealthBookable } from "../telehealth/telehealth-availability";
+import { notifyTelehealthChanged } from "../telehealth/telehealth-hooks";
+import { telehealthBlock } from "../telehealth/telehealth-events";
+import { ensureTelehealthSession, syncTelehealthWithAppointment } from "../telehealth/telehealth-sync";
 
 const appointmentDtoInclude = {
   patient: {
@@ -218,6 +222,8 @@ export class AppointmentsService {
       scheduledCollectionMode: row.scheduledCollectionMode ?? null,
       scheduledTransferChannel: row.scheduledTransferChannel ?? null,
       status: row.status,
+      serviceLocation: row.serviceLocation,
+      visitType: row.serviceLocation === ServiceLocation.VIDEO ? "TELEHEALTH" : row.serviceLocation === ServiceLocation.HOME ? "HOME" : "IN_PERSON",
       notes: row.notes,
       roomLabel: row.roomLabel ?? null,
       queueStage: row.queueStage ?? null,
@@ -263,7 +269,17 @@ export class AppointmentsService {
     });
     const latest = new Map<string, (typeof rows)[number]>();
     for (const r of rows) if (r.appointmentId && !latest.has(r.appointmentId)) latest.set(r.appointmentId, r);
-    return dtos.map((d) => {
+    // ADR-039: the telehealth session summary rides along with the deposit badge (one extra query, only for VIDEO rows).
+    const videoIds = dtos.filter((d) => d.serviceLocation === "VIDEO").map((d) => d.id);
+    const sessions = videoIds.length
+      ? await this.prisma.telehealthSession.findMany({ where: { tenantId, appointmentId: { in: videoIds } } })
+      : [];
+    const byApt = new Map(sessions.map((s) => [s.appointmentId, s]));
+    return dtos.map((d0) => {
+      const ts = byApt.get(d0.id);
+      const d: AppointmentDto = ts
+        ? { ...d0, telehealth: { ...telehealthBlock(ts, { startsAt: new Date(d0.startsAt), endsAt: d0.endsAt ? new Date(d0.endsAt) : null }), needsStaffReview: ts.needsStaffReview } }
+        : d0;
       const dep = latest.get(d.id);
       if (!dep) return { ...d, deposit: null };
       return {
@@ -787,8 +803,17 @@ export class AppointmentsService {
       integration.attributionJson ?? dto.attributionJson ?? null;
     const newPatientStamp = await this.newPatients.stampNewPatientAtBooking(tenantId, patientId, start);
 
-    const row = await this.prisma.appointment.create({
+    // ADR-039: a telehealth booking needs flag + entitlement + a doctor who offers it, and a patient phone (the link goes by SMS/WhatsApp).
+    const wantsVideo = dto.visitMode === "TELEHEALTH" || (dto.visitMode !== "IN_CLINIC" && apptType?.serviceLocation === ServiceLocation.VIDEO);
+    if (wantsVideo) {
+      await assertTelehealthBookable({ prisma: this.prisma, flags: this.featureFlags, entitlements: this.entitlements }, tenantId, dto.clinicianId.trim());
+      if (!patient.phone?.trim()) throw new BadRequestException({ code: "TELEHEALTH_PATIENT_PHONE_REQUIRED", message: "A patient phone number is required for a telehealth visit" });
+    }
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.appointment.create({
       data: {
+        ...(wantsVideo ? { serviceLocation: ServiceLocation.VIDEO } : {}),
         tenantId,
         clinicId: dto.clinicId,
         patientId,
@@ -812,7 +837,11 @@ export class AppointmentsService {
         newPatientCheckedAt: newPatientStamp.newPatientCheckedAt,
       },
       include: appointmentDtoInclude,
+      });
+      if (wantsVideo) await ensureTelehealthSession(tx, created, actor?.userId ?? null);
+      return created;
     });
+    if (wantsVideo) await notifyTelehealthChanged(tenantId, row.id);
     if (row.status === AppointmentStatus.CONFIRMED) {
       await this.appointmentOutbox.emitStatusChange({
         tenantId,
@@ -882,11 +911,8 @@ export class AppointmentsService {
           reason: row.cancellationReason,
         });
       }
-      if (!isRevertingAppointmentCheckIn(existing.status, status)) {
-        await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
-      }
       if (status === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN) {
-        await this.commissionCharges.onCheckIn(tx, tenantId, id, row.checkedInAt ?? new Date());
+        await this.runCheckInEffects(tx, tenantId, id, row.checkedInAt ?? new Date());
       } else if (
         status === AppointmentStatus.CANCELLED ||
         status === AppointmentStatus.NO_SHOW
@@ -897,8 +923,12 @@ export class AppointmentsService {
         await this.commissionCharges.onComplete(tx, tenantId, id);
       }
       if (credit) creditIntents.push(credit);
+      if (!isRevertingAppointmentCheckIn(existing.status, status) && !(status === AppointmentStatus.CHECKED_IN && existing.status !== AppointmentStatus.CHECKED_IN)) {
+        await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
+      }
       await this.depositSettlement.settleAppointmentDepositsTx(tx, tenantId, row.id, viewer?.userId ?? null);
       await syncHomeVisitWithAppointmentStatus(tx, tenantId, row.id, row.status);
+      await syncTelehealthWithAppointment(tx, row, existing, viewer?.userId ?? null);
       await this.appointmentOutbox.emitStatusChange(
         {
           tenantId,
@@ -921,11 +951,56 @@ export class AppointmentsService {
       return row;
     });
     await this.commissionCharges.applyCreditIntents(creditIntents);
+    if (row.serviceLocation === ServiceLocation.VIDEO || existing.serviceLocation === ServiceLocation.VIDEO) await notifyTelehealthChanged(tenantId, row.id);
     if (status === AppointmentStatus.CANCELLED) {
       await this.scheduling.recordFreedSlot(tenantId, row.id);
     }
     await this.invalidateSlotsForAppointment(tenantId, row.clinicId, row.clinicianId, "appointment_status_changed");
     return this.finishAppointmentDto(tenantId, row, viewer);
+  }
+
+  /**
+   * Shared "the patient attended" side effects, used by every check-in path (front desk updateStatus/update and telehealth):
+   * draft encounter, then the SAME CommissionChargeService.onCheckIn billing (unique per appointment, so repeat calls are no-ops).
+   */
+  private async runCheckInEffects(tx: Prisma.TransactionClient, tenantId: string, id: string, checkedInAt: Date): Promise<void> {
+    await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
+    await this.commissionCharges.onCheckIn(tx, tenantId, id, checkedInAt);
+  }
+
+  /**
+   * ADR-039 attendance without a queue ticket or room (the patient is on a call, not in the waiting area): CHECKED_IN +
+   * pre-filled encounter + billing + outbox CHECKED_IN. Idempotent: an already CHECKED_IN appointment only heals the encounter;
+   * cancelled / completed / no-show appointments are left alone. Skips the patient-profile gate on purpose (system attendance must not fail).
+   */
+  async markAttended(
+    tenantId: string,
+    appointmentId: string,
+    opts: { source: "TELEHEALTH" | "MANUAL"; tx?: Prisma.TransactionClient },
+  ): Promise<{ changed: boolean }> {
+    const run = async (tx: Prisma.TransactionClient) => {
+      const existing = await tx.appointment.findFirst({ where: { id: appointmentId, tenantId } });
+      if (!existing) throw new NotFoundException("Appointment not found");
+      if (existing.status === AppointmentStatus.CANCELLED || existing.status === AppointmentStatus.NO_SHOW || existing.status === AppointmentStatus.COMPLETED) {
+        return { changed: false };
+      }
+      if (existing.status === AppointmentStatus.CHECKED_IN) {
+        await ensureDraftEncounterIfCheckedIn(tx, tenantId, appointmentId);
+        return { changed: false };
+      }
+      const now = new Date();
+      const row = await tx.appointment.update({ where: { id: appointmentId }, data: { status: AppointmentStatus.CHECKED_IN, checkedInAt: now } });
+      await this.runCheckInEffects(tx, tenantId, appointmentId, now);
+      await this.depositSettlement.settleAppointmentDepositsTx(tx, tenantId, row.id, null);
+      await this.appointmentOutbox.emitStatusChange(
+        { tenantId, appointmentId: row.id, clinicId: row.clinicId, previousStatus: existing.status, nextStatus: row.status, bookingSource: row.bookingSource, cancelledByPatient: false, metadata: { attendedVia: opts.source } },
+        tx,
+      );
+      return { changed: true };
+    };
+    const out = opts.tx ? await run(opts.tx) : await this.prisma.$transaction(run);
+    if (out.changed) await this.invalidateSlotsForAppointment(tenantId, (await this.prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId }, select: { clinicId: true } })).clinicId, (await this.prisma.appointment.findUniqueOrThrow({ where: { id: appointmentId }, select: { clinicianId: true } })).clinicianId, "appointment_status_changed").catch(() => undefined);
+    return out;
   }
 
   async getById(tenantId: string, id: string, viewer?: JwtUser): Promise<AppointmentDto> {
@@ -1021,6 +1096,19 @@ export class AppointmentsService {
       scheduledPatch = { scheduledCollectionMode: null, scheduledTransferChannel: null };
     }
 
+    // ADR-039: in-person <-> telehealth conversion. New telehealth capability is gated; converting AWAY from telehealth never is.
+    const nextLocation: ServiceLocation | undefined =
+      dto.visitMode === "TELEHEALTH" ? ServiceLocation.VIDEO : dto.visitMode === "IN_CLINIC" && existing.serviceLocation === ServiceLocation.VIDEO ? ServiceLocation.IN_CLINIC : undefined;
+    if (nextLocation === ServiceLocation.VIDEO && existing.serviceLocation !== ServiceLocation.VIDEO) {
+      await assertTelehealthBookable({ prisma: this.prisma, flags: this.featureFlags, entitlements: this.entitlements }, tenantId, clinicianId);
+    } else if (existing.serviceLocation === ServiceLocation.VIDEO && dto.clinicianId !== undefined && dto.clinicianId !== existing.clinicianId) {
+      await assertTelehealthBookable({ prisma: this.prisma, flags: this.featureFlags, entitlements: this.entitlements }, tenantId, clinicianId);
+    }
+    if (nextLocation === ServiceLocation.VIDEO) {
+      const p = await this.prisma.patient.findFirst({ where: { id: patientId, tenantId }, select: { phone: true } });
+      if (!p?.phone?.trim()) throw new BadRequestException({ code: "TELEHEALTH_PATIENT_PHONE_REQUIRED", message: "A patient phone number is required for a telehealth visit" });
+    }
+
     const creditIntents: BilledReversalCreditIntent[] = [];
     const row = await this.prisma.$transaction(async (tx) => {
       const reverting =
@@ -1057,6 +1145,7 @@ export class AppointmentsService {
               : undefined,
           notes: dto.notes !== undefined ? (dto.notes === "" ? null : dto.notes) : undefined,
           ...(feeProvided ? { feeAmount: new Prisma.Decimal(String(Number(dto.feeAmount))) } : {}),
+          ...(nextLocation ? { serviceLocation: nextLocation } : {}),
           ...scheduledPatch,
           ...statusFields,
           ...cancelPatch,
@@ -1075,17 +1164,16 @@ export class AppointmentsService {
         });
       }
 
-      if (!reverting) {
-        await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
-      }
-
       if (
         !reverting &&
         nextStatus === AppointmentStatus.CHECKED_IN &&
         existing.status !== AppointmentStatus.CHECKED_IN
       ) {
-        await this.commissionCharges.onCheckIn(tx, tenantId, id, updated.checkedInAt ?? new Date());
+        await this.runCheckInEffects(tx, tenantId, id, updated.checkedInAt ?? new Date());
+      } else if (!reverting) {
+        await ensureDraftEncounterIfCheckedIn(tx, tenantId, id);
       }
+      await syncTelehealthWithAppointment(tx, updated, existing, viewer?.userId ?? null);
 
       if (feeProvided) {
         await syncOpenEncounterVisitFeeFromAppointment(tx, tenantId, id, Number(dto.feeAmount));
@@ -1119,6 +1207,7 @@ export class AppointmentsService {
       return updated;
     });
     await this.commissionCharges.applyCreditIntents(creditIntents);
+    if (row.serviceLocation === ServiceLocation.VIDEO || existing.serviceLocation === ServiceLocation.VIDEO) await notifyTelehealthChanged(tenantId, row.id);
     await this.invalidateSlotsForAppointment(tenantId, row.clinicId, row.clinicianId, "appointment_updated");
     if (existing.clinicianId !== row.clinicianId) {
       await this.invalidateSlotsForAppointment(tenantId, row.clinicId, existing.clinicianId, "appointment_updated");

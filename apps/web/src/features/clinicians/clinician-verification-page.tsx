@@ -105,6 +105,18 @@ export function ClinicianVerificationPage() {
   const extraRegisters = (v?.requiredRegisters ?? []).filter((r) => !r.isSyndicate);
   const readOnly = v?.status === "PENDING" || v?.status === "VERIFIED";
 
+  const forbidden = q.isError && (q.error as { status?: number } | null)?.status === 403;
+  if (forbidden) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-3" data-testid="verification-not-applicable">
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("verification.title", "Doctor verification")}</h1>
+        <p className="text-sm text-muted-foreground">
+          {t("verification.notApplicable", "Verification applies to clinicians (doctors, nurses and therapists) who are listed on Kiorex. Your role does not need it.")}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex flex-wrap items-center gap-2">

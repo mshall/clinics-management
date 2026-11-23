@@ -2,14 +2,15 @@ import { expect, test } from "@playwright/test";
 import { SOLO_EMAIL, uiLogin } from "./nurse-fixtures";
 
 /** Q7 — shared dev stack: GKN1 / GKN2 are unrecorded (human gates), so the web must show the awaiting-gate states, never a broken screen. */
-test("Nurse login: Sign in with Kiorex Passport is the primary action on the Nurse host", async ({ page }) => {
+test("Nurse login: Sign in with Kiorex Passport is the default method on the Nurse host, Password sits behind the toggle", async ({ page }) => {
   await page.goto("http://nurse.localhost:5186/login", { waitUntil: "domcontentloaded" });
-  const primary = page.getByTestId("nurse-login-primary");
+  const primary = page.getByTestId("signin-passport-panel");
   await expect(primary).toBeVisible({ timeout: 30_000 });
   await expect(primary.getByTestId("kiorex-passport-button")).toBeVisible();
-  await expect(page.locator("#email")).toBeVisible(); // the password form stays below it
-  const [passportBox, emailBox] = [await primary.boundingBox(), await page.locator("#email").boundingBox()];
-  expect(passportBox!.y).toBeLessThan(emailBox!.y);
+  await expect(page.getByTestId("signin-method-passport")).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#email")).toHaveCount(0); // the password form is behind the toggle
+  await page.getByTestId("signin-method-password").click();
+  await expect(page.locator("#email")).toBeVisible();
 });
 
 test("awaiting-gate states: care plans, structured MAR and family updates", async ({ page }) => {
