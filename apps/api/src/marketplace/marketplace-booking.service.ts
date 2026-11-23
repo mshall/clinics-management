@@ -669,7 +669,7 @@ export class MarketplaceBookingService {
     cancellationReason?: string | null;
     depositRefundable?: boolean | null;
     rescheduleCount?: number;
-    serviceLocation?: "IN_CLINIC" | "HOME";
+    serviceLocation?: "IN_CLINIC" | "HOME" | "VIDEO";
   }) {
     return {
       appointmentId: row.id,

@@ -23,11 +23,13 @@ export class HomeVisitReportsService {
     const out: Record<"IN_CLINIC" | "HOME", ReturnType<typeof empty> & { travelMinutes?: number }> = { IN_CLINIC: empty(), HOME: empty() };
     const money = { IN_CLINIC: [0, 0], HOME: [0, 0] } as Record<string, [number, number]>;
     for (const r of rows) {
-      const bucket = out[r.serviceLocation];
+      // ADR-039: telehealth (VIDEO) is not a home visit; the home-vs-clinic split counts it with the non-home bucket.
+      const loc = r.serviceLocation === "HOME" ? "HOME" : "IN_CLINIC";
+      const bucket = out[loc];
       if (r.status === AppointmentStatus.COMPLETED) {
         bucket.visits += r._count._all;
-        money[r.serviceLocation]![0] += Number(r._sum.feeAmount ?? 0);
-        money[r.serviceLocation]![1] += Number(r._sum.homeSurchargeAmount ?? 0);
+        money[loc]![0] += Number(r._sum.feeAmount ?? 0);
+        money[loc]![1] += Number(r._sum.homeSurchargeAmount ?? 0);
       }
       if (r.status === AppointmentStatus.CANCELLED) bucket.cancellations += r._count._all;
       if (r.status === AppointmentStatus.NO_SHOW) bucket.noShows += r._count._all;

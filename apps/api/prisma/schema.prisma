@@ -1212,7 +1212,7 @@ model Tenant {
   whatsAppRemindersEnabled           Boolean                            @default(false)
   appointmentReminderHoursBefore     Int                                @default(24)
   /// When true, creating an operation requires "How did they find us?" (acquisition channel).
-  operationAcquisitionRequired        Boolean                           @default(false)
+  operationAcquisitionRequired       Boolean                            @default(false)
   providerSettings                   Json                               @default("{}")
   users                              User[]
   clinics                            Clinic[]
@@ -1296,6 +1296,10 @@ model Tenant {
   physioReferrals                    PhysioReferral[]
   homeClinicianSettings              ClinicianHomeSettings[]
   homeVisits                         HomeVisit[]
+  telehealthSessions                 TelehealthSession[]
+  telehealthClinicianSettings        ClinicianTelehealthSetting[]
+  /// ADR-039: minutes after start with no patient before a telehealth session becomes MISSED (per organisation).
+  telehealthNoShowMinutes            Int                                @default(15)
   homeVisitGeostamps                 HomeVisitGeostamp[]
   homeSafetyAlerts                   HomeSafetyAlert[]
   carePlans                          CarePlan[]
@@ -1513,6 +1517,7 @@ model User {
   integrationFailuresResolved     IntegrationFailureLog[]            @relation("IntegrationFailureResolvedBy")
   clinicianAvailabilityTemplates  ClinicianAvailabilityTemplate[]    @relation("ClinicianAvailability")
   appointmentTypeOverrides        ClinicianAppointmentTypeOverride[] @relation("ClinicianApptTypeOverride")
+  telehealthSetting               ClinicianTelehealthSetting?        @relation("ClinicianTelehealth")
   appointmentSeriesAsClinician    AppointmentSeries[]                @relation("AppointmentSeriesClinician")
   waitlistAsClinician             AppointmentWaitlistEntry[]         @relation("WaitlistClinician")
   clinicalFormTemplatesOwned      ClinicalFormTemplate[]             @relation("ClinicalFormTemplateOwner")
@@ -2204,7 +2209,7 @@ model ClinicalOrder {
   createdByUserId        String?
   /// KNLAB01: the doctor whose lab request a nurse transcribed (a nurse never orders on her own authority).
   prescriberName         String?
-  prescribedOn           DateTime?           @db.Date
+  prescribedOn           DateTime?            @db.Date
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   items                  ClinicalOrderItem[]
@@ -2507,6 +2512,7 @@ model Appointment {
   serviceLocation              ServiceLocation              @default(IN_CLINIC)
   homeSurchargeAmount          Decimal?                     @db.Decimal(14, 2)
   homeVisit                    HomeVisit?
+  telehealthSession            TelehealthSession?
   revenueEntries               RevenueEntry[]
   encounters                   Encounter[]
   rescheduleToken              AppointmentRescheduleToken?
@@ -2524,31 +2530,35 @@ model Appointment {
 }
 
 model Operation {
-  id                  String                    @id @default(cuid())
+  id                  String                     @id @default(cuid())
   tenantId            String
-  tenant              Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant              Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   clinicId            String
-  clinic              Clinic                    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinic              Clinic                     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   patientId           String
-  patient             Patient                   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patient             Patient                    @relation(fields: [patientId], references: [id], onDelete: Cascade)
   clinicianId         String
-  clinician           User                      @relation("OperationClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
+  clinician           User                       @relation("OperationClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
   createdByUserId     String?
-  createdBy           User?                     @relation("OperationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdBy           User?                      @relation("OperationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   operationDate       DateTime
-  totalCost           Decimal                   @db.Decimal(14, 2)
-  downPayment         Decimal                   @default(0) @db.Decimal(14, 2)
-  paidAmount          Decimal                   @default(0) @db.Decimal(14, 2)
-  feeCurrency         String                    @default("EGP")
-  /** Zero-value ops must be marked contract (تعاقد); allows totalCost = 0. */
-  isContract          Boolean                   @default(false)
-  /** Snapshot of how the patient found us at booking (for channel revenue reports). */
+  totalCost           Decimal                    @db.Decimal(14, 2)
+  downPayment         Decimal                    @default(0) @db.Decimal(14, 2)
+  paidAmount          Decimal                    @default(0) @db.Decimal(14, 2)
+  feeCurrency         String                     @default("EGP")
+  /**
+   * Zero-value ops must be marked contract (تعاقد); allows totalCost = 0.
+   */
+  isContract          Boolean                    @default(false)
+  /**
+   * Snapshot of how the patient found us at booking (for channel revenue reports).
+   */
   acquisitionChannel  PatientAcquisitionChannel?
   comments            String?
-  status              OperationStatus           @default(SCHEDULED)
-  noMedications       Boolean                   @default(false)
+  status              OperationStatus            @default(SCHEDULED)
+  noMedications       Boolean                    @default(false)
   integrationClientId String?
-  integrationClient   IntegrationClient?        @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
+  integrationClient   IntegrationClient?         @relation(fields: [integrationClientId], references: [id], onDelete: SetNull)
   externalReference   String?
   documents           OperationDocument[]
   medications         OperationMedication[]
@@ -2558,8 +2568,8 @@ model Operation {
   operationNote       Json?
   revenueEntries      RevenueEntry[]
   invoices            Invoice[]
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime                  @updatedAt
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
 
   @@unique([integrationClientId, externalReference])
   @@index([tenantId, clinicId, operationDate])
@@ -4601,6 +4611,109 @@ model PhysioHepLink {
 enum ServiceLocation {
   IN_CLINIC
   HOME
+  /// ADR-039 — telehealth video visit (P2P WebRTC). Exposed as visitType TELEHEALTH in DTOs.
+  VIDEO
+}
+
+enum TelehealthSessionStatus {
+  SCHEDULED
+  WAITING
+  ACTIVE
+  ENDED
+  CANCELLED
+  MISSED
+}
+
+enum TelehealthMode {
+  VIDEO
+  AUDIO
+}
+
+enum TelehealthRole {
+  CLINICIAN
+  PATIENT
+}
+
+enum TelehealthSignalType {
+  OFFER
+  ANSWER
+  ICE_CANDIDATE
+  BYE
+  RENEGOTIATE
+}
+
+/// ADR-039 — one telehealth session per appointment. The join window is NEVER stored: it is computed at join time from the
+/// appointment's current start/end. The patient link token carries only {sessionId, patientId, linkVersion}.
+model TelehealthSession {
+  id                  String                  @id @default(cuid())
+  tenantId            String
+  tenant              Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId            String
+  appointmentId       String                  @unique
+  appointment         Appointment             @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId           String
+  clinicianUserId     String
+  status              TelehealthSessionStatus @default(SCHEDULED)
+  mode                TelehealthMode          @default(VIDEO)
+  /// Incremented by "Regenerate link": tokens carrying an older version are rejected.
+  linkVersion         Int                     @default(1)
+  clinicianJoinedAt   DateTime?
+  patientJoinedAt     DateTime?
+  /// Heartbeats (every poll); a participant counts as present while lastSeen is recent.
+  clinicianLastSeenAt DateTime?
+  patientLastSeenAt   DateTime?
+  startedAt           DateTime?
+  /// Both participants present since this instant (reset when one drops); attendance = now - bothActiveSince >= threshold.
+  bothActiveSince     DateTime?
+  /// Exactly-once guard for attendance (check-in + commission + encounter).
+  attendedAt          DateTime?
+  endedAt             DateTime?
+  endReason           String?
+  missedAt            DateTime?
+  /// MISSED because the doctor never showed: appointment kept open, flagged for staff review, patient not charged.
+  needsStaffReview    Boolean                 @default(false)
+  /// Per-reminder state {"24h":{"startsAt":iso,"linkVersion":n},"15m":{...}}: dedupe per linkVersion, re-armed by a moved start.
+  reminderState       Json?
+  signalSeq           Int                     @default(0)
+  createdByUserId     String?
+  signals             TelehealthSignal[]
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, clinicianUserId])
+  @@index([status, updatedAt])
+}
+
+/// ADR-039 — WebRTC signaling messages (SDP/ICE only, no PHI). seq is monotonic per session; rows older than 24 h are purged.
+model TelehealthSignal {
+  id        String               @id @default(cuid())
+  sessionId String
+  session   TelehealthSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  fromRole  TelehealthRole
+  type      TelehealthSignalType
+  payload   Json
+  seq       Int
+  createdAt DateTime             @default(now())
+
+  @@unique([sessionId, seq])
+  @@index([createdAt])
+}
+
+/// ADR-039 — per-doctor telehealth switch and optional telehealth-only availability windows
+/// ({"mon":[{"start":"09:00","end":"12:00"}],...} in clinic local time). Durations/prices per service come from
+/// AppointmentType (serviceLocation VIDEO) and ClinicianAppointmentTypeOverride.
+model ClinicianTelehealthSetting {
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicianId      String
+  clinician        User     @relation("ClinicianTelehealth", fields: [clinicianId], references: [id], onDelete: Cascade)
+  offersTelehealth Boolean  @default(false)
+  windowsJson      Json?
+  updatedAt        DateTime @updatedAt
+
+  @@id([clinicianId])
+  @@index([tenantId, offersTelehealth])
 }
 
 enum OrganizationEdition {

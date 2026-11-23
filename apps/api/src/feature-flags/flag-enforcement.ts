@@ -45,6 +45,7 @@ export const FLAG_ENFORCEMENT: Record<string, FlagEnforcement> = {
   },
   "clinic.home_route_view": { kind: "service", files: ["home-visits/home-visit-config.service.ts", "home-visits/home-visit.service.ts"] },
   "clinic.home_dispatch": { kind: "service", files: ["home-visits/home-visit-config.service.ts", "home-visits/home-visit.service.ts"] },
+  "telehealth.video": { kind: "pending", note: "ADR-039: enforced in telehealth/telehealth.service.ts (next commit)" },
   "nurse.edition": { kind: "service", files: ["nurse/nurse-edition.service.ts"] },
   "nurse.individual_tenants": { kind: "service", files: ["nurse/nurse-edition.service.ts"] },
   "nurse.care_plans": { kind: "service", files: ["nurse/care-plan.service.ts"] },
