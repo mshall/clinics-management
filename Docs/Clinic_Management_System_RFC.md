@@ -399,7 +399,7 @@ GET    /operations/:id/documents/:docId/file
 
 **Notes:**
 - Completing an operation posts revenue in **`feeCurrency`** (defaults from clinic `defaultCurrency` via `resolveClinicCurrency()`); cancelling voids linked revenue.
-- Scheduled edit loads detail via `GET :id`; save may call `reset-clinical` to replace medications/documents.
+- Scheduled edit loads detail via `GET :id`; save may call `reset-clinical` to replace medications/documents (`{ ok: true }` JSON body — never empty).
 - Web edit dialog uses the same fieldset layout as create (`operations-page.tsx`).
 - Physician scope matches encounters/appointments patterns.
 - Document kinds: `ATTACHMENT`, `PRESCRIPTION`, `CONSENT`, `OPERATION_NOTE` (UI label **Operation Report**; alias `OPERATION_REPORT` accepted), `POST_SURGERY`. Consent and operation report are available on create/clinical prep and on post-surgery upload after discharge.
