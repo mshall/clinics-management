@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   Param,
@@ -14,6 +15,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
+import { hasAnyRole } from "../common/effective-roles";
 import {
   ApiBearerAuth,
   ApiBody,
@@ -60,6 +63,45 @@ export class PatientsController {
   @ApiOperation({ summary: "SC-03 — consent status by purpose (AI, marketplace, messaging, data)" })
   listConsents(@CurrentUser() user: JwtUser, @Param("id") id: string) {
     return this.consentPolicy.listForPatient(requireTenantId(user), id);
+  }
+
+  private assertCanManageDuplicates(user: JwtUser): void {
+    if (!hasAnyRole(user, [UserRole.GROUP_ADMIN, UserRole.CLINIC_ADMIN, UserRole.BRANCH_MANAGER])) {
+      throw new ForbiddenException("Only organization or clinic administrators may manage duplicate patients");
+    }
+  }
+
+  @Get("duplicates/summary")
+  @ApiOperation({ summary: "Count patient charts that share a phone number with another chart" })
+  @ApiOkResponse()
+  duplicateSummary(@CurrentUser() user: JwtUser) {
+    this.assertCanManageDuplicates(user);
+    return this.patient360.phoneDuplicateSummary(requireTenantId(user));
+  }
+
+  @Get("duplicates")
+  @ApiOperation({ summary: "List phone-number duplicate patient clusters for review and merge" })
+  @ApiOkResponse()
+  listDuplicates(
+    @CurrentUser() user: JwtUser,
+    @Query("reason") reason?: "phone" | "nationalId" | "name_dob",
+  ) {
+    this.assertCanManageDuplicates(user);
+    return this.patient360.listDoubleLinkedPatients(requireTenantId(user), {
+      reason: reason === "nationalId" || reason === "name_dob" ? reason : "phone",
+    });
+  }
+
+  @Post("duplicates/merge-safe")
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      "Merge all safe phone duplicate clusters (same phone + compatible names). Keeps the richer chart; moves documents/visits.",
+  })
+  @ApiOkResponse()
+  mergeSafePhoneDuplicates(@CurrentUser() user: JwtUser) {
+    this.assertCanManageDuplicates(user);
+    return this.patient360.mergeSafePhoneDuplicatePatients(requireTenantId(user), user);
   }
 
   @Get()
