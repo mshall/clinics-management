@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  ArrowLeft,
   Bell,
   CalendarPlus,
   Camera,
@@ -8,6 +9,7 @@ import {
   HeartPulse,
   Images,
   LayoutGrid,
+  Pencil,
   Receipt,
   Scissors,
   Sparkles,
@@ -193,6 +195,44 @@ export function PatientDetailPage() {
     <div className="space-y-6 doctor-mobile-view">
       <Card className="border-b">
         <CardContent className="pt-4 md:pt-5">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="h-9 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              data-testid="patient-back-to-list"
+            >
+              <Link to="/patients">
+                <ArrowLeft className="size-4 rtl-flip" aria-hidden />
+                <span className="hidden sm:inline">{t("patients.backToList")}</span>
+                <span className="sm:hidden">{t("common.back", "Back")}</span>
+              </Link>
+            </Button>
+            {canEditPatient ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5"
+                data-testid="patient-edit"
+                onClick={() => setEditOpen(true)}
+                title={
+                  patient.profileComplete === false
+                    ? t("patients.completeProfile", "Complete profile")
+                    : t("patients.editPatient", "Edit patient")
+                }
+              >
+                <Pencil className="size-3.5" aria-hidden />
+                <span className="hidden sm:inline">
+                  {patient.profileComplete === false
+                    ? t("patients.completeProfile", "Complete profile")
+                    : t("patients.editPatient", "Edit patient")}
+                </span>
+                <span className="sm:hidden">{t("common.edit", "Edit")}</span>
+              </Button>
+            ) : null}
+          </div>
           <div className="flex flex-col gap-4 md:gap-6 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-3 md:gap-4">
               <div className="relative">
@@ -260,16 +300,6 @@ export function PatientDetailPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline">
-                <Link to="/patients">{t("patients.backToList")}</Link>
-              </Button>
-              {canEditPatient ? (
-                <Button type="button" variant="outline" onClick={() => setEditOpen(true)}>
-                  {patient.profileComplete === false
-                    ? t("patients.completeProfile", "Complete profile")
-                    : t("patients.editPatient", "Edit patient")}
-                </Button>
-              ) : null}
               {canViewAppointments && canCreateAppointment ? (
                 <Button
                   type="button"
