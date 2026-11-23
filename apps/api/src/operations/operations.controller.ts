@@ -334,12 +334,12 @@ export class OperationsController {
   @RequiresScope("rx.prescribe")
   @Post(":id/reset-clinical")
   @ApiOperation({ summary: "Clear medications and optionally prescription documents (scheduled operations only)" })
-  @ApiOkResponse({ description: "Clinical data cleared" })
+  @ApiOkResponse({ description: "{ ok: true }" })
   async resetClinical(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body() body?: { clearPrescription?: boolean },
-  ) {
+  ): Promise<{ ok: true }> {
     await this.assertStage2Access(user);
     return this.operations.resetClinical(requireTenantId(user), id, user, body);
   }

@@ -4497,7 +4497,18 @@
         ],
         "responses": {
           "200": {
-            "description": "Clinical data cleared"
+            "description": "{ ok: true }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["ok"],
+                  "properties": {
+                    "ok": { "type": "boolean", "enum": [true] }
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [

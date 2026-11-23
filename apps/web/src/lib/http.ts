@@ -3,6 +3,7 @@ import { observeWebBuildIdHeader } from "@/lib/deploy-version-watch";
 import { localizeApiErrorMessage } from "@/lib/api-error-message";
 import { enhanceFormDataImages } from "@/lib/enhance-image";
 import i18n from "@/lib/i18n";
+import { parseSuccessJsonText } from "@/lib/parse-response-json";
 import { parsePlanUpgradePayload } from "@/lib/plan-upgrade-payload";
 import { useUpgradePaywallStore } from "@/stores/upgrade-paywall-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -108,7 +109,7 @@ export async function apiGet<T>(path: string): Promise<T> {
     const msg = messageFromErrorBody(res.status, body, res.statusText || "Request failed");
     throw new ApiError(msg, res.status, body);
   }
-  return (await res.json()) as T;
+  return parseSuccessJsonText<T>(await res.text());
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
@@ -126,7 +127,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
-  return (await res.json()) as T;
+  return parseSuccessJsonText<T>(await res.text());
 }
 
 export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
@@ -145,9 +146,8 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
   const text = await res.text();
-  if (!text) return {} as T;
   try {
-    return JSON.parse(text) as T;
+    return parseSuccessJsonText<T>(text);
   } catch {
     throw new ApiError("Invalid JSON response", res.status, text);
   }
@@ -168,7 +168,7 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
     maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
-  return (await res.json()) as T;
+  return parseSuccessJsonText<T>(await res.text());
 }
 
 export async function apiPostFormData<T>(
@@ -198,7 +198,7 @@ export async function apiPostFormData<T>(
     maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
-  return (await res.json()) as T;
+  return parseSuccessJsonText<T>(await res.text());
 }
 
 export async function apiPatchFormData<T>(
@@ -228,9 +228,7 @@ export async function apiPatchFormData<T>(
     maybeOpenUpgradePaywall(res.status, parsed, path);
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
-  const text = await res.text();
-  if (!text) return {} as T;
-  return JSON.parse(text) as T;
+  return parseSuccessJsonText<T>(await res.text());
 }
 
 /** Authenticated GET returning raw bytes (e.g. PDF / image preview). */
@@ -265,9 +263,8 @@ export async function apiDelete<T = unknown>(path: string): Promise<T> {
     throw new ApiError(messageFromErrorBody(res.status, parsed, res.statusText || "Request failed"), res.status, parsed);
   }
   const text = await res.text();
-  if (!text) return {} as T;
   try {
-    return JSON.parse(text) as T;
+    return parseSuccessJsonText<T>(text);
   } catch {
     return {} as T;
   }

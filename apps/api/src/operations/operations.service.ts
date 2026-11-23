@@ -339,7 +339,7 @@ export class OperationsService {
     operationId: string,
     viewer: JwtUser,
     opts?: { clearPrescription?: boolean },
-  ): Promise<void> {
+  ): Promise<{ ok: true }> {
     const op = await this.prisma.operation.findFirst({ where: { id: operationId, tenantId } });
     if (!op) throw new NotFoundException("Operation not found");
     await this.assertOperationAccess(viewer, op);
@@ -349,6 +349,8 @@ export class OperationsService {
     if (opts?.clearPrescription !== false) {
       await this.deletePrescriptionDocuments(tenantId, operationId);
     }
+    // Always return JSON — empty 200 bodies break web clients that call response.json().
+    return { ok: true as const };
   }
 
   async list(
