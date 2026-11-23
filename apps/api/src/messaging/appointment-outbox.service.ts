@@ -3,8 +3,21 @@ import { AppointmentStatus, BookingSource, Prisma } from "@prisma/client";
 import { OutboxEventService } from "./outbox-event.service";
 import { OUTBOX_EVENT } from "./outbox-event-types";
 import { isReviewInvitationEligible } from "./review-invitation";
+import { telehealthBlock } from "../telehealth/telehealth-events";
 
 type Tx = Pick<Prisma.TransactionClient, "outboxEvent">;
+
+/**
+ * ADR-039: appointment events of a telehealth visit carry an additive `telehealth` block (sessionId, join URL, window), so Kiorex
+ * keeps the same link after reschedule/cancel. Read through the caller's transaction (the session row is created in it).
+ * Absent for in-person appointments and when no transaction client is supplied.
+ */
+async function telehealthPayload(tx: Tx | undefined, appointmentId: string): Promise<Record<string, unknown>> {
+  const c = tx as Partial<Prisma.TransactionClient> | undefined;
+  if (!c?.telehealthSession) return {};
+  const s = await c.telehealthSession.findUnique({ where: { appointmentId }, include: { appointment: { select: { startsAt: true, endsAt: true } } } });
+  return s ? { telehealth: telehealthBlock(s, s.appointment) } : {};
+}
 
 @Injectable()
 export class AppointmentOutboxService {
@@ -38,6 +51,7 @@ export class AppointmentOutboxService {
           nextStatus: params.nextStatus,
           bookingSource: params.bookingSource,
           ...params.metadata,
+          ...(await telehealthPayload(tx, params.appointmentId)),
         },
       },
       tx,
@@ -101,7 +115,7 @@ export class AppointmentOutboxService {
         type: OUTBOX_EVENT.APPOINTMENT_RESCHEDULED,
         aggregateType: "Appointment",
         aggregateId: appointmentId,
-        payload: { appointmentId, clinicId, startsAt },
+        payload: { appointmentId, clinicId, startsAt, ...(await telehealthPayload(tx, appointmentId)) },
       },
       tx,
     );

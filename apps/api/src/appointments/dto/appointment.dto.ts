@@ -3,6 +3,15 @@ import { AppointmentQueueStage, AppointmentStatus, BookingSource, VisitCollectio
 import type { NoShowRiskView } from "../../common/no-show-risk";
 
 export class AppointmentDto {
+  @ApiPropertyOptional({ enum: ["IN_CLINIC", "HOME", "VIDEO"] })
+  serviceLocation?: "IN_CLINIC" | "HOME" | "VIDEO";
+
+  @ApiPropertyOptional({ enum: ["IN_PERSON", "HOME", "TELEHEALTH"], description: "Derived from serviceLocation (ADR-039)" })
+  visitType?: "IN_PERSON" | "HOME" | "TELEHEALTH";
+
+  @ApiPropertyOptional({ nullable: true, description: "ADR-039 telehealth session summary; joinUrl only for clinic staff who may share it" })
+  telehealth?: { sessionId: string; status: string; mode: string; linkVersion: number; joinUrl?: string; opensAt: string; closesAt: string; needsStaffReview: boolean } | null;
+
   @ApiProperty()
   id!: string;
 
