@@ -7,6 +7,12 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Default sign-in method preselected on the login page for an organisation (ADR-038 amendment). Both methods stay available.
+enum SignInMethod {
+  PASSWORD
+  PASSPORT
+}
+
 enum UserRole {
   PLATFORM_SUPER_ADMIN
   GROUP_ADMIN
@@ -1194,6 +1200,8 @@ model Tenant {
   ownerConfirmedAt                   DateTime?
   baseCurrency                       String                             @default("EGP")
   defaultLocale                      String                             @default("en")
+  /// Preselected sign-in method (both stay offered). null = automatic: PASSPORT when the org is linked to Kiorex, else PASSWORD.
+  defaultSignInMethod                SignInMethod?
   defaultVisitFee                    Decimal?                           @db.Decimal(14, 2)
   encounterAutoLockHours             Int                                @default(72)
   defaultTaxRegistrationNumber       String?

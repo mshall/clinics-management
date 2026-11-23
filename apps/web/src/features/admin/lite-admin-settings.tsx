@@ -5,11 +5,14 @@ import { Button } from "@/components/ui/button";
 import { OrgWhatsAppRemindersCard } from "./org-whatsapp-reminders-card";
 import { EntitlementGate } from "@/components/entitlement-gate";
 import { useClinicsQuery } from "@/lib/api-hooks";
+import { OrgSignInDefaultCard } from "./org-sign-in-default-card";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function LiteAdminSettings() {
   const { t } = useTranslation();
   const { data: clinics = [] } = useClinicsQuery();
   const primaryClinic = clinics[0];
+  const isGroupAdmin = useAuthStore((s) => s.user?.role === "group_admin");
 
   return (
     <div className="space-y-4">
@@ -37,6 +40,7 @@ export function LiteAdminSettings() {
       <EntitlementGate entitlement="whatsapp_reminders" requiredPlan="PRO">
         <OrgWhatsAppRemindersCard />
       </EntitlementGate>
+      {isGroupAdmin ? <OrgSignInDefaultCard /> : null}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("liteAdmin.marketplaceTitle")}</CardTitle>

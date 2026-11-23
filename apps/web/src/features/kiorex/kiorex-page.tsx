@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiGet } from "@/lib/http";
+import { KiorexConnectBanner } from "./kiorex-connect-banner";
 import { KiorexBookingLinkCard } from "./kiorex-booking-link-card";
 import { KiorexBookingSettingsCard } from "./kiorex-booking-settings-card";
 import { KiorexPayoutsCard } from "./kiorex-payouts-card";
@@ -55,6 +56,7 @@ export function KiorexPage() {
           </div>
         ) : null}
       </div>
+      {clinicId ? <KiorexConnectBanner clinicId={clinicId} /> : null}
       {settings.isError ? (
         <p className="text-sm text-destructive">
           {t("kiorexTab.loadError", "Kiorex settings are available to clinic owners and managers.")}

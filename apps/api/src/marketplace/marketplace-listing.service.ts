@@ -17,6 +17,7 @@ import {
   evaluateMarketplaceListingEligibility,
   type MarketplaceBlockerCode,
 } from "./marketplace-listing-eligibility";
+import { connectionGateFromSettings } from "./kiorex-connect.logic";
 import { parseProviderProfileJson, providerProfileCompletenessPercent } from "./provider-profile-schema";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { effectiveVerificationStatus } from "../clinician-verification/profession-verification";
@@ -199,7 +200,7 @@ export class MarketplaceListingService implements OnModuleInit {
         where: { id: row.clinicId },
         select: { latitude: true, longitude: true, addressEn: true, addressAr: true },
       }),
-      this.prisma.tenant.findUnique({ where: { id: row.tenantId }, select: { edition: true, nurseTenantKind: true, market: { select: { code: true, clinicalConfig: true } } } }),
+      this.prisma.tenant.findUnique({ where: { id: row.tenantId }, select: { edition: true, nurseTenantKind: true, providerSettings: true, market: { select: { code: true, clinicalConfig: true } } } }),
     ]);
     const solo = tenantMarket?.edition === "NURSE" && tenantMarket.nurseTenantKind === "SOLO";
     const soloListing = solo
@@ -229,6 +230,7 @@ export class MarketplaceListingService implements OnModuleInit {
       ownerPaused,
       kiorexBillingPaused: subscription?.tenant.kiorexBillingPausedAt != null,
       soloNurse: soloListing,
+      connection: connectionGateFromSettings(tenantMarket?.providerSettings),
     });
 
     // clinic.kiorex_listing OFF: listing PAUSED on Kiorex; confirmed bookings and the booking link are untouched.

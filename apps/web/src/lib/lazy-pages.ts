@@ -12,6 +12,7 @@ export const MarketplaceListingProfilePage = lazyNamed(
   "MarketplaceListingProfilePage",
 );
 export const KiorexPage = lazyNamed(() => import("@/features/kiorex/kiorex-page"), "KiorexPage");
+export const KiorexConnectPage = lazyNamed(() => import("@/features/kiorex/kiorex-connect-page"), "KiorexConnectPage");
 export const DashboardPage = lazyNamed(() => import("@/features/dashboard/dashboard-page"), "DashboardPage");
 export const PatientsPage = lazyNamed(() => import("@/features/patients/patients-page"), "PatientsPage");
 export const DuplicatePatientsPage = lazyNamed(
