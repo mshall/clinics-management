@@ -177,6 +177,10 @@
     "visitBalanceTransferDue": "Payment channel fee — collect with transaction ID and receipt before completing the visit."
   },
   "auth": {
+    "method": "Sign-in method",
+    "methodPassport": "Kiorex Passport",
+    "methodPassword": "Password",
+    "passportHint": "Uses your verified phone number. Roles, permissions and MFA stay managed in Kiorly.",
     "signIn": "Sign in",
     "email": "Email",
     "password": "Password",

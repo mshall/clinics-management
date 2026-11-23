@@ -12,6 +12,7 @@ import { apiGet, apiPost } from "@/lib/http";
 import { resolvePostLoginPath } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import { useKiorexConfig } from "@/features/auth/use-kiorex-config";
+import { rememberSignInMethod } from "@/lib/sign-in-method";
 
 type Session = { accessToken: string; refreshToken?: string; user: Parameters<ReturnType<typeof useAuthStore.getState>["setSession"]>[1] };
 type CallbackResult =
@@ -41,8 +42,9 @@ export function KiorexPassportButton() {
   return (
     <Button
       type="button"
-      // KNED / ADR-031: "Sign in with Kiorex Passport" is the default (primary) action in the Nurse edition; the password form stays below it.
-      variant={data.defaultSignIn === "KIOREX_PASSPORT" ? "default" : "outline"}
+      // "Sign in with Kiorex Passport" is the default method on every edition (founder, 24 Nov 2026): it is the primary action of its tab.
+      variant="default"
+      size="lg"
       className="w-full"
       data-testid="kiorex-passport-button"
       disabled={busy}
@@ -82,6 +84,7 @@ export function KiorexCallbackPage() {
   function finish(res: CallbackResult) {
     if (res.status === "SESSION") {
       rememberPassportLogout(res.endSessionUrl);
+      rememberSignInMethod("passport");
       setSession(res.session.accessToken, res.session.user, res.session.refreshToken);
       const { user } = useAuthStore.getState();
       navigate(resolvePostLoginPath(user?.role, user?.navTabKeys, undefined, user?.roleNavTabKeys), { replace: true });

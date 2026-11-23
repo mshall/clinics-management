@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { showPasswordForm } from "./helpers";
 
 const DEV_OTP = process.env.SIGNUP_OTP_DEV_CODE;
 
@@ -8,6 +9,7 @@ test.describe("ON-07 field-sales rep console", () => {
   test("rep signs a clinic that stays awaiting the owner until the OTP is confirmed", async ({ page }) => {
     const unique = Date.now();
     await page.goto("/login");
+    await showPasswordForm(page);
     await page.getByLabel(/email/i).fill("rep@kiorly.com");
     await page.getByLabel(/password/i).fill("demo");
     await page.getByRole("button", { name: /^(sign in|log in)$/i }).click();

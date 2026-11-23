@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import type { APIRequestContext, Page } from "@playwright/test";
+import { showPasswordForm } from "./helpers";
 
 /**
  * Kiorly Nurse E2E fixtures (Q7). Test-only: data is created directly in the dev database (unique per run, tagged "E2E Nurse") and through the
@@ -47,6 +48,7 @@ export async function uiLogin(page: Page, email: string): Promise<void> {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await page.evaluate(() => { localStorage.removeItem("cms-auth"); sessionStorage.clear(); });
   await page.reload({ waitUntil: "domcontentloaded" });
+  await showPasswordForm(page);
   await page.locator("#email").waitFor({ state: "visible", timeout: 60_000 });
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(PASSWORD);
