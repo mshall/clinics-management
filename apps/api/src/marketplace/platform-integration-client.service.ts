@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import {
@@ -19,6 +19,13 @@ export type PlatformIntegrationPrincipal = {
 @Injectable()
 export class PlatformIntegrationClientService {
   private readonly seenNonces = new Map<string, number>();
+  /**
+   * Successful secret verifications, keyed by sha256(storedHash + secret). bcryptjs is pure JS (~200 ms of blocked event loop per compare),
+   * so a Kiorex search fanning out dozens of slot calls used to serialise for seconds and time out. A rotated secret changes the stored
+   * hash, hence the key; a deactivated client is still rejected by the row lookup. Only successes are cached, for a short time.
+   */
+  private readonly verified = new Map<string, number>();
+  private static readonly VERIFIED_TTL_MS = 5 * 60 * 1000;
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -41,7 +48,14 @@ export class PlatformIntegrationClientService {
       where: { clientKey, deactivatedAt: null },
     });
     if (!row) throw new UnauthorizedException("Unknown marketplace client");
-    const ok = await verifyIntegrationSecret(secret, row.secretHash);
+    const cacheKey = createHash("sha256").update(`${row.secretHash}\u0000${secret}`).digest("hex");
+    const now = Date.now();
+    const cachedAt = this.verified.get(cacheKey);
+    const ok = cachedAt !== undefined && now - cachedAt < PlatformIntegrationClientService.VERIFIED_TTL_MS ? true : await verifyIntegrationSecret(secret, row.secretHash);
+    if (ok) {
+      this.verified.set(cacheKey, now);
+      if (this.verified.size > 200) for (const [k, at] of this.verified) if (now - at > PlatformIntegrationClientService.VERIFIED_TTL_MS) this.verified.delete(k);
+    }
     if (!ok) throw new UnauthorizedException("Invalid marketplace client secret");
     void this.prisma.platformIntegrationClient
       .update({ where: { id: row.id }, data: { lastUsedAt: new Date() } })
