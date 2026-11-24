@@ -51,7 +51,7 @@ interface AuthState {
   user: AuthUser | null;
   setSession: (
     accessToken: string,
-    user: Omit<AuthUser, "role"> & {
+    user: Omit<AuthUser, "role" | "roles" | "additionalRoles" | "moneyVisibilityOverrides" | "plan"> & {
       role: string;
       roles?: string[];
       additionalRoles?: string[];
@@ -64,8 +64,9 @@ interface AuthState {
       mfaEnabled?: boolean;
       tenantBaseCurrency?: string | null;
       operationAcquisitionRequired?: boolean;
-      moneyVisibilityOverrides?: MoneyVisibilityOverrides | null;
-      plan?: { key: string; status: string } | null;
+      /** Generated API enums are wider than the store's own types: they are narrowed below. */
+      moneyVisibilityOverrides?: unknown;
+      plan?: { key?: string; status?: string } | null;
       entitlements?: Record<string, unknown> | null;
     },
     refreshToken?: string | null,
@@ -123,8 +124,8 @@ export const useAuthStore = create<AuthState>()(
             tenantNameAr: raw.tenantNameAr ?? null,
             clinicalSpecialty: raw.clinicalSpecialty ?? null,
             mfaEnabled: Boolean(raw.mfaEnabled),
-            moneyVisibilityOverrides: raw.moneyVisibilityOverrides ?? undefined,
-            plan: raw.plan ?? undefined,
+            moneyVisibilityOverrides: (raw.moneyVisibilityOverrides ?? undefined) as AuthUser["moneyVisibilityOverrides"],
+            plan: raw.plan?.key && raw.plan.status ? { key: raw.plan.key, status: raw.plan.status } : undefined,
             entitlements: raw.entitlements ?? undefined,
           },
         });

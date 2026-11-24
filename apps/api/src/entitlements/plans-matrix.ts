@@ -141,6 +141,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "kiorex/kiorex-billing-charges.controller.ts": { kind: "open" },
   "kiorex/commission-decisions.controller.ts": { kind: "open" },
   "marketplace/marketplace.controller.ts": { kind: "webhook" },
+  "marketplace/marketplace-referral-links.controller.ts": { kind: "webhook" }, // HMAC marketplace client (link registry lookup for Kiorex), same guard as marketplace.controller.ts
   "marketplace/kiorex-import.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connection.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connect.controller.ts": { kind: "open" },
