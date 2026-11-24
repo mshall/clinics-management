@@ -121,6 +121,7 @@ export type PublicBookingPageDto = {
     titleEn: string | null;
     titleAr: string | null;
     specialty: string | null;
+    /** Never null since GRW-P1-D1: the dedicated widget origin when configured, else the Kiorex canonical page; carries the signed touch for tracked visits. */
     widgetUrl: string | null;
   }[];
   appointmentTypes: { id: string; nameEn: string; nameAr: string; durationMinutes: number; feeAmount: string | null }[];

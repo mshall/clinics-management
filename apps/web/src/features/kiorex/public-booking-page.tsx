@@ -1,14 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiUrl } from "@/lib/api-url";
 import type { PublicBookingPageDto } from "./kiorex-types";
 
-async function fetchPage(slug: string): Promise<PublicBookingPageDto> {
-  const res = await fetch(apiUrl(`/api/v1/public/booking-pages/${encodeURIComponent(slug)}`));
+/** `s` is the provider link code from `?s=` (GRW-P1-D1): the API ignores unknown codes, counts a visit for a known one and returns a signed touch inside each Book link. */
+async function fetchPage(slug: string, s: string | null): Promise<PublicBookingPageDto> {
+  const res = await fetch(apiUrl(`/api/v1/public/booking-pages/${encodeURIComponent(slug)}${s ? `?s=${encodeURIComponent(s)}` : ""}`));
   const body = (await res.json().catch(() => ({}))) as PublicBookingPageDto & { message?: string };
   if (!res.ok) throw new Error(body.message ?? `Failed (${res.status})`);
   return body;
@@ -23,12 +24,15 @@ function headerStyle(brandColor: string | undefined) {
 
 export function PublicBookingPage() {
   const { slug } = useParams();
+  const [search] = useSearchParams();
+  const linkCode = search.get("s");
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith("ar");
   const q = useQuery({
-    queryKey: ["public-booking-page", slug],
+    queryKey: ["public-booking-page", slug, linkCode],
     enabled: Boolean(slug),
-    queryFn: () => fetchPage(slug!),
+    staleTime: Infinity, // one visit is one count: never refetch a tracked page on focus
+    queryFn: () => fetchPage(slug!, linkCode),
     retry: false,
   });
 

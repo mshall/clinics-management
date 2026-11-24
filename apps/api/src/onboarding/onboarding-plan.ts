@@ -60,6 +60,8 @@ export type SetupSnapshot = {
   doctorVerified: boolean;
   /** providerSettings.kiorexConnect.status */
   kiorexConnectStatus: string | null;
+  /** GRW-P1-D1: live (ACTIVE or PAUSED) provider referral links of the organisation; absent in older snapshots = 0. */
+  referralLinkCount?: number;
   nurse: { verified: boolean; zones: boolean; services: boolean; prices: boolean; availability: boolean; safetyContact: boolean };
 };
 
@@ -79,6 +81,7 @@ export type SetupStepKey =
   | "kiorex_profile"
   | "doctor_verification"
   | "connect_kiorex"
+  | "growth_links"
   | "nurse_verification"
   | "nurse_zones"
   | "nurse_services"
@@ -148,6 +151,9 @@ export const SETUP_DEFS: Def[] = [
   { key: "connect_kiorex", scope: "org", required: false, hideIfCannot: true, roles: ["group_admin", "clinic_admin"], editions: ["CLINIC", "NURSE"],
     doneOrg: (s) => ["REQUESTED", "IN_REVIEW", "CHANGES_REQUESTED", "APPROVED", "PAUSED"].includes(s.kiorexConnectStatus ?? ""),
     href: () => withSetup("/kiorex", "connect_kiorex") },
+  // GRW-P1-D1: links work standalone (no Kiorex connection needed); marketing staff share the step with the admins
+  { key: "growth_links", scope: "org", required: false, roles: ADMINS, editions: ["CLINIC"],
+    doneOrg: (s) => (s.referralLinkCount ?? 0) > 0, href: () => withSetup("/kiorex/growth", "growth_links") },
   // Nurse edition (KNED03): the signed-in nurse's own readiness
   { key: "nurse_verification", scope: "org", required: true, roles: ["nurse", "physician", ...ADMINS], editions: ["NURSE"],
     doneOrg: (s) => s.nurse.verified, href: () => withSetup("/profile/verification", "nurse_verification") },

@@ -5484,6 +5484,8 @@ model ProviderReferralLink {
   code        String                  @unique
   label       String
   status      ReferralLinkStatus      @default(ACTIVE)
+  /// GRW-P1-D1: campaign and UTM tags ({ utm_source, utm_medium, utm_campaign, utm_content, campaign }), each a short [a-z0-9_.-] token. Never patient data.
+  tags        Json?
   createdBy   String
   revokedAt   DateTime?
   revokedBy   String?
@@ -5522,6 +5524,8 @@ model BookingWidgetConfig {
   allowedOrigins Json     @default("[]")
   theme          String   @default("auto")
   locale         String   @default("ar")
+  /// GRW-P1-D1: { brandColor?, languages: ("ar"|"en")[], doctorIds: string[] (empty = all listed doctors), branchIds: string[] (empty = all) }.
+  settings       Json     @default("{}")
   updatedBy      String?
   updatedAt      DateTime @updatedAt
   createdAt      DateTime @default(now())

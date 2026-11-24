@@ -241,9 +241,12 @@ export class AppointmentsService {
       newPatientCheckedAt: row.newPatientCheckedAt?.toISOString() ?? null,
       cancelledBy: row.cancelledBy ?? null,
       cancellationReason: row.cancellationReason ?? null,
+      // GRW-P1-D2: provider-led bookings are never chargeable; `acquisitionOrigin` null = today's rules.
+      acquisitionOrigin: row.acquisitionOrigin ?? null,
       commissionChargeableAtBooking: isCommissionChargeableBooking(
         row.bookingSource,
         row.isNewPatientAtBooking,
+        row.acquisitionOrigin,
       ),
       ...(patient
         ? {

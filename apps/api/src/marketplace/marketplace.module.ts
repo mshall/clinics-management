@@ -37,6 +37,7 @@ import { MarketplaceWaitlistService } from "./marketplace-waitlist.service";
 import { KiorexImportController } from "./kiorex-import.controller";
 import { KiorexImportService } from "./kiorex-import.service";
 import { KiorexModule } from "../kiorex/kiorex.module";
+import { ProviderLinkCoreModule } from "../growth/provider-links/provider-link-core.module";
 import { KiorexConnectController } from "./kiorex-connect.controller";
 import { KiorexConnectService } from "./kiorex-connect.service";
 import { KiorexFrontDoorController } from "./kiorex-front-door.controller";
@@ -58,6 +59,7 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
     BillingModule,
     RecordShareModule,
     KiorexModule,
+    ProviderLinkCoreModule,
     NurseModule,
     // HVBK01/03: the @Optional() HomeVisitService must really be injected, otherwise every Kiorex HOME slot/hold/booking answers 400 "Home visits are not available"
     HomeVisitsModule,

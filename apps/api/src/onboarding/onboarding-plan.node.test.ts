@@ -105,11 +105,22 @@ describe("quick setup plan", () => {
   it("all done once every unit is done or skipped", () => {
     const c = clinic("a", { licenseNumber: "L", logoUrl: "x", hoursConfirmed: true, appointmentTypesConfigured: true, availabilityConfigured: true, kiorexListingReady: true });
     const p = buildSetupPlan(
-      snap({ clinics: [c], whatsAppRemindersEnabled: true, staffInvited: true, patientCount: 1, appointmentCount: 1, checkedInCount: 1, doctorVerified: true, kiorexConnectStatus: "APPROVED" }),
+      snap({ clinics: [c], whatsAppRemindersEnabled: true, staffInvited: true, patientCount: 1, appointmentCount: 1, checkedInCount: 1, doctorVerified: true, kiorexConnectStatus: "APPROVED", referralLinkCount: 1 }),
       {}, owner,
     );
     assert.equal(p.allDone, true);
     assert.equal(p.progressPercent, 100);
     assert.equal(p.nextKey, null);
+  });
+
+  it("GRW-P1-D1 growth_links: optional, standalone (no Kiorex connection needed), done once a live link exists, opens the Growth workspace", () => {
+    const owner = { isOwner: true, roles: [] as never[] };
+    const pending = step(buildSetupPlan(snap(), {}, owner), "growth_links");
+    assert.equal(pending.status, "pending");
+    assert.equal(pending.required, false);
+    assert.equal(pending.href, "/kiorex/growth?setup=growth_links");
+    assert.equal(step(buildSetupPlan(snap({ referralLinkCount: 2 }), {}, owner), "growth_links").status, "done");
+    assert.equal(step(buildSetupPlan(snap({ kiorexConnectStatus: null, referralLinkCount: 1 }), {}, owner), "growth_links").status, "done");
+    assert.equal(buildSetupPlan(snap({ edition: "NURSE" }), {}, owner).steps.some((s) => s.key === "growth_links"), false, "Clinic edition only");
   });
 });

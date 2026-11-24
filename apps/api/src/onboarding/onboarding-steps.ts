@@ -13,6 +13,7 @@ export const ONBOARDING_STEP_KEYS = [
   "kiorex_profile",
   "doctor_verification",
   "connect_kiorex",
+  "growth_links",
   "nurse_verification",
   "nurse_zones",
   "nurse_services",

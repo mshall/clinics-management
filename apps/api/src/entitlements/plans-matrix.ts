@@ -82,6 +82,9 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "scope-of-practice/scope-of-practice.controller.ts": { kind: "open" },
   "feature-flags/kiorex-flag-webhook.controller.ts": { kind: "webhook" },
   "growth/growth-referral.controller.ts": { kind: "open" },
+  /** GRW-P1-D1: links work standalone (no Kiorex entitlement); plan limits are applied in the service (growth-plan-limits.ts). */
+  "growth/provider-links/provider-links.controller.ts": { kind: "open" },
+  "growth/provider-links/public-link.controller.ts": { kind: "open" },
   "billing-platform/kiorly-invoices.controller.ts": { kind: "open" },
   "billing-platform/kiorly-billing-payments.controller.ts": { kind: "open" },
   "billing-platform/kiorly-payments-webhook.controller.ts": { kind: "webhook" },
@@ -135,6 +138,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "kiorex/platform-commission-disputes.controller.ts": { kind: "platform" },
   "kiorex/public-kiorex-fees.controller.ts": { kind: "open" },
   "kiorex/kiorex-billing-charges.controller.ts": { kind: "open" },
+  "kiorex/commission-decisions.controller.ts": { kind: "open" },
   "marketplace/marketplace.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-import.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connection.controller.ts": { kind: "webhook" },

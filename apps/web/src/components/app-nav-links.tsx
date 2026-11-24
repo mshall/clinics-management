@@ -11,6 +11,7 @@ import {
   Receipt,
   Scissors,
   Settings,
+  Megaphone,
   Sparkles,
   Stethoscope,
   BookOpen,
@@ -202,9 +203,15 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
         </NavLink>
       ) : null}
       {showTab("clinics") || showTab("admin") ? (
-        <NavLink to="/kiorex" className={navClass} onClick={() => onNavigate?.()}>
+        <NavLink to="/kiorex" className={({ isActive }) => navClass({ isActive: isActive && !pathname.startsWith("/kiorex/growth") })} onClick={() => onNavigate?.()}>
           <Sparkles className="size-4 shrink-0" />
           {t("nav.kiorex", "Kiorex")}
+        </NavLink>
+      ) : null}
+      {showTab("clinics") || showTab("admin") ? (
+        <NavLink to="/kiorex/growth" className={navClass} onClick={() => onNavigate?.()} data-testid="nav-growth">
+          <Megaphone className="size-4 shrink-0" />
+          {t("nav.growth", "Growth & Marketing")}
         </NavLink>
       ) : null}
       {showTab("expenses") ? (

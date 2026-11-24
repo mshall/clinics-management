@@ -86,3 +86,11 @@ credentials exist. No credentials are ever committed; keys live in Secrets Manag
 | AI (OpenAI-compatible) | per-market AI config (`providers/ai`) | key via `ai-secret-resolver` (Secrets Manager reference) | DPA, clinical sign-off | real adapter (pre-existing) |
 
 **Unverified against live vendors:** Twilio callback shape, FCM/Expo behaviour with real credentials; exercise in staging first.
+
+## Growth and Marketing (GRW-P1-D1/D2), decisions needed
+- Plan packaging: link limits per plan and widget from Pro (`growth-plan-limits.ts`, PROPOSED_DEFAULT).
+- A dedicated Marketing role (today `CLINIC_ASSISTANT` stands in).
+- `kiorly.link` host (NH-008), widget host `book.kiorex.com`, Kiorex canonical page routes (set `KIOREX_PATIENT_WEB_URL`).
+- Contract change: optional `lt` field on `POST /marketplace/v1/bookings`; a Clinic flag key for evidence disputes (today env `GROWTH_EVIDENCE_DISPUTES`).
+- Real evidence fetch (`GROWTH_EVIDENCE_MODE=real`) needs partner credentials from Kiorex and a live test.
+- Commission handling defaults for cancelled, no-show and refunded visits per market.

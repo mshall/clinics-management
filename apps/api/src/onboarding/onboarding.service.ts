@@ -241,7 +241,7 @@ export class OnboardingService {
     if (!tenant) return null;
     const clinicIds = tenant.clinics.map((c) => c.id);
     const physicianWhere = { OR: [{ role: UserRole.PHYSICIAN }, { additionalRoles: { has: UserRole.PHYSICIAN } }] };
-    const [checkInAppt, types, templates, staffCount, openInvites, patientCount, appointmentCount, checkedInCount, listingTypes, verifiedPhysicians, ents, myVerification, homeSettings, homeTypes] =
+    const [checkInAppt, types, templates, staffCount, openInvites, patientCount, appointmentCount, checkedInCount, listingTypes, verifiedPhysicians, ents, myVerification, homeSettings, homeTypes, referralLinkCount] =
       await Promise.all([
         this.prisma.appointment.findFirst({ where: { tenantId, patient: { isSample: false }, status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] } }, orderBy: { startsAt: "asc" }, select: { id: true } }),
         this.prisma.appointmentType.findMany({ where: { tenantId, isActive: true }, select: { clinicId: true, createdAt: true, updatedAt: true, feeAmount: true, serviceLocation: true, marketplaceBookable: true } }),
@@ -259,6 +259,7 @@ export class OnboardingService {
         userId ? this.prisma.clinicianVerification.findUnique({ where: { userId }, select: { status: true } }) : Promise.resolve(null),
         userId ? this.prisma.clinicianHomeSettings.findUnique({ where: { tenantId_clinicianId: { tenantId, clinicianId: userId } }, select: { coverageDistrictIds: true } }) : Promise.resolve(null),
         this.prisma.appointmentType.findMany({ where: { tenantId, isActive: true, serviceLocation: "HOME" }, select: { feeAmount: true } }),
+        this.prisma.providerReferralLink.count({ where: { tenantId, status: { not: "REVOKED" } } }),
       ]);
 
     // "configured" = the owner edited a type (fee, duration...) or added one after the clinic was created; signup seeds alone do not count.
@@ -305,6 +306,7 @@ export class OnboardingService {
       checkInAppointmentId: checkInAppt?.id ?? null,
       doctorVerified: verifiedPhysicians > 0,
       kiorexConnectStatus: connect?.status ?? null,
+      referralLinkCount,
       nurse: {
         verified: myVerification?.status === VerificationStatus.VERIFIED,
         zones: (homeSettings?.coverageDistrictIds.length ?? 0) > 0,

@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import {
   CommissionChargeStatus,
@@ -14,6 +15,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { parsePageParams } from "../common/pagination";
 import { NewPatientService } from "../patients/new-patient.service";
+import { AttributionEvidenceService } from "./attribution-evidence.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { findDuplicateCharge, shouldAutoApproveExistingPatient } from "./commission-dispute-auto";
 import {
@@ -66,6 +68,8 @@ export class CommissionDisputeService {
     private readonly prisma: PrismaService,
     private readonly charges: CommissionChargeService,
     private readonly newPatients: NewPatientService,
+    /** GRW-P1-D2: evidence for PROVIDER_LED_EVIDENCE disputes. Optional so older constructions keep working (no auto-approval without it). */
+    @Optional() private readonly evidence?: AttributionEvidenceService,
   ) {}
 
   private assertPlatform(user: JwtUser): void {
@@ -141,7 +145,7 @@ export class CommissionDisputeService {
         },
       });
 
-      const auto = await this.tryAutoResolve(tx, dispute.id, tenantId, row.patientId, row.id, reason, row.attendedAt);
+      const auto = await this.tryAutoResolve(tx, dispute.id, tenantId, row.patientId, row.id, reason, row.attendedAt, row.appointmentId);
       creditIntent = auto.creditIntent;
 
       const finalDispute =
@@ -177,6 +181,7 @@ export class CommissionDisputeService {
     chargeId: string,
     reason: CommissionDisputeReason,
     attendedAt: Date,
+    appointmentId?: string,
   ): Promise<{ creditIntent: BilledReversalCreditIntent | null }> {
     let autoApprove = false;
     let autoNote = "";
@@ -190,6 +195,11 @@ export class CommissionDisputeService {
       autoNote = dupe
         ? `Auto-approved: duplicate charge ${dupe.id} within ${7} days`
         : "";
+    } else if (reason === CommissionDisputeReason.PROVIDER_LED_EVIDENCE && appointmentId && this.evidence?.autoApproveEnabled) {
+      // GRW-P1-D2: signed Kiorex evidence (or, in mock mode, the Clinic's own link facts) shows a provider touch the original decision missed.
+      const v = await this.evidence.verdict(tx, tenantId, appointmentId);
+      autoApprove = v.providerLed;
+      autoNote = autoApprove ? `Auto-approved: provider-led evidence confirmed (${v.source}${v.reason ? `, ${v.reason}` : ""})` : "";
     }
 
     if (!autoApprove) return { creditIntent: null };

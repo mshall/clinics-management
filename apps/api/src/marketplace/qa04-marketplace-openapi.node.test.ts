@@ -157,4 +157,26 @@ describe("QA-04 marketplace OpenAPI contract", () => {
     assert.ok(consumer.requiredOperations.length >= 18);
     assert.ok(consumer.authHeaders.includes("X-Kiorly-Signature"));
   });
+
+  it("GRW-P1-D2 contracts 1.4.0: the copy documents the optional signed acquisition block, its error codes and keeps the old fields", () => {
+    const spec = loadSpec() as OpenApiSpec & { components: { schemas: Record<string, { required?: string[]; properties?: Record<string, { enum?: string[] }> }> } };
+    assert.equal(spec.info.version, "1.4.0");
+    const body = spec.paths["/bookings"]?.post?.requestBody?.content?.["application/json"]?.schema?.properties as Record<string, unknown>;
+    for (const f of ["channel", "bookingPageSlug", "attribution", "acquisition"]) assert.ok(f in body, `booking request lost ${f}`);
+    assert.deepEqual(body.acquisition, { $ref: "#/components/schemas/AcquisitionBlock" });
+    const block = spec.components.schemas.AcquisitionBlock!;
+    assert.deepEqual([...(block.required ?? [])].sort(), ["decisionId", "evidenceHash", "origin", "policyVersion", "reason"], "acquisition is optional as a whole, these fields are required inside it");
+    assert.deepEqual([...block.properties!.origin!.enum!].sort(), ["MARKETPLACE", "PROVIDER_LED", "UNATTRIBUTED"]);
+    assert.deepEqual([...spec.components.schemas.AcquisitionError!.properties!.code!.enum!].sort(), ["ACQUISITION_BLOCK_INVALID", "ACQUISITION_EVIDENCE_HASH_INVALID"]);
+    const required = (spec.paths["/bookings"]?.post as { requestBody?: { required?: boolean } }).requestBody?.required;
+    assert.notEqual(required, true, "an older Kiorex that sends no acquisition block must keep working");
+  });
+
+  it("GRW-P1-D2 the origins and error codes the service accepts are the ones the spec documents", async () => {
+    const { ACQUISITION_ORIGINS, parseAcquisitionBlock } = await import("../growth/acquisition-contract");
+    const spec = loadSpec() as unknown as { components: { schemas: Record<string, { properties?: Record<string, { enum?: string[] }> }> } };
+    assert.deepEqual([...ACQUISITION_ORIGINS].sort(), [...spec.components.schemas.AcquisitionBlock!.properties!.origin!.enum!].sort());
+    const bad = parseAcquisitionBlock({ origin: "MARKETPLACE", decisionId: "d", policyVersion: "v", reason: "MARKETPLACE_TOUCH", evidenceHash: "nope" });
+    assert.ok(!bad.ok && spec.components.schemas.AcquisitionError!.properties!.code!.enum!.includes(bad.code));
+  });
 });

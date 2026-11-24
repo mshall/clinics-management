@@ -242,6 +242,7 @@ export interface AppointmentDto {
   isNewPatientAtBooking?: boolean | null;
   newPatientCheckedAt?: string | null;
   commissionChargeableAtBooking?: boolean;
+  acquisitionOrigin?: "PROVIDER_LED" | "MARKETPLACE" | "UNATTRIBUTED" | null;
   cancelledBy?: string | null;
   cancellationReason?: string | null;
   /** FS-05 rule-based no-show risk (Pro+, upcoming bookings only) */

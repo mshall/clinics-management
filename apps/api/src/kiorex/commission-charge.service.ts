@@ -8,19 +8,29 @@ import {
 } from "@nestjs/common";
 import { FeatureFlagsService, flagOn } from "../feature-flags/feature-flags-public";
 import {
+  AcquisitionOrigin,
   CommissionChargeStatus,
+  CommissionDecisionKind,
+  CommissionDisputeReason,
   CreditReason,
   Prisma,
   type KiorexCommissionCharge,
 } from "@prisma/client";
+import { recordLinkAttended } from "../growth/provider-links/link-attended";
 import type { JwtUser } from "../auth/jwt-user";
 import { parsePageParams } from "../common/pagination";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { PrismaService } from "../prisma/prisma.service";
-import { isCommissionChargeableBooking } from "../appointments/booking-attribution";
 import { effectiveProfession } from "../scope-of-practice/scope-of-practice.service";
-import { COMMISSION_CHARGE_CREATED, COMMISSION_CHARGE_REVERSED } from "./commission-charge-topics";
+import { COMMISSION_ADJUSTED, COMMISSION_CHARGE_CREATED, COMMISSION_CHARGE_REVERSED } from "./commission-charge-topics";
+import {
+  DECISION_REASON,
+  commissionPolicyVersion,
+  decideCommissionGate,
+  resolveCommissionHandling,
+  writeCommissionDecision,
+} from "./commission-decision";
 import { isActiveCommissionChargeStatus } from "./commission-charge-status";
 import { KiorexCommissionService } from "./kiorex-commission.service";
 import { resolveDisputeDeadlineDays } from "./kiorex-commission-config";
@@ -85,6 +95,8 @@ export class CommissionChargeService {
         feeAmount: true,
         bookingSource: true,
         isNewPatientAtBooking: true,
+        acquisitionOrigin: true,
+        attributionJson: true,
         serviceLocation: true,
         patient: { select: { isSample: true } },
         clinic: { select: { defaultCurrency: true, tenant: { select: { marketId: true, market: { select: { id: true, featureDefaults: true } } } } } },
@@ -92,28 +104,55 @@ export class CommissionChargeService {
       },
     });
     if (!apt || apt.patient.isSample) return;
+    // GRW-P1-D1: the first attended visit of a booking made through a provider link counts on that link (counters only; independent of commission).
+    await recordLinkAttended(tx, apt, attendedAt);
     // BR55: only the FIRST attended visit is commissionable. A care-plan follow-up (sequence > 1) never is, whatever its booking source.
     const planVisit = await tx.carePlanVisit.findUnique({ where: { appointmentId }, select: { sequence: true } });
-    if (planVisit && planVisit.sequence > 1) return;
+    const followUpVisit = Boolean(planVisit && planVisit.sequence > 1);
     // clinic.commission_settlement OFF: new commission charges stop; already-CONFIRMED charges still settle.
     if (!(await flagOn(this.flags, tenantId, "clinic.commission_settlement"))) return;
-    if (!isCommissionChargeableBooking(apt.bookingSource, apt.isNewPatientAtBooking)) return;
 
     const marketId = apt.clinic.tenant.marketId;
-    if (!marketId) return;
+    const currency =
+      apt.clinic.defaultCurrency?.trim() ||
+      (await tx.tenant.findUnique({ where: { id: tenantId }, select: { baseCurrency: true } }))?.baseCurrency ||
+      "EGP";
+    const origin = apt.acquisitionOrigin ?? AcquisitionOrigin.UNATTRIBUTED;
+    const isNew = Boolean(apt.isNewPatientAtBooking);
+    const rows = marketId ? await tx.kiorexCommissionRate.findMany({ where: { marketId } }) : [];
+    const policyVersion = commissionPolicyVersion(rows, attendedAt);
+    const base = { tenantId, clinicId: apt.clinicId, appointmentId: apt.id, policyVersion, origin, bookingSource: apt.bookingSource, isNewPatient: isNew, followUpVisit, currency };
 
-    const rows = await tx.kiorexCommissionRate.findMany({ where: { marketId } });
+    // GRW-P1-D2: one append-only explanation per appointment and policy version, for BOTH outcomes ("why was I charged" / "why was I not").
+    const gate = decideCommissionGate({ origin, bookingSource: apt.bookingSource, isNewPatient: isNew, followUpVisit });
+    if (gate.decision === "NO_CHARGE") {
+      await writeCommissionDecision(tx, { ...base, decision: CommissionDecisionKind.NO_CHARGE, reasonCodes: gate.reasonCodes });
+      return;
+    }
+    if (!marketId) {
+      await writeCommissionDecision(tx, { ...base, decision: CommissionDecisionKind.NO_CHARGE, reasonCodes: [DECISION_REASON.NO_MARKET] });
+      return;
+    }
+
     const specialty = apt.clinician.employee?.clinicalSpecialty ?? null;
     const visitFee = Number(apt.feeAmount);
     // BR56: the home surcharge is a separate field (Appointment.homeSurchargeAmount) and is never part of visitFee (S) or the commission base (C).
     const profession = effectiveProfession(apt.clinician);
     const resolved = this.kiorexRates.resolveForBooking(rows, specialty, visitFee, attendedAt, { profession, serviceLocation: apt.serviceLocation });
-    if (!resolved.rate) return;
+    if (!resolved.rate) {
+      await writeCommissionDecision(tx, { ...base, decision: CommissionDecisionKind.NO_CHARGE, reasonCodes: [DECISION_REASON.NO_RATE_CONFIGURED] });
+      return;
+    }
+    const amount = new Prisma.Decimal(resolved.commissionAmount.toFixed(2));
+    await writeCommissionDecision(tx, {
+      ...base,
+      decision: CommissionDecisionKind.CHARGE,
+      reasonCodes: gate.reasonCodes,
+      rateId: resolved.rate.id,
+      amount: amount.toFixed(2),
+      extra: { visitFee: visitFee.toFixed(2) },
+    });
 
-    const currency =
-      apt.clinic.defaultCurrency?.trim() ||
-      (await tx.tenant.findUnique({ where: { id: tenantId }, select: { baseCurrency: true } }))?.baseCurrency ||
-      "EGP";
     const disputeDays = resolveDisputeDeadlineDays(apt.clinic.tenant.market?.featureDefaults);
     const disputeDeadline = new Date(attendedAt);
     disputeDeadline.setDate(disputeDeadline.getDate() + disputeDays);
@@ -130,7 +169,7 @@ export class CommissionChargeService {
             confirmedAt: null,
             disputeDeadline,
             rateId: resolved.rate.id,
-            amount: new Prisma.Decimal(resolved.commissionAmount.toFixed(2)),
+            amount,
             currency,
             reversalReason: null,
           },
@@ -139,7 +178,7 @@ export class CommissionChargeService {
         await this.outbox.enqueue(
           tenantId,
           COMMISSION_CHARGE_CREATED,
-          this.outboxPayload(charge),
+          await this.outboxPayload(tx, charge),
           tx,
         );
       }
@@ -154,7 +193,7 @@ export class CommissionChargeService {
         patientId: apt.patientId,
         clinicianId: apt.clinicianId,
         rateId: resolved.rate.id,
-        amount: new Prisma.Decimal(resolved.commissionAmount.toFixed(2)),
+        amount,
         currency,
         status: CommissionChargeStatus.PENDING,
         attendedAt,
@@ -162,7 +201,7 @@ export class CommissionChargeService {
       },
     });
     await this.auditCharge(tx, tenantId, "kiorex.commission_charge.created", charge);
-    await this.outbox.enqueue(tenantId, COMMISSION_CHARGE_CREATED, this.outboxPayload(charge), tx);
+    await this.outbox.enqueue(tenantId, COMMISSION_CHARGE_CREATED, await this.outboxPayload(tx, charge), tx);
   }
 
   async onRevert(
@@ -213,9 +252,17 @@ export class CommissionChargeService {
   }
 
   async onCancelOrNoShow(tx: Tx, tenantId: string, appointmentId: string): Promise<BilledReversalCreditIntent | null> {
+    // GRW-P1-D2: configurable per market (`featureDefaults.kiorex.commissionHandling.cancelledNoShow`); the default REVERSE is today's behaviour.
+    const handling = await this.handlingFor(tx, tenantId);
+    if (handling.cancelledNoShow === "KEEP") return null;
     return this.reverseActiveCharge(tx, tenantId, appointmentId, "appointment_cancelled_or_no_show", {
-      creditIfBilled: true,
+      creditIfBilled: handling.refunded === "CREDIT",
     });
+  }
+
+  private async handlingFor(tx: Tx, tenantId: string) {
+    const t = await tx.tenant.findUnique({ where: { id: tenantId }, select: { market: { select: { featureDefaults: true } } } });
+    return resolveCommissionHandling(t?.market?.featureDefaults);
   }
 
   async onApprovedDispute(tx: Tx, tenantId: string, chargeId: string): Promise<BilledReversalCreditIntent | null> {
@@ -223,10 +270,16 @@ export class CommissionChargeService {
       where: { id: chargeId, tenantId, status: CommissionChargeStatus.DISPUTED },
     });
     if (!charge) throw new NotFoundException("Disputed charge not found");
+    const handling = await this.handlingFor(tx, tenantId);
     const intent = await this.reverseActiveCharge(tx, tenantId, charge.appointmentId, "dispute_approved", {
-      creditIfBilled: true,
+      creditIfBilled: handling.refunded === "CREDIT",
       fromStatus: CommissionChargeStatus.DISPUTED,
     });
+    // GRW-P1-D2: a PROVIDER_LED_EVIDENCE dispute leaves its own append-only decision (origin PROVIDER_LED, NO_CHARGE) and a CommissionAdjusted event.
+    const dispute = await tx.commissionDispute.findUnique({ where: { chargeId }, select: { reason: true } });
+    if (dispute?.reason === CommissionDisputeReason.PROVIDER_LED_EVIDENCE) {
+      await this.adjustToProviderLed(tx, tenantId, charge, DECISION_REASON.PROVIDER_LED_EVIDENCE, "PLE");
+    }
     await tx.auditLog.create({
       data: {
         tenantId,
@@ -240,6 +293,85 @@ export class CommissionChargeService {
       },
     });
     return intent;
+  }
+
+  /**
+   * Waive an active (PENDING / CONFIRMED / BILLED) charge for a platform-authorised reason without a dispute: GOODWILL_WAIVER or POLICY_CORRECTION.
+   * Direction is removal only. Writes a new append-only decision (`<policy>+OVR<n>`), reverses through the same path as a dispute, emits CommissionAdjusted.
+   */
+  async onOverrideWaive(tx: Tx, tenantId: string, appointmentId: string, reason: string, actorId: string): Promise<BilledReversalCreditIntent | null> {
+    const charge = await tx.kiorexCommissionCharge.findFirst({ where: { tenantId, appointmentId } });
+    if (!charge || !isActiveCommissionChargeStatus(charge.status)) throw new BadRequestException("No active charge to waive for this appointment");
+    const handling = await this.handlingFor(tx, tenantId);
+    const prior = await tx.kiorexCommissionDecision.count({ where: { appointmentId, policyVersion: { contains: "+OVR" } } });
+    const intent = await this.reverseActiveCharge(tx, tenantId, appointmentId, `override_${reason.toLowerCase()}`, { creditIfBilled: handling.refunded === "CREDIT" });
+    await this.adjustToProviderOrWaived(tx, tenantId, charge, reason, `OVR${prior + 1}`, actorId);
+    return intent;
+  }
+
+  /** PROVIDER_LED_EVIDENCE: the decision flips the origin to PROVIDER_LED (never the other way). */
+  private async adjustToProviderLed(tx: Tx, tenantId: string, charge: KiorexCommissionCharge, reason: string, tag: string) {
+    await tx.appointment.update({ where: { id: charge.appointmentId }, data: { acquisitionOrigin: AcquisitionOrigin.PROVIDER_LED } });
+    await this.adjustToProviderOrWaived(tx, tenantId, charge, reason, tag, null, AcquisitionOrigin.PROVIDER_LED);
+  }
+
+  private async adjustToProviderOrWaived(
+    tx: Tx,
+    tenantId: string,
+    charge: KiorexCommissionCharge,
+    reason: string,
+    tag: string,
+    actorId: string | null,
+    originOverride?: AcquisitionOrigin,
+  ) {
+    const apt = await tx.appointment.findUniqueOrThrow({
+      where: { id: charge.appointmentId },
+      select: { clinicId: true, bookingSource: true, isNewPatientAtBooking: true, acquisitionOrigin: true },
+    });
+    const prev = await tx.kiorexCommissionDecision.findFirst({ where: { appointmentId: charge.appointmentId }, orderBy: { createdAt: "desc" }, select: { policyVersion: true } });
+    const root = (prev?.policyVersion ?? "CP1@base").split("+")[0]!;
+    const origin = originOverride ?? apt.acquisitionOrigin ?? AcquisitionOrigin.UNATTRIBUTED;
+    const decision = await writeCommissionDecision(tx, {
+      tenantId,
+      clinicId: apt.clinicId,
+      appointmentId: charge.appointmentId,
+      policyVersion: `${root}+${tag}`,
+      origin,
+      bookingSource: apt.bookingSource,
+      isNewPatient: Boolean(apt.isNewPatientAtBooking),
+      followUpVisit: false,
+      decision: CommissionDecisionKind.NO_CHARGE,
+      reasonCodes: [reason, ...(actorId ? [DECISION_REASON.MANUAL_OVERRIDE] : [])],
+      currency: charge.currency,
+      extra: { previousAmount: charge.amount.toFixed(2), chargeId: charge.id },
+    });
+    await tx.auditLog.create({
+      data: {
+        tenantId,
+        actorId,
+        action: "kiorex.commission_charge.adjusted",
+        resource: "KiorexCommissionCharge",
+        resourceId: charge.id,
+        metadata: { appointmentId: charge.appointmentId, reason, decisionRef: decision.id, previousAmount: charge.amount.toFixed(2) } as Prisma.InputJsonValue,
+      },
+    });
+    await this.outbox.enqueue(
+      tenantId,
+      COMMISSION_ADJUSTED,
+      {
+        chargeId: charge.id,
+        appointmentId: charge.appointmentId,
+        previousAmount: charge.amount.toFixed(2),
+        adjustedAmount: "0.00",
+        currency: charge.currency,
+        reason,
+        decisionRef: decision.id,
+        origin: decision.origin,
+        policyVersion: decision.policyVersion,
+        adjustedAt: new Date().toISOString(),
+      },
+      tx,
+    );
   }
 
   async beforeAppointmentDelete(tenantId: string, appointmentId: string): Promise<void> {
@@ -365,7 +497,7 @@ export class CommissionChargeService {
       },
     });
     await this.auditCharge(tx, tenantId, "kiorex.commission_charge.reversed", updated, { reason });
-    await this.outbox.enqueue(tenantId, COMMISSION_CHARGE_REVERSED, { ...this.outboxPayload(updated), reason }, tx);
+    await this.outbox.enqueue(tenantId, COMMISSION_CHARGE_REVERSED, { ...(await this.outboxPayload(tx, updated)), reason }, tx);
 
     if (wasBilled && opts.creditIfBilled) {
       return {
@@ -379,8 +511,11 @@ export class CommissionChargeService {
     return null;
   }
 
-  private outboxPayload(charge: KiorexCommissionCharge): Record<string, unknown> {
+  /** Additive contract 1.10.0 fields: the decision that explains the charge (latest append-only row). Absent when no decision exists (legacy). */
+  private async outboxPayload(tx: Tx, charge: KiorexCommissionCharge): Promise<Record<string, unknown>> {
+    const d = await tx.kiorexCommissionDecision.findFirst({ where: { appointmentId: charge.appointmentId }, orderBy: { createdAt: "desc" }, select: { id: true, origin: true, policyVersion: true } });
     return {
+      ...(d ? { decisionRef: d.id, origin: d.origin, policyVersion: d.policyVersion } : {}),
       chargeId: charge.id,
       appointmentId: charge.appointmentId,
       amount: charge.amount.toFixed(2),

@@ -22,6 +22,7 @@ import { TelehealthCallPage } from "@/features/telehealth/telehealth-call-page";
 import { AppointmentReschedulePage } from "@/features/appointments/appointment-reschedule-page";
 import { DepositPayPage } from "@/features/appointments/deposit-pay-page";
 import { PublicBookingPage } from "@/features/kiorex/public-booking-page";
+import { PublicShortLinkPage } from "@/features/growth/public-short-link";
 import { PublicRxVerifyPage } from "@/features/prescriptions/public-rx-verify-page";
 import { DevInboxPage } from "@/features/dev/dev-inbox-page";
 import { ClinicalTemplatesRedirect } from "@/features/clinical/clinical-templates-redirect";
@@ -71,6 +72,7 @@ import {
   MarketplaceListingProfilePage,
   KiorexPage,
   KiorexConnectPage,
+  GrowthPage,
   PlatformOverviewPage,
   PlatformUsersTab,
   ReportsPage,
@@ -116,6 +118,7 @@ export const router = createBrowserRouter([
   { path: "/v/:token", element: <PatientJoinPage /> },
   { path: "/pay/:token", element: <DepositPayPage /> },
   { path: "/b/:slug", element: <PublicBookingPage /> },
+  { path: "/q/:code", element: <PublicShortLinkPage /> },
   { path: "/rx/:token", element: <PublicRxVerifyPage /> },
   // KNFAM01 — public family summary (token-gated, clinically minimal).
   { path: "/f/:token", element: defer(FamilySummaryPage) },
@@ -197,6 +200,7 @@ export const router = createBrowserRouter([
       },
       { path: "kiorex", element: <NavGate tab="clinics" orTab="admin">{defer(KiorexPage)}</NavGate> },
       { path: "kiorex/connect", element: <NavGate tab="clinics" orTab="admin">{defer(KiorexConnectPage)}</NavGate> },
+      { path: "kiorex/growth", element: <NavGate tab="clinics" orTab="admin">{defer(GrowthPage)}</NavGate> },
       { path: "expenses", element: <NavGate tab="expenses">{defer(ExpensesPage)}</NavGate> },
       { path: "revenue", element: <RevenueGate /> },
       { path: "clinic-revenue", element: <Navigate to="/revenue" replace /> },

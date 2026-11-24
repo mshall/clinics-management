@@ -75,6 +75,7 @@
     "frontDeskBoard": "Front desk board",
     "guideBook": "Guide book",
     "kiorex": "Kiorex",
+    "growth": "Growth & Marketing",
     "mobileToday": "Today",
     "mobileMore": "More",
     "mobileBottom": "Primary navigation"
@@ -371,6 +372,7 @@
       "kiorex_profile": "Publish Kiorex marketplace profile",
       "doctor_verification": "Verify your doctor credentials for Kiorex",
       "connect_kiorex": "Connect to Kiorex",
+      "growth_links": "Create your first booking link",
       "nurse_verification": "Verify your nursing credentials",
       "nurse_zones": "Set your coverage zones",
       "nurse_services": "Choose the services you offer",
@@ -438,6 +440,7 @@
       "kiorex_profile": "Make this clinic bookable on Kiorex (needs a verified doctor and a bookable visit type).",
       "doctor_verification": "Upload credentials so patients can trust your listing.",
       "connect_kiorex": "Optional. Let patients find and book you on Kiorex.",
+      "growth_links": "Optional. Share it with patients you already see: bookings through it never carry a Kiorex fee.",
       "nurse_verification": "Upload ID and credentials for review.",
       "nurse_zones": "The districts you travel to.",
       "nurse_services": "Add the home-visit services you offer.",

@@ -52,6 +52,6 @@ export const FLAG_ENFORCEMENT: Record<string, FlagEnforcement> = {
   "nurse.mar": { kind: "controller", files: ["nurse/nurse-mar.controller.ts"] },
   "nurse.private_duty_shifts": { kind: "service", files: ["nurse/shift.service.ts"] },
   "nurse.family_updates": { kind: "service", files: ["nurse/family-update.service.ts"] },
-  "growth.provider_links": { kind: "pending", note: "GRW-P1-D1 (provider links, QR, widget settings) enforces it on POST /growth/links; registered in Wave 1 so the control plane can pre-stage it" },
+  "growth.provider_links": { kind: "controller", files: ["growth/provider-links/provider-links.controller.ts"] },
   "nurse.individual_kiorex_listing": { kind: "service", files: ["marketplace/marketplace-listing-eligibility.ts"] },
 };

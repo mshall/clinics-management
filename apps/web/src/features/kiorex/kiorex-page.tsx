@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Megaphone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
@@ -53,6 +55,9 @@ export function KiorexPage() {
           <p className="text-sm text-muted-foreground">
             {t("kiorexTab.subtitle", "Control how patients find and book you on Kiorex, and see what it brings in.")}
           </p>
+          <Button asChild variant="outline" size="sm" className="mt-2">
+            <Link to="/kiorex/growth" data-testid="kiorex-growth-link"><Megaphone className="size-4" aria-hidden />{t("nav.growth", "Growth & Marketing")}</Link>
+          </Button>
         </div>
         {clinics.data && clinics.data.length > 1 ? (
           <div className="space-y-1">

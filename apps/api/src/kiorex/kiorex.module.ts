@@ -5,6 +5,9 @@ import { PatientsModule } from "../patients/patients.module";
 import { CommissionChargeScheduler } from "./commission-charge.scheduler";
 import { CommissionChargeService } from "./commission-charge.service";
 import { CommissionDisputeService } from "./commission-dispute.service";
+import { AttributionEvidenceService } from "./attribution-evidence.service";
+import { CommissionDecisionsController } from "./commission-decisions.controller";
+import { CommissionDecisionsService } from "./commission-decisions.service";
 import { KiorexBillingChargesController } from "./kiorex-billing-charges.controller";
 import { KiorexCommissionService } from "./kiorex-commission.service";
 import { PlatformCommissionDisputesController } from "./platform-commission-disputes.controller";
@@ -18,8 +21,9 @@ import { PublicKiorexFeesController } from "./public-kiorex-fees.controller";
     PlatformCommissionDisputesController,
     PublicKiorexFeesController,
     KiorexBillingChargesController,
+    CommissionDecisionsController,
   ],
-  providers: [KiorexCommissionService, CommissionChargeService, CommissionDisputeService, CommissionChargeScheduler],
-  exports: [KiorexCommissionService, CommissionChargeService, CommissionDisputeService],
+  providers: [KiorexCommissionService, CommissionChargeService, CommissionDisputeService, CommissionChargeScheduler, AttributionEvidenceService, CommissionDecisionsService],
+  exports: [KiorexCommissionService, CommissionChargeService, CommissionDisputeService, AttributionEvidenceService, CommissionDecisionsService],
 })
 export class KiorexModule {}
