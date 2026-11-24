@@ -5,9 +5,11 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CreditWalletService } from "./credit-wallet.service";
 import { decimalAmount, sumLedgerAmounts } from "./credit-wallet-math";
 import { createPrismaClient } from "../prisma/create-prisma-client";
+import { OutboxEventService } from "../messaging/outbox-event.service";
 
 const prisma = createPrismaClient();
 const walletSvc = new CreditWalletService(prisma as unknown as PrismaService);
+const walletWithEvents = new CreditWalletService(prisma as unknown as PrismaService, new OutboxEventService(prisma as unknown as PrismaService));
 
 describe("CR-05 credit wallet service", () => {
   const suffix = `cr05-${Date.now()}`;
@@ -44,6 +46,25 @@ describe("CR-05 credit wallet service", () => {
     });
     return tenant;
   }
+
+  it("provider credit events (contracts 1.12.0) are written INTERNAL in the ledger transaction: granted, consumed, expired; tenant, category, reason and amount only", async () => {
+    const tenant = await seedTenant("events");
+    await walletWithEvents.grantInTransaction({ tenantId: tenant.id, amount: decimalAmount(40), reason: CreditReason.PROMO, note: "promo", expiresAt: new Date(Date.now() + 86_400_000) });
+    await walletWithEvents.consume(tenant.id, 15, CreditReason.KIOREX_FEE_OFFSET, { untyped: true });
+    await walletWithEvents.grantInTransaction({ tenantId: tenant.id, amount: decimalAmount(10), reason: CreditReason.PROMO, expiresAt: new Date(Date.now() - 1000) });
+    await walletWithEvents.runDailyCreditMaintenance();
+    const rows = await prisma.outboxEvent.findMany({ where: { tenantId: tenant.id, type: { startsWith: "ProviderCredit" } }, orderBy: { createdAt: "asc" } });
+    assert.deepEqual(rows.map((r) => r.type), ["ProviderCreditGranted", "ProviderCreditConsumed", "ProviderCreditGranted", "ProviderCreditExpired"]);
+    for (const r of rows) {
+      assert.equal(r.target, "INTERNAL");
+      const p = r.payload as Record<string, unknown>;
+      assert.equal(p.orgRef, tenant.id);
+      assert.ok(Number.isInteger(p.amountMinor) && (p.amountMinor as number) >= 1);
+      assert.doesNotMatch(Object.keys(p).join(" "), /patient|name|phone|email|sub\b/i);
+    }
+    assert.equal((rows[0]!.payload as { amountMinor: number }).amountMinor, 4000);
+    assert.equal((rows[1]!.payload as { amountMinor: number }).amountMinor, 1500);
+  });
 
   it("grant + consume keeps ledger sum equal to wallet balance", async () => {
     const tenant = await seedTenant("ledger");
