@@ -42,6 +42,8 @@ import { ProviderLinkCoreModule } from "../growth/provider-links/provider-link-c
 import { VerificationCoreModule } from "../growth/provider-marketing/verification-core.module";
 import { MarketplaceProviderVerificationController } from "./marketplace-provider-verification.controller";
 import { MarketplaceReferralLinksController } from "./marketplace-referral-links.controller";
+import { MarketplaceStaffPhoneMatchController } from "./marketplace-staff-phone-match.controller";
+import { StaffPhoneMatchService } from "../growth/staff-phone-match.service";
 import { KiorexConnectController } from "./kiorex-connect.controller";
 import { KiorexConnectService } from "./kiorex-connect.service";
 import { KiorexFrontDoorController } from "./kiorex-front-door.controller";
@@ -76,6 +78,7 @@ import { PromotionsMarketplaceController } from "../promotions/promotions-market
   controllers: [
     MarketplaceController,
     MarketplaceReferralLinksController,
+    MarketplaceStaffPhoneMatchController,
     MarketplaceProviderVerificationController,
     MarketplaceOrgController,
     MarketplaceListingsProfileController,
@@ -88,6 +91,7 @@ import { PromotionsMarketplaceController } from "../promotions/promotions-market
     PromotionsMarketplaceController,
   ],
   providers: [
+    StaffPhoneMatchService,
     KiorexSettingsService,
     KiorexReviewsService,
     ClinicBookingPageService,

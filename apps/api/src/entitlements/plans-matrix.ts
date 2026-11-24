@@ -150,6 +150,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "promotions/promotions.controller.ts": { kind: "open" }, // GRW-P2-S: gated by the flag clinic.provider_credit_v2 and the owner and admin roles in the controller
   "promotions/promotions-marketplace.controller.ts": { kind: "webhook" }, // GRW-P2-S: signed Kiorex commands (HMAC marketplace client)
   "marketplace/marketplace-referral-links.controller.ts": { kind: "webhook" }, // HMAC marketplace client (link registry lookup for Kiorex), same guard as marketplace.controller.ts
+  "marketplace/marketplace-staff-phone-match.controller.ts": { kind: "webhook" }, // HMAC marketplace client (RF_PROVIDER_COLLUSION: keyed phone hashes in, one boolean out)
   "marketplace/kiorex-import.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connection.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connect.controller.ts": { kind: "open" },
