@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import {
   IsArray,
   IsBoolean,
+  IsDefined,
   IsIn,
   IsNumber,
   IsObject,
@@ -121,6 +122,7 @@ class ProviderProfileBodyDto {
 }
 
 export class PutProviderProfileDto {
+  @IsDefined()
   @ValidateNested()
   @Type(() => ProviderProfileBodyDto)
   profile!: ProviderProfileBodyDto;

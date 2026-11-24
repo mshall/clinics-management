@@ -19,6 +19,7 @@ import {
 import { recordLinkAttended } from "../growth/provider-links/link-attended";
 import type { JwtUser } from "../auth/jwt-user";
 import { parsePageParams } from "../common/pagination";
+import { reasonForFeeReturn } from "../credits/credit-categories";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -214,10 +215,13 @@ export class CommissionChargeService {
   }
 
   async grantLateReversalCredit(intent: BilledReversalCreditIntent): Promise<void> {
+    // GRW-P2-W: a billed fee returns as credit once (idempotent on the charge id), with a named reason (dispute win, goodwill waiver or the generic late reversal)
+    const v2 = await flagOn(this.flags, intent.tenantId, "clinic.provider_credit_v2");
     await this.creditWallet.grantInTransaction({
       tenantId: intent.tenantId,
       amount: intent.amount,
-      reason: CreditReason.KIOREX_LATE_REVERSAL,
+      reason: v2 ? CreditReason[reasonForFeeReturn(intent.reason)] : CreditReason.KIOREX_LATE_REVERSAL,
+      idempotencyKey: v2 ? `fee-return:${intent.chargeId}` : undefined,
       note: `Kiorex commission reversal · appointment ${intent.appointmentId}`,
       sourceRef: intent.chargeId,
       metadata: {

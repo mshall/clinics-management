@@ -78,11 +78,22 @@ export type ProviderProfileEditorDto = {
   preview: PublishedProviderDto;
 };
 
+/** Contract names (1.6.0): IN_CLINIC, VIDEO, HOME_VISIT; the listing always offers at least one. */
+export function modalitiesOf(inClinic: boolean, home: boolean, video: boolean): ("IN_CLINIC" | "VIDEO" | "HOME_VISIT")[] {
+  const out: ("IN_CLINIC" | "VIDEO" | "HOME_VISIT")[] = [];
+  if (inClinic) out.push("IN_CLINIC");
+  if (video) out.push("VIDEO");
+  if (home) out.push("HOME_VISIT");
+  return out.length ? out : ["IN_CLINIC"];
+}
+
 export type PublishedProviderDto = {
   /** Rev 2.3 (KX-09 §03, contracts 1.5.0): additive provider-sync fields. */
   profession?: string;
   edition?: "CLINIC" | "NURSE";
   serviceLocations?: ("IN_CLINIC" | "HOME" | "VIDEO")[];
+  /** GRW-GC-2 G-10 (marketplace 1.6.0, additive): care modalities offered; VIDEO = telemedicine is bookable. Mirrors `serviceLocations` with the contract's names. */
+  modalities?: ("IN_CLINIC" | "VIDEO" | "HOME_VISIT")[];
   /** District codes only; no polygons or coordinates. */
   coverageDistricts?: string[];
   verification?: { register: string };
@@ -396,10 +407,11 @@ export class MarketplaceProviderProfileService {
     const telehealthOffered = hasVideoTypes && (await telehealthOfferedBy({ prisma: this.prisma as never, flags: this.flags, entitlements: this.entitlements }, tenantId, clinicianId));
     const pack = resolveProfessionPack(tenant?.market);
     const register = profession ? pack.verification[profession]?.registers.find((r) => r.isSyndicate)?.code : undefined;
-    const fields: Pick<PublishedProviderDto, "profession" | "edition" | "serviceLocations" | "coverageDistricts" | "verification" | "assignsClinician"> = {
+    const fields: Pick<PublishedProviderDto, "profession" | "edition" | "serviceLocations" | "modalities" | "coverageDistricts" | "verification" | "assignsClinician"> = {
       ...(profession ? { profession } : {}),
       edition: tenant?.edition ?? "CLINIC",
       serviceLocations: [...(typeLocations.some((l) => l !== "HOME" && l !== "VIDEO") || typeLocations.length === 0 ? (["IN_CLINIC"] as const) : []), ...(homeOffered ? (["HOME"] as const) : []), ...(telehealthOffered ? (["VIDEO"] as const) : [])],
+      modalities: modalitiesOf(typeLocations.some((l) => l !== "HOME" && l !== "VIDEO") || typeLocations.length === 0, homeOffered, telehealthOffered),
       coverageDistricts: homeOffered ? settings?.coverageDistrictIds ?? [] : [],
       ...(register ? { verification: { register } } : {}),
       ...(tenant?.nurseTenantKind === "AGENCY" ? { assignsClinician: true } : {}),

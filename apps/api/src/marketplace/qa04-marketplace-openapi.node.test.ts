@@ -138,17 +138,16 @@ describe("QA-04 marketplace OpenAPI contract", () => {
     }
   });
 
-  it("booking channel enum stays MARKETPLACE | CLINIC_LINK", () => {
+  it("booking channel enum keeps MARKETPLACE | CLINIC_LINK (1.6.0 appends KIOREX_WHATSAPP)", () => {
     const spec = loadSpec();
     const consumer = loadConsumer();
     const booking = spec.paths["/bookings"]?.post;
     const channelEnum =
       booking?.requestBody?.content?.["application/json"]?.schema?.properties?.channel?.enum ?? [];
-    assert.deepEqual(
-      [...channelEnum].sort(),
-      [...consumer.bookingChannelEnum].sort(),
-      "breaking: booking.channel enum changed",
-    );
+    // contracts 1.12.0 (marketplace 1.6.0) only APPENDS KIOREX_WHATSAPP; the consumer fixture lists what Kiorex sends today, so it may be a subset.
+    const added = (channelEnum as string[]).filter((c) => !(consumer.bookingChannelEnum as string[]).includes(c));
+    assert.deepEqual(added.filter((c) => c !== "KIOREX_WHATSAPP"), [], "breaking: booking.channel enum changed");
+    for (const c of consumer.bookingChannelEnum as string[]) assert.ok(channelEnum.includes(c), `breaking: booking.channel lost ${c}`);
   });
 
   it("consumer contract fixture is published for the Kiorex repo", () => {
@@ -160,7 +159,7 @@ describe("QA-04 marketplace OpenAPI contract", () => {
 
   it("GRW-P1-D2 contracts 1.4.0: the copy documents the optional signed acquisition block, its error codes and keeps the old fields", () => {
     const spec = loadSpec() as OpenApiSpec & { components: { schemas: Record<string, { required?: string[]; properties?: Record<string, { enum?: string[] }> }> } };
-    assert.match(spec.info.version, /^1\.(4|5)\.\d+$/, "1.4.0 added the acquisition block; 1.5.0 (contracts 1.11.0) only adds");
+    assert.match(spec.info.version, /^1\.(4|5|6)\.\d+$/, "1.4.0 added the acquisition block; 1.5.0 (contracts 1.11.0) and 1.6.0 (contracts 1.12.0) only add");
     const body = spec.paths["/bookings"]?.post?.requestBody?.content?.["application/json"]?.schema?.properties as Record<string, unknown>;
     for (const f of ["channel", "bookingPageSlug", "attribution", "acquisition"]) assert.ok(f in body, `booking request lost ${f}`);
     assert.deepEqual(body.acquisition, { $ref: "#/components/schemas/AcquisitionBlock" });
@@ -199,5 +198,43 @@ describe("QA-04 marketplace OpenAPI contract", () => {
     }
     assert.equal(spec.paths["/referral-links/{code}"]?.get?.operationId, "marketplaceGetReferralLink");
     assert.equal(spec.paths["/referral-links"]?.get?.operationId, "marketplaceListReferralLinks");
+  });
+
+  it("GRW-GC-2 contracts 1.12.0 (marketplace 1.6.0): the copy documents the Clinic-side items and the Clinic implements them", () => {
+    const spec = loadSpec() as unknown as {
+      info: { version: string };
+      paths: Record<string, Record<string, { operationId?: string }>>;
+      components: { schemas: Record<string, { properties?: Record<string, { enum?: string[]; items?: { enum?: string[] } }> }> };
+    };
+    assert.match(spec.info.version, /^1\.6\.\d+$/, "the Clinic copy is the 1.6.0 contract");
+    // G-9 KIOREX_WHATSAPP is a documented booking channel AND the service accepts and stores it
+    const channel = spec.paths["/bookings"]?.post && (spec.paths["/bookings"]!.post as never as { requestBody: { content: { "application/json": { schema: { properties: { channel: { enum: string[] } } } } } } }).requestBody.content["application/json"].schema.properties.channel.enum;
+    assert.ok(channel.includes("KIOREX_WHATSAPP"));
+    const booking = readFileSync(join(__dirname, "marketplace-booking.service.ts"), "utf8");
+    assert.match(booking, /KIOREX_WHATSAPP_CHANNEL/);
+    assert.match(booking, /BookingSource\.KIOREX_WHATSAPP/);
+    // G-8 waitlist join / read / leave / accept / decline are documented and routed (they were already in 1.1.0)
+    const routes = parseControllerRoutes(readFileSync(CONTROLLER_PATH, "utf8"));
+    for (const [m, p] of [["post", "/waitlist"], ["get", "/waitlist/{externalRef}"], ["delete", "/waitlist/{externalRef}"], ["post", "/waitlist/offers/{offerId}/accept"], ["post", "/waitlist/offers/{offerId}/decline"]] as const) {
+      assert.ok(spec.paths[p]?.[m], `${m} ${p} documented`);
+      assert.ok(routes.some((r) => r.method === m && nestPathToOpenApi(r.path) === p), `${m} ${p} routed`);
+    }
+    // G-13 slot counts for the liquidity dashboard: the documented path is analytics/slot-capacity and it is routed
+    assert.ok(spec.paths["/analytics/slot-capacity"]?.get);
+    assert.ok(routes.some((r) => r.method === "get" && r.path === "/analytics/slot-capacity"));
+    // G-12 pay-link registration is documented in the copy (hosted by Kiorex, called by Kiorly)
+    assert.ok(spec.paths["/pay/links"]?.post, "POST /pay/links documented");
+    // G-10 telemedicine capability: `modalities` includes VIDEO and the profile publisher sets it
+    const provider = Object.values(spec.components.schemas).find((sc) => sc.properties?.modalities);
+    assert.ok(provider?.properties?.modalities?.items?.enum?.includes("VIDEO") || (provider?.properties?.modalities as { items?: { enum?: string[] } })?.items?.enum?.includes("VIDEO"));
+    assert.match(readFileSync(join(__dirname, "marketplace-provider-profile.service.ts"), "utf8"), /modalities: modalitiesOf\(/);
+  });
+
+  it("GRW-P2-C the signed provider-verification routes are HMAC guarded and documented as a Clinic-side addition", () => {
+    const src = readFileSync(join(__dirname, "marketplace-provider-verification.controller.ts"), "utf8");
+    assert.match(src, /MarketplaceAuthGuard/);
+    assert.equal(/@Controller\("marketplace\/v1\/([^"]*)"\)/.exec(src)?.[1], "provider-verification");
+    const routes = parseControllerRoutes(src).map((r) => `${r.method} ${r.path}`).sort();
+    assert.deepEqual(routes, ["get /requests/:requestRef", "post /decisions"]);
   });
 });

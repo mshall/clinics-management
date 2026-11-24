@@ -1,4 +1,5 @@
-import { CreditEntryType, type CreditReason, Prisma } from "@prisma/client";
+import { CreditEntryType, type CreditCategory, type CreditReason, Prisma } from "@prisma/client";
+import { lotSpendableFor, type CreditUse } from "./credit-categories";
 
 export type SimLedgerEntry = {
   type: CreditEntryType;
@@ -137,4 +138,72 @@ export function simulateWalletOps(ops: WalletSimOp[]): {
   const balance = sumLedgerAmounts(entries);
   if (balance.lt(0)) throw new Error("negative balance");
   return { balance, entries };
+}
+
+/* ───────────── GRW-P2-W: draw-down with categories (pure) ───────────── */
+export type CreditLotView = {
+  id: string;
+  remaining: Prisma.Decimal;
+  expiresAt: Date | null;
+  reason: CreditReason;
+  category?: CreditCategory | null;
+  restrictions?: unknown;
+  /** tie-break for lots without an expiry (creation order) */
+  seq: number;
+};
+
+export type ChargeLine = { key: string; use: CreditUse; amount: Prisma.Decimal };
+export type LotAllocation = { lotId: string; taken: Prisma.Decimal; use: CreditUse; lineKey: string };
+export type LineCredit = { key: string; use: CreditUse; amount: Prisma.Decimal; credit: Prisma.Decimal; payable: Prisma.Decimal };
+
+const ZERO = new Prisma.Decimal(0);
+
+/** First expiring first, no expiry last, ties by lot id (the shared credit-ledger vectors), then creation order. */
+export function sortLotsFifo<T extends { id: string; expiresAt: Date | null; seq: number }>(lots: T[]): T[] {
+  const byId = (a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : a.seq - b.seq);
+  return [...lots].sort((a, b) => {
+    if (a.expiresAt && b.expiresAt) return a.expiresAt.getTime() - b.expiresAt.getTime() || byId(a, b);
+    if (a.expiresAt) return -1;
+    if (b.expiresAt) return 1;
+    return byId(a, b);
+  });
+}
+
+/** Credit that can pay for `use` at `at`: expired lots and lots whose category or restrictions exclude the use do not count. */
+export function spendableForUse(lots: CreditLotView[], use: CreditUse, at: Date): Prisma.Decimal {
+  return lots
+    .filter((l) => l.remaining.gt(0) && (!l.expiresAt || l.expiresAt.getTime() > at.getTime()) && lotSpendableFor(l, use))
+    .reduce((s, l) => s.add(l.remaining), ZERO);
+}
+
+/**
+ * Credit first, then the invoice. Lines are served in the given order; inside a line lots go first-expiring-first.
+ * Never more than the payable of a line, never negative, never from an expired or non-spendable lot. Deterministic.
+ */
+export function applyCreditToCharges(lines: ChargeLine[], lotsIn: CreditLotView[], at: Date): { lines: LineCredit[]; allocations: LotAllocation[]; totalCredit: Prisma.Decimal; totalPayable: Prisma.Decimal } {
+  const lots = sortLotsFifo(lotsIn.map((l) => ({ ...l, remaining: l.remaining })));
+  const allocations: LotAllocation[] = [];
+  const out: LineCredit[] = [];
+  for (const line of lines) {
+    const amount = Prisma.Decimal.max(line.amount, ZERO);
+    let left = amount;
+    for (const lot of lots) {
+      if (left.lte(0)) break;
+      if (lot.remaining.lte(0)) continue;
+      if (lot.expiresAt && lot.expiresAt.getTime() <= at.getTime()) continue;
+      if (!lotSpendableFor(lot, line.use)) continue;
+      const taken = Prisma.Decimal.min(lot.remaining, left);
+      lot.remaining = lot.remaining.sub(taken);
+      left = left.sub(taken);
+      allocations.push({ lotId: lot.id, taken, use: line.use, lineKey: line.key });
+    }
+    const credit = amount.sub(left);
+    out.push({ key: line.key, use: line.use, amount, credit, payable: left });
+  }
+  return {
+    lines: out,
+    allocations,
+    totalCredit: out.reduce((s, l) => s.add(l.credit), ZERO),
+    totalPayable: out.reduce((s, l) => s.add(l.payable), ZERO),
+  };
 }

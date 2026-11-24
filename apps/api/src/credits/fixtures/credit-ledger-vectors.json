@@ -1,0 +1,384 @@
+{
+  "_source": "Fixed numeric vectors for the two credit ledgers (contracts 1.12.0, Rev 2.6, ADR-048 Proposed). Patient credit (kiorex-platform growth/rewards) and provider credit (clinics-management credits) are separate systems with separate ledgers; both must reproduce these numbers. Minor units, Math.round half up, largest remainder to the card line.",
+  "rules": {
+    "rounding": "Math.round(ratio * amount), residual to the card line",
+    "refundRatio": "refundableMinor / priceMinor",
+    "sponsoredShare": "voided, never refunded to the patient as cash or credit",
+    "fifo": "scoped lots first, then first expiring, then lot id; expired lots are never consumed",
+    "invariantRC4": "creditRestoredMinor + cardRefundMinor === patientPaidRefundableMinor"
+  },
+  "refundAllocation": [
+    {
+      "name": "doc example, full cancel before completion",
+      "priceMinor": 50000,
+      "sponsoredMinor": 10000,
+      "creditMinor": 15000,
+      "cardMinor": 25000,
+      "heldDepositMinor": 0,
+      "refundableMinor": 50000,
+      "expected": {
+        "patientPaidRefundableMinor": 40000,
+        "creditRestoredMinor": 15000,
+        "cardRefundMinor": 25000,
+        "sponsoredVoidedMinor": 10000
+      }
+    },
+    {
+      "name": "doc example, 40 percent",
+      "priceMinor": 50000,
+      "sponsoredMinor": 10000,
+      "creditMinor": 15000,
+      "cardMinor": 25000,
+      "heldDepositMinor": 0,
+      "refundableMinor": 20000,
+      "expected": {
+        "patientPaidRefundableMinor": 16000,
+        "creditRestoredMinor": 6000,
+        "cardRefundMinor": 10000,
+        "sponsoredVoidedMinor": 4000
+      }
+    },
+    {
+      "name": "card only, full",
+      "priceMinor": 30000,
+      "sponsoredMinor": 0,
+      "creditMinor": 0,
+      "cardMinor": 30000,
+      "heldDepositMinor": 0,
+      "refundableMinor": 30000,
+      "expected": {
+        "patientPaidRefundableMinor": 30000,
+        "creditRestoredMinor": 0,
+        "cardRefundMinor": 30000,
+        "sponsoredVoidedMinor": 0
+      }
+    },
+    {
+      "name": "credit only, full",
+      "priceMinor": 20000,
+      "sponsoredMinor": 0,
+      "creditMinor": 20000,
+      "cardMinor": 0,
+      "heldDepositMinor": 0,
+      "refundableMinor": 20000,
+      "expected": {
+        "patientPaidRefundableMinor": 20000,
+        "creditRestoredMinor": 20000,
+        "cardRefundMinor": 0,
+        "sponsoredVoidedMinor": 0
+      }
+    },
+    {
+      "name": "sponsored plus card, half",
+      "priceMinor": 40000,
+      "sponsoredMinor": 8000,
+      "creditMinor": 0,
+      "cardMinor": 32000,
+      "heldDepositMinor": 0,
+      "refundableMinor": 20000,
+      "expected": {
+        "patientPaidRefundableMinor": 16000,
+        "creditRestoredMinor": 0,
+        "cardRefundMinor": 16000,
+        "sponsoredVoidedMinor": 4000
+      }
+    },
+    {
+      "name": "rounding: thirds",
+      "priceMinor": 10000,
+      "sponsoredMinor": 1000,
+      "creditMinor": 3333,
+      "cardMinor": 5667,
+      "heldDepositMinor": 0,
+      "refundableMinor": 3333,
+      "expected": {
+        "patientPaidRefundableMinor": 3000,
+        "creditRestoredMinor": 1111,
+        "cardRefundMinor": 1889,
+        "sponsoredVoidedMinor": 333
+      }
+    },
+    {
+      "name": "rounding: one piastre",
+      "priceMinor": 10001,
+      "sponsoredMinor": 0,
+      "creditMinor": 5001,
+      "cardMinor": 5000,
+      "heldDepositMinor": 0,
+      "refundableMinor": 5001,
+      "expected": {
+        "patientPaidRefundableMinor": 5001,
+        "creditRestoredMinor": 2501,
+        "cardRefundMinor": 2500,
+        "sponsoredVoidedMinor": 0
+      }
+    },
+    {
+      "name": "held deposit present",
+      "priceMinor": 60000,
+      "sponsoredMinor": 0,
+      "creditMinor": 10000,
+      "cardMinor": 20000,
+      "heldDepositMinor": 30000,
+      "refundableMinor": 60000,
+      "expected": {
+        "patientPaidRefundableMinor": 60000,
+        "creditRestoredMinor": 10000,
+        "cardRefundMinor": 50000,
+        "sponsoredVoidedMinor": 0
+      }
+    },
+    {
+      "name": "nothing refundable",
+      "priceMinor": 50000,
+      "sponsoredMinor": 10000,
+      "creditMinor": 15000,
+      "cardMinor": 25000,
+      "heldDepositMinor": 0,
+      "refundableMinor": 0,
+      "expected": {
+        "patientPaidRefundableMinor": 0,
+        "creditRestoredMinor": 0,
+        "cardRefundMinor": 0,
+        "sponsoredVoidedMinor": 0
+      }
+    },
+    {
+      "name": "10 percent",
+      "priceMinor": 50000,
+      "sponsoredMinor": 10000,
+      "creditMinor": 15000,
+      "cardMinor": 25000,
+      "heldDepositMinor": 0,
+      "refundableMinor": 5000,
+      "expected": {
+        "patientPaidRefundableMinor": 4000,
+        "creditRestoredMinor": 1500,
+        "cardRefundMinor": 2500,
+        "sponsoredVoidedMinor": 1000
+      }
+    },
+    {
+      "name": "99 percent",
+      "priceMinor": 50000,
+      "sponsoredMinor": 10000,
+      "creditMinor": 15000,
+      "cardMinor": 25000,
+      "heldDepositMinor": 0,
+      "refundableMinor": 49500,
+      "expected": {
+        "patientPaidRefundableMinor": 39600,
+        "creditRestoredMinor": 14850,
+        "cardRefundMinor": 24750,
+        "sponsoredVoidedMinor": 9900
+      }
+    },
+    {
+      "name": "small amounts",
+      "priceMinor": 700,
+      "sponsoredMinor": 100,
+      "creditMinor": 150,
+      "cardMinor": 450,
+      "heldDepositMinor": 0,
+      "refundableMinor": 350,
+      "expected": {
+        "patientPaidRefundableMinor": 300,
+        "creditRestoredMinor": 75,
+        "cardRefundMinor": 225,
+        "sponsoredVoidedMinor": 50
+      }
+    }
+  ],
+  "fifo": [
+    {
+      "name": "first expiring first",
+      "lots": [
+        {
+          "id": "a",
+          "remainingMinor": 3000,
+          "expiresAt": "2027-06-01T00:00:00Z"
+        },
+        {
+          "id": "b",
+          "remainingMinor": 5000,
+          "expiresAt": "2027-04-01T00:00:00Z"
+        }
+      ],
+      "consumeMinor": 6000,
+      "expected": [
+        {
+          "lotId": "b",
+          "minor": 5000
+        },
+        {
+          "lotId": "a",
+          "minor": 1000
+        }
+      ]
+    },
+    {
+      "name": "ties break by lot id",
+      "lots": [
+        {
+          "id": "b",
+          "remainingMinor": 1000,
+          "expiresAt": "2027-04-01T00:00:00Z"
+        },
+        {
+          "id": "a",
+          "remainingMinor": 1000,
+          "expiresAt": "2027-04-01T00:00:00Z"
+        }
+      ],
+      "consumeMinor": 1500,
+      "expected": [
+        {
+          "lotId": "a",
+          "minor": 1000
+        },
+        {
+          "lotId": "b",
+          "minor": 500
+        }
+      ]
+    },
+    {
+      "name": "scoped lots before unscoped",
+      "lots": [
+        {
+          "id": "u",
+          "remainingMinor": 2000,
+          "expiresAt": "2027-03-01T00:00:00Z",
+          "scoped": false
+        },
+        {
+          "id": "s",
+          "remainingMinor": 2000,
+          "expiresAt": "2027-09-01T00:00:00Z",
+          "scoped": true
+        }
+      ],
+      "consumeMinor": 2500,
+      "expected": [
+        {
+          "lotId": "s",
+          "minor": 2000
+        },
+        {
+          "lotId": "u",
+          "minor": 500
+        }
+      ]
+    },
+    {
+      "name": "more than available is refused",
+      "lots": [
+        {
+          "id": "a",
+          "remainingMinor": 1000,
+          "expiresAt": "2027-06-01T00:00:00Z"
+        }
+      ],
+      "consumeMinor": 1001,
+      "expected": null
+    },
+    {
+      "name": "exact",
+      "lots": [
+        {
+          "id": "a",
+          "remainingMinor": 1000,
+          "expiresAt": "2027-06-01T00:00:00Z"
+        }
+      ],
+      "consumeMinor": 1000,
+      "expected": [
+        {
+          "lotId": "a",
+          "minor": 1000
+        }
+      ]
+    },
+    {
+      "name": "expired lot is skipped",
+      "now": "2027-05-01T00:00:00Z",
+      "lots": [
+        {
+          "id": "old",
+          "remainingMinor": 9000,
+          "expiresAt": "2027-04-01T00:00:00Z"
+        },
+        {
+          "id": "new",
+          "remainingMinor": 1000,
+          "expiresAt": "2027-06-01T00:00:00Z"
+        }
+      ],
+      "consumeMinor": 500,
+      "expected": [
+        {
+          "lotId": "new",
+          "minor": 500
+        }
+      ]
+    }
+  ],
+  "expiry": [
+    {
+      "name": "unspent remainder expires",
+      "issuedMinor": 5000,
+      "redeemedMinor": 2000,
+      "expiresAt": "2027-04-01T00:00:00Z",
+      "at": "2027-04-01T00:00:00Z",
+      "expireMinor": 3000
+    },
+    {
+      "name": "not yet expired",
+      "issuedMinor": 5000,
+      "redeemedMinor": 0,
+      "expiresAt": "2027-04-01T00:00:00Z",
+      "at": "2027-03-31T23:59:59Z",
+      "expireMinor": 0
+    },
+    {
+      "name": "fully spent",
+      "issuedMinor": 5000,
+      "redeemedMinor": 5000,
+      "expiresAt": "2027-04-01T00:00:00Z",
+      "at": "2027-05-01T00:00:00Z",
+      "expireMinor": 0
+    },
+    {
+      "name": "reservation open at expiry stays reserved",
+      "issuedMinor": 5000,
+      "redeemedMinor": 0,
+      "reservedMinor": 1000,
+      "expiresAt": "2027-04-01T00:00:00Z",
+      "at": "2027-04-02T00:00:00Z",
+      "expireMinor": 4000
+    }
+  ],
+  "reversal": [
+    {
+      "name": "nothing redeemed yet",
+      "issuedMinor": 5000,
+      "redeemedMinor": 0,
+      "reverseMinor": 5000,
+      "recoverableLossMinor": 0
+    },
+    {
+      "name": "part redeemed",
+      "issuedMinor": 5000,
+      "redeemedMinor": 2000,
+      "reverseMinor": 3000,
+      "recoverableLossMinor": 2000
+    },
+    {
+      "name": "all redeemed",
+      "issuedMinor": 5000,
+      "redeemedMinor": 5000,
+      "reverseMinor": 0,
+      "recoverableLossMinor": 5000
+    }
+  ]
+}

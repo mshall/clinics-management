@@ -45,6 +45,8 @@ Items the autonomous build cannot finish without you. **STOP** entries block FIN
 | NH-038 | HVSAF01 / GHV2 | Safety on-call rota (primary + secondary, 24/7 while field visits run), `safety_alerts.alarm_emails` / `alarm_webhook_urls` in the tofu tfvars, safety-contact consent copy, and the staging safety drill with a real channel. | needs human | open |
 | NH-039 | KNFAM01 / KNED03 | Approve the Meta WhatsApp template `nurse_family_update` (EN + AR; variable `link` only, no PHI), the family-contact consent wording (`MessagingConsent` purpose `FAMILY_UPDATES`) and the solo-nurse criminal-record certificate wording (Q8). | needs human | open |
 | NH-040 | HVCFG02 | Decide the market-pack district list (`Market.clinicalConfig.districts`, none shipped) and later polygons; until then districts are free-form slugs validated only for shape. | needs human | open |
+| NH-041 | GRW-P2-C | Egyptian medical-advertising review of the social share content: the deny list in `Docs/growth/content-guard-terms.md`, the six approved templates (AR and EN) and the protected footer. Until counsel signs, the guard stays strict. Also decide whether a provider photo may appear on a share card (not built: no content-licence field exists). | needs human | open |
+| NH-042 | GRW-GC-2 | Deploy ordering for the new Clinic marketplace behaviour: Kiorex keeps `KIORLY_ACCEPTS_WHATSAPP_CHANNEL=false` until this Clinic build is live (it now accepts `channel: KIOREX_WHATSAPP`); then flip it per environment. The signed verification-update routes (`/marketplace/v1/provider-verification/*`) are a Clinic-side addition that contracts 1.12.1 should document. | needs human | open |
 
 ## Provider go-live
 
@@ -94,3 +96,9 @@ credentials exist. No credentials are ever committed; keys live in Secrets Manag
 - Contract change: optional `lt` field on `POST /marketplace/v1/bookings`; a Clinic flag key for evidence disputes (today env `GROWTH_EVIDENCE_DISPUTES`).
 - Real evidence fetch (`GROWTH_EVIDENCE_MODE=real`) needs partner credentials from Kiorex and a live test.
 - Commission handling defaults for cancelled, no-show and refunded visits per market.
+
+## Provider credit v2 (GRW-P2-W)
+- Amounts of the onboarding credit and the connect bonus per market (`credit.onboardingAmount`, `credit.connectBonusAmount`): default 0, founder decision (KX-12).
+- Usage bundle prices and VAT treatment of credit purchases (H-2, H-25); `credit.usageBundlesEnabled` stays false until then.
+- Counsel: forfeiture of promotional credit when a tenant closes (H-24); wording of the credit screen in Arabic (copy review).
+- Accounting: treatment of provider-sponsored discounts debited from credit (H-26 to H-28, P2-S).

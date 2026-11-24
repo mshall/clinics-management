@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -7,13 +7,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { MobileAlertsService } from "./mobile-alerts.service";
 import { MobileUpgradeService } from "./mobile-upgrade.service";
 import { MobileService } from "./mobile.service";
-import { MobileInboxQueryDto, MobileAckBodyDto, MobileUpgradeRequestBodyDto, MobileScheduleQueryDto, MobileApproveBodyDto } from "./mobile.controller.dto";
-
-const need = (b: Record<string, unknown>, k: string, max = 300): string => {
-  const v = b?.[k];
-  if (typeof v !== "string" || !v.trim() || v.length > max) throw new BadRequestException(`${k} is required`);
-  return v;
-};
+import { MobileInboxQueryDto, MobileAckBodyDto, MobileUpgradeRequestBodyDto, MobileScheduleQueryDto, MobileApproveBodyDto, MobileRegisterDeviceBodyDto, MobilePushTokenBodyDto, MobileRecordVitalsBodyDto } from "./mobile.controller.dto";
 
 /**
  * Kiorly staff app API. All routes need a staff JWT. Routes other than bootstrap / alerts / DELETE devices need the `mobile_staff_app`
@@ -28,17 +22,13 @@ export class MobileController {
 
   @Get("bootstrap") bootstrap(@CurrentUser() u: JwtUser, @Headers("x-kiorly-device") dev?: string) { return this.svc.bootstrap(u, dev); }
 
-  @Post("devices") register(@CurrentUser() u: JwtUser, @Body() b: Record<string, unknown>) {
-    const platform = need(b, "platform", 10);
-    if (!["ios", "android", "web"].includes(platform)) throw new BadRequestException("platform must be ios, android or web");
-    return this.svc.registerDevice(u, { deviceId: need(b, "deviceId", 80), platform, name: need(b, "name", 120), appVersion: typeof b.appVersion === "string" ? b.appVersion.slice(0, 40) : undefined, pushToken: typeof b.pushToken === "string" ? b.pushToken.slice(0, 300) : undefined });
+  @Post("devices") register(@CurrentUser() u: JwtUser, @Body() b: MobileRegisterDeviceBodyDto) {
+    return this.svc.registerDevice(u, { deviceId: b.deviceId, platform: b.platform, name: b.name, appVersion: typeof b.appVersion === "string" ? b.appVersion.slice(0, 40) : undefined, pushToken: typeof b.pushToken === "string" ? b.pushToken.slice(0, 300) : undefined });
   }
   @Get("devices") devices(@CurrentUser() u: JwtUser) { return this.svc.listDevices(u); }
   @Delete("devices/:id") revoke(@CurrentUser() u: JwtUser, @Param("id") id: string) { return this.svc.revokeDevice(u, id); }
-  @Put("devices/:id/push-token") pushToken(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: Record<string, unknown>) {
-    const provider = need(b, "provider", 10);
-    if (provider !== "expo" && provider !== "mock") throw new BadRequestException("provider must be expo or mock");
-    return this.svc.setPushToken(u, id, { token: need(b, "token"), provider });
+  @Put("devices/:id/push-token") pushToken(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: MobilePushTokenBodyDto) {
+    return this.svc.setPushToken(u, id, { token: b.token, provider: b.provider });
   }
 
   @Get("inbox") inbox(@CurrentUser() u: JwtUser, @Query() q: MobileInboxQueryDto) { return this.svc.inbox(u, q); }
@@ -59,6 +49,6 @@ export class MobileController {
   @Post("prescriptions/:encounterId/sign") @HttpCode(200) sign(@CurrentUser() u: JwtUser, @Param("encounterId") id: string) { return this.svc.signPrescription(u, id); }
   @Get("lab-results") labResults(@CurrentUser() u: JwtUser, @Query("status") s?: string) { return this.svc.labResults(u, s === "reviewed" ? "reviewed" : "pending"); }
   @Post("lab-results/:orderId/approve") @HttpCode(200) approve(@CurrentUser() u: JwtUser, @Param("orderId") id: string, @Body() b: MobileApproveBodyDto) { return this.svc.approveLabResult(u, id, typeof b?.note === "string" ? b.note : undefined); }
-  @Post("vitals") recordVitals(@CurrentUser() u: JwtUser, @Body() b: Record<string, unknown>, @Headers("idempotency-key") idem?: string) { return this.svc.recordVitals(u, b as never, idem); }
+  @Post("vitals") recordVitals(@CurrentUser() u: JwtUser, @Body() b: MobileRecordVitalsBodyDto, @Headers("idempotency-key") idem?: string) { return this.svc.recordVitals(u, b, idem); }
   @Get("revenue/snapshot") revenue(@CurrentUser() u: JwtUser) { return this.svc.revenueSnapshot(u); }
 }

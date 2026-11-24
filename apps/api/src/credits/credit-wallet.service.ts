@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
@@ -10,6 +11,7 @@ import {
   CreditEntryType,
   CreditReason,
   Prisma,
+  type CreditCategory,
   type CreditLedgerEntry,
   type CreditWallet,
 } from "@prisma/client";
@@ -19,16 +21,61 @@ import { parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   allocateConsumeFifo,
+  applyCreditToCharges,
   decimalAmount,
   grantLotsFromEntries,
+  spendableForUse,
   sumLedgerAmounts,
-  type GrantLot,
+  type ChargeLine,
+  type CreditLotView,
 } from "./credit-wallet-math";
+import {
+  CREDIT_USES,
+  MANUAL_GRANT_REASONS,
+  PROMOTIONAL_CATEGORIES,
+  USE_OF_REASON,
+  categoryOfReason,
+  defaultExpiryFor,
+  lotSpendableFor,
+  namesPatientLedgerObject,
+  type CreditUse,
+} from "./credit-categories";
 import { dualApprovalThresholdFromMarket } from "./credit-wallet.config";
 
 const MAX_GRANT_RETRIES = 5;
 
 type Tx = Prisma.TransactionClient;
+
+export type GrantOpts = {
+  tenantId: string;
+  amount: Prisma.Decimal;
+  reason: CreditReason;
+  expiresAt?: Date | null;
+  note?: string | null;
+  createdBy?: string | null;
+  sourceRef?: string | null;
+  metadata?: Record<string, unknown>;
+  category?: CreditCategory;
+  campaignRef?: string | null;
+  restrictions?: { spendableOn?: CreditUse[] } | null;
+  /** W-6: `(walletId, idempotencyKey)` is unique; a replay returns the first entry. */
+  idempotencyKey?: string | null;
+  tx?: Tx;
+};
+
+export type ConsumeOpts = {
+  createdBy?: string;
+  sourceRef?: string;
+  invoiceId?: string;
+  note?: string;
+  campaignRef?: string;
+  idempotencyKey?: string;
+  /** What the credit pays for; draws only from unexpired lots whose category allows it. Defaults from the reason. */
+  use?: CreditUse;
+  /** Legacy behaviour: draw from any lot with something left (an expired lot the daily sweep has not removed yet). */
+  untyped?: boolean;
+  tx?: Tx;
+};
 
 export type CreditWalletView = {
   balance: string;
@@ -46,12 +93,18 @@ export type CreditWalletView = {
     amount: string;
     remaining: string | null;
     expiresAt: string | null;
+    category: CreditCategory | null;
     note: string | null;
     createdAt: string;
   }[];
   page: number;
   pageSize: number;
   total: number;
+  /** GRW-P2-W (additive): lots by expiry and category, what the credit can pay for, and budget held for sponsored promotions. */
+  lots?: { id: string; reason: CreditReason; category: CreditCategory; remaining: string; expiresAt: string | null }[];
+  spendableByUse?: Record<CreditUse, string>;
+  reserved?: string;
+  canPayFor?: Record<CreditUse, boolean>;
 };
 
 @Injectable()
@@ -68,15 +121,9 @@ export class CreditWalletService {
       select: { baseCurrency: true },
     });
     if (!tenant) throw new NotFoundException("Organization not found");
-    try {
-      return await tx.creditWallet.create({
-        data: { tenantId, currency: tenant.baseCurrency, balance: 0, version: 0 },
-      });
-    } catch {
-      const again = await tx.creditWallet.findUnique({ where: { tenantId } });
-      if (again) return again;
-      throw new ConflictException("Could not provision credit wallet");
-    }
+    // INSERT .. ON CONFLICT DO NOTHING: two first writers racing inside transactions never abort each other (a failed INSERT would poison the transaction)
+    await tx.$executeRaw`INSERT INTO "CreditWallet" ("id", "tenantId", "currency", "balance", "version", "createdAt", "updatedAt") VALUES (${randomUUID()}, ${tenantId}, ${tenant.baseCurrency}, 0, 0, now(), now()) ON CONFLICT ("tenantId") DO NOTHING`;
+    return tx.creditWallet.findUniqueOrThrow({ where: { tenantId } });
   }
 
   async getWalletForTenant(user: JwtUser, tenantId: string, page?: number, pageSize?: number): Promise<CreditWalletView> {
@@ -112,7 +159,14 @@ export class CreditWalletService {
       }),
     ]);
 
+    const lots = await this.listLots(tenantId);
+    const spendableByUse = Object.fromEntries(CREDIT_USES.map((u) => [u, spendableForUse(lots, u, now).toFixed(2)])) as Record<CreditUse, string>;
+    const reservedAgg = await this.prisma.creditReservation.aggregate({ where: { walletId: wallet.id, state: "RESERVED" }, _sum: { amount: true } });
     return {
+      lots: lots.map((l) => ({ id: l.id, reason: l.reason, category: l.category ?? categoryOfReason(l.reason), remaining: l.remaining.toFixed(2), expiresAt: l.expiresAt?.toISOString() ?? null })),
+      spendableByUse,
+      reserved: (reservedAgg._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+      canPayFor: Object.fromEntries(CREDIT_USES.map((u) => [u, Number(spendableByUse[u]) > 0])) as Record<CreditUse, boolean>,
       balance: wallet.balance.toFixed(2),
       currency: wallet.currency,
       version: wallet.version,
@@ -144,6 +198,7 @@ export class CreditWalletService {
     }
     const reason = body.reason;
     if (!reason) throw new BadRequestException("reason is required");
+    if (!MANUAL_GRANT_REASONS.includes(reason)) throw new BadRequestException("reason cannot be granted by hand");
     const note = body.note?.trim();
     if (!note) {
       throw new BadRequestException("note is required for manual credit grants");
@@ -176,6 +231,7 @@ export class CreditWalletService {
     if (expiresAt && Number.isNaN(expiresAt.getTime())) {
       throw new BadRequestException("expiresAt is invalid");
     }
+    if (expiresAt && expiresAt.getTime() <= Date.now()) throw new BadRequestException("expiresAt must be in the future");
 
     const entry = await this.grantInTransaction({
       tenantId,
@@ -200,60 +256,26 @@ export class CreditWalletService {
     }
   }
 
-  async grantInTransaction(opts: {
-    tenantId: string;
-    amount: Prisma.Decimal;
-    reason: CreditReason;
-    expiresAt?: Date | null;
-    note?: string | null;
-    createdBy?: string | null;
-    sourceRef?: string | null;
-    metadata?: Record<string, unknown>;
-  }): Promise<CreditLedgerEntry> {
+  /** Credit config of the tenant's market (`featureDefaults.credit`): expiry months only; amounts of grants live with the grant service. */
+  private async expiryConfig(tx: Tx, tenantId: string): Promise<{ promotionalExpiryMonths?: number; recoveryExpiryMonths?: number }> {
+    const t = await tx.tenant.findUnique({ where: { id: tenantId }, select: { market: { select: { featureDefaults: true } } } });
+    const fd = t?.market?.featureDefaults as Record<string, unknown> | null | undefined;
+    const c = fd && typeof fd === "object" ? (fd.credit as Record<string, unknown> | undefined) : undefined;
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v > 0 && v <= 120 ? Math.floor(v) : undefined);
+    return { promotionalExpiryMonths: num(c?.promotionalExpiryMonths), recoveryExpiryMonths: num(c?.recoveryExpiryMonths) };
+  }
+
+  private assertNoPatientRefs(...refs: (string | null | undefined)[]): void {
+    for (const r of refs) {
+      if (namesPatientLedgerObject(r)) throw new BadRequestException("provider credit references must not name a patient ledger object");
+    }
+  }
+
+  async grantInTransaction(opts: GrantOpts): Promise<CreditLedgerEntry> {
+    if (opts.tx) return this.grantInTx(opts.tx, opts);
     for (let attempt = 0; attempt < MAX_GRANT_RETRIES; attempt++) {
       try {
-        return await this.prisma.$transaction(async (tx) => {
-          const wallet = await this.ensureWallet(opts.tenantId, tx);
-          const newBalance = wallet.balance.add(opts.amount);
-          const updated = await tx.creditWallet.updateMany({
-            where: { id: wallet.id, version: wallet.version },
-            data: { balance: newBalance, version: { increment: 1 } },
-          });
-          if (updated.count !== 1) throw new ConflictException("wallet version conflict");
-
-          const entry = await tx.creditLedgerEntry.create({
-            data: {
-              walletId: wallet.id,
-              type: CreditEntryType.GRANT,
-              reason: opts.reason,
-              amount: opts.amount,
-              remaining: opts.amount,
-              expiresAt: opts.expiresAt ?? null,
-              sourceRef: opts.sourceRef ?? null,
-              note: opts.note ?? null,
-              createdBy: opts.createdBy ?? null,
-            },
-          });
-
-          await tx.auditLog.create({
-            data: {
-              tenantId: opts.tenantId,
-              actorId: opts.createdBy ?? null,
-              action: "credit.grant",
-              resource: "CreditWallet",
-              resourceId: wallet.id,
-              metadata: {
-                amount: opts.amount.toFixed(2),
-                reason: opts.reason,
-                note: opts.note,
-                entryId: entry.id,
-                ...opts.metadata,
-              } as Prisma.InputJsonValue,
-            },
-          });
-
-          return entry;
-        });
+        return await this.prisma.$transaction((tx) => this.grantInTx(tx, opts));
       } catch (e) {
         if (e instanceof ConflictException && attempt < MAX_GRANT_RETRIES - 1) continue;
         throw e;
@@ -262,96 +284,162 @@ export class CreditWalletService {
     throw new ConflictException("Could not grant credits");
   }
 
-  async consume(
-    tenantId: string,
-    amountRaw: number | string,
-    reason: CreditReason,
-    opts?: { createdBy?: string; sourceRef?: string; invoiceId?: string; note?: string },
-  ): Promise<CreditLedgerEntry> {
-    const amount = decimalAmount(amountRaw);
-    if (amount.lte(0)) throw new BadRequestException("consume amount must be positive");
+  private async grantInTx(tx: Tx, opts: GrantOpts): Promise<CreditLedgerEntry> {
+    if (opts.amount.lte(0)) throw new BadRequestException("grant amount must be positive");
+    this.assertNoPatientRefs(opts.sourceRef, opts.idempotencyKey, opts.campaignRef);
+    const wallet = await this.ensureWallet(opts.tenantId, tx);
+    if (opts.idempotencyKey) {
+      const existing = await tx.creditLedgerEntry.findUnique({ where: { walletId_idempotencyKey: { walletId: wallet.id, idempotencyKey: opts.idempotencyKey } } });
+      if (existing) return existing; // W-6 replay: same entry, no second grant
+    }
+    const category = opts.category ?? categoryOfReason(opts.reason);
+    const now = new Date();
+    let expiresAt = opts.expiresAt ?? null;
+    // W-4: every grant expires except an explicit ADJUSTMENT; promotional categories always expire
+    if (!expiresAt && (opts.reason !== CreditReason.ADJUSTMENT || PROMOTIONAL_CATEGORIES.includes(category))) {
+      expiresAt = defaultExpiryFor(category, now, await this.expiryConfig(tx, opts.tenantId));
+    }
 
+    const updated = await tx.creditWallet.updateMany({
+      where: { id: wallet.id, version: wallet.version },
+      data: { balance: wallet.balance.add(opts.amount), version: { increment: 1 } },
+    });
+    if (updated.count !== 1) throw new ConflictException("wallet version conflict");
+
+    const entry = await tx.creditLedgerEntry.create({
+      data: {
+        walletId: wallet.id,
+        type: CreditEntryType.GRANT,
+        reason: opts.reason,
+        amount: opts.amount,
+        remaining: opts.amount,
+        expiresAt,
+        sourceRef: opts.sourceRef ?? null,
+        note: opts.note ?? null,
+        createdBy: opts.createdBy ?? null,
+        category,
+        campaignRef: opts.campaignRef ?? null,
+        restrictions: (opts.restrictions ?? undefined) as Prisma.InputJsonValue | undefined,
+        idempotencyKey: opts.idempotencyKey ?? null,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        tenantId: opts.tenantId,
+        actorId: opts.createdBy ?? null,
+        action: "credit.grant",
+        resource: "CreditWallet",
+        resourceId: wallet.id,
+        metadata: {
+          amount: opts.amount.toFixed(2),
+          reason: opts.reason,
+          category,
+          note: opts.note,
+          entryId: entry.id,
+          ...opts.metadata,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    return entry;
+  }
+
+  /** Lots with something left, as pure views (read only). */
+  async listLots(tenantId: string, tx: Tx = this.prisma): Promise<CreditLotView[]> {
+    const wallet = await this.ensureWallet(tenantId, tx);
+    const rows = await tx.creditLedgerEntry.findMany({
+      where: { walletId: wallet.id, type: CreditEntryType.GRANT, remaining: { gt: 0 } },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((r, seq) => ({ id: r.id, remaining: r.remaining ?? r.amount, expiresAt: r.expiresAt, reason: r.reason, category: r.category, restrictions: r.restrictions, seq }));
+  }
+
+  /** What credit would pay now, line by line, without writing anything (invoice preview, checkout hints). */
+  async previewApplicable(tenantId: string, lines: ChargeLine[], at = new Date()) {
+    return applyCreditToCharges(lines, await this.listLots(tenantId), at);
+  }
+
+  async consume(tenantId: string, amountRaw: number | string, reason: CreditReason, opts?: ConsumeOpts): Promise<CreditLedgerEntry> {
+    if (opts?.tx) return this.consumeInTx(opts.tx, tenantId, amountRaw, reason, opts);
     for (let attempt = 0; attempt < MAX_GRANT_RETRIES; attempt++) {
       try {
-        return await this.prisma.$transaction(async (tx) => {
-          const wallet = await this.ensureWallet(tenantId, tx);
-          if (wallet.balance.lt(amount)) {
-            throw new BadRequestException("Insufficient credit balance");
-          }
-
-          const grantRows = await tx.creditLedgerEntry.findMany({
-            where: {
-              walletId: wallet.id,
-              type: CreditEntryType.GRANT,
-              remaining: { gt: 0 },
-            },
-            orderBy: { createdAt: "asc" },
-          });
-
-          const simEntries = grantRows.map((r) => ({
-            type: r.type,
-            reason: r.reason,
-            amount: r.amount,
-            remaining: r.remaining,
-            expiresAt: r.expiresAt,
-          }));
-          const lots = grantLotsFromEntries(simEntries);
-          const allocations = allocateConsumeFifo(lots, amount);
-
-          for (const alloc of allocations) {
-            const row = grantRows[alloc.entryIndex];
-            const prev = row.remaining ?? row.amount;
-            const next = prev.sub(alloc.taken);
-            await tx.creditLedgerEntry.update({
-              where: { id: row.id },
-              data: { remaining: next },
-            });
-          }
-
-          const newBalance = wallet.balance.sub(amount);
-          const updated = await tx.creditWallet.updateMany({
-            where: { id: wallet.id, version: wallet.version },
-            data: { balance: newBalance, version: { increment: 1 } },
-          });
-          if (updated.count !== 1) throw new ConflictException("wallet version conflict");
-
-          const entry = await tx.creditLedgerEntry.create({
-            data: {
-              walletId: wallet.id,
-              type: CreditEntryType.CONSUME,
-              reason,
-              amount: amount.neg(),
-              sourceRef: opts?.sourceRef ?? null,
-              invoiceId: opts?.invoiceId ?? null,
-              note: opts?.note ?? null,
-              createdBy: opts?.createdBy ?? null,
-            },
-          });
-
-          await tx.auditLog.create({
-            data: {
-              tenantId,
-              actorId: opts?.createdBy ?? null,
-              action: "credit.consume",
-              resource: "CreditWallet",
-              resourceId: wallet.id,
-              metadata: {
-                amount: amount.toFixed(2),
-                reason,
-                entryId: entry.id,
-                invoiceId: opts?.invoiceId ?? null,
-              } as Prisma.InputJsonValue,
-            },
-          });
-
-          return entry;
-        });
+        return await this.prisma.$transaction((tx) => this.consumeInTx(tx, tenantId, amountRaw, reason, opts));
       } catch (e) {
         if (e instanceof ConflictException && attempt < MAX_GRANT_RETRIES - 1) continue;
         throw e;
       }
     }
     throw new ConflictException("Could not consume credits");
+  }
+
+  async consumeInTx(tx: Tx, tenantId: string, amountRaw: number | string | Prisma.Decimal, reason: CreditReason, opts?: ConsumeOpts): Promise<CreditLedgerEntry> {
+    const amount = decimalAmount(amountRaw instanceof Prisma.Decimal ? amountRaw.toFixed(2) : amountRaw);
+    if (amount.lte(0)) throw new BadRequestException("consume amount must be positive");
+    this.assertNoPatientRefs(opts?.sourceRef, opts?.idempotencyKey);
+    const use = opts?.untyped ? undefined : (opts?.use ?? USE_OF_REASON[reason]);
+    const wallet = await this.ensureWallet(tenantId, tx);
+    if (opts?.idempotencyKey) {
+      const existing = await tx.creditLedgerEntry.findUnique({ where: { walletId_idempotencyKey: { walletId: wallet.id, idempotencyKey: opts.idempotencyKey } } });
+      if (existing) return existing; // W-6 replay
+    }
+    if (wallet.balance.lt(amount)) throw new BadRequestException("Insufficient credit balance");
+
+    const now = new Date();
+    const grantRows = await tx.creditLedgerEntry.findMany({
+      where: { walletId: wallet.id, type: CreditEntryType.GRANT, remaining: { gt: 0 } },
+      orderBy: { createdAt: "asc" },
+    });
+    // a typed use only draws from unexpired lots whose category (and restrictions) allow it; a legacy untyped consume behaves as before
+    const eligible = use ? grantRows.filter((r) => (!r.expiresAt || r.expiresAt.getTime() > now.getTime()) && lotSpendableFor(r, use)) : grantRows;
+    const lots = grantLotsFromEntries(eligible.map((r) => ({ type: r.type, reason: r.reason, amount: r.amount, remaining: r.remaining, expiresAt: r.expiresAt })));
+    const spendable = lots.reduce((s, l) => s.add(l.remaining), new Prisma.Decimal(0));
+    if (spendable.lt(amount)) throw new BadRequestException("Insufficient credit balance");
+    const allocations = allocateConsumeFifo(lots, amount);
+
+    for (const alloc of allocations) {
+      const row = eligible[alloc.entryIndex];
+      await tx.creditLedgerEntry.update({ where: { id: row.id }, data: { remaining: (row.remaining ?? row.amount).sub(alloc.taken) } });
+    }
+
+    const updated = await tx.creditWallet.updateMany({
+      where: { id: wallet.id, version: wallet.version },
+      data: { balance: wallet.balance.sub(amount), version: { increment: 1 } },
+    });
+    if (updated.count !== 1) throw new ConflictException("wallet version conflict");
+
+    const entry = await tx.creditLedgerEntry.create({
+      data: {
+        walletId: wallet.id,
+        type: CreditEntryType.CONSUME,
+        reason,
+        amount: amount.neg(),
+        sourceRef: opts?.sourceRef ?? null,
+        invoiceId: opts?.invoiceId ?? null,
+        note: opts?.note ?? null,
+        createdBy: opts?.createdBy ?? null,
+        campaignRef: opts?.campaignRef ?? null,
+        idempotencyKey: opts?.idempotencyKey ?? null,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        tenantId,
+        actorId: opts?.createdBy ?? null,
+        action: "credit.consume",
+        resource: "CreditWallet",
+        resourceId: wallet.id,
+        metadata: {
+          amount: amount.toFixed(2),
+          reason,
+          use: use ?? null,
+          entryId: entry.id,
+          invoiceId: opts?.invoiceId ?? null,
+          lots: allocations.map((a) => ({ lot: eligible[a.entryIndex].id, taken: a.taken.toFixed(2) })),
+        } as Prisma.InputJsonValue,
+      },
+    });
+    return entry;
   }
 
   async runDailyCreditMaintenance(): Promise<{ expiredWallets: number; repairedWallets: number }> {
@@ -475,6 +563,7 @@ function serializeLedgerRow(row: CreditLedgerEntry) {
     amount: row.amount.toFixed(2),
     remaining: row.remaining != null ? row.remaining.toFixed(2) : null,
     expiresAt: row.expiresAt?.toISOString() ?? null,
+    category: row.category ?? null,
     note: row.note,
     createdAt: row.createdAt.toISOString(),
   };

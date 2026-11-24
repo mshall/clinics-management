@@ -180,7 +180,8 @@ export class RecordShareService {
         objective: true,
         assessment: true,
         plan: true,
-        medications: { select: { id: true }, take: 1 },
+        followUpWeeks: true,
+        medications: { select: { id: true, drugName: true, dosage: true, frequency: true, duration: true }, orderBy: { createdAt: "asc" }, take: 50 },
         patient: { select: { isSample: true } },
       },
     });
@@ -213,6 +214,8 @@ export class RecordShareService {
         scope: RecordShareScope.VISIT_SUMMARY,
         summary,
         signature,
+        // GRW-GC-2 G-10 (contracts 1.12.0): the interval sits BESIDE the signed summary so the signature is unchanged. Interval only, never a diagnosis.
+        ...(followUpIntervalDays(enc.followUpWeeks) ? { followUp: { intervalDays: followUpIntervalDays(enc.followUpWeeks) } } : {}),
       });
       shared.push(RecordShareScope.VISIT_SUMMARY);
     }
@@ -227,6 +230,7 @@ export class RecordShareService {
         encounterId: enc.id,
         clinicId: enc.clinicId,
         signedAt: enc.signedAt.toISOString(),
+        ...(rxItems(enc.medications).length ? { items: rxItems(enc.medications) } : {}),
         pdf: { url: rxPdfUrl(raw), expiresAt: expiresAt.toISOString() },
       });
       shared.push(RecordShareScope.PRESCRIPTIONS);
@@ -267,7 +271,41 @@ export class RecordShareService {
   }
 }
 
-function signPayload(payload: unknown): string {
+export function signPayload(payload: unknown): string {
   const secret = process.env.KIOREX_RECORD_SHARE_HMAC_SECRET?.trim() || "dev-record-share-secret";
   return createHmac("sha256", secret).update(JSON.stringify(payload), "utf8").digest("hex");
+}
+
+
+/** Weeks (1..104) to the contract's interval in days (1..730); absent when unset or out of range. */
+export function followUpIntervalDays(weeks: number | null | undefined): number | undefined {
+  if (!weeks || !Number.isInteger(weeks) || weeks < 1) return undefined;
+  const days = weeks * 7;
+  return days >= 1 && days <= 730 ? days : undefined;
+}
+
+type RxRow = { drugName: string; dosage: string | null; frequency: string | null; duration: string | null };
+const clip = (v: string | null | undefined, n: number) => (v ?? "").trim().slice(0, n);
+
+/** Structured Rx lines (marketplace 1.6.0 `items[]`): name, dose, frequency, durationDays when the free-text duration parses ("7 days", "2 weeks"). The signed PDF stays the legal document. */
+export function rxItems(rows: RxRow[]): { name: string; dose?: string; frequency?: string; durationDays?: number }[] {
+  return rows
+    .filter((r) => r.drugName?.trim())
+    .slice(0, 50)
+    .map((r) => {
+      const dose = clip(r.dosage, 100);
+      const frequency = clip(r.frequency, 100);
+      const durationDays = parseDurationDays(r.duration);
+      return { name: clip(r.drugName, 200), ...(dose ? { dose } : {}), ...(frequency ? { frequency } : {}), ...(durationDays ? { durationDays } : {}) };
+    });
+}
+
+export function parseDurationDays(text: string | null | undefined): number | undefined {
+  const m = /^\s*(\d{1,4})\s*(day|days|d|week|weeks|w|month|months|يوم|ايام|أيام|اسبوع|أسبوع|اسابيع|أسابيع|شهر)?\s*$/i.exec(text ?? "");
+  if (!m) return undefined;
+  const n = Number(m[1]);
+  const u = (m[2] ?? "day").toLowerCase();
+  const mult = /^(week|weeks|w|اسبوع|أسبوع|اسابيع|أسابيع)$/.test(u) ? 7 : /^(month|months|شهر)$/.test(u) ? 30 : 1;
+  const days = n * mult;
+  return days >= 1 && days <= 3650 ? days : undefined;
 }

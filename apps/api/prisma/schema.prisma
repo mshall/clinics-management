@@ -610,6 +610,31 @@ enum CreditReason {
   GOODWILL
   DOWNGRADE_PRORATION
   ADJUSTMENT
+  KIOREX_FEE_OFFSET
+  SUBSCRIPTION_OFFSET
+  DISPUTE_WIN
+  ONBOARDING
+  CONNECT_BONUS
+  USAGE_PURCHASE
+  MARKETING_SPEND
+  SPONSORED_PROMOTION
+  SPONSORED_PROMOTION_REVERSAL
+}
+
+/// GRW-P2-W: provider credit category (drives the default expiry and what a lot may pay for). Never a patient concept.
+enum CreditCategory {
+  SERVICE_RECOVERY
+  ONBOARDING
+  PROMOTIONAL
+  REFERRAL
+  ADJUSTMENT
+}
+
+enum CreditReservationState {
+  RESERVED
+  DEBITED
+  RELEASED
+  REVERSED
 }
 
 enum KiorlyInvoiceStatus {
@@ -1302,6 +1327,7 @@ model Tenant {
   salesRepCode                       String?
   referralCode                       String?
   creditWallet                       CreditWallet?
+  usageUnitLedger                    UsageUnitLedger[]
   referralCodeRow                    ReferralCode?
   referralsGiven                     Referral[]                         @relation("ReferrerTenant")
   referralReceived                   Referral?                          @relation("ReferredTenant")
@@ -1310,6 +1336,10 @@ model Tenant {
   kiorlyPayments                     KiorlyPayment[]
   kiorexCommissionCharges            KiorexCommissionCharge[]
   providerReferralLinks              ProviderReferralLink[]
+  socialShareLogs                    SocialShareLog[]
+  providerRecommendationStates       ProviderRecommendationState[]
+  providerVerificationUpdateRequests ProviderVerificationUpdateRequest[]
+  commissionStatementExports         CommissionStatementExport[]
   bookingWidgetConfigs               BookingWidgetConfig[]
   commissionDisputes                 CommissionDispute[]
   clinicianVerifications             ClinicianVerification[]
@@ -1803,6 +1833,9 @@ model Clinic {
   appointmentWaitlist             AppointmentWaitlistEntry[]
   kiorexCommissionCharges         KiorexCommissionCharge[]
   providerReferralLinks           ProviderReferralLink[]
+  socialShareLogs                 SocialShareLog[]
+  providerRecommendationStates    ProviderRecommendationState[]
+  providerVerificationUpdateRequests ProviderVerificationUpdateRequest[]
   bookingWidgetConfig             BookingWidgetConfig?
   marketplaceListings             MarketplaceListing[]
   slotHolds                       SlotHold[]
@@ -4316,6 +4349,7 @@ model CreditWallet {
   updatedAt DateTime            @updatedAt
   tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   entries   CreditLedgerEntry[]
+  reservations CreditReservation[]
 }
 
 model CreditLedgerEntry {
@@ -4332,9 +4366,68 @@ model CreditLedgerEntry {
   note      String?
   createdBy String?
   createdAt DateTime        @default(now())
+  /// GRW-P2-W (migration 20261217100000): append-only, only `remaining` may change (database trigger).
+  category       CreditCategory?
+  campaignRef    String?
+  restrictions   Json?
+  idempotencyKey String?
 
+  @@unique([walletId, idempotencyKey])
   @@index([walletId, createdAt])
   @@index([walletId, expiresAt])
+  @@index([walletId, category])
+}
+
+/// GRW-P2-W: budget hold for a provider-sponsored patient promotion (reserve at booking, debit at completion). Opaque refs only: no patient column.
+model CreditReservation {
+  id              String                 @id @default(cuid())
+  walletId        String
+  wallet          CreditWallet           @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  tenantId        String
+  amount          Decimal                @db.Decimal(14, 2)
+  state           CreditReservationState @default(RESERVED)
+  idempotencyKey  String
+  promotionRef    String
+  holdRef         String
+  debitedAmount   Decimal?               @db.Decimal(14, 2)
+  shortfall       Decimal?               @db.Decimal(14, 2)
+  debitEntryId    String?
+  reversalEntryId String?
+  reservedAt      DateTime               @default(now())
+  settledAt       DateTime?
+
+  @@unique([walletId, idempotencyKey])
+  @@index([walletId, state])
+  @@index([promotionRef])
+}
+
+/// GRW-P2-W: prepaid usage units (never currency). Append-only by trigger.
+model UsageUnitLedger {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit            String
+  delta           Int
+  reason          String
+  idempotencyKey  String
+  purchaseEntryId String?
+  createdAt       DateTime @default(now())
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, unit])
+}
+
+/// GRW-P2-W: daily credit reconcile report.
+model CreditReconcileRun {
+  id         String   @id @default(cuid())
+  ranAt      DateTime @default(now())
+  wallets    Int
+  repaired   Int
+  expired    Int
+  mismatches Int
+  details    Json?
+
+  @@index([ranAt])
 }
 
 model KiorlyInvoiceNumberSequence {
@@ -5576,4 +5669,138 @@ model MarketplaceNonce {
 
   @@id([clientId, nonce])
   @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------------------------------
+// GRW-P2-C provider marketing portal completion (contracts 1.12.0). Counts and references only; no patient data anywhere.
+// ---------------------------------------------------------------------------------------------------
+
+enum SocialTemplateKind {
+  POST
+  STORY
+  FLYER
+  WHATSAPP_MESSAGE
+  SMS_TEXT
+}
+
+enum SocialTemplateStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+enum ProviderRecommendationStatus {
+  OPEN
+  DISMISSED
+  SNOOZED
+  DONE
+}
+
+enum VerificationUpdateField {
+  LICENSE_NUMBER
+  SPECIALTY
+  ADDRESS
+  DISPLAY_NAME
+  PHOTO
+  DOCUMENT
+}
+
+enum VerificationUpdateStatus {
+  SUBMITTED
+  NEEDS_INFO
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum StatementExportKind {
+  PDF
+  CSV
+}
+
+/// Platform-authored, approved wording (no tenant column). `slug` groups the AR and EN renditions of one template; `protectedFooter` is appended by the renderer and cannot be edited by providers.
+model SocialContentTemplate {
+  id              String               @id @default(cuid())
+  slug            String
+  kind            SocialTemplateKind
+  locale          String
+  title           String
+  body            String
+  layoutKey       String               @default("plain")
+  protectedFooter String
+  status          SocialTemplateStatus @default(DRAFT)
+  version         Int                  @default(1)
+  createdBy       String               @default("system")
+  createdAt       DateTime             @default(now())
+
+  @@unique([slug, locale, version])
+  @@index([status, kind, locale])
+}
+
+/// Counts only: which template was shared through which channel. Never the rendered content, a patient or a slot time.
+model SocialShareLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId   String
+  clinic     Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  templateId String
+  channel    String
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([templateId])
+}
+
+model ProviderRecommendationState {
+  tenantId  String
+  tenant    Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId  String
+  clinic    Clinic                       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  key       String
+  status    ProviderRecommendationStatus @default(OPEN)
+  until     DateTime?
+  updatedBy String
+  updatedAt DateTime                     @updatedAt
+
+  @@id([clinicId, key])
+  @@index([tenantId])
+}
+
+/// A provider asks Kiorex ops to change a verified public profile field. `newValueEnc` is encrypted at rest (AES-256-GCM, the clinician PII key) and travels to Kiorex only in the signed marketplace call body, never in an event.
+model ProviderVerificationUpdateRequest {
+  id              String                   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId        String
+  clinic          Clinic                   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  field           VerificationUpdateField
+  oldRef          String?
+  newValueEnc     String
+  evidenceFileRefs Json                    @default("[]")
+  status          VerificationUpdateStatus @default(SUBMITTED)
+  kiorexRef       String?
+  decidedAt       DateTime?
+  decisionNote    String?
+  createdBy       String
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  @@index([tenantId, status])
+  @@index([clinicId, createdAt])
+}
+
+model CommissionStatementExport {
+  id          String              @id @default(cuid())
+  tenantId    String
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  month       String
+  kind        StatementExportKind
+  fileRef     String?
+  checksum    String
+  generatedBy String
+  createdAt   DateTime            @default(now())
+
+  @@index([tenantId, month])
 }

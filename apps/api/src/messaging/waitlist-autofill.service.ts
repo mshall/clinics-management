@@ -208,6 +208,21 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
           await this.closeOffer(offerId, WaitlistOfferStatus.SKIPPED, now, e instanceof Error ? e.message.slice(0, 200) : "EVENT_FAILED");
           continue;
         }
+        // G-8: the explicit, symmetric counterpart of WAITLIST_OFFER_EXPIRED (same payload; WAITLIST_OFFER stays the delivered event).
+        await this.outbox.enqueueEvent({
+          tenantId: slot.tenantId,
+          type: OUTBOX_EVENT.WAITLIST_OFFER_CREATED,
+          aggregateType: "WaitlistOffer",
+          aggregateId: offerId,
+          payload: {
+            offerId,
+            waitlistRef: entry.externalRef,
+            clinicId: slot.clinicId,
+            clinicianId: slot.clinicianId,
+            startsAt: slot.startsAt.toISOString(),
+            expiresAt: new Date(now.getTime() + holdMinutes * 60_000).toISOString(),
+          },
+        }).catch(() => undefined);
         await this.audit.recordEvent({
           tenantId: slot.tenantId,
           actorId: null,
@@ -381,11 +396,22 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
         data: { status, activeSlotId: null, respondedAt: now, ...(skipReason ? { skipReason } : {}) },
       });
       if (res.count === 0) return false;
-      const offer = await tx.waitlistSlotOffer.findUniqueOrThrow({ where: { id: offerId } });
+      const offer = await tx.waitlistSlotOffer.findUniqueOrThrow({ where: { id: offerId }, include: { slot: { select: { clinicId: true } }, waitlistEntry: { select: { source: true, externalRef: true } } } });
       await tx.appointmentWaitlistEntry.updateMany({
         where: { id: offer.waitlistEntryId, status: AppointmentWaitlistStatus.OFFERED },
         data: { status: AppointmentWaitlistStatus.WAITING, offeredSlotAt: null },
       });
+      // GRW-GC-2 G-8 (contracts 1.12.0): tell Kiorex an offer ended without a booking. A decline is the patient's own call and is already known to Kiorex.
+      const reason = waitlistExpiredReason(status, skipReason);
+      if (reason && offer.waitlistEntry.source === KIOREX_WAITLIST_SOURCE && offer.waitlistEntry.externalRef && this.outbox) {
+        await this.outbox.enqueueEvent({
+          tenantId: offer.tenantId,
+          type: OUTBOX_EVENT.WAITLIST_OFFER_EXPIRED,
+          aggregateType: "WaitlistOffer",
+          aggregateId: offer.id,
+          payload: { offerId: offer.id, waitlistRef: offer.waitlistEntry.externalRef, clinicId: offer.slot.clinicId, reason, at: now.toISOString() },
+        }, tx);
+      }
       return true;
     });
   }
@@ -481,4 +507,12 @@ export class WaitlistAutofillService implements OnModuleInit, OnModuleDestroy {
       minute: "2-digit",
     });
   }
+}
+
+
+/** Contract reason for WAITLIST_OFFER_EXPIRED, or null when no event is due (accepted, declined by the patient, skipped before any send). */
+export function waitlistExpiredReason(status: WaitlistOfferStatus, skipReason?: string | null): "EXPIRED" | "WITHDRAWN" | "SLOT_TAKEN" | null {
+  if (status === WaitlistOfferStatus.EXPIRED) return "EXPIRED";
+  if (status === WaitlistOfferStatus.WITHDRAWN) return skipReason === "SLOT_TAKEN" ? "SLOT_TAKEN" : "WITHDRAWN";
+  return null;
 }

@@ -35,6 +35,7 @@ import { SubscriptionAccessAction } from "../../subscriptions/subscription-acces
 import { Patient360Service } from "../../patients/patient-360.service";
 import { assertDataExplorerAccess, assertExplorerTenant } from "./data-explorer-access";
 import { AdminDataExplorerStartExportJobBodyDto } from "./admin-data-explorer.controller.dto";
+import { BoundedObjectPipe } from "../../common/bounded-json";
 
 const IMPORT_TMP_DIR = join(process.cwd(), ".data", "imports");
 mkdirSync(IMPORT_TMP_DIR, { recursive: true });
@@ -217,15 +218,15 @@ export class AdminDataExplorerController {
   @Post(":table")
   @ApiOperation({ summary: "Create row (tables that support create only)" })
   @ApiOkResponse()
-  create(@CurrentUser() user: JwtUser, @Param("table") table: string, @Body() body: Record<string, unknown>) {
-    return this.explorer.create(user, table, body ?? {});
+  create(@CurrentUser() user: JwtUser, @Param("table") table: string, @Body(new BoundedObjectPipe({ maxBytes: 64 * 1024, maxDepth: 4, maxKeys: 200 })) body: Record<string, unknown>) {
+    return this.explorer.create(user, table, body);
   }
 
   @Patch(":table/:id")
   @ApiOperation({ summary: "Partial update for allowlisted fields" })
   @ApiOkResponse()
-  patch(@CurrentUser() user: JwtUser, @Param("table") table: string, @Param("id") id: string, @Body() body: Record<string, unknown>) {
-    return this.explorer.patch(user, table, id, body ?? {});
+  patch(@CurrentUser() user: JwtUser, @Param("table") table: string, @Param("id") id: string, @Body(new BoundedObjectPipe({ maxBytes: 64 * 1024, maxDepth: 4, maxKeys: 200 })) body: Record<string, unknown>) {
+    return this.explorer.patch(user, table, id, body);
   }
 
   @Delete(":table/:id")

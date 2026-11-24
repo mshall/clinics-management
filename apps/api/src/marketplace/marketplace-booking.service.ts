@@ -35,6 +35,8 @@ import { MarketplacePatientIntakeService, type MarketplacePatientInput } from ".
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
 import { NewPatientService } from "../patients/new-patient.service";
 import { assertBookingSlugMatchesClinic, CLINIC_LINK_CHANNEL } from "./clinic-booking-page.service";
+
+export const KIOREX_WHATSAPP_CHANNEL = "KIOREX_WHATSAPP" as const;
 import { CANCELLATION_REASON_MAX } from "../appointments/kiorex-clinic-cancel";
 import {
   CANCELLED_BY,
@@ -68,7 +70,7 @@ export type MarketplaceBookingBody = {
   remindersConsentGranted?: boolean;
   attribution?: Record<string, unknown>;
   /** KX-09: bookings made from the clinic's own booking page are CLINIC_LINK (never commissioned). */
-  channel?: typeof CLINIC_LINK_CHANNEL | "MARKETPLACE";
+  channel?: typeof CLINIC_LINK_CHANNEL | "MARKETPLACE" | typeof KIOREX_WHATSAPP_CHANNEL;
   bookingPageSlug?: string;
   /** KX-09 §03 — HOME visit types: the address normally travels on the hold; sending it here too is accepted. */
   visitAddress?: unknown;
@@ -131,14 +133,15 @@ export class MarketplaceBookingService {
 
     const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
     await this.access.assertListingBookable(body.clinicId, body.clinicianId);
-    if (body.channel !== undefined && body.channel !== CLINIC_LINK_CHANNEL && body.channel !== "MARKETPLACE") {
+    // GRW-GC-2 (G-9, contracts 1.12.0): KIOREX_WHATSAPP is accepted; it is commissioned like MARKETPLACE (isCommissionChargeableBooking) unless PROVIDER_LED evidence applies.
+    if (body.channel !== undefined && body.channel !== CLINIC_LINK_CHANNEL && body.channel !== "MARKETPLACE" && body.channel !== KIOREX_WHATSAPP_CHANNEL) {
       throw new BadRequestException("Invalid channel");
     }
     const viaClinicLink = body.channel === CLINIC_LINK_CHANNEL;
     if (viaClinicLink) {
       await assertBookingSlugMatchesClinic(this.prisma, body.bookingPageSlug, body.clinicId, body.clinicianId);
     }
-    const bookingSource = viaClinicLink ? BookingSource.CLINIC_LINK : BookingSource.KIOREX_MARKETPLACE;
+    const bookingSource = viaClinicLink ? BookingSource.CLINIC_LINK : body.channel === KIOREX_WHATSAPP_CHANNEL ? BookingSource.KIOREX_WHATSAPP : BookingSource.KIOREX_MARKETPLACE;
     // GRW-P1-D2: the optional signed `acquisition` block. A malformed block is rejected with the contract's error code; an absent one is UNATTRIBUTED (today's rules).
     let block: AcquisitionBlock | null = null;
     if (body.acquisition !== undefined && body.acquisition !== null) {
@@ -671,7 +674,7 @@ export class MarketplaceBookingService {
     const now = new Date();
     const rows = await this.prisma.appointment.findMany({
       where: {
-        bookingSource: { in: [BookingSource.KIOREX_MARKETPLACE, BookingSource.CLINIC_LINK] },
+        bookingSource: { in: [BookingSource.KIOREX_MARKETPLACE, BookingSource.KIOREX_WHATSAPP, BookingSource.CLINIC_LINK] },
         status: AppointmentStatus.SCHEDULED,
         marketplaceConfirmationDueAt: { lte: now },
       },

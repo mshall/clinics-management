@@ -1,4 +1,6 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from "@nestjs/common";
+import { CreditStatementService } from "../credits/credit-statement.service";
+import { FeatureFlagsService, flagOn } from "../feature-flags/feature-flags-public";
 import { KiorlyLineType, Prisma } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
@@ -34,7 +36,16 @@ export class MonthlyStatementService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settlement: SettlementService,
+    @Optional() private readonly creditStatements?: CreditStatementService,
+    @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
+
+  /** GRW-P2-W: the Credit section (flag `clinic.provider_credit_v2`), read from the ledger. */
+  private async withCredit(tenantId: string, st: MonthlyStatementDto): Promise<MonthlyStatementDto> {
+    if (!this.creditStatements || !(await flagOn(this.flags, tenantId, "clinic.provider_credit_v2"))) return st;
+    const credit = await this.creditStatements.sectionForPeriod(tenantId, st.periodKey);
+    return credit ? { ...st, credit } : st;
+  }
 
   private assertTenant(user: JwtUser, tenantId: string): void {
     if (!isPlatformSuperAdmin(user) && user.tenantId !== tenantId) throw new ForbiddenException();
@@ -71,7 +82,7 @@ export class MonthlyStatementService {
 
   async getForTenant(user: JwtUser, tenantId: string, periodKeyRaw: string): Promise<MonthlyStatementDto> {
     this.assertTenant(user, tenantId);
-    return this.getForPeriod(tenantId, periodKeyRaw);
+    return this.withCredit(tenantId, await this.getForPeriod(tenantId, periodKeyRaw));
   }
 
   async renderPdfForTenant(

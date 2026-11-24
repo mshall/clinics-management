@@ -11,6 +11,7 @@ import { effectiveProfession } from "../scope-of-practice/scope-of-practice.serv
 import { KiorexCommissionService } from "../kiorex/kiorex-commission.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { normalizeWeekJson } from "../scheduling/availability-week-schema";
+import { CreditGrantsService } from "../credits/credit-grants.service";
 import { KIOREX_TERMS_VERSION, canRequestGoLive, computeConnectSteps, connectProgressPct, type ConnectDoctorFacts, type ConnectStatus } from "./kiorex-connect.logic";
 import { MarketplaceListingService } from "./marketplace-listing.service";
 import { PROVIDER_PROFILE_COMPLETENESS_MIN, parseProviderProfileJson, providerProfileCompletenessPercent } from "./provider-profile-schema";
@@ -70,6 +71,7 @@ export class KiorexConnectService {
     private readonly audit: AuditService,
     private readonly fees: KiorexCommissionService,
     @Optional() private readonly flags?: FeatureFlagsService,
+    @Optional() private readonly creditGrants?: CreditGrantsService,
   ) {}
 
   doc(raw: unknown): ConnectDoc | undefined { return (raw as { kiorexConnect?: ConnectDoc } | null | undefined)?.kiorexConnect; }
@@ -232,6 +234,10 @@ export class KiorexConnectService {
     if (JSON.stringify(next) !== JSON.stringify(doc)) {
       await this.saveDoc(tenantId, next);
       await this.listings.recomputeTenantListings(tenantId);
+      // GRW-P2-W: one connect bonus per organisation, on the first approval (the grant key is unique, so a pause and re-approve never pays twice)
+      if (next.status === "APPROVED" && doc.status !== "APPROVED") {
+        await this.creditGrants?.grantConnectBonus(tenantId).catch(() => undefined);
+      }
     }
     return next;
   }

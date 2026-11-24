@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { formatMoneyAmount } from "@/lib/money-display";
 import { localeForLanguage } from "@/lib/locale-display";
+import { useRecommendationState } from "./provider-marketing-api";
 import { usePerformance, useProfilePreview, useRecommendations, useStatement, type GrowthAccess, type OriginStats, type RecommendationDto } from "./growth-api";
 import { isKnownRecommendation, lastMonths, pct } from "./growth-logic";
 
@@ -30,12 +31,17 @@ const ACTION_TARGET: Record<RecommendationDto["action"], (clinicId: string) => s
   widget: () => "/kiorex/growth?tab=widget",
   page: (c) => `/clinics/${c}?tab=settings`,
   visit_types: (c) => `/clinics/${c}?tab=settings`,
+  reviews: () => "/kiorex",
+  verification: () => "/kiorex/growth?tab=verification",
+  share: () => "/kiorex/growth?tab=share",
+  statements: () => "/kiorex/growth?tab=statement",
 };
 
 export function Recommendations({ clinicId }: { clinicId: string }) {
   const { t } = useTranslation();
   const q = useRecommendations(clinicId);
   const items = (q.data?.items ?? []).filter((r) => isKnownRecommendation(r.id));
+  const state = useRecommendationState();
   return (
     <Card data-testid="recommendations">
       <CardHeader>
@@ -55,9 +61,14 @@ export function Recommendations({ clinicId }: { clinicId: string }) {
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">{t(`growth.rec.severity.${r.severity}`)}</p>
                     <p className="text-sm">{t(`growth.rec.items.${r.id}`, r.params)}</p>
+                    {r.window ? <p className="text-xs text-muted-foreground" data-testid={`rec-window-${r.id}`}>{t("growth.pm.rec.window", { window: t(`growth.pm.rec.windows.${r.window}`, { defaultValue: r.window }) })}</p> : null}
                   </div>
                 </div>
-                <Button asChild size="sm" variant="outline"><Link to={ACTION_TARGET[r.action](clinicId)}>{t("growth.rec.open")}<ArrowUpRight className="size-4 rtl:-scale-x-100" aria-hidden /></Link></Button>
+                <div className="flex flex-wrap items-center gap-1">
+                  <Button asChild size="sm" variant="outline"><Link to={ACTION_TARGET[r.action](clinicId)}>{t("growth.rec.open")}<ArrowUpRight className="size-4 rtl:-scale-x-100" aria-hidden /></Link></Button>
+                  <Button size="sm" variant="ghost" onClick={() => state.mutate({ id: r.id, clinicId, status: "SNOOZED", snoozeDays: 7 })} data-testid={`rec-snooze-${r.id}`}>{t("growth.pm.rec.snooze")}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => state.mutate({ id: r.id, clinicId, status: "DISMISSED" })} data-testid={`rec-dismiss-${r.id}`}>{t("growth.pm.rec.dismiss")}</Button>
+                </div>
               </li>
             ))}
           </ul>

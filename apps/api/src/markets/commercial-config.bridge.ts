@@ -1,5 +1,5 @@
 import type { CommercialConfig } from "./commercial-config.schema";
-import { DEFAULT_COMMERCIAL_CONFIG } from "./commercial-config.schema";
+import { CREDIT_CONFIG_DEFAULTS, DEFAULT_COMMERCIAL_CONFIG, type CreditConfig } from "./commercial-config.schema";
 
 export function commercialConfigToFeatureDefaultsPatch(config: CommercialConfig): Record<string, unknown> {
   const trialPolicy =
@@ -43,6 +43,7 @@ export function commercialConfigToFeatureDefaultsPatch(config: CommercialConfig)
       expiryMonths: config.referral.expiryMonths,
       maxPerYear: config.referral.maxPerYear,
     },
+    ...(config.credit ? { credit: { ...config.credit } } : {}),
   };
 }
 
@@ -124,6 +125,17 @@ export function commercialConfigFromFeatureDefaults(featureDefaults: unknown): C
   base.referral.expiryMonths = readNumber(referral, "expiryMonths") ?? base.referral.expiryMonths;
   base.referral.maxPerYear = readNumber(referral, "maxPerYear") ?? base.referral.maxPerYear;
 
+  if (root.credit && typeof root.credit === "object" && !Array.isArray(root.credit)) {
+    const c = root.credit as Record<string, unknown>;
+    base.credit = {
+      onboardingAmount: readNumber(c, "onboardingAmount") ?? CREDIT_CONFIG_DEFAULTS.onboardingAmount,
+      connectBonusAmount: readNumber(c, "connectBonusAmount") ?? CREDIT_CONFIG_DEFAULTS.connectBonusAmount,
+      promotionalExpiryMonths: readNumber(c, "promotionalExpiryMonths") ?? CREDIT_CONFIG_DEFAULTS.promotionalExpiryMonths,
+      recoveryExpiryMonths: readNumber(c, "recoveryExpiryMonths") ?? CREDIT_CONFIG_DEFAULTS.recoveryExpiryMonths,
+      usageBundlesEnabled: c.usageBundlesEnabled === true,
+    };
+  }
+
   return base;
 }
 
@@ -169,9 +181,15 @@ export function commercialConfigPreviewDiff(before: CommercialConfig, after: Com
   walk("lite", before.lite, after.lite);
   walk("dunning", before.dunning, after.dunning);
   walk("referral", before.referral, after.referral);
+  walk("credit", before.credit, after.credit);
   return keys;
 }
 
 export function referralConfigFromMarket(featureDefaults: unknown): CommercialConfig["referral"] {
   return commercialConfigFromFeatureDefaults(featureDefaults).referral;
+}
+
+/** GRW-P2-W: the market's provider-credit config (defaults: no platform grants, 12 and 24 month expiry). */
+export function creditConfigFromMarket(featureDefaults: unknown): CreditConfig {
+  return commercialConfigFromFeatureDefaults(featureDefaults).credit ?? { ...CREDIT_CONFIG_DEFAULTS };
 }

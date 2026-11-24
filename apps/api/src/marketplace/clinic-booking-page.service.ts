@@ -11,7 +11,7 @@ import {
   slugifyBookingName,
 } from "./booking-slug";
 import { ProviderLinkCoreService } from "../growth/provider-links/provider-link-core.service";
-import { widgetEmbedUrl } from "../growth/provider-links/link-urls";
+import { normalizeSlotParam, widgetEmbedUrl } from "../growth/provider-links/link-urls";
 import { MarketplaceListingService } from "./marketplace-listing.service";
 import type { ProviderProfileJson } from "./provider-profile-schema";
 
@@ -183,7 +183,7 @@ export class ClinicBookingPageService {
   }
 
   /** Public, unauthenticated page payload. Never returns patient data. */
-  async publicPage(rawSlug: string, opts?: { s?: string | null; bot?: boolean }) {
+  async publicPage(rawSlug: string, opts?: { s?: string | null; slot?: string | null; bot?: boolean }) {
     const slug = (rawSlug ?? "").trim().toLowerCase();
     if (!isValidBookingSlug(slug)) throw new NotFoundException("Booking page not found");
 
@@ -244,8 +244,15 @@ export class ClinicBookingPageService {
     // GRW-P1-D1: `?s=<code>` of an ACTIVE link of this organisation counts one visit (no cookie, bots filtered) and yields the signed `lt`; anything else is ignored.
     const touch = opts?.s && this.links ? await this.links.touch(opts.s, clinic.tenantId, { bot: opts.bot === true }) : null;
     const lt = touch?.lt ?? null;
+    const slotIso = normalizeSlotParam(opts?.slot);
+    const withSlot = (url: string) => {
+      if (!slotIso) return url;
+      const u = new URL(url);
+      u.searchParams.set("slot", slotIso);
+      return u.toString();
+    };
     const embed = (clinicianId: string | undefined, doctorSlug: string | null) =>
-      widgetEmbedUrl({
+      withSlot(widgetEmbedUrl({
         kind: doctorSlug ? "doctor" : "clinic",
         slug: doctorSlug ?? slug,
         pageSlug: slug,
@@ -255,7 +262,7 @@ export class ClinicBookingPageService {
         lt,
         channelKind: touch?.link.channelKind,
         tags: touch?.link.tags,
-      });
+      }));
 
     return {
       slug,

@@ -234,7 +234,7 @@ export class DigestsService implements OnModuleInit, OnModuleDestroy {
       where: {
         tenantId,
         startsAt: { gte: weekStart, lt: now },
-        bookingSource: "KIOREX_MARKETPLACE",
+        bookingSource: { in: ["KIOREX_MARKETPLACE", "KIOREX_WHATSAPP"] },
         status: { not: AppointmentStatus.CANCELLED },
       },
     });

@@ -8,8 +8,9 @@ import { apiUrl } from "@/lib/api-url";
 import type { PublicBookingPageDto } from "./kiorex-types";
 
 /** `s` is the provider link code from `?s=` (GRW-P1-D1): the API ignores unknown codes, counts a visit for a known one and returns a signed touch inside each Book link. */
-async function fetchPage(slug: string, s: string | null): Promise<PublicBookingPageDto> {
-  const res = await fetch(apiUrl(`/api/v1/public/booking-pages/${encodeURIComponent(slug)}${s ? `?s=${encodeURIComponent(s)}` : ""}`));
+async function fetchPage(slug: string, s: string | null, slot: string | null): Promise<PublicBookingPageDto> {
+  const qs = [s ? `s=${encodeURIComponent(s)}` : "", slot ? `slot=${encodeURIComponent(slot)}` : ""].filter(Boolean).join("&");
+  const res = await fetch(apiUrl(`/api/v1/public/booking-pages/${encodeURIComponent(slug)}${qs ? `?${qs}` : ""}`));
   const body = (await res.json().catch(() => ({}))) as PublicBookingPageDto & { message?: string };
   if (!res.ok) throw new Error(body.message ?? `Failed (${res.status})`);
   return body;
@@ -26,13 +27,15 @@ export function PublicBookingPage() {
   const { slug } = useParams();
   const [search] = useSearchParams();
   const linkCode = search.get("s");
+  /** GRW-P2-C: a shared slot card carries `slot=<ISO start>`; the API validates it and appends it to the Book links so Kiorex can prefill that time. */
+  const slotParam = search.get("slot");
   const { t, i18n } = useTranslation();
   const isAr = i18n.language.startsWith("ar");
   const q = useQuery({
-    queryKey: ["public-booking-page", slug, linkCode],
+    queryKey: ["public-booking-page", slug, linkCode, slotParam],
     enabled: Boolean(slug),
     staleTime: Infinity, // one visit is one count: never refetch a tracked page on focus
-    queryFn: () => fetchPage(slug!, linkCode),
+    queryFn: () => fetchPage(slug!, linkCode, slotParam),
     retry: false,
   });
 

@@ -11,9 +11,10 @@ export const LOCAL_HOME_URL = "http://localhost:5194";
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /** The configured Home URL (build env), the local default in dev, nothing otherwise. */
-export function homeUrlFromEnv(env: { VITE_KIORLY_HOME_URL?: string; DEV?: boolean }): string | undefined {
+/** `localDefault` is passed by the caller as `import.meta.env.DEV ? LOCAL_HOME_URL : undefined`, so the bundler folds the local address away in a production build (check:dev-test-users fails on a localhost URL in it). */
+export function homeUrlFromEnv(env: { VITE_KIORLY_HOME_URL?: string; DEV?: boolean; localDefault?: string }): string | undefined {
   const v = env.VITE_KIORLY_HOME_URL?.trim();
-  return v ? v : env.DEV ? LOCAL_HOME_URL : undefined;
+  return v ? v : env.DEV ? env.localDefault : undefined;
 }
 
 /** `<home origin>/signin?switch=1`, or null when no safe Home URL is configured (https anywhere, http only on a loopback host). */

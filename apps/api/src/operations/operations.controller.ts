@@ -36,6 +36,7 @@ import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { BoundedObjectPipe } from "../common/bounded-json";
 import { CreateOperationDto } from "./dto/create-operation.dto";
 import { OperationDto } from "./dto/operation.dto";
 import { OperationDetailDto } from "./dto/operation-detail.dto";
@@ -417,7 +418,7 @@ export class OperationsController {
   }
 
   @Patch(":id/operation-note")
-  async saveNote(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
+  async saveNote(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body(new BoundedObjectPipe({ maxBytes: 128 * 1024, maxDepth: 8, maxKeys: 1000 }, false)) body: Record<string, unknown>) {
     await this.assertStage2Access(user);
     return this.operations.saveOperationNote(requireTenantId(user), id, body);
   }

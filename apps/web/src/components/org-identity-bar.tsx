@@ -67,7 +67,7 @@ export function OrgIdentityBar({ name, specialtyLabel, planLabel, className }: P
             data-testid="header-org-plan"
             title={t("app.orgPlanHint", "Your organization's current Kiorly plan")}
           >
-            <span className="hidden uppercase tracking-wide text-sky-800/70 dark:text-sky-300/70 sm:inline">
+            <span className="hidden uppercase tracking-wide text-sky-900 dark:text-sky-200 sm:inline">
               {t("app.orgPlan", "Plan")}
             </span>
             <span className="truncate">{planLabel}</span>

@@ -37,6 +37,18 @@ Audit: `market.commercial_config_updated` on `AuditLog` (platform actor, `resour
 ## Follow-ups
 
 - Cohort editor UI (array) alongside trial section
-- Wire `referral` block into credit wallet grants
+- ~~Wire `referral` block into credit wallet grants~~ Done: `ReferralRewardService` grants both sides on the referred organisation's first paid invoice (REFERRAL reason, category REFERRAL, idempotency key `referral:<referralId>:<role>`, expiry from `referral.expiryMonths`); GRW-P2-W added the key and the end-to-end tests
 - `autoConfirmHours` consumption in Kiorex charge lifecycle
 - Diff viewer comparing `commercialConfig` vs synced `featureDefaults`
+
+## `credit` block (GRW-P2-W, optional, ADR-048 Proposed)
+
+| Key | Default | Meaning |
+|---|---|---|
+| `onboardingAmount` | 0 | one onboarding credit per organisation (reason ONBOARDING). 0 = nothing is granted. The amount is a founder decision (KX-12), NEEDS_HUMAN |
+| `connectBonusAmount` | 0 | one credit per organisation on the first approval of its Kiorex connection (reason CONNECT_BONUS, unique key `connect:<orgId>`). 0 = nothing is granted |
+| `promotionalExpiryMonths` | 12 | expiry of ONBOARDING, PROMOTIONAL and REFERRAL lots when the grant gives none (W-4) |
+| `recoveryExpiryMonths` | 24 | expiry of returned or waived fees and goodwill when the grant gives none |
+| `usageBundlesEnabled` | false | the usage bundle skeleton also needs this (and the flag `clinic.usage_bundles`) |
+
+Stored in `featureDefaults.credit` by the existing bridge; absent block = the defaults above (no platform grants).

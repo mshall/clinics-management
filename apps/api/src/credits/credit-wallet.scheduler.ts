@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
-import { CreditWalletService } from "./credit-wallet.service";
+import { CreditReconcileService } from "./credit-reconcile.service";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -8,7 +8,7 @@ export class CreditWalletScheduler implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(CreditWalletScheduler.name);
   private timer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private readonly credits: CreditWalletService) {}
+  constructor(private readonly credits: CreditReconcileService) {}
 
   onModuleInit() {
     void this.runSafe("startup");
@@ -21,10 +21,10 @@ export class CreditWalletScheduler implements OnModuleInit, OnModuleDestroy {
 
   private async runSafe(label: string) {
     try {
-      const result = await this.credits.runDailyCreditMaintenance();
-      if (result.expiredWallets > 0 || result.repairedWallets > 0) {
+      const result = await this.credits.run();
+      if (result.expired > 0 || result.repaired > 0 || result.mismatches > 0) {
         this.log.log(
-          `Credit wallet maintenance (${label}): expired ${result.expiredWallets} wallet(s), reconciled ${result.repairedWallets}`,
+          `Credit wallet maintenance (${label}): expired ${result.expired} wallet(s), reconciled ${result.repaired}, mismatches ${result.mismatches}`,
         );
       }
     } catch (e) {

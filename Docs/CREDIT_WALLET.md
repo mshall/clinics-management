@@ -63,3 +63,6 @@ Tests: `billing/cr10-no-show-guarantee.*.test.ts`.
 - Apply credits at Kiorly invoice issuance — wired on `KiorlyInvoicesService.issue` (`consume` with `invoiceId`)
 - Platform UI for manual grants (API only today)
 - `REVERSE` entry type for dispute workflows
+## Provider credit v2 (GRW-P2-W)
+
+Categories, spendable-on rules, the append-only trigger, idempotency keys, fee draw-down, promotion holds, usage bundles and the credit statement section are described in `GROWTH.md` ("P2-W provider credit integration"). This file keeps the CR-05 base model.
