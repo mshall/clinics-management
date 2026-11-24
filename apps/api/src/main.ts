@@ -17,6 +17,7 @@ import compressionMiddleware from "compression";
 import { json, type NextFunction, type Request, type Response } from "express";
 import { assertProviderEnv } from "./common/provider-env";
 import { warnIfLeadSigningMissing } from "./common/lead-signing-status";
+import { applyHttpHardening, swaggerEnabled } from "./common/http-hardening";
 
 async function bootstrap() {
   bootstrapTelemetry();
@@ -25,6 +26,7 @@ async function bootstrap() {
   warnIfLeadSigningMissing(); // production without KIOREX_LEAD_SIGNING_SECRET: a notice only (names, never values)
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
+  applyHttpHardening(app); // security headers, no X-Powered-By, trust-proxy hops (TRUSTED_PROXY_HOPS)
   // Org-onboarding import chunks carry base64 documents: a larger JSON limit on that HMAC path only (the signature is verified over the raw bytes).
   // The parser is wrapped on purpose: Nest decides whether to install its own global JSON parser by looking for a router layer named
   // "jsonParser"; mounting body-parser's json() directly (even path-scoped) made Nest skip it, so EVERY other JSON body arrived empty.
@@ -46,8 +48,8 @@ async function bootstrap() {
   );
   app.useGlobalFilters(...orderedGlobalFilters(app.get(IntegrationFailureExceptionFilter)));
   app.enableCors({
-    origin: true,
-    credentials: true,
+    origin: true, // bearer-token API: no cookies and no ambient credentials, so a reflected Origin cannot ride a victim session
+    credentials: false,
     exposedHeaders: [
       "X-Kiorly-Web-Build-Id",
       "X-Kiorly-Web-Build-Built-At",
@@ -69,7 +71,7 @@ async function bootstrap() {
     })
   );
 
-  if (process.env.SWAGGER_ENABLED !== "false") {
+  if (swaggerEnabled()) { // off in production unless SWAGGER_ENABLED=true
     const swaggerConfig = new DocumentBuilder()
       .setTitle("Kiorly API")
       .setDescription("REST API for the clinic platform (v1).")
@@ -109,7 +111,7 @@ async function bootstrap() {
   httpServer.keepAliveTimeout = 120_000;
   httpServer.timeout = 0;
   console.log(`API listening on http://localhost:${port}/api/v1`);
-  if (process.env.SWAGGER_ENABLED !== "false") {
+  if (swaggerEnabled()) {
     console.log(`OpenAPI UI: http://localhost:${port}/docs`);
     console.log(`OpenAPI JSON: http://localhost:${port}/docs-json`);
   }

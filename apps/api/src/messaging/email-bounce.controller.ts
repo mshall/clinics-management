@@ -1,3 +1,4 @@
+import { secretsEqual } from "../common/http-hardening";
 import { Body, Controller, Headers, Post, UnauthorizedException } from "@nestjs/common";
 import { ApiExcludeController } from "@nestjs/swagger";
 import { EmailService } from "./email.service";
@@ -18,7 +19,8 @@ export class EmailBounceController {
     @Headers("x-kiorly-email-webhook-secret") secret?: string,
   ) {
     const expected = process.env.EMAIL_SES_WEBHOOK_SECRET?.trim();
-    if (expected && secret !== expected) {
+    // fail CLOSED (pentest 2026-11): without a configured secret anyone could suppress a patient's e-mail by posting a fake bounce. Dev/test keep the open mock path.
+    if (expected ? !secretsEqual(secret, expected) : process.env.NODE_ENV === "production") {
       throw new UnauthorizedException("Invalid webhook secret");
     }
 

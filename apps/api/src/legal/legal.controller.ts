@@ -1,3 +1,4 @@
+import { clientIpOf } from "../common/http-hardening";
 import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
@@ -29,7 +30,7 @@ export class LegalController {
     @Req() req: Request,
   ) {
     const tenantId = requireTenantId(user);
-    const ip = req.ip || req.headers["x-forwarded-for"]?.toString().split(",")[0]?.trim();
+    const ip = clientIpOf(req);
     const items = body.acceptances ?? [];
     this.acceptance.validateAcceptanceVersions(items);
     return this.acceptance

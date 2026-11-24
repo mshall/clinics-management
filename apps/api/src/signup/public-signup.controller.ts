@@ -1,3 +1,4 @@
+import { clientIpOf } from "../common/http-hardening";
 import { Body, Controller, Get, HttpCode, HttpStatus, Optional, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
@@ -24,10 +25,7 @@ export class PublicSignupController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Send phone OTP for signup" })
   requestOtp(@Body() body: { phone: string; market: string }, @Req() req: Request) {
-    const clientIp =
-      (typeof req.headers["x-forwarded-for"] === "string"
-        ? req.headers["x-forwarded-for"].split(",")[0]?.trim()
-        : undefined) || req.socket.remoteAddress;
+    const clientIp = clientIpOf(req);
     return this.signup.requestOtp(body, clientIp);
   }
 

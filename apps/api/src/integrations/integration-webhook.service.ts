@@ -1,3 +1,4 @@
+import { assertPublicWebhookUrl, safeRequest, UnsafeUrlError } from "../common/safe-outbound";
 import { createHmac, randomUUID } from "node:crypto";
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { IntegrationWebhookEvent } from "@prisma/client";
@@ -53,6 +54,13 @@ export class IntegrationWebhookService {
 
     const eventTypes = [...new Set(body.eventTypes)];
     if (!eventTypes.length) throw new BadRequestException("At least one event type is required");
+
+    try {
+      await assertPublicWebhookUrl(body.url);
+    } catch (e) {
+      if (e instanceof UnsafeUrlError) throw new BadRequestException({ message: e.message, errorCode: "WEBHOOK_URL_NOT_ALLOWED" });
+      throw e;
+    }
 
     const signingSecret = generateWebhookSigningSecret();
     const row = await this.prisma.integrationWebhook.create({
@@ -158,7 +166,8 @@ export class IntegrationWebhookService {
       .digest("hex");
 
     try {
-      const res = await fetch(url, {
+      // SSRF guard (pentest 2026-11): public addresses only, validated at connect time, no redirects
+      const res = await safeRequest(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -169,7 +178,7 @@ export class IntegrationWebhookService {
           "X-Kiorly-Signature": `sha256=${signature}`,
         },
         body,
-        signal: AbortSignal.timeout(15_000),
+        timeoutMs: 15_000,
       });
 
       if (res.ok) {

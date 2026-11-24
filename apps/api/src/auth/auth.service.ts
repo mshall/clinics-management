@@ -30,6 +30,8 @@ type AvatarFile = { buffer: Buffer; originalname: string; mimetype: string; size
 export type LoginSessionMeta = { userAgent?: string; ipHash?: string };
 
 /** Off the event loop (see password-hasher.ts): a synchronous bcrypt compare blocks every other request for ~50 ms. */
+/** bcrypt cost-10 hash of a random string: only ever compared against, never matches. */
+const DUMMY_PASSWORD_HASH = "$2b$10$ddXgvmEVsQCgeK94hKf92u1hwaUDa9eY64ULbM8nTYXEsrY.jyJjK";
 function passwordMatches(password: string, passwordHash: string | null | undefined): Promise<boolean> {
   return passwordHasher.compare(password, passwordHash);
 }
@@ -179,6 +181,8 @@ export class AuthService {
     });
     let user: (typeof candidates)[number] | undefined;
     for (const u of candidates) if (await passwordMatches(password, u.passwordHash)) { user = u; break; }
+    // user-enumeration timing (pentest 2026-11): an unknown e-mail used to return ~50 ms faster than a known one, so burn one bcrypt compare either way
+    if (!candidates.length) await passwordMatches(password, DUMMY_PASSWORD_HASH);
     if (!user) throw new UnauthorizedException("Invalid credentials");
     await this.assertLoginAllowed(user);
     return user;
