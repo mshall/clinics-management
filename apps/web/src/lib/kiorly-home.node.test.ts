@@ -12,11 +12,11 @@ describe("Switch workspace link (Kiorly Home)", () => {
     for (const v of [undefined, null, "", "  ", "not a url", "javascript:alert(1)", "http://www.kiorly.com", "ftp://x"]) assert.equal(switchWorkspaceHref(v), null, String(v));
   });
   it("dev falls back to the local Home port, a production build has no default", () => {
-    assert.equal(homeUrlFromEnv({ DEV: true }), LOCAL_HOME_URL);
+    assert.equal(homeUrlFromEnv({ DEV: true, localDefault: LOCAL_HOME_URL }), LOCAL_HOME_URL);
     assert.equal(homeUrlFromEnv({ DEV: false }), undefined);
     assert.equal(homeUrlFromEnv({ DEV: false, VITE_KIORLY_HOME_URL: "https://www.kiorly.com" }), "https://www.kiorly.com");
     assert.equal(homeUrlFromEnv({ DEV: true, VITE_KIORLY_HOME_URL: "https://www.staging.kiorly.com" }), "https://www.staging.kiorly.com");
-    assert.equal(homeUrlFromEnv({ DEV: true, VITE_KIORLY_HOME_URL: "  " }), LOCAL_HOME_URL);
+    assert.equal(homeUrlFromEnv({ DEV: true, VITE_KIORLY_HOME_URL: "  ", localDefault: LOCAL_HOME_URL }), LOCAL_HOME_URL);
   });
 });
 

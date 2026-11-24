@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { OrgIdentityBar } from "@/components/org-identity-bar";
 import { useAuthStore } from "@/stores/auth-store";
 import { formatUserRole } from "@/lib/locale-display";
-import { homeUrlFromEnv, switchWorkspaceHref } from "@/lib/kiorly-home";
+import { homeUrlFromEnv, LOCAL_HOME_URL, switchWorkspaceHref } from "@/lib/kiorly-home";
 import { RoleAssistantWidget } from "@/features/assistant/role-assistant-widget";
 import { GlobalPatientSearch } from "@/components/global-patient-search";
 import { DeployVersionBanner } from "@/components/deploy-version-banner";
@@ -57,7 +57,7 @@ export function AppShell() {
   const openHelp = useHelpStore((s) => s.setDrawerOpen);
   useA11yAutoFixes();
   const nurseEdition = useNurseEditionDom();
-  const switchHref = switchWorkspaceHref(homeUrlFromEnv({ VITE_KIORLY_HOME_URL: import.meta.env.VITE_KIORLY_HOME_URL as string | undefined, DEV: import.meta.env.DEV }));
+  const switchHref = switchWorkspaceHref(homeUrlFromEnv({ VITE_KIORLY_HOME_URL: import.meta.env.VITE_KIORLY_HOME_URL as string | undefined, DEV: import.meta.env.DEV, localDefault: import.meta.env.DEV ? LOCAL_HOME_URL : undefined }));
   const density = useDensityStore((s) => s.density);
   const toggleDensity = useDensityStore((s) => s.toggle);
   const orgPlanKey = user?.tenantId && user.plan?.key ? user.plan.key : null;

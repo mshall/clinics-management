@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { homeUrlFromEnv, switchWorkspaceHref } from "@/lib/kiorly-home";
+import { homeUrlFromEnv, LOCAL_HOME_URL, switchWorkspaceHref } from "@/lib/kiorly-home";
 
 /**
  * "Switch product" on the sign-in page: opens Kiorly Home's product picker (`<home>/signin?switch=1`). The Home URL comes from the domain config
@@ -7,7 +7,7 @@ import { homeUrlFromEnv, switchWorkspaceHref } from "@/lib/kiorly-home";
  */
 export function SwitchProductLink({ className }: { className?: string }) {
   const { t } = useTranslation();
-  const href = switchWorkspaceHref(homeUrlFromEnv({ VITE_KIORLY_HOME_URL: import.meta.env.VITE_KIORLY_HOME_URL as string | undefined, DEV: import.meta.env.DEV }));
+  const href = switchWorkspaceHref(homeUrlFromEnv({ VITE_KIORLY_HOME_URL: import.meta.env.VITE_KIORLY_HOME_URL as string | undefined, DEV: import.meta.env.DEV, localDefault: import.meta.env.DEV ? LOCAL_HOME_URL : undefined }));
   if (!href) return null;
   return <a href={href} data-testid="switch-product" className={className ?? "text-sm font-medium text-primary underline-offset-4 hover:underline"}>{t("auth.switchProduct")}</a>;
 }
