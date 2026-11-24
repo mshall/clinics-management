@@ -164,7 +164,7 @@
   --kx-accent: #E8735E;
   --kx-accent-soft: #FDEDE9;
   --kx-link: #0369A1;
-  --kx-focus: #E8735E;
+  --kx-focus: #3730A3;
   --kx-overlay: rgba(15,16,36,0.48);
   --kx-success: #15803D;
   --kx-success-soft: #DCFCE7;
@@ -210,7 +210,7 @@
   --kx-accent: #F08A75;
   --kx-accent-soft: #3A211F;
   --kx-link: #38BDF8;
-  --kx-focus: #F08A75;
+  --kx-focus: #A5B4FC;
   --kx-overlay: rgba(0,0,10,0.62);
   --kx-success: #4ADE80;
   --kx-success-soft: #0F2E1B;
@@ -230,7 +230,7 @@
 /* Arabic: switch family, add line-height for tall Arabic glyphs */
 :root[lang="ar"], [dir="rtl"] { --kx-font: var(--kx-font-ar); }
 :root[lang="ar"] body, [dir="rtl"] body { line-height: 1.15; letter-spacing: 0; }
-/* Focus ring — coral, always visible for keyboard users */
+/* Focus ring — indigo (AA on light and dark), always visible for keyboard users */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: var(--kx-focus-width) solid var(--kx-focus);
   outline-offset: var(--kx-focus-offset);
