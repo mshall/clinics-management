@@ -57,6 +57,7 @@ import { KiorexModule } from "./kiorex/kiorex.module";
 import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { ClinicianVerificationModule } from "./clinician-verification/clinician-verification.module";
 import { CreditsModule } from "./credits/credits.module";
+import { PromotionsModule } from "./promotions/promotions.module";
 import { BillingPlatformModule } from "./billing-platform/billing-platform.module";
 import { ObservabilityModule } from "./observability/observability.module";
 import { UsageModule } from "./usage/usage.module";
@@ -123,6 +124,7 @@ import { PushModule } from "./push/push.module";
     MarketplaceModule,
     ClinicianVerificationModule,
     CreditsModule,
+    PromotionsModule,
     BillingPlatformModule,
     UsageModule,
     CohortsModule,

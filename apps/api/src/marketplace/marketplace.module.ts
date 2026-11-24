@@ -47,6 +47,8 @@ import { KiorexConnectService } from "./kiorex-connect.service";
 import { KiorexFrontDoorController } from "./kiorex-front-door.controller";
 import { KiorexFrontDoorService } from "./kiorex-front-door.service";
 import { KiorexConnectionController } from "./kiorex-connection.controller";
+import { PromotionsModule } from "../promotions/promotions.module";
+import { PromotionsMarketplaceController } from "../promotions/promotions-marketplace.controller";
 
 @Module({
   imports: [
@@ -61,6 +63,7 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
     PatientsModule,
     BillingPlatformModule,
     CreditsModule,
+    PromotionsModule,
     BillingModule,
     RecordShareModule,
     KiorexModule,
@@ -82,6 +85,7 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
     KiorexConnectController,
     KiorexFrontDoorController,
     KiorexConnectionController,
+    PromotionsMarketplaceController,
   ],
   providers: [
     KiorexSettingsService,

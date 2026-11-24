@@ -102,3 +102,10 @@ credentials exist. No credentials are ever committed; keys live in Secrets Manag
 - Usage bundle prices and VAT treatment of credit purchases (H-2, H-25); `credit.usageBundlesEnabled` stays false until then.
 - Counsel: forfeiture of promotional credit when a tenant closes (H-24); wording of the credit screen in Arabic (copy review).
 - Accounting: treatment of provider-sponsored discounts debited from credit (H-26 to H-28, P2-S).
+
+## Provider-sponsored promotions (GRW-P2-S, wave 7)
+- Counsel (H-28): Egyptian medical-advertising rules for the patient wording; the content-guard word list (`promotions/promotion-content-guard.ts`, AR and EN) is a PLACEHOLDER floor, never a clearance; Arabic copy review of the wizard, the statement line and the patient label.
+- Accounting (H-26, H-27): provider-funded discounts are neither Kiorex revenue nor a Kiorex expense; VAT treatment of the `PROMOTION_EXPENSE` invoice line.
+- Finance (H-25): `postToPayLedger` and what Kiorex Pay pays the clinic for the sponsored share; the Kiorex side of this wiring is not built (launch guide 11.78).
+- Numbers: high-value thresholds, maximum percentage, grace minutes, price-inflation window, which fraud rules enforce (`featureDefaults.sponsoredPromotions`, PROPOSED_DEFAULT); default funding mode.
+- Contracts: the `reverse` and `review-decision` marketplace commands and the additive `PROVIDER_PROMOTION_UPDATED` fields are not yet in the OpenAPI (1.12.1 request, launch guide 11.81).

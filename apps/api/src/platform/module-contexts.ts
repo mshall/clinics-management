@@ -42,6 +42,7 @@ export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   marketplace: "organization",
   "clinician-verification": "organization",
   credits: "organization",
+  promotions: "organization", // GRW-P2-S provider-sponsored promotions (provider-owned asset, ADR-041)
   "billing-platform": "organization",
   subscriptions: "organization",
   entitlements: "organization",

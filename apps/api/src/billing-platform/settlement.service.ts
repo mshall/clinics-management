@@ -210,6 +210,14 @@ export class SettlementService {
         });
       }
 
+      // GRW-P2-S: the shortfalls now on this invoice are marked once (re-running the period finds nothing left to invoice)
+      const promoRefs = (input.promotionExpenses ?? []).map((x) => x.refId).filter((r): r is string => !!r);
+      if (invoiceId && promoRefs.length) {
+        const marked = await tx.promotionReservation.updateMany({ where: { tenantId, reservationRef: { in: promoRefs }, invoicedAt: null }, data: { invoicedAt: new Date(), invoicedPeriod: periodKey } });
+        const promos = await tx.promotionReservation.findMany({ where: { reservationRef: { in: promoRefs } }, select: { promotionId: true, reservationRef: true, shortfallMinor: true } });
+        for (const r of promos) await tx.promotionAudit.create({ data: { promotionId: r.promotionId, actor: "system", action: "promotion.shortfall_invoiced", snapshot: { invoiceId, reservationRef: r.reservationRef, amountMinor: r.shortfallMinor, markedNow: marked.count } as Prisma.InputJsonValue } });
+      }
+
       const chargeIds = input.commissionItems.map((c) => c.chargeId);
       if (invoiceId && chargeIds.length > 0) {
         await tx.kiorexCommissionCharge.updateMany({
@@ -370,6 +378,11 @@ export class SettlementService {
     const walletBalance = tenant.creditWallet ? Number(tenant.creditWallet.balance) : 0;
     const carryIn = resolveCarryForwardIn(tenant, periodKey);
 
+    // GRW-P2-S: sponsored discounts debited in the period that the wallet could not cover, for promotions funded WALLET_THEN_INVOICE (not yet invoiced)
+    const shortfalls = await this.prisma.promotionReservation.findMany({ where: { tenantId, state: { in: ["DEBITED", "REVERSED"] }, OR: [{ invoicedAt: null, state: "DEBITED" }, { invoicedPeriod: periodKey }], shortfallMinor: { gt: 0 }, settledAt: { lt: periodEnd } }, select: { id: true, reservationRef: true, shortfallMinor: true, versionId: true }, take: 2000 });
+    const funding = new Map((await this.prisma.sponsoredPromotionVersion.findMany({ where: { id: { in: [...new Set(shortfalls.map((s) => s.versionId))] } }, select: { id: true, fundingMode: true } })).map((v) => [v.id, v.fundingMode]));
+    const promotionExpenses = shortfalls.filter((s) => funding.get(s.versionId) === "WALLET_THEN_INVOICE").map((s) => ({ descEn: "Promotion expense (sponsored discount)", descAr: "مصروف العروض (خصم برعاية العيادة)", amount: (s.shortfallMinor ?? 0) / 100, refId: s.reservationRef }));
+
     return {
       periodKey,
       currency,
@@ -380,6 +393,7 @@ export class SettlementService {
       seatCount,
       seatUnitPrice,
       addons: [],
+      promotionExpenses,
       usageOverage: 0,
       commissionItems,
       commissionGrossBeforeCap,

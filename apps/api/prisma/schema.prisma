@@ -657,6 +657,8 @@ enum KiorlyLineType {
   CREDIT
   DISCOUNT
   TAX
+  /// GRW-P2-S: the part of a provider-sponsored discount the clinic wallet could not cover (funding mode WALLET_THEN_INVOICE).
+  PROMOTION_EXPENSE
 }
 
 enum KiorlyPaymentMethodKind {
@@ -1215,26 +1217,26 @@ model FiscalPosChain {
 
 model Tenant {
   cashierShifts                      CashierShift[]
-  id                                 String                             @id @default(cuid())
+  id                                 String                              @id @default(cuid())
   name                               String
-  nameAr                             String                             @default("")
+  nameAr                             String                              @default("")
   marketId                           String?
-  market                             Market?                            @relation(fields: [marketId], references: [id], onDelete: SetNull)
+  market                             Market?                             @relation(fields: [marketId], references: [id], onDelete: SetNull)
   deploymentCell                     String
-  status                             TenantStatus                       @default(ACTIVE)
+  status                             TenantStatus                        @default(ACTIVE)
   /// ON-07 — SalesRep.id that created the tenant on the owner's behalf.
   createdBySalesRepId                String?
   ownerConfirmedAt                   DateTime?
-  baseCurrency                       String                             @default("EGP")
-  defaultLocale                      String                             @default("en")
+  baseCurrency                       String                              @default("EGP")
+  defaultLocale                      String                              @default("en")
   /// Preselected sign-in method (both stay offered). null = automatic: PASSPORT when the org is linked to Kiorex, else PASSWORD.
   defaultSignInMethod                SignInMethod?
-  defaultVisitFee                    Decimal?                           @db.Decimal(14, 2)
-  encounterAutoLockHours             Int                                @default(72)
+  defaultVisitFee                    Decimal?                            @db.Decimal(14, 2)
+  encounterAutoLockHours             Int                                 @default(72)
   defaultTaxRegistrationNumber       String?
   defaultLicenseNumber               String?
-  defaultInvoiceVatPercent           Decimal?                           @db.Decimal(5, 2)
-  integrationFailureRetentionDays    Int                                @default(30)
+  defaultInvoiceVatPercent           Decimal?                            @db.Decimal(5, 2)
+  integrationFailureRetentionDays    Int                                 @default(30)
   integrationFailureLastSpikeAlertAt DateTime?
   /**
    * MN-04: first production ETA day for pilot success week-1 metric
@@ -1244,19 +1246,19 @@ model Tenant {
    * MN-04: cooldown for ETA success rate below-threshold audit alerts
    */
   etaHealthLastAlertAt               DateTime?
-  whatsAppRemindersEnabled           Boolean                            @default(false)
-  appointmentReminderHoursBefore     Int                                @default(24)
+  whatsAppRemindersEnabled           Boolean                             @default(false)
+  appointmentReminderHoursBefore     Int                                 @default(24)
   /// When true, creating an operation requires "How did they find us?" (acquisition channel).
-  operationAcquisitionRequired        Boolean                           @default(false)
+  operationAcquisitionRequired       Boolean                             @default(false)
   /// Storage quality pipeline: null = env default (on local/test, off AWS prod); true/false = tenant override.
-  storageQualityPipelineEnabled       Boolean?
+  storageQualityPipelineEnabled      Boolean?
   /// NEEDS_HUMAN: founder/clinical lead — when true, keep untouched originals under …/orig/ for reduced files.
-  keepOriginalUploads                 Boolean                           @default(false)
+  keepOriginalUploads                Boolean                             @default(false)
   /// Shadow mode: keep originals of reduced files until this instant (two-week window after enable).
-  storageQualityShadowUntil           DateTime?
+  storageQualityShadowUntil          DateTime?
   /// Running total of stored upload bytes (documents + thumbs + optional orig/). Adjusted on process/delete.
-  storageBytesUsed                    BigInt                            @default(0)
-  providerSettings                   Json                               @default("{}")
+  storageBytesUsed                   BigInt                              @default(0)
+  providerSettings                   Json                                @default("{}")
   storageJobs                        StorageJob[]
   users                              User[]
   clinics                            Clinic[]
@@ -1327,10 +1329,11 @@ model Tenant {
   salesRepCode                       String?
   referralCode                       String?
   creditWallet                       CreditWallet?
+  sponsoredPromotions                SponsoredPromotion[]
   usageUnitLedger                    UsageUnitLedger[]
   referralCodeRow                    ReferralCode?
-  referralsGiven                     Referral[]                         @relation("ReferrerTenant")
-  referralReceived                   Referral?                          @relation("ReferredTenant")
+  referralsGiven                     Referral[]                          @relation("ReferrerTenant")
+  referralReceived                   Referral?                           @relation("ReferredTenant")
   kiorlyInvoices                     KiorlyInvoice[]
   kiorlyPaymentMethods               KiorlyPaymentMethod[]
   kiorlyPayments                     KiorlyPayment[]
@@ -1350,7 +1353,7 @@ model Tenant {
   telehealthSessions                 TelehealthSession[]
   telehealthClinicianSettings        ClinicianTelehealthSetting[]
   /// ADR-039: minutes after start with no patient before a telehealth session becomes MISSED (per organisation).
-  telehealthNoShowMinutes            Int                                @default(15)
+  telehealthNoShowMinutes            Int                                 @default(15)
   homeVisitGeostamps                 HomeVisitGeostamp[]
   homeSafetyAlerts                   HomeSafetyAlert[]
   carePlans                          CarePlan[]
@@ -1368,14 +1371,14 @@ model Tenant {
   kiorexRatings                      KiorexRating[]
   kiorexReviews                      KiorexReview[]
   kiorexProfileViews                 KiorexProfileViewDaily[]
-  kiorlySettlementCarry              Decimal?                           @db.Decimal(14, 2)
+  kiorlySettlementCarry              Decimal?                            @db.Decimal(14, 2)
   /// SB-05: period whose settlement last wrote `kiorlySettlementCarry` (re-runs reuse `kiorlySettlementCarryIn`).
   kiorlySettlementCarryPeriodKey     String?
-  kiorlySettlementCarryIn            Decimal?                           @db.Decimal(14, 2)
+  kiorlySettlementCarryIn            Decimal?                            @db.Decimal(14, 2)
   /// SB-05: Lite commission unpaid past the market pause window — Kiorex listings paused (Kiorly keeps working).
   kiorexBillingPausedAt              DateTime?
   /// ADR-031 — CLINIC | NURSE. Changeable only by the Kiorex super admin (KNED04); never changes DB, API or connector.
-  edition                            OrganizationEdition                @default(CLINIC)
+  edition                            OrganizationEdition                 @default(CLINIC)
   /// NURSE edition: SOLO (organization of one) | AGENCY (ADR-032). Null for the Clinic edition.
   nurseTenantKind                    String?
   /// HVSAF01 — organisation safety contact that receives safety-timer and SOS alerts (BR53).
@@ -1397,8 +1400,8 @@ model Tenant {
   messagingConsents                  MessagingConsent[]
   legalAcceptances                   LegalAcceptance[]
   pushSubscriptions                  PushSubscription[]
-  createdAt                          DateTime                           @default(now())
-  updatedAt                          DateTime                           @updatedAt
+  createdAt                          DateTime                            @default(now())
+  updatedAt                          DateTime                            @updatedAt
 }
 
 model OnboardingProgress {
@@ -1760,95 +1763,95 @@ model UserClinicEmployeePrivilegeGrant {
 }
 
 model Clinic {
-  cashierShifts                   CashierShift[]
-  id                              String                             @id @default(cuid())
-  tenantId                        String
-  tenant                          Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  parentClinicId                  String?
-  parent                          Clinic?                            @relation("ClinicHierarchy", fields: [parentClinicId], references: [id])
-  branches                        Clinic[]                           @relation("ClinicHierarchy")
-  nameEn                          String
-  nameAr                          String
-  logoUrl                         String?
-  country                         String
-  city                            String
-  addressEn                       String
-  addressAr                       String
-  locationUrl                     String
-  latitude                        Decimal?                           @db.Decimal(10, 7)
-  longitude                       Decimal?                           @db.Decimal(10, 7)
-  phone                           String
-  email                           String
-  licenseNumber                   String
-  clinicalSpecialty               ClinicalSpecialty                  @default(POLYCLINIC)
-  taxRegistrationNumber           String?
-  invoiceVatPercent               Decimal?                           @db.Decimal(5, 2)
-  defaultLanguage                 Locale                             @default(en)
-  defaultCurrency                 String                             @default("EGP")
-  invoiceLogoRelativePath         String?
-  invoiceLogoOriginalName         String?
-  invoiceLogoMimeType             String?
-  invoiceBackgroundColor          String                             @default("white")
-  invoiceSections                 Json                               @default("[\"clinicHeader\",\"patientDetails\",\"invoiceMeta\",\"lineItems\",\"totals\",\"footer\"]")
-  prescriptionLogoRelativePath    String?
-  prescriptionLogoOriginalName    String?
-  prescriptionLogoMimeType        String?
-  prescriptionHeaderDescriptionEn String                             @default("")
-  prescriptionHeaderDescriptionAr String                             @default("")
-  openingTime                     String                             @default("09:00") @db.VarChar(5)
-  closingTime                     String                             @default("00:00") @db.VarChar(5)
-  frontDeskRoomLabels             Json                               @default("[\"Room 1\",\"Room 2\",\"Room 3\"]")
-  providerSettings                Json                               @default("{}")
-  lastCalledTicketNumber          Int?
-  patientsHome                    Patient[]                          @relation("PatientHomeBranch")
-  encounters                      Encounter[]
-  clinicalOrders                  ClinicalOrder[]
-  revenueEntries                  RevenueEntry[]
-  expenses                        Expense[]
-  employees                       Employee[]
-  appointments                    Appointment[]
-  operations                      Operation[]
-  invoices                        Invoice[]
-  billingPayments                 BillingPayment[]
-  clinicalFormTemplates           ClinicalFormTemplate[]
-  cashierShiftCloses              CashierShiftClose[]
-  fiscalDocuments                 FiscalDocument[]
-  fiscalSubmissions               FiscalSubmission[]
-  fiscalDevices                   FiscalDevice[]
-  providerCredentials             ProviderCredential[]
-  timezone                        String?
-  weekendDays                     Json?
-  settingsOverrides               Json?
-  auditLogs                       AuditLog[]
-  clinicAdminScopes               ClinicAdminScope[]
-  employeePrivilegeGrants         UserClinicEmployeePrivilegeGrant[]
-  recordStatus                    ClinicRecordStatus                 @default(ACTIVE)
-  disabledAt                      DateTime?
-  operatingPeriods                ClinicOperatingPeriod[]
-  supportTickets                  SupportTicket[]
-  integrationFailureLogs          IntegrationFailureLog[]
-  appointmentTypes                AppointmentType[]
-  clinicianAvailabilityTemplates  ClinicianAvailabilityTemplate[]
-  appointmentSeries               AppointmentSeries[]
-  appointmentWaitlist             AppointmentWaitlistEntry[]
-  kiorexCommissionCharges         KiorexCommissionCharge[]
-  providerReferralLinks           ProviderReferralLink[]
-  socialShareLogs                 SocialShareLog[]
-  providerRecommendationStates    ProviderRecommendationState[]
+  cashierShifts                      CashierShift[]
+  id                                 String                              @id @default(cuid())
+  tenantId                           String
+  tenant                             Tenant                              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentClinicId                     String?
+  parent                             Clinic?                             @relation("ClinicHierarchy", fields: [parentClinicId], references: [id])
+  branches                           Clinic[]                            @relation("ClinicHierarchy")
+  nameEn                             String
+  nameAr                             String
+  logoUrl                            String?
+  country                            String
+  city                               String
+  addressEn                          String
+  addressAr                          String
+  locationUrl                        String
+  latitude                           Decimal?                            @db.Decimal(10, 7)
+  longitude                          Decimal?                            @db.Decimal(10, 7)
+  phone                              String
+  email                              String
+  licenseNumber                      String
+  clinicalSpecialty                  ClinicalSpecialty                   @default(POLYCLINIC)
+  taxRegistrationNumber              String?
+  invoiceVatPercent                  Decimal?                            @db.Decimal(5, 2)
+  defaultLanguage                    Locale                              @default(en)
+  defaultCurrency                    String                              @default("EGP")
+  invoiceLogoRelativePath            String?
+  invoiceLogoOriginalName            String?
+  invoiceLogoMimeType                String?
+  invoiceBackgroundColor             String                              @default("white")
+  invoiceSections                    Json                                @default("[\"clinicHeader\",\"patientDetails\",\"invoiceMeta\",\"lineItems\",\"totals\",\"footer\"]")
+  prescriptionLogoRelativePath       String?
+  prescriptionLogoOriginalName       String?
+  prescriptionLogoMimeType           String?
+  prescriptionHeaderDescriptionEn    String                              @default("")
+  prescriptionHeaderDescriptionAr    String                              @default("")
+  openingTime                        String                              @default("09:00") @db.VarChar(5)
+  closingTime                        String                              @default("00:00") @db.VarChar(5)
+  frontDeskRoomLabels                Json                                @default("[\"Room 1\",\"Room 2\",\"Room 3\"]")
+  providerSettings                   Json                                @default("{}")
+  lastCalledTicketNumber             Int?
+  patientsHome                       Patient[]                           @relation("PatientHomeBranch")
+  encounters                         Encounter[]
+  clinicalOrders                     ClinicalOrder[]
+  revenueEntries                     RevenueEntry[]
+  expenses                           Expense[]
+  employees                          Employee[]
+  appointments                       Appointment[]
+  operations                         Operation[]
+  invoices                           Invoice[]
+  billingPayments                    BillingPayment[]
+  clinicalFormTemplates              ClinicalFormTemplate[]
+  cashierShiftCloses                 CashierShiftClose[]
+  fiscalDocuments                    FiscalDocument[]
+  fiscalSubmissions                  FiscalSubmission[]
+  fiscalDevices                      FiscalDevice[]
+  providerCredentials                ProviderCredential[]
+  timezone                           String?
+  weekendDays                        Json?
+  settingsOverrides                  Json?
+  auditLogs                          AuditLog[]
+  clinicAdminScopes                  ClinicAdminScope[]
+  employeePrivilegeGrants            UserClinicEmployeePrivilegeGrant[]
+  recordStatus                       ClinicRecordStatus                  @default(ACTIVE)
+  disabledAt                         DateTime?
+  operatingPeriods                   ClinicOperatingPeriod[]
+  supportTickets                     SupportTicket[]
+  integrationFailureLogs             IntegrationFailureLog[]
+  appointmentTypes                   AppointmentType[]
+  clinicianAvailabilityTemplates     ClinicianAvailabilityTemplate[]
+  appointmentSeries                  AppointmentSeries[]
+  appointmentWaitlist                AppointmentWaitlistEntry[]
+  kiorexCommissionCharges            KiorexCommissionCharge[]
+  providerReferralLinks              ProviderReferralLink[]
+  socialShareLogs                    SocialShareLog[]
+  providerRecommendationStates       ProviderRecommendationState[]
   providerVerificationUpdateRequests ProviderVerificationUpdateRequest[]
-  bookingWidgetConfig             BookingWidgetConfig?
-  marketplaceListings             MarketplaceListing[]
-  slotHolds                       SlotHold[]
+  bookingWidgetConfig                BookingWidgetConfig?
+  marketplaceListings                MarketplaceListing[]
+  slotHolds                          SlotHold[]
   /// When false, Kiorex bookings stay SCHEDULED until front desk confirms (KX-04).
-  marketplaceBookingAutoConfirm   Boolean                            @default(true)
+  marketplaceBookingAutoConfirm      Boolean                             @default(true)
   /// KX-06: clinic override of the market pack Kiorex cancellation policy (partial JSON; null = market default).
-  kiorexCancellationPolicy        Json?
+  kiorexCancellationPolicy           Json?
   /// FS-04 — partial override of market pack `commercialConfig.deposits` (rules, link expiry, auto-cancel).
-  depositPolicy                   Json?
+  depositPolicy                      Json?
   /// KX-09: public clinic booking page slug (commission-free CLINIC_LINK bookings). Shares a namespace with listing slugs.
-  bookingSlug                     String?                            @unique
-  createdAt                       DateTime                           @default(now())
-  updatedAt                       DateTime                           @updatedAt
+  bookingSlug                        String?                             @unique
+  createdAt                          DateTime                            @default(now())
+  updatedAt                          DateTime                            @updatedAt
 
   @@index([tenantId])
   @@index([parentClinicId])
@@ -4340,32 +4343,32 @@ model OtpChallenge {
 }
 
 model CreditWallet {
-  id        String              @id @default(cuid())
-  tenantId  String              @unique
-  currency  String
-  balance   Decimal             @default(0) @db.Decimal(14, 2)
-  version   Int                 @default(0)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  entries   CreditLedgerEntry[]
+  id           String              @id @default(cuid())
+  tenantId     String              @unique
+  currency     String
+  balance      Decimal             @default(0) @db.Decimal(14, 2)
+  version      Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries      CreditLedgerEntry[]
   reservations CreditReservation[]
 }
 
 model CreditLedgerEntry {
-  id        String          @id @default(cuid())
-  walletId  String
-  wallet    CreditWallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  type      CreditEntryType
-  reason    CreditReason
-  amount    Decimal         @db.Decimal(14, 2)
-  remaining Decimal?        @db.Decimal(14, 2)
-  expiresAt DateTime?
-  sourceRef String?
-  invoiceId String?
-  note      String?
-  createdBy String?
-  createdAt DateTime        @default(now())
+  id             String          @id @default(cuid())
+  walletId       String
+  wallet         CreditWallet    @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type           CreditEntryType
+  reason         CreditReason
+  amount         Decimal         @db.Decimal(14, 2)
+  remaining      Decimal?        @db.Decimal(14, 2)
+  expiresAt      DateTime?
+  sourceRef      String?
+  invoiceId      String?
+  note           String?
+  createdBy      String?
+  createdAt      DateTime        @default(now())
   /// GRW-P2-W (migration 20261217100000): append-only, only `remaining` may change (database trigger).
   category       CreditCategory?
   campaignRef    String?
@@ -5628,22 +5631,26 @@ model BookingWidgetConfig {
 
 /// Append-only explanation of why a Kiorex fee was or was not applied (1:1 per appointment and policy version). Written by the commission service at check-in.
 model KiorexCommissionDecision {
-  id            String                 @id @default(cuid())
-  tenantId      String
-  clinicId      String
-  appointmentId String
-  appointment   Appointment            @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  policyVersion String
-  origin        AcquisitionOrigin
-  bookingSource BookingSource
-  isNewPatient  Boolean
-  decision      CommissionDecisionKind
-  reasonCodes   String[]
-  rateId        String?
-  amount        Decimal?               @db.Decimal(14, 2)
-  currency      String?
-  inputsHash    String
-  createdAt     DateTime               @default(now())
+  id                     String                 @id @default(cuid())
+  tenantId               String
+  clinicId               String
+  appointmentId          String
+  appointment            Appointment            @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  policyVersion          String
+  origin                 AcquisitionOrigin
+  bookingSource          BookingSource
+  isNewPatient           Boolean
+  decision               CommissionDecisionKind
+  reasonCodes            String[]
+  rateId                 String?
+  amount                 Decimal?               @db.Decimal(14, 2)
+  currency               String?
+  inputsHash             String
+  createdAt              DateTime               @default(now())
+  /// GRW-P2-S (additive, contracts 1.12.0): the fee the Kiorex fee was computed on, before any sponsored discount; reference fields only, NOT part of inputsHash.
+  feeBasisMinor          Int?
+  sponsoredDiscountMinor Int?
+  basisPolicyVersion     String?
 
   @@unique([appointmentId, policyVersion])
   @@index([tenantId, createdAt])
@@ -5770,22 +5777,22 @@ model ProviderRecommendationState {
 
 /// A provider asks Kiorex ops to change a verified public profile field. `newValueEnc` is encrypted at rest (AES-256-GCM, the clinician PII key) and travels to Kiorex only in the signed marketplace call body, never in an event.
 model ProviderVerificationUpdateRequest {
-  id              String                   @id @default(cuid())
-  tenantId        String
-  tenant          Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  clinicId        String
-  clinic          Clinic                   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  field           VerificationUpdateField
-  oldRef          String?
-  newValueEnc     String
-  evidenceFileRefs Json                    @default("[]")
-  status          VerificationUpdateStatus @default(SUBMITTED)
-  kiorexRef       String?
-  decidedAt       DateTime?
-  decisionNote    String?
-  createdBy       String
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
+  id               String                   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId         String
+  clinic           Clinic                   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  field            VerificationUpdateField
+  oldRef           String?
+  newValueEnc      String
+  evidenceFileRefs Json                     @default("[]")
+  status           VerificationUpdateStatus @default(SUBMITTED)
+  kiorexRef        String?
+  decidedAt        DateTime?
+  decisionNote     String?
+  createdBy        String
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
 
   @@index([tenantId, status])
   @@index([clinicId, createdAt])
@@ -5803,4 +5810,196 @@ model CommissionStatementExport {
   createdAt   DateTime            @default(now())
 
   @@index([tenantId, month])
+}
+
+// ───────────────────────── GRW-P2-S provider-sponsored promotions (migration 20270107120000_growth_sponsored_promotions) ─────────────────────────
+// A discount the CLINIC funds from its own provider credit. The patient never receives provider credit; no row here references a patient credit object (RC-S5).
+// Money is in minor units (piastres). The budget is an append-only ledger (PromotionBudgetEntry) guarded by a deferred constraint trigger.
+
+enum PromotionStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  ACTIVE
+  PAUSED
+  EXHAUSTED
+  EXPIRED
+  REJECTED
+  ARCHIVED
+}
+
+enum PromotionDiscountKind {
+  FIXED_MINOR
+  PERCENT_BP
+}
+
+enum PromotionFundingMode {
+  WALLET_ONLY
+  WALLET_THEN_INVOICE
+}
+
+enum PromotionReviewKind {
+  CONTENT
+  SCOPE
+  HIGH_VALUE
+}
+
+enum PromotionReviewDecision {
+  APPROVED
+  REJECTED
+  NEEDS_CHANGES
+}
+
+enum PromotionBudgetEntryType {
+  RESERVE
+  RELEASE
+  DEBIT
+  REVERSE_DEBIT
+}
+
+enum PromotionReservationState {
+  RESERVED
+  BOOKED
+  DEBITED
+  RELEASED
+  REVERSED
+}
+
+model SponsoredPromotion {
+  id               String          @id @default(cuid())
+  tenantId         String
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status           PromotionStatus @default(DRAFT)
+  currentVersionId String?
+  createdBy        String
+  pausedAt         DateTime?
+  pauseReason      String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  versions      SponsoredPromotionVersion[]
+  budgetEntries PromotionBudgetEntry[]
+  reservations  PromotionReservation[]
+  audits        PromotionAudit[]
+
+  @@index([tenantId, status])
+  @@index([status])
+}
+
+/// Immutable (trigger): an edit creates a new version; bookings cite the version they used.
+model SponsoredPromotionVersion {
+  id                  String                @id @default(cuid())
+  promotionId         String
+  promotion           SponsoredPromotion    @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  version             Int
+  nameAr              String
+  nameEn              String
+  patientCopyAr       String
+  patientCopyEn       String
+  scope               Json
+  discountKind        PromotionDiscountKind
+  discountValue       Int
+  maxPerBookingMinor  Int?
+  budgetCapMinor      Int
+  perPatientLimit     Int                   @default(1)
+  perDayLimit         Int?
+  eligibility         Json
+  startsAt            DateTime
+  endsAt              DateTime
+  fundingMode         PromotionFundingMode  @default(WALLET_ONLY)
+  policyVersion       String
+  referencePriceMinor Int
+  contentHash         String
+  guardResult         Json                  @default("{}")
+  createdBy           String
+  createdAt           DateTime              @default(now())
+
+  reviews PromotionComplianceReview[]
+
+  @@unique([promotionId, version])
+}
+
+model PromotionComplianceReview {
+  id          String                    @id @default(cuid())
+  promotionId String
+  versionId   String
+  version     SponsoredPromotionVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  kind        PromotionReviewKind
+  requestedBy String
+  decidedBy   String?
+  decision    PromotionReviewDecision?
+  reason      String?
+  guardResult Json                      @default("{}")
+  createdAt   DateTime                  @default(now())
+  decidedAt   DateTime?
+
+  @@unique([versionId, kind])
+  @@index([promotionId])
+}
+
+/// Append-only (trigger). reserved + debited - released - reversed <= budget cap at commit (deferred constraint trigger).
+model PromotionBudgetEntry {
+  id             String                   @id @default(cuid())
+  promotionId    String
+  promotion      SponsoredPromotion       @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  versionId      String
+  type           PromotionBudgetEntryType
+  amountMinor    Int
+  currency       String                   @default("EGP")
+  idempotencyKey String                   @unique
+  appointmentId  String?
+  bookingRef     String?
+  reservationId  String?
+  walletEntryId  String?
+  invoiceLineId  String?
+  reason         String
+  createdAt      DateTime                 @default(now())
+
+  @@index([promotionId, type])
+  @@index([reservationId])
+}
+
+model PromotionAudit {
+  id          String             @id @default(cuid())
+  promotionId String
+  promotion   SponsoredPromotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  actor       String
+  action      String
+  snapshot    Json               @default("{}")
+  at          DateTime           @default(now())
+
+  @@index([promotionId, at])
+}
+
+/// One budget hold of one booking (the mutable state of the append-only budget entries). patientRef is an opaque keyed hash; it never is a Passport sub.
+model PromotionReservation {
+  id             String                    @id @default(cuid())
+  tenantId       String
+  promotionId    String
+  promotion      SponsoredPromotion        @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  versionId      String
+  reservationRef String                    @unique
+  bookingRef     String
+  patientRef     String
+  careType       String
+  amountMinor    Int
+  currency       String                    @default("EGP")
+  state          PromotionReservationState @default(RESERVED)
+  appointmentId  String?
+  expiresAt      DateTime
+  idempotencyKey String                    @unique
+  debitedMinor   Int?
+  shortfallMinor Int?
+  invoicedAt     DateTime?
+  /// the Kiorly invoice period (YYYY-MM) whose PROMOTION_EXPENSE line carries the shortfall; a re-run of the same draft period keeps it
+  invoicedPeriod String?
+  createdAt      DateTime                  @default(now())
+  settledAt      DateTime?
+
+  @@unique([promotionId, bookingRef])
+  @@index([tenantId, state])
+  @@index([appointmentId])
+  @@index([state, expiresAt])
+  @@index([promotionId, patientRef])
 }

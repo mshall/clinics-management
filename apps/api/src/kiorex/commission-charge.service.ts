@@ -22,6 +22,7 @@ import { parsePageParams } from "../common/pagination";
 import { reasonForFeeReturn } from "../credits/credit-categories";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
+import { loadSponsoredBasis } from "../promotions/promotion-basis";
 import { PrismaService } from "../prisma/prisma.service";
 import { effectiveProfession } from "../scope-of-practice/scope-of-practice.service";
 import { COMMISSION_ADJUSTED, COMMISSION_CHARGE_CREATED, COMMISSION_CHARGE_REVERSED } from "./commission-charge-topics";
@@ -122,7 +123,9 @@ export class CommissionChargeService {
     const isNew = Boolean(apt.isNewPatientAtBooking);
     const rows = marketId ? await tx.kiorexCommissionRate.findMany({ where: { marketId } }) : [];
     const policyVersion = commissionPolicyVersion(rows, attendedAt);
-    const base = { tenantId, clinicId: apt.clinicId, appointmentId: apt.id, policyVersion, origin, bookingSource: apt.bookingSource, isNewPatient: isNew, followUpVisit, currency };
+    // GRW-P2-S: a sponsored booking names the basis the fee is computed on (default: the fee before the sponsored discount, so the amount is unchanged); other bookings get no new field
+    const sponsoredBasis = await loadSponsoredBasis(tx, tenantId, apt.id, apt.feeAmount);
+    const base = { tenantId, clinicId: apt.clinicId, appointmentId: apt.id, policyVersion, origin, bookingSource: apt.bookingSource, isNewPatient: isNew, followUpVisit, currency, ...sponsoredBasis };
 
     // GRW-P1-D2: one append-only explanation per appointment and policy version, for BOTH outcomes ("why was I charged" / "why was I not").
     const gate = decideCommissionGate({ origin, bookingSource: apt.bookingSource, isNewPatient: isNew, followUpVisit });
@@ -136,7 +139,7 @@ export class CommissionChargeService {
     }
 
     const specialty = apt.clinician.employee?.clinicalSpecialty ?? null;
-    const visitFee = Number(apt.feeAmount);
+    const visitFee = sponsoredBasis.feeBasisMinor !== undefined ? sponsoredBasis.feeBasisMinor / 100 : Number(apt.feeAmount);
     // BR56: the home surcharge is a separate field (Appointment.homeSurchargeAmount) and is never part of visitFee (S) or the commission base (C).
     const profession = effectiveProfession(apt.clinician);
     const resolved = this.kiorexRates.resolveForBooking(rows, specialty, visitFee, attendedAt, { profession, serviceLocation: apt.serviceLocation });
@@ -517,9 +520,11 @@ export class CommissionChargeService {
 
   /** Additive contract 1.10.0 fields: the decision that explains the charge (latest append-only row). Absent when no decision exists (legacy). */
   private async outboxPayload(tx: Tx, charge: KiorexCommissionCharge): Promise<Record<string, unknown>> {
-    const d = await tx.kiorexCommissionDecision.findFirst({ where: { appointmentId: charge.appointmentId }, orderBy: { createdAt: "desc" }, select: { id: true, origin: true, policyVersion: true } });
+    const d = await tx.kiorexCommissionDecision.findFirst({ where: { appointmentId: charge.appointmentId }, orderBy: { createdAt: "desc" }, select: { id: true, origin: true, policyVersion: true, feeBasisMinor: true, sponsoredDiscountMinor: true, basisPolicyVersion: true } });
     return {
       ...(d ? { decisionRef: d.id, origin: d.origin, policyVersion: d.policyVersion } : {}),
+      // GRW-P2-S (additive, contracts 1.12.0): present only for a sponsored booking
+      ...(d?.feeBasisMinor != null ? { feeBasisMinor: d.feeBasisMinor, sponsoredDiscountMinor: d.sponsoredDiscountMinor ?? 0, basisPolicyVersion: d.basisPolicyVersion ?? undefined } : {}),
       chargeId: charge.id,
       appointmentId: charge.appointmentId,
       amount: charge.amount.toFixed(2),

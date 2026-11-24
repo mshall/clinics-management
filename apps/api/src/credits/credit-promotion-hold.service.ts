@@ -37,6 +37,11 @@ export class CreditPromotionHoldService {
     }
   }
 
+  /** Runs `fn` in the caller's transaction when one is given (the promotion budget entry and the wallet entry then commit together), else in its own retried transaction. */
+  private run<T>(tx: Tx | undefined, fn: (tx: Tx) => Promise<T>): Promise<T> {
+    return tx ? fn(tx) : this.retry(() => this.prisma.$transaction(fn));
+  }
+
   private assertRefs(...refs: string[]) {
     for (const r of refs) {
       if (!r || r.length > 120) throw new BadRequestException("invalid reference");
@@ -55,25 +60,25 @@ export class CreditPromotionHoldService {
   }
 
   /** Reserve budget at booking time. Replay-safe on (promotionRef, holdRef). Fails when the clinic's promotion credit cannot cover it. */
-  async reserve(tenantId: string, i: { promotionRef: string; holdRef: string; amount: number | string }): Promise<HoldView> {
+  async reserve(tenantId: string, i: { promotionRef: string; holdRef: string; amount: number | string }, tx0?: Tx, opts: { allowShortfall?: boolean } = {}): Promise<HoldView> {
     await this.gate(tenantId);
     this.assertRefs(i.promotionRef, i.holdRef);
     const amount = new Prisma.Decimal(String(i.amount));
     if (amount.lte(0)) throw new BadRequestException("amount must be positive");
     const key = `reserve:${i.promotionRef}:${i.holdRef}`;
-    return this.retry(() => this.prisma.$transaction(async (tx) => {
+    return this.run(tx0, async (tx) => {
       const wallet = await this.wallet.ensureWallet(tenantId, tx);
       const existing = await tx.creditReservation.findUnique({ where: { walletId_idempotencyKey: { walletId: wallet.id, idempotencyKey: key } } });
       if (existing) return view(existing);
       const av = await this.available(tenantId, tx);
-      if (av.available.lt(amount)) throw new BadRequestException({ code: "PROMOTION_CREDIT_INSUFFICIENT", message: "Not enough promotion credit to hold this discount", available: av.available.toFixed(2) });
+      if (!opts.allowShortfall && av.available.lt(amount)) throw new BadRequestException({ code: "PROMOTION_CREDIT_INSUFFICIENT", message: "Not enough promotion credit to hold this discount", available: av.available.toFixed(2) });
       // serialise concurrent reservations on the wallet version (same optimistic lock as grants and consumes)
       const bumped = await tx.creditWallet.updateMany({ where: { id: wallet.id, version: wallet.version }, data: { version: { increment: 1 } } });
       if (bumped.count !== 1) throw new ConflictException("wallet version conflict");
       const row = await tx.creditReservation.create({ data: { walletId: wallet.id, tenantId, amount, idempotencyKey: key, promotionRef: i.promotionRef, holdRef: i.holdRef } });
       await tx.auditLog.create({ data: { tenantId, action: "credit.promotion_reserved", resource: "CreditReservation", resourceId: row.id, metadata: { promotionRef: i.promotionRef, holdRef: i.holdRef, amount: amount.toFixed(2) } as Prisma.InputJsonValue } });
       return view(row);
-    }));
+    });
   }
 
   private async find(tx: Tx, tenantId: string, promotionRef: string, holdRef: string) {
@@ -82,25 +87,25 @@ export class CreditPromotionHoldService {
   }
 
   /** Release an unspent hold (booking cancelled or expired before the visit). Idempotent. */
-  async release(tenantId: string, i: { promotionRef: string; holdRef: string }): Promise<HoldView | null> {
+  async release(tenantId: string, i: { promotionRef: string; holdRef: string }, tx0?: Tx): Promise<HoldView | null> {
     await this.gate(tenantId);
-    return this.retry(() => this.prisma.$transaction(async (tx) => {
+    return this.run(tx0, async (tx) => {
       const r = await this.find(tx, tenantId, i.promotionRef, i.holdRef);
       if (!r) return null;
       if (r.state !== "RESERVED") return view(r);
       const done = await tx.creditReservation.update({ where: { id: r.id }, data: { state: "RELEASED", settledAt: new Date() } });
       await tx.auditLog.create({ data: { tenantId, action: "credit.promotion_released", resource: "CreditReservation", resourceId: r.id, metadata: { promotionRef: i.promotionRef, holdRef: i.holdRef } as Prisma.InputJsonValue } });
       return view(done);
-    }));
+    });
   }
 
   /**
    * Debit at completion (attendance evidence is the caller's duty, GRW-P2-S): consumes the clinic's credit once, reason SPONSORED_PROMOTION.
    * If lots expired or were used meanwhile the debit takes what is spendable and records the shortfall for the invoice line "promotion expense".
    */
-  async debit(tenantId: string, i: { promotionRef: string; holdRef: string }): Promise<HoldView> {
+  async debit(tenantId: string, i: { promotionRef: string; holdRef: string }, tx0?: Tx): Promise<HoldView> {
     await this.gate(tenantId);
-    return this.retry(() => this.prisma.$transaction(async (tx) => {
+    return this.run(tx0, async (tx) => {
       const r = await this.find(tx, tenantId, i.promotionRef, i.holdRef);
       if (!r) throw new BadRequestException({ code: "RESERVATION_NOT_FOUND", message: "No reservation for this booking" });
       if (r.state === "DEBITED") return view(r);
@@ -119,16 +124,16 @@ export class CreditPromotionHoldService {
       }
       const done = await tx.creditReservation.update({ where: { id: r.id }, data: { state: "DEBITED", settledAt: new Date(), debitedAmount: take, shortfall: r.amount.sub(take), debitEntryId: entryId } });
       return view(done);
-    }));
+    });
   }
 
   /**
    * After a debit, a refund or cancellation hands the sponsored amount back to the clinic as credit (reason SPONSORED_PROMOTION_REVERSAL, once);
    * an undebited hold is simply released. Never pays the patient.
    */
-  async reverse(tenantId: string, i: { promotionRef: string; holdRef: string }): Promise<HoldView | null> {
+  async reverse(tenantId: string, i: { promotionRef: string; holdRef: string }, tx0?: Tx): Promise<HoldView | null> {
     await this.gate(tenantId);
-    return this.retry(() => this.prisma.$transaction(async (tx) => {
+    return this.run(tx0, async (tx) => {
       const r = await this.find(tx, tenantId, i.promotionRef, i.holdRef);
       if (!r) return null;
       if (r.state === "RESERVED") {
@@ -147,6 +152,6 @@ export class CreditPromotionHoldService {
       }
       const done = await tx.creditReservation.update({ where: { id: r.id }, data: { state: "REVERSED", settledAt: new Date(), reversalEntryId: reversalId } });
       return view(done);
-    }));
+    });
   }
 }

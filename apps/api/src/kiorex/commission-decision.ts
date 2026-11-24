@@ -69,6 +69,10 @@ export interface DecisionRowInput {
   currency?: string | null;
   /** Anything else that influenced the outcome (fee base, attribution evidence hash). Included in the hash. */
   extra?: Record<string, unknown>;
+  /** GRW-P2-S reference fields (contracts 1.12.0). Stored with the decision, NOT part of the hash: a promotion never changes the decision, it only names the basis. */
+  feeBasisMinor?: number;
+  sponsoredDiscountMinor?: number;
+  basisPolicyVersion?: string;
 }
 
 export function decisionInputsHash(i: DecisionRowInput): string {
@@ -111,6 +115,9 @@ export async function writeCommissionDecision(tx: Prisma.TransactionClient, i: D
         amount: i.amount != null ? new Prisma.Decimal(i.amount) : null,
         currency: i.currency ?? null,
         inputsHash: decisionInputsHash(i),
+        feeBasisMinor: i.feeBasisMinor ?? null,
+        sponsoredDiscountMinor: i.sponsoredDiscountMinor ?? null,
+        basisPolicyVersion: i.basisPolicyVersion ?? null,
       },
     ],
     skipDuplicates: true,

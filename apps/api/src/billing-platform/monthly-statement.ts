@@ -74,6 +74,8 @@ export type MonthlyStatementDto = {
   offset: string;
   prepaid: string;
   otherAdjustments: string;
+  /** GRW-P2-S: provider-sponsored discounts the wallet could not cover, invoiced (PROMOTION_EXPENSE lines). Included in the subtotal. */
+  promotionExpense: string;
   subtotal: string;
   creditsUsed: string;
   walletBalance: string;
@@ -125,6 +127,7 @@ export function buildMonthlyStatement(src: MonthlyStatementSource): MonthlyState
   );
   const offset = -sumLines(lines, (l) => l.type === KiorlyLineType.KIOREX_COMMISSION_OFFSET);
   const prepaid = -sumLines(lines, (l) => l.type === KiorlyLineType.PREPAID);
+  const promotionExpense = sumLines(lines, (l) => l.type === KiorlyLineType.PROMOTION_EXPENSE);
   const known = new Set<KiorlyLineType>([
     KiorlyLineType.SUBSCRIPTION,
     KiorlyLineType.SEAT,
@@ -133,13 +136,14 @@ export function buildMonthlyStatement(src: MonthlyStatementSource): MonthlyState
     KiorlyLineType.KIOREX_COMMISSION,
     KiorlyLineType.KIOREX_COMMISSION_OFFSET,
     KiorlyLineType.PREPAID,
+    KiorlyLineType.PROMOTION_EXPENSE,
     KiorlyLineType.TAX,
   ]);
   const other = sumLines(lines, (l) => !known.has(l.type));
   const vatFromLines = sumLines(lines, (l) => l.type === KiorlyLineType.TAX);
 
   const subtotal = roundMoney(
-    subscription + seats + addons + usage + commission + carryIn - offset - prepaid + other,
+    subscription + seats + addons + usage + commission + carryIn - offset - prepaid + promotionExpense + other,
   );
   const creditsUsed = roundMoney(num(src.creditsApplied));
   const netPayable = roundMoney(subtotal - creditsUsed);
@@ -171,6 +175,7 @@ export function buildMonthlyStatement(src: MonthlyStatementSource): MonthlyState
     offset: money(offset),
     prepaid: money(prepaid),
     otherAdjustments: money(other),
+    promotionExpense: money(promotionExpense),
     subtotal: money(subtotal),
     creditsUsed: money(creditsUsed),
     walletBalance: money(num(src.walletBalance)),
@@ -238,6 +243,7 @@ type StatementLabels = {
   offset: string;
   prepaid: string;
   other: string;
+  promotionExpense: string;
   subtotal: string;
   credits: string;
   wallet: string;
@@ -271,6 +277,7 @@ const LABELS_EN: StatementLabels = {
   offset: "Offset (higher-of, never both)",
   prepaid: "Prepaid period",
   other: "Other adjustments",
+  promotionExpense: "Promotion expense (sponsored discounts)",
   subtotal: "Subtotal",
   credits: "Credits used",
   wallet: "Wallet balance",
@@ -304,6 +311,7 @@ const LABELS_AR: StatementLabels = {
   offset: "الخصم (الأعلى فقط وليس المجموع)",
   prepaid: "فترة مدفوعة مسبقاً",
   other: "تسويات أخرى",
+  promotionExpense: "مصروف العروض (خصومات برعاية العيادة)",
   subtotal: "المجموع الفرعي",
   credits: "الأرصدة المستخدمة",
   wallet: "رصيد المحفظة",
@@ -357,6 +365,7 @@ function statementSection(st: MonthlyStatementDto, lang: "en" | "ar"): PdfSectio
   rows.push({ kind: "gap" }, { kind: "rule" });
   rows.push({ kind: "pair", label: L.offset, value: neg(st.offset) });
   if (Number(st.prepaid) !== 0) rows.push({ kind: "pair", label: L.prepaid, value: neg(st.prepaid) });
+  if (Number(st.promotionExpense) !== 0) rows.push({ kind: "pair", label: L.promotionExpense, value: amt(st.promotionExpense) });
   if (Number(st.otherAdjustments) !== 0) rows.push({ kind: "pair", label: L.other, value: amt(st.otherAdjustments) });
   rows.push({ kind: "pair", label: L.subtotal, value: amt(st.subtotal) });
   rows.push({ kind: "pair", label: L.credits, value: neg(st.creditsUsed) });
