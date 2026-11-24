@@ -21,6 +21,7 @@ import { UPLOAD_BLOB_STORAGE, type UploadBlobStorage } from "../storage/upload-b
 import { KiorlyPaymentMethodsService } from "./kiorly-payment-methods.service";
 import { KiorlyPaymentService, type PayInvoiceMethod } from "./kiorly-payment.service";
 import { assertNoPanOrCvvInBody } from "./kiorly-payment-no-pan";
+import { KiorlyBillingPaymentsCardSessionBodyDto, KiorlyBillingPaymentsPayBodyDto } from "./kiorly-billing-payments.controller.dto";
 
 const PROOF_LIMIT = 8 * 1024 * 1024;
 const PROOF_MIME = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
@@ -38,7 +39,7 @@ export class KiorlyBillingPaymentsController {
 
   @Post("payment-methods/card-session")
   @ApiOperation({ summary: "Start hosted card tokenization session (Paymob iframe — no PAN on Kiorly API)" })
-  cardSession(@CurrentUser() user: JwtUser, @Body() body: { returnUrl: string }) {
+  cardSession(@CurrentUser() user: JwtUser, @Body() body: KiorlyBillingPaymentsCardSessionBodyDto) {
     return this.paymentMethods.createCardSession(user, requireTenantId(user), body);
   }
 
@@ -72,11 +73,7 @@ export class KiorlyBillingPaymentsController {
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body()
-    body: {
-      method: PayInvoiceMethod;
-      paymentMethodId?: string;
-      proofUploadKey?: string;
-    },
+    body: KiorlyBillingPaymentsPayBodyDto,
   ) {
     assertNoPanOrCvvInBody(body);
     return this.payments.payInvoice(requireTenantId(user), id, body);

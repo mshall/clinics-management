@@ -7,6 +7,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { SchedulingService } from "./scheduling.service";
 import { SlotService } from "./slot.service";
 import { SLOT_CHANNEL } from "./slot-channel";
+import { SchedulingPutTypeOverridesBodyDto } from "./scheduling.controller.dto";
 
 @ApiTags("scheduling")
 @ApiBearerAuth("bearer")
@@ -42,7 +43,7 @@ export class SchedulingController {
   putTypeOverrides(
     @CurrentUser() user: JwtUser,
     @Param("clinicianId") clinicianId: string,
-    @Body() body: { overrides: Array<{ appointmentTypeId: string; durationMinutes?: number | null; feeAmount?: number | null }> },
+    @Body() body: SchedulingPutTypeOverridesBodyDto,
   ) {
     return this.scheduling.putClinicianTypeOverrides(requireTenantId(user), clinicianId, body.overrides ?? []);
   }

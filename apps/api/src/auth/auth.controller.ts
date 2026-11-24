@@ -38,6 +38,7 @@ import { AuthOtpLoginService } from "./auth-otp-login.service";
 import { AuthSessionService } from "./auth-session.service";
 import { loginMetaFromRequest, clientIpFromRequest } from "./request-client-meta";
 import { PublicAuthRateLimitGuard } from "../common/rate-limit.guard";
+import { AuthRefreshBodyDto, AuthForgotPasswordBodyDto, AuthResetPasswordBodyDto, AuthOtpRequestBodyDto, AuthOtpVerifyBodyDto, AuthConfirmMfaBodyDto, AuthDisableMfaBodyDto, AuthEnableWhatsAppMfaBodyDto, AuthWhatsappMfaChallengeBodyDto, AuthRegenerateMfaRecoveryBodyDto } from "./auth.controller.dto";
 
 const AVATAR_UPLOAD_LIMIT = 5 * 1024 * 1024;
 
@@ -114,14 +115,14 @@ export class AuthController {
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Rotate refresh token and issue a new access token" })
-  refresh(@Body() body: { refreshToken: string }) {
+  refresh(@Body() body: AuthRefreshBodyDto) {
     return this.auth.refreshSession(body.refreshToken?.trim() ?? "");
   }
 
   @Post("password/forgot")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Request password reset via email link or WhatsApp OTP" })
-  forgotPassword(@Body() body: { email?: string; phone?: string }, @Req() req: Request) {
+  forgotPassword(@Body() body: AuthForgotPasswordBodyDto, @Req() req: Request) {
     return this.passwordReset.forgot(body, clientIpFromRequest(req));
   }
 
@@ -129,7 +130,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Complete password reset with token or phone OTP" })
   resetPassword(
-    @Body() body: { token?: string; phone?: string; code?: string; newPassword: string },
+    @Body() body: AuthResetPasswordBodyDto,
   ) {
     return this.passwordReset.reset(body);
   }
@@ -137,7 +138,7 @@ export class AuthController {
   @Post("otp/request")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Request login OTP (physicians)" })
-  otpRequest(@Body() body: { phone: string }, @Req() req: Request) {
+  otpRequest(@Body() body: AuthOtpRequestBodyDto, @Req() req: Request) {
     return this.otpLogin.request(body.phone, clientIpFromRequest(req));
   }
 
@@ -146,7 +147,7 @@ export class AuthController {
   @ApiOkResponse({ type: LoginResponseDto })
   @ApiOperation({ summary: "Verify login OTP and receive session" })
   otpVerify(
-    @Body() body: { phone: string; code: string; mfaCode?: string },
+    @Body() body: AuthOtpVerifyBodyDto,
     @Req() req: Request,
   ) {
     return this.otpLogin.verify(body.phone, body.code, body.mfaCode, loginMetaFromRequest(req));
@@ -193,7 +194,7 @@ export class AuthController {
   @ApiOperation({ summary: "Confirm MFA with a valid TOTP code" })
   confirmMfa(
     @CurrentUser() user: JwtUser,
-    @Body() body: { secret: string; code: string },
+    @Body() body: AuthConfirmMfaBodyDto,
   ) {
     return this.mfa.confirmSetup(user.userId, user.tenantId, body.secret, body.code);
   }
@@ -204,7 +205,7 @@ export class AuthController {
   @ApiOperation({ summary: "Disable MFA (password + current TOTP code)" })
   disableMfa(
     @CurrentUser() user: JwtUser,
-    @Body() body: { password: string; code: string },
+    @Body() body: AuthDisableMfaBodyDto,
   ) {
     return this.mfa.disable(user.userId, user.tenantId, body.password, body.code);
   }
@@ -213,14 +214,14 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth("bearer")
   @ApiOperation({ summary: "SC-04 — enable WhatsApp OTP as MFA for physicians" })
-  enableWhatsAppMfa(@CurrentUser() user: JwtUser, @Body() body: { password: string }) {
+  enableWhatsAppMfa(@CurrentUser() user: JwtUser, @Body() body: AuthEnableWhatsAppMfaBodyDto) {
     return this.mfa.enableWhatsAppMfa(user.userId, user.tenantId, body.password);
   }
 
   @Post("mfa/whatsapp/challenge")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "SC-04 — send WhatsApp MFA OTP (login second factor)" })
-  whatsappMfaChallenge(@Body() body: { userId: string }, @Req() req: Request) {
+  whatsappMfaChallenge(@Body() body: AuthWhatsappMfaChallengeBodyDto, @Req() req: Request) {
     return this.mfa.requestWhatsAppMfaChallenge(body.userId, clientIpFromRequest(req));
   }
 
@@ -229,7 +230,7 @@ export class AuthController {
   @ApiBearerAuth("bearer")
   regenerateMfaRecovery(
     @CurrentUser() user: JwtUser,
-    @Body() body: { password: string; code: string },
+    @Body() body: AuthRegenerateMfaRecoveryBodyDto,
   ) {
     return this.mfa.regenerateRecoveryCodes(user.userId, user.tenantId, body.password, body.code);
   }

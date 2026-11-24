@@ -4,6 +4,7 @@ import { BadRequestException } from "@nestjs/common";
 import { AppointmentStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { AppointmentRescheduleTokenService } from "./appointment-reschedule-token.service";
+import { PublicAppointmentRescheduleApplyBodyDto } from "./public-appointment-reschedule.controller.dto";
 
 @ApiTags("public")
 @Controller("public/appointments/reschedule")
@@ -21,7 +22,7 @@ export class PublicAppointmentRescheduleController {
 
   @Post(":token")
   @ApiOperation({ summary: "Apply a new startsAt from the public reschedule page" })
-  async apply(@Param("token") token: string, @Body() body: { startsAt?: string }) {
+  async apply(@Param("token") token: string, @Body() body: PublicAppointmentRescheduleApplyBodyDto) {
     const raw = body.startsAt?.trim();
     if (!raw) throw new BadRequestException("startsAt is required");
     const start = new Date(raw);

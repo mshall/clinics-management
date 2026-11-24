@@ -10,6 +10,7 @@ import { RequiresSubscriptionAccess } from "../subscriptions/requires-subscripti
 import { SubscriptionAccessAction } from "../subscriptions/subscription-access-policy";
 import { TelehealthException } from "./telehealth.errors";
 import { TelehealthService } from "./telehealth.service";
+import { TelehealthPutSettingsBodyDto, TelehealthConfigureTypeBodyDto, TelehealthPostSignalBodyDto, TelehealthModeBodyDto } from "./telehealth.controller.dto";
 
 /**
  * Staff telehealth API (clinicians use normal auth). New capability (creating sessions, enabling a doctor) is gated by flag
@@ -53,12 +54,12 @@ export class TelehealthController {
   }
 
   @Put("settings/:clinicianId")
-  putSettings(@CurrentUser() u: JwtUser, @Param("clinicianId") clinicianId: string, @Body() body: { offersTelehealth?: boolean; windows?: unknown }) {
+  putSettings(@CurrentUser() u: JwtUser, @Param("clinicianId") clinicianId: string, @Body() body: TelehealthPutSettingsBodyDto) {
     return this.svc.putSettings(u, clinicianId, body ?? {});
   }
 
   @Put("appointment-types/:id")
-  configureType(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { enabled?: boolean; durationMinutes?: number; feeAmount?: number; depositAmount?: number | null; marketplaceBookable?: boolean }) {
+  configureType(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: TelehealthConfigureTypeBodyDto) {
     return this.svc.configureType(u, id, body ?? {});
   }
 
@@ -81,7 +82,7 @@ export class TelehealthController {
 
   @Post("sessions/:id/signals")
   @HttpCode(200)
-  postSignal(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { type?: string; payload?: unknown }) {
+  postSignal(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: TelehealthPostSignalBodyDto) {
     this.limit(u, id, "sigpost", 300);
     return this.svc.postSignal({ actor: u, sessionId: id }, body ?? {});
   }
@@ -94,7 +95,7 @@ export class TelehealthController {
 
   @Post("sessions/:id/mode")
   @HttpCode(200)
-  mode(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { mode?: string }) {
+  mode(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: TelehealthModeBodyDto) {
     return this.svc.setMode({ actor: u, sessionId: id }, String(body?.mode ?? ""));
   }
 

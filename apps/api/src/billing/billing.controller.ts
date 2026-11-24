@@ -15,6 +15,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "./billing.service";
 import { NoShowGuaranteeService } from "./no-show-guarantee.service";
 import { SpecialtyPacksService } from "../clinical/specialty-packs.service";
+import { BillingRecordPaywallEventBodyDto, BillingPurchaseSpecialtyAddonBodyDto, BillingPreviewChangeBodyDto, BillingChangePlanBodyDto, BillingChangeSeatsBodyDto, BillingPreviewSeatsBodyDto, BillingCancelSubscriptionBodyDto, BillingCreateCatalogBodyDto, BillingRecordPaymentBodyDto, BillingCashCloseBodyDto } from "./billing.controller.dto";
 
 @ApiTags("billing")
 @ApiBearerAuth("bearer")
@@ -37,7 +38,7 @@ export class BillingController {
   @Post("paywall-events")
   async recordPaywallEvent(
     @CurrentUser() user: JwtUser,
-    @Body() body: { type: string; entitlement: string; requiredPlan: string; source?: string | null },
+    @Body() body: BillingRecordPaywallEventBodyDto,
   ) {
     const tenantId = requireTenantId(user);
     await this.prisma.auditLog.create({
@@ -101,7 +102,7 @@ export class BillingController {
   @Post("addons/purchase")
   purchaseSpecialtyAddon(
     @CurrentUser() user: JwtUser,
-    @Body() body: { entitlementKey: string },
+    @Body() body: BillingPurchaseSpecialtyAddonBodyDto,
   ) {
     return this.specialtyPacks.purchaseAddon(requireTenantId(user), user.userId, body.entitlementKey);
   }
@@ -110,12 +111,7 @@ export class BillingController {
   previewChange(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      planKey: PlanKey;
-      interval: BillingInterval;
-      seats: number;
-      timing?: "IMMEDIATE" | "PERIOD_END";
-    },
+    body: BillingPreviewChangeBodyDto,
   ) {
     return this.subscriptions.previewPlanChange(user, requireTenantId(user), body);
   }
@@ -124,14 +120,7 @@ export class BillingController {
   changePlan(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      planKey: PlanKey;
-      interval: BillingInterval;
-      seats: number;
-      confirm?: boolean;
-      timing?: "IMMEDIATE" | "PERIOD_END";
-      activeClinicianUserIds?: string[];
-    },
+    body: BillingChangePlanBodyDto,
   ) {
     return this.subscriptions.changePlan(user, requireTenantId(user), body);
   }
@@ -140,20 +129,20 @@ export class BillingController {
   changeSeats(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: { seats: number; confirm?: boolean; activeClinicianUserIds?: string[] },
+    body: BillingChangeSeatsBodyDto,
   ) {
     return this.subscriptions.changeSeats(user, requireTenantId(user), body);
   }
 
   @Post("subscription/preview-seats")
-  previewSeats(@CurrentUser() user: JwtUser, @Body() body: { seats: number }) {
+  previewSeats(@CurrentUser() user: JwtUser, @Body() body: BillingPreviewSeatsBodyDto) {
     return this.subscriptions.previewSeatsChange(user, requireTenantId(user), body.seats);
   }
 
   @Post("subscription/cancel")
   cancelSubscription(
     @CurrentUser() user: JwtUser,
-    @Body() body: { atPeriodEnd?: boolean },
+    @Body() body: BillingCancelSubscriptionBodyDto,
   ) {
     return this.subscriptions.requestCancelAtPeriodEnd(user, requireTenantId(user), body.atPeriodEnd !== false);
   }
@@ -166,7 +155,7 @@ export class BillingController {
   @Post("catalog")
   createCatalog(
     @CurrentUser() user: JwtUser,
-    @Body() body: { code: string; nameEn: string; nameAr?: string; category?: string; amount: number; currency?: string },
+    @Body() body: BillingCreateCatalogBodyDto,
   ) {
     return this.billing.createCatalogItem(requireTenantId(user), user, body);
   }
@@ -175,14 +164,7 @@ export class BillingController {
   async recordPayment(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      clinicId: string;
-      patientId: string;
-      invoiceId?: string;
-      currency?: string;
-      allocations: { method: PaymentMethod; amount: number }[];
-      submitEta?: boolean;
-    },
+    body: BillingRecordPaymentBodyDto,
   ) {
     const tenantId = requireTenantId(user);
     // card_payments OFF: card allocation hidden/blocked at cashier; cash and other methods remain.
@@ -196,7 +178,7 @@ export class BillingController {
   cashClose(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: { clinicId: string; shiftDate: string; countedCash: number; countedCard: number; notes?: string },
+    body: BillingCashCloseBodyDto,
   ) {
     return this.billing.closeCashierShift(requireTenantId(user), user, body);
   }

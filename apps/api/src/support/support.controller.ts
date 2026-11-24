@@ -11,6 +11,7 @@ import { CreateSupportTicketEventDto } from "./dto/create-support-ticket-event.d
 import { PatchSupportTicketDto } from "./dto/patch-support-ticket.dto";
 import { SupportService } from "./support.service";
 import { SupportAccessSessionService } from "./support-access-session.service";
+import { SupportEscalateEngineeringBodyDto, SupportRequestAccessBodyDto, SupportDecideAccessBodyDto } from "./support.controller.dto";
 
 @ApiTags("support")
 @ApiBearerAuth("bearer")
@@ -93,7 +94,7 @@ export class SupportController {
   async escalateEngineering(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { note?: string },
+    @Body() body: SupportEscalateEngineeringBodyDto,
   ) {
     await assertSupportMutate(user, this.navTabAccess);
     return this.support.escalateToEngineering(requireTenantId(user), user, id, body?.note);
@@ -142,12 +143,7 @@ export class SupportController {
   requestAccess(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      tenantId: string;
-      reason: string;
-      durationMinutes?: number;
-      requestedUnmaskPhi?: boolean;
-    },
+    body: SupportRequestAccessBodyDto,
   ) {
     return this.accessSessions.requestAccess(user, body);
   }
@@ -172,7 +168,7 @@ export class SupportController {
   decideAccess(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { approved: boolean; allowUnmaskPhi?: boolean },
+    @Body() body: SupportDecideAccessBodyDto,
   ) {
     return this.accessSessions.decide(user, id, body);
   }

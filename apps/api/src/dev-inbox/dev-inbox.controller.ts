@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from "
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { DevInboxGuard } from "./dev-inbox.guard";
 import { DevInboxService, type DevDeliveryState } from "./dev-inbox.service";
+import { DevInboxDeliveryBodyDto, DevInboxInboundBodyDto, DevInboxPspBodyDto, DevInboxPspRefundBodyDto, DevInboxSendTestBodyDto } from "./dev-inbox.controller.dto";
 
 @ApiTags("dev-inbox")
 @Controller("dev/inbox")
@@ -35,14 +36,14 @@ export class DevInboxController {
   @Post("messages/:id/delivery")
   @HttpCode(200)
   @ApiOperation({ summary: "Simulate a delivery receipt: delivered | read | failed | bounced" })
-  delivery(@Param("id") id: string, @Body() body: { state: DevDeliveryState; error?: string }) {
+  delivery(@Param("id") id: string, @Body() body: DevInboxDeliveryBodyDto) {
     return this.inbox.simulateDelivery(id, body?.state, body?.error);
   }
 
   @Post("inbound/whatsapp")
   @HttpCode(200)
   @ApiOperation({ summary: "Simulate a patient WhatsApp reply (text or quick-reply button payload)" })
-  inbound(@Body() body: { fromPhone: string; text?: string; buttonPayload?: string; replyToId?: string; toDisplayPhone?: string }) {
+  inbound(@Body() body: DevInboxInboundBodyDto) {
     return this.inbox.simulateInboundWhatsApp(body);
   }
 
@@ -51,7 +52,7 @@ export class DevInboxController {
   @ApiOperation({ summary: "Simulate a Paymob / Fawry payment callback for a Kiorly invoice" })
   psp(
     @Body()
-    body: { provider: string; outcome: "succeeded" | "failed"; tenantId: string; invoiceId: string; amount?: string; currency?: string; idempotencyKey?: string },
+    body: DevInboxPspBodyDto,
   ) {
     return this.inbox.simulatePspCallback(body);
   }
@@ -59,14 +60,14 @@ export class DevInboxController {
   @Post("psp/refund")
   @HttpCode(200)
   @ApiOperation({ summary: "Refund a succeeded Kiorly payment (mock settles via the signed refund webhook)" })
-  pspRefund(@Body() body: { paymentId: string; amount?: string }) {
+  pspRefund(@Body() body: DevInboxPspRefundBodyDto) {
     return this.inbox.simulatePspRefund(body);
   }
 
   @Post("send-test")
   @HttpCode(200)
   @ApiOperation({ summary: "Smoke-test sms | email | whatsapp through the live provider port (mock => inbox, real => provider)" })
-  sendTest(@Body() body: { channel: string; to: string; body?: string; templateKey?: string; tenantId?: string }) {
+  sendTest(@Body() body: DevInboxSendTestBodyDto) {
     return this.inbox.sendTest(body);
   }
 }

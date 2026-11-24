@@ -7,6 +7,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import { type RuleBody, RevenueShareService } from "./revenue-share.service";
+import { RevenueShareAddAdjustmentBodyDto, RevenueShareMarkPaidBodyDto } from "./revenue-share.controller.dto";
 
 /** MN-02 — doctor revenue-share engine & statements. */
 @ApiTags("revenue-share")
@@ -30,7 +31,7 @@ export class RevenueShareController {
   }
 
   @Post("statements/:id/adjustments")
-  addAdjustment(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { amount: number; note: string }) {
+  addAdjustment(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: RevenueShareAddAdjustmentBodyDto) {
     return this.share.addAdjustment(requireTenantId(user), user, id, body);
   }
 
@@ -42,7 +43,7 @@ export class RevenueShareController {
 
   @Post("statements/:id/mark-paid")
   @ApiOperation({ summary: "Record the payout to the doctor (approved statements only)" })
-  markPaid(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { method?: string; reference?: string; amount?: number }) {
+  markPaid(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: RevenueShareMarkPaidBodyDto) {
     return this.share.markPaid(requireTenantId(user), user, id, body ?? {});
   }
 

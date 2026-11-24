@@ -94,6 +94,16 @@
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthRefreshBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -109,6 +119,16 @@
       "post": {
         "operationId": "AuthController_forgotPassword",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthForgotPasswordBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -124,6 +144,16 @@
       "post": {
         "operationId": "AuthController_resetPassword",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthResetPasswordBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -139,6 +169,16 @@
       "post": {
         "operationId": "AuthController_otpRequest",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthOtpRequestBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -154,6 +194,16 @@
       "post": {
         "operationId": "AuthController_otpVerify",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthOtpVerifyBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -265,6 +315,16 @@
       "post": {
         "operationId": "AuthController_confirmMfa",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthConfirmMfaBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -285,6 +345,16 @@
       "post": {
         "operationId": "AuthController_disableMfa",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthDisableMfaBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -305,6 +375,16 @@
       "post": {
         "operationId": "AuthController_enableWhatsAppMfa",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthEnableWhatsAppMfaBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -325,6 +405,16 @@
       "post": {
         "operationId": "AuthController_whatsappMfaChallenge",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthWhatsappMfaChallengeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -340,6 +430,16 @@
       "post": {
         "operationId": "AuthController_regenerateMfaRecovery",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthRegenerateMfaRecoveryBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -776,6 +876,16 @@
       "post": {
         "operationId": "MessagingController_send",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessagingSendBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -961,6 +1071,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicAppointmentRescheduleApplyBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -1278,6 +1398,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulingPutTypeOverridesBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -3083,6 +3213,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientsMergePatientsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -3262,6 +3402,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplianceRecordConsentBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -3838,6 +3988,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportEscalateEngineeringBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -3980,6 +4140,16 @@
       "post": {
         "operationId": "SupportController_requestAccess",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportRequestAccessBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -4047,6 +4217,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportDecideAccessBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -5340,6 +5520,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncountersAmendBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -5501,6 +5691,16 @@
       "post": {
         "operationId": "ClinicalController_createShortcut",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalCreateShortcutBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -5576,6 +5776,16 @@
       "post": {
         "operationId": "ClinicalController_favIcd",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalFavIcdBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -5659,6 +5869,16 @@
       "post": {
         "operationId": "ClinicalController_letter",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalLetterBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -5714,6 +5934,16 @@
       "post": {
         "operationId": "ClinicalController_rxCheck",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalRxCheckBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -5733,6 +5963,16 @@
       "post": {
         "operationId": "ClinicalController_safetyCheck",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalSafetyCheckBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -5786,6 +6026,16 @@
       "post": {
         "operationId": "ClinicalController_createOrder",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalCreateOrderBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -5814,6 +6064,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalPatchOrderBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -5969,6 +6229,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalUpsertDentalToothBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -6016,6 +6286,16 @@
       "post": {
         "operationId": "ClinicalController_physioPlan",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalPhysioPlanBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -6157,6 +6437,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhysioPublicDischargeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -6185,6 +6475,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhysioPublicProgrammeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -6335,6 +6635,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordShareClinicPutRecordShareConsentBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -6382,6 +6692,16 @@
       "post": {
         "operationId": "PlatformKiorexRatesController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformKiorexRatesCreateBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -6411,6 +6731,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformKiorexRatesPatchMarketSettingsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -6753,6 +7083,16 @@
       "post": {
         "operationId": "CommissionDecisionsController_override",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommissionDecisionsOverrideBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -7402,6 +7742,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevenueShareAddAdjustmentBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -7459,6 +7809,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevenueShareMarkPaidBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -8898,6 +9258,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepositLinksUpdatePolicyBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -9001,6 +9371,16 @@
       "post": {
         "operationId": "LegalController_accept",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LegalAcceptBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9021,6 +9401,16 @@
       "post": {
         "operationId": "BillingController_recordPaywallEvent",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingRecordPaywallEventBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9171,6 +9561,16 @@
       "post": {
         "operationId": "BillingController_purchaseSpecialtyAddon",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingPurchaseSpecialtyAddonBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9190,6 +9590,16 @@
       "post": {
         "operationId": "BillingController_previewChange",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingPreviewChangeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9209,6 +9619,16 @@
       "post": {
         "operationId": "BillingController_changePlan",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingChangePlanBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9228,6 +9648,16 @@
       "post": {
         "operationId": "BillingController_changeSeats",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingChangeSeatsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9247,6 +9677,16 @@
       "post": {
         "operationId": "BillingController_previewSeats",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingPreviewSeatsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9266,6 +9706,16 @@
       "post": {
         "operationId": "BillingController_cancelSubscription",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCancelSubscriptionBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9311,6 +9761,16 @@
       "post": {
         "operationId": "BillingController_createCatalog",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCreateCatalogBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9330,6 +9790,16 @@
       "post": {
         "operationId": "BillingController_recordPayment",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingRecordPaymentBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9349,6 +9819,16 @@
       "post": {
         "operationId": "BillingController_cashClose",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCashCloseBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9431,6 +9911,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientMoneyApproveRefundBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9459,6 +9949,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientMoneyRejectRefundBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9507,6 +10007,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientMoneyConsumePackageBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9535,6 +10045,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientMoneyCancelPackageBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9583,6 +10103,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientMoneyApplyDepositBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9611,6 +10141,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientMoneyReleaseDepositBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9639,6 +10179,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientMoneyMarkDepositPaidBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9807,6 +10357,16 @@
       "post": {
         "operationId": "CashierShiftsController_open",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CashierShiftsOpenBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9836,6 +10396,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CashierShiftsCloseBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9865,6 +10435,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CashierShiftsReviewBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9996,6 +10576,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SplitPaymentsSetScheduleBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -10034,6 +10624,16 @@
       "post": {
         "operationId": "ClaimsController_upsertPayer",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimsUpsertPayerBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -10089,6 +10689,16 @@
       "post": {
         "operationId": "ClaimsController_createBatch",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimsCreateBatchBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -10176,6 +10786,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimsRejectLineBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -10225,6 +10845,16 @@
       "post": {
         "operationId": "ClaimsController_importRemittance",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimsImportRemittanceBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -10810,6 +11440,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationsResetClinicalBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "{ ok: true }"
@@ -10949,6 +11589,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationsAddSupplyBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -10977,6 +11627,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperationsSetInstallmentsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -12158,6 +12818,16 @@
       "put": {
         "operationId": "AdminController_putSignInMethod",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPutSignInMethodBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -12772,6 +13442,16 @@
       "post": {
         "operationId": "AdminDataExplorerController_startExportJob",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminDataExplorerStartExportJobBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -14255,6 +14935,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformAdminVerifyKiorlyPaymentBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -14284,6 +14974,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformAdminGrantCreditsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -14304,6 +15004,16 @@
       "post": {
         "operationId": "PlatformAdminController_runSettlement",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformAdminRunSettlementBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -14333,6 +15043,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformAdminExtendTrialBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -14362,6 +15082,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformAdminSetPlanBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -14399,6 +15129,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformAdminPutEntitlementOverrideBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -14466,6 +15206,16 @@
       "post": {
         "operationId": "PlatformAdminController_resetSalesDemo",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformAdminResetSalesDemoBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -15682,6 +16432,16 @@
       "post": {
         "operationId": "KiorlyBillingPaymentsController_cardSession",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorlyBillingPaymentsCardSessionBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -15751,6 +16511,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorlyBillingPaymentsPayBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -16639,6 +17409,16 @@
       "put": {
         "operationId": "ReportsController_putSchedule",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportsPutScheduleBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -16783,6 +17563,16 @@
       "put": {
         "operationId": "UserPreferencesController_put",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserPreferencesPutBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -16821,6 +17611,16 @@
       "post": {
         "operationId": "InvitationsController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicInvitationsCreateBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -16931,6 +17731,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicInvitationsAcceptBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -17330,6 +18140,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevInboxDeliveryBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -17345,6 +18165,16 @@
       "post": {
         "operationId": "DevInboxController_inbound",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevInboxInboundBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -17360,6 +18190,16 @@
       "post": {
         "operationId": "DevInboxController_psp",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevInboxPspBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -17375,6 +18215,16 @@
       "post": {
         "operationId": "DevInboxController_pspRefund",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevInboxPspRefundBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -17390,6 +18240,16 @@
       "post": {
         "operationId": "DevInboxController_sendTest",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevInboxSendTestBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -17527,6 +18387,16 @@
       "post": {
         "operationId": "FrontDeskController_callTicket",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FrontDeskCallTicketBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -17691,6 +18561,16 @@
       "put": {
         "operationId": "FrontDeskController_putPrintSettings",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FrontDeskPutPrintSettingsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -17764,6 +18644,16 @@
       "post": {
         "operationId": "FrontDeskController_printReceipt",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FrontDeskPrintReceiptBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -17804,6 +18694,16 @@
       "post": {
         "operationId": "ExportsController_requestPatient",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportsRequestPatientBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -17841,6 +18741,16 @@
       "post": {
         "operationId": "ExportsController_startOffboarding",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportsStartOffboardingBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -17860,6 +18770,16 @@
       "put": {
         "operationId": "ExportsController_legalHold",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportsLegalHoldBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -17997,6 +18917,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicAiStartScribeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -18053,6 +18983,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicAiUploadAudioBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -18081,6 +19021,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicAiStopScribeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -18295,6 +19245,16 @@
       "put": {
         "operationId": "HomeVisitsController_putSafetyContact",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeVisitsPutSafetyContactBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -18605,6 +19565,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeVisitsAssignBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -18633,6 +19603,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeVisitsDepartBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -18661,6 +19641,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeVisitsArriveBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -18689,6 +19679,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeVisitsFinishBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -18717,6 +19717,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeVisitsAbortBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -18745,6 +19755,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeVisitsSosBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -18910,6 +19930,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelehealthPutSettingsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -18938,6 +19968,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelehealthConfigureTypeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19041,6 +20081,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelehealthPostSignalBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19103,6 +20153,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelehealthModeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19258,6 +20318,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelehealthPublicPostBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19302,6 +20372,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelehealthPublicModeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19384,6 +20464,16 @@
       "post": {
         "operationId": "NursePublicController_complete",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseEditionCompleteBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19485,6 +20575,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseEditionChangeEditionBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19622,6 +20722,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseClinicalResumePlanBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19650,6 +20760,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseClinicalExtendPlanBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19678,6 +20798,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseClinicalEndPlanBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19790,6 +20920,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseClinicalDeclinePlanRequestBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19956,6 +21096,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseClinicalEscalationBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -19975,6 +21125,16 @@
       "post": {
         "operationId": "NurseClinicalController_bookShift",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseClinicalBookShiftBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -20029,6 +21189,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseClinicalCheckInBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -20057,6 +21227,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseClinicalCheckOutBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -20149,6 +21329,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseClinicalSetFamilyConsentBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -20240,6 +21430,16 @@
       "post": {
         "operationId": "NurseMarController_photoOrder",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NurseMarPhotoOrderBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -20635,6 +21835,16 @@
       "post": {
         "operationId": "PublicSignupController_requestOtp",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicSignupRequestOtpBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -20650,6 +21860,16 @@
       "post": {
         "operationId": "PublicSignupController_verify",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicSignupVerifyBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -20665,6 +21885,16 @@
       "post": {
         "operationId": "PublicSignupController_complete",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicSignupCompleteBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Provisioned clinic session (same shape as auth login)"
@@ -20746,6 +21976,16 @@
       "post": {
         "operationId": "PlatformPlansController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformPlansCreateBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -20876,6 +22116,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformPlansCreatePriceBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -21268,6 +22518,16 @@
       "post": {
         "operationId": "SalesRepsController_roi",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformSalesRepsRoiBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -21345,6 +22605,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformSalesRepsConfirmBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -21447,6 +22717,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformSalesRepsUploadBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -21519,6 +22799,16 @@
       "post": {
         "operationId": "PlatformSalesRepsController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformSalesRepsCreateBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -22179,6 +23469,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSlotHoldBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -22435,6 +23735,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketplaceCancelBookingBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -22499,6 +23809,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketplaceRescheduleBookingBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -23475,6 +24795,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketplaceUpsertRecordShareConsentsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -23924,6 +25254,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorexSettingsReplyBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -24128,6 +25468,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorexImportRollbackBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -24172,6 +25522,16 @@
       "put": {
         "operationId": "KiorexConnectController_consent",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorexConnectConsentBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -24192,6 +25552,16 @@
       "post": {
         "operationId": "KiorexConnectController_request",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorexConnectRequestBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -24212,6 +25582,16 @@
       "post": {
         "operationId": "KiorexConnectController_refresh",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorexConnectRefreshBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -24261,6 +25641,16 @@
       "post": {
         "operationId": "KiorexFrontDoorController_interest",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorexFrontDoorInterestBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -24281,6 +25671,16 @@
       "post": {
         "operationId": "KiorexFrontDoorController_start",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorexFrontDoorStartBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -24352,6 +25752,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KiorexConnectionDecideBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -25190,7 +26600,24 @@
     "/mobile/inbox": {
       "get": {
         "operationId": "MobileController_inbox",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -25313,6 +26740,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileAckBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -25332,6 +26769,16 @@
       "post": {
         "operationId": "MobileController_upgradeRequest",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileUpgradeRequestBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -25369,7 +26816,24 @@
     "/mobile/schedule": {
       "get": {
         "operationId": "MobileController_schedule",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinicId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -25510,6 +26974,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileApproveBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -25978,6 +27452,144 @@
           "code"
         ]
       },
+      "AuthRefreshBodyDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "AuthForgotPasswordBodyDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthResetPasswordBodyDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "newPassword"
+        ]
+      },
+      "AuthOtpRequestBodyDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "AuthOtpVerifyBodyDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "mfaCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "AuthConfirmMfaBodyDto": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "code"
+        ]
+      },
+      "AuthDisableMfaBodyDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "code"
+        ]
+      },
+      "AuthEnableWhatsAppMfaBodyDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "AuthWhatsappMfaChallengeBodyDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId"
+        ]
+      },
+      "AuthRegenerateMfaRecoveryBodyDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "code"
+        ]
+      },
       "ChangePasswordDto": {
         "type": "object",
         "properties": {
@@ -26011,6 +27623,64 @@
       "KiorexBackchannelDto": {
         "type": "object",
         "properties": {}
+      },
+      "MessagingSendBodyDto": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "appointmentId": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "SMS",
+              "WHATSAPP",
+              "EMAIL"
+            ]
+          },
+          "toPhone": {
+            "type": "string"
+          },
+          "templateKey": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "variables": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "channel",
+          "toPhone",
+          "body"
+        ]
+      },
+      "PublicAppointmentRescheduleApplyBodyDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string"
+          }
+        }
+      },
+      "SchedulingPutTypeOverridesBodyDto": {
+        "type": "object",
+        "properties": {
+          "overrides": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "overrides"
+        ]
       },
       "SubmitClinicianVerificationDto": {
         "type": "object",
@@ -26483,6 +28153,20 @@
           }
         }
       },
+      "PatientsMergePatientsBodyDto": {
+        "type": "object",
+        "properties": {
+          "sourcePatientId": {
+            "type": "string"
+          },
+          "fieldChoices": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "sourcePatientId"
+        ]
+      },
       "MessagingConsentItemDto": {
         "type": "object",
         "properties": {
@@ -26534,6 +28218,23 @@
         "required": [
           "consents"
         ]
+      },
+      "ComplianceRecordConsentBodyDto": {
+        "type": "object",
+        "properties": {
+          "signerName": {
+            "type": "string"
+          },
+          "signedOnTablet": {
+            "type": "boolean"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "ipAddress": {
+            "type": "string"
+          }
+        }
       },
       "UserNavTabGrantResponseDto": {
         "type": "object",
@@ -26742,6 +28443,49 @@
         },
         "required": [
           "eventType"
+        ]
+      },
+      "SupportEscalateEngineeringBodyDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "SupportRequestAccessBodyDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "requestedUnmaskPhi": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "tenantId",
+          "reason"
+        ]
+      },
+      "SupportDecideAccessBodyDto": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          },
+          "allowUnmaskPhi": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "approved"
         ]
       },
       "ClinicDto": {
@@ -28072,6 +29816,370 @@
           "descriptionEn"
         ]
       },
+      "EncountersAmendBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "ClinicalCreateShortcutBodyDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "TEXT_EXPAND",
+              "DIAGNOSIS_FAV",
+              "RX_SET",
+              "COPY_LAST_VISIT"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "type",
+          "label",
+          "payload"
+        ]
+      },
+      "ClinicalFavIcdBodyDto": {
+        "type": "object",
+        "properties": {
+          "icd10Code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "icd10Code"
+        ]
+      },
+      "ClinicalLetterBodyDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "SICK_LEAVE",
+              "MEDICAL_REPORT",
+              "REFERRAL",
+              "FITNESS_CERTIFICATE"
+            ]
+          },
+          "patientId": {
+            "type": "string"
+          },
+          "encounterId": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "type",
+          "patientId"
+        ]
+      },
+      "ClinicalRxCheckBodyDto": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "patientId",
+          "items"
+        ]
+      },
+      "ClinicalSafetyCheckBodyDto": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "drugName": {
+            "type": "string"
+          },
+          "drugProductId": {
+            "type": "string"
+          },
+          "existingDrugNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "patientId",
+          "drugName"
+        ]
+      },
+      "ClinicalCreateOrderBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "patientId": {
+            "type": "string"
+          },
+          "encounterId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "LAB",
+              "IMAGING"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "clinicId",
+          "patientId",
+          "kind",
+          "items"
+        ]
+      },
+      "ClinicalPatchOrderBodyDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ORDERED",
+              "IN_PROGRESS",
+              "RESULTS_READY",
+              "CANCELLED"
+            ]
+          },
+          "resultsJson": {
+            "type": "object"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "ClinicalUpsertDentalToothBodyDto": {
+        "type": "object",
+        "properties": {
+          "toothFdi": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          },
+          "planNote": {
+            "type": "string"
+          },
+          "feeAmount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "toothFdi"
+        ]
+      },
+      "ClinicalPhysioPlanBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "patientId": {
+            "type": "string"
+          },
+          "clinicianId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "sessionCount": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicId",
+          "patientId",
+          "clinicianId",
+          "label",
+          "sessionCount"
+        ]
+      },
+      "PhysioPublicDischargeBodyDto": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "summary"
+        ]
+      },
+      "PhysioPublicProgrammeBodyDto": {
+        "type": "object",
+        "properties": {
+          "exercises": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "exercises"
+        ]
+      },
+      "RecordShareClinicPutRecordShareConsentBodyDto": {
+        "type": "object",
+        "properties": {
+          "consents": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "consents"
+        ]
+      },
+      "PlatformKiorexRatesCreateBodyDto": {
+        "type": "object",
+        "properties": {
+          "marketId": {
+            "type": "string"
+          },
+          "specialty": {
+            "type": "string",
+            "enum": [
+              "POLYCLINIC",
+              "GENERAL_MEDICINE",
+              "PAIN_MANAGEMENT",
+              "ORTHOPEDICS",
+              "PEDIATRICS",
+              "DERMATOLOGY",
+              "DENTISTRY",
+              "PHYSIO_THERAPY",
+              "AESTHETICS",
+              "CARDIOLOGY",
+              "OBSTETRICS_GYNECOLOGY",
+              "ENT",
+              "OPHTHALMOLOGY",
+              "PSYCHIATRY",
+              "RADIOLOGY",
+              "LABORATORY",
+              "INTERNAL_MEDICINE",
+              "FAMILY_MEDICINE",
+              "UROLOGY",
+              "CUSTOM"
+            ],
+            "nullable": true
+          },
+          "feeType": {
+            "type": "string",
+            "enum": [
+              "FLAT",
+              "PERCENT"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "nullable": true
+          },
+          "percent": {
+            "type": "number",
+            "nullable": true
+          },
+          "minAmount": {
+            "type": "number",
+            "nullable": true
+          },
+          "maxAmount": {
+            "type": "number",
+            "nullable": true
+          },
+          "benchmarkFlat": {
+            "type": "number",
+            "nullable": true
+          },
+          "benchmarkPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "benchmarkSource": {
+            "type": "string",
+            "nullable": true
+          },
+          "benchmarkCheckedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "validFrom": {
+            "type": "string"
+          },
+          "validTo": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "marketId",
+          "feeType"
+        ]
+      },
+      "PlatformKiorexRatesPatchMarketSettingsBodyDto": {
+        "type": "object",
+        "properties": {
+          "benchmarkTargetRatio": {
+            "type": "number"
+          },
+          "liteMonthlyCap": {
+            "type": "number",
+            "nullable": true
+          }
+        }
+      },
       "ResolveCommissionDisputeDto": {
         "type": "object",
         "properties": {}
@@ -28079,6 +30187,20 @@
       "OpenCommissionDisputeDto": {
         "type": "object",
         "properties": {}
+      },
+      "CommissionDecisionsOverrideBodyDto": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
       },
       "ExpenseDto": {
         "type": "object",
@@ -28323,6 +30445,35 @@
           "postedAt",
           "status"
         ]
+      },
+      "RevenueShareAddAdjustmentBodyDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "note"
+        ]
+      },
+      "RevenueShareMarkPaidBodyDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          }
+        }
       },
       "HrManageContextDto": {
         "type": "object",
@@ -29734,6 +31885,514 @@
           }
         }
       },
+      "DepositLinksUpdatePolicyBodyDto": {
+        "type": "object",
+        "properties": {
+          "policy": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "LegalAcceptBodyDto": {
+        "type": "object",
+        "properties": {
+          "acceptances": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "acceptances"
+        ]
+      },
+      "BillingRecordPaywallEventBodyDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "entitlement": {
+            "type": "string"
+          },
+          "requiredPlan": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "type",
+          "entitlement",
+          "requiredPlan"
+        ]
+      },
+      "BillingPurchaseSpecialtyAddonBodyDto": {
+        "type": "object",
+        "properties": {
+          "entitlementKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entitlementKey"
+        ]
+      },
+      "BillingPreviewChangeBodyDto": {
+        "type": "object",
+        "properties": {
+          "planKey": {
+            "type": "string",
+            "enum": [
+              "LITE",
+              "PRO",
+              "CLINIC",
+              "ENTERPRISE",
+              "NURSE_LITE",
+              "NURSE_PRO",
+              "NURSE_AGENCY"
+            ]
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "MONTHLY",
+              "ANNUAL"
+            ]
+          },
+          "seats": {
+            "type": "number"
+          },
+          "timing": {
+            "type": "string",
+            "enum": [
+              "IMMEDIATE",
+              "PERIOD_END"
+            ]
+          }
+        },
+        "required": [
+          "planKey",
+          "interval",
+          "seats"
+        ]
+      },
+      "BillingChangePlanBodyDto": {
+        "type": "object",
+        "properties": {
+          "planKey": {
+            "type": "string",
+            "enum": [
+              "LITE",
+              "PRO",
+              "CLINIC",
+              "ENTERPRISE",
+              "NURSE_LITE",
+              "NURSE_PRO",
+              "NURSE_AGENCY"
+            ]
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "MONTHLY",
+              "ANNUAL"
+            ]
+          },
+          "seats": {
+            "type": "number"
+          },
+          "confirm": {
+            "type": "boolean"
+          },
+          "timing": {
+            "type": "string",
+            "enum": [
+              "IMMEDIATE",
+              "PERIOD_END"
+            ]
+          },
+          "activeClinicianUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "planKey",
+          "interval",
+          "seats"
+        ]
+      },
+      "BillingChangeSeatsBodyDto": {
+        "type": "object",
+        "properties": {
+          "seats": {
+            "type": "number"
+          },
+          "confirm": {
+            "type": "boolean"
+          },
+          "activeClinicianUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "seats"
+        ]
+      },
+      "BillingPreviewSeatsBodyDto": {
+        "type": "object",
+        "properties": {
+          "seats": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "seats"
+        ]
+      },
+      "BillingCancelSubscriptionBodyDto": {
+        "type": "object",
+        "properties": {
+          "atPeriodEnd": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BillingCreateCatalogBodyDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "nameEn",
+          "amount"
+        ]
+      },
+      "BillingRecordPaymentBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "patientId": {
+            "type": "string"
+          },
+          "invoiceId": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "submitEta": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "clinicId",
+          "patientId",
+          "allocations"
+        ]
+      },
+      "BillingCashCloseBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "shiftDate": {
+            "type": "string"
+          },
+          "countedCash": {
+            "type": "number"
+          },
+          "countedCard": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicId",
+          "shiftDate",
+          "countedCash",
+          "countedCard"
+        ]
+      },
+      "PatientMoneyApproveRefundBodyDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "PatientMoneyRejectRefundBodyDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "PatientMoneyConsumePackageBodyDto": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PatientMoneyCancelPackageBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "CARD",
+              "TRANSFER",
+              "WALLET",
+              "OTHER",
+              "KIOREX_PAY"
+            ]
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "PatientMoneyApplyDepositBodyDto": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "PatientMoneyReleaseDepositBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "RELEASED",
+              "FORFEITED"
+            ]
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "PatientMoneyMarkDepositPaidBodyDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "CARD",
+              "TRANSFER",
+              "WALLET",
+              "OTHER",
+              "KIOREX_PAY"
+            ]
+          },
+          "reference": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "CashierShiftsOpenBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "openingFloat": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "clinicId",
+          "openingFloat"
+        ]
+      },
+      "CashierShiftsCloseBodyDto": {
+        "type": "object",
+        "properties": {
+          "countedCash": {
+            "type": "number"
+          },
+          "countedCard": {
+            "type": "number"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "countedCash"
+        ]
+      },
+      "CashierShiftsReviewBodyDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "SplitPaymentsSetScheduleBodyDto": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "rows"
+        ]
+      },
+      "ClaimsUpsertPayerBodyDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "contractRef": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nameEn"
+        ]
+      },
+      "ClaimsCreateBatchBodyDto": {
+        "type": "object",
+        "properties": {
+          "payerCompanyId": {
+            "type": "string"
+          },
+          "periodFrom": {
+            "type": "string"
+          },
+          "periodTo": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "invoiceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "payerCompanyId",
+          "periodFrom",
+          "periodTo"
+        ]
+      },
+      "ClaimsRejectLineBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "ClaimsImportRemittanceBodyDto": {
+        "type": "object",
+        "properties": {
+          "payerCompanyId": {
+            "type": "string"
+          },
+          "batchId": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "payerCompanyId",
+          "reference",
+          "lines"
+        ]
+      },
       "OperationDto": {
         "type": "object",
         "properties": {
@@ -30153,6 +32812,14 @@
           "drugName"
         ]
       },
+      "OperationsResetClinicalBodyDto": {
+        "type": "object",
+        "properties": {
+          "clearPrescription": {
+            "type": "boolean"
+          }
+        }
+      },
       "UpdateOperationDto": {
         "type": "object",
         "properties": {
@@ -30233,6 +32900,40 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "OperationsAddSupplyBodyDto": {
+        "type": "object",
+        "properties": {
+          "itemName": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "catalogCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemName"
+        ]
+      },
+      "OperationsSetInstallmentsBodyDto": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "rows"
         ]
       },
       "CreateInvoiceLineDto": {
@@ -30614,6 +33315,14 @@
           }
         }
       },
+      "AdminPutSignInMethodBodyDto": {
+        "type": "object",
+        "properties": {
+          "defaultSignInMethod": {
+            "type": "object"
+          }
+        }
+      },
       "CreateTenantPaymentChannelDto": {
         "type": "object",
         "properties": {
@@ -30865,6 +33574,28 @@
           "enabled"
         ]
       },
+      "AdminDataExplorerStartExportJobBodyDto": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "SQL",
+              "DOCUMENTS",
+              "FULL"
+            ]
+          },
+          "tables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "format"
+        ]
+      },
       "CreateTenantGroupAdminDto": {
         "type": "object",
         "properties": {
@@ -31000,6 +33731,143 @@
           "defaultVisitFee": {
             "type": "number",
             "description": "Default visit fee for new encounters in this organization"
+          }
+        }
+      },
+      "PlatformAdminVerifyKiorlyPaymentBodyDto": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "approved"
+        ]
+      },
+      "PlatformAdminGrantCreditsBodyDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string"
+          },
+          "secondApproverUserId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "reason"
+        ]
+      },
+      "PlatformAdminRunSettlementBodyDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "tenantIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "period"
+        ]
+      },
+      "PlatformAdminExtendTrialBodyDto": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "trialConfigOverride": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "days",
+          "reason"
+        ]
+      },
+      "PlatformAdminSetPlanBodyDto": {
+        "type": "object",
+        "properties": {
+          "planKey": {
+            "type": "string",
+            "enum": [
+              "LITE",
+              "PRO",
+              "CLINIC",
+              "ENTERPRISE"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "MONTHLY",
+              "ANNUAL",
+              "YEARLY"
+            ]
+          },
+          "clinicianSeats": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "TRIALING"
+            ]
+          }
+        },
+        "required": [
+          "planKey",
+          "reason"
+        ]
+      },
+      "PlatformAdminPutEntitlementOverrideBodyDto": {
+        "type": "object",
+        "properties": {
+          "valueJson": {
+            "type": "object"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "valueJson",
+          "reason"
+        ]
+      },
+      "PlatformAdminResetSalesDemoBodyDto": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string"
           }
         }
       },
@@ -31257,6 +34125,123 @@
           }
         }
       },
+      "KiorlyBillingPaymentsCardSessionBodyDto": {
+        "type": "object",
+        "properties": {
+          "returnUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnUrl"
+        ]
+      },
+      "KiorlyBillingPaymentsPayBodyDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "card",
+              "saved_card",
+              "paymob",
+              "fawry",
+              "instapay",
+              "bank"
+            ]
+          },
+          "paymentMethodId": {
+            "type": "string"
+          },
+          "proofUploadKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "ReportsPutScheduleBodyDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "format": {
+            "type": "string"
+          },
+          "reportKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "channelEmail": {
+            "type": "boolean"
+          },
+          "channelWhatsApp": {
+            "type": "boolean"
+          },
+          "dayOfWeek": {
+            "type": "number"
+          },
+          "hourLocal": {
+            "type": "number"
+          }
+        }
+      },
+      "UserPreferencesPutBodyDto": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "object"
+          }
+        }
+      },
+      "PublicInvitationsCreateBodyDto": {
+        "type": "object",
+        "properties": {
+          "phoneOrEmail": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "clinicIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "phoneOrEmail",
+          "roles"
+        ]
+      },
+      "PublicInvitationsAcceptBodyDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
       "UserMoneyVisibilityResponseDto": {
         "type": "object",
         "properties": {
@@ -31511,6 +34496,123 @@
           "suggestedPrompts"
         ]
       },
+      "DevInboxDeliveryBodyDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "delivered",
+              "read",
+              "failed",
+              "bounced"
+            ]
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "DevInboxInboundBodyDto": {
+        "type": "object",
+        "properties": {
+          "fromPhone": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "buttonPayload": {
+            "type": "string"
+          },
+          "replyToId": {
+            "type": "string"
+          },
+          "toDisplayPhone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fromPhone"
+        ]
+      },
+      "DevInboxPspBodyDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "succeeded",
+              "failed"
+            ]
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "invoiceId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "outcome",
+          "tenantId",
+          "invoiceId"
+        ]
+      },
+      "DevInboxPspRefundBodyDto": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentId"
+        ]
+      },
+      "DevInboxSendTestBodyDto": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "templateKey": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "to"
+        ]
+      },
       "CheckInConsentCaptureDto": {
         "type": "object",
         "properties": {
@@ -31554,6 +34656,21 @@
           }
         }
       },
+      "FrontDeskCallTicketBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "ticketNumber": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "clinicId",
+          "ticketNumber"
+        ]
+      },
       "CollectVisitBalanceDto": {
         "type": "object",
         "properties": {
@@ -31563,6 +34680,716 @@
         },
         "required": [
           "visitCollection"
+        ]
+      },
+      "FrontDeskPutPrintSettingsBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "thermalPrinterProfileId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicId",
+          "thermalPrinterProfileId"
+        ]
+      },
+      "FrontDeskPrintReceiptBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "patientName": {
+            "type": "string"
+          },
+          "receiptNumber": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "ar"
+            ]
+          }
+        },
+        "required": [
+          "clinicId",
+          "patientName",
+          "total"
+        ]
+      },
+      "ExportsRequestPatientBodyDto": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "patientId"
+        ]
+      },
+      "ExportsStartOffboardingBodyDto": {
+        "type": "object",
+        "properties": {
+          "legalHold": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ExportsLegalHoldBodyDto": {
+        "type": "object",
+        "properties": {
+          "legalHold": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "legalHold"
+        ]
+      },
+      "ClinicAiStartScribeBodyDto": {
+        "type": "object",
+        "properties": {
+          "patientConsent": {
+            "type": "boolean"
+          },
+          "retainAudioAfterSignOff": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ClinicAiUploadAudioBodyDto": {
+        "type": "object",
+        "properties": {
+          "seq": {
+            "type": "number"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "payloadB64": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "payloadB64"
+        ]
+      },
+      "ClinicAiStopScribeBodyDto": {
+        "type": "object",
+        "properties": {
+          "audioSeconds": {
+            "type": "number"
+          }
+        }
+      },
+      "HomeVisitsPutSafetyContactBodyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "phone"
+        ]
+      },
+      "HomeVisitsAssignBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicianId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicianId"
+        ]
+      },
+      "HomeVisitsDepartBodyDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "etaMinutes": {
+            "type": "number"
+          }
+        }
+      },
+      "HomeVisitsArriveBodyDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      },
+      "HomeVisitsFinishBodyDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        }
+      },
+      "HomeVisitsAbortBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "reasonCategory": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "HomeVisitsSosBodyDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      },
+      "TelehealthPutSettingsBodyDto": {
+        "type": "object",
+        "properties": {
+          "offersTelehealth": {
+            "type": "boolean"
+          },
+          "windows": {
+            "type": "object"
+          }
+        }
+      },
+      "TelehealthConfigureTypeBodyDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "feeAmount": {
+            "type": "number"
+          },
+          "depositAmount": {
+            "type": "number",
+            "nullable": true
+          },
+          "marketplaceBookable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TelehealthPostSignalBodyDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          }
+        }
+      },
+      "TelehealthModeBodyDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string"
+          }
+        }
+      },
+      "TelehealthPublicPostBodyDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          }
+        }
+      },
+      "TelehealthPublicModeBodyDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string"
+          }
+        }
+      },
+      "NurseEditionCompleteBodyDto": {
+        "type": "object",
+        "properties": {
+          "signupToken": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "SOLO",
+              "AGENCY"
+            ]
+          },
+          "profile": {
+            "type": "object"
+          },
+          "practice": {
+            "type": "object"
+          },
+          "planKey": {
+            "type": "string"
+          },
+          "legalAcceptances": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "signupToken",
+          "kind",
+          "profile",
+          "practice",
+          "planKey"
+        ]
+      },
+      "NurseEditionChangeEditionBodyDto": {
+        "type": "object",
+        "properties": {
+          "edition": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "edition"
+        ]
+      },
+      "NurseClinicalResumePlanBodyDto": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string"
+          },
+          "visitAddress": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "startDate",
+          "visitAddress"
+        ]
+      },
+      "NurseClinicalExtendPlanBodyDto": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string"
+          },
+          "extraDays": {
+            "type": "number"
+          },
+          "visitAddress": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "startDate",
+          "extraDays",
+          "visitAddress"
+        ]
+      },
+      "NurseClinicalEndPlanBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "COMPLETED",
+              "CANCELLED_BY_PATIENT",
+              "CANCELLED_BY_PROVIDER",
+              "EXPIRED"
+            ]
+          },
+          "dischargeNote": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "dischargeNote"
+        ]
+      },
+      "NurseClinicalDeclinePlanRequestBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "NurseClinicalEscalationBodyDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "NurseClinicalBookShiftBodyDto": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "nurseId": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "durationHours": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "patientId",
+          "nurseId",
+          "startsAt",
+          "durationHours"
+        ]
+      },
+      "NurseClinicalCheckInBodyDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      },
+      "NurseClinicalCheckOutBodyDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "handoverNote": {
+            "type": "string"
+          },
+          "handoverToNurseId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      },
+      "NurseClinicalSetFamilyConsentBodyDto": {
+        "type": "object",
+        "properties": {
+          "granted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "granted"
+        ]
+      },
+      "NurseMarPhotoOrderBodyDto": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "prescriberName": {
+            "type": "string"
+          },
+          "orderedOn": {
+            "type": "string"
+          },
+          "expiresOn": {
+            "type": "string"
+          },
+          "controlled": {
+            "type": "boolean"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "documentKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "patientId",
+          "prescriberName",
+          "orderedOn",
+          "expiresOn",
+          "lines"
+        ]
+      },
+      "PublicSignupRequestOtpBodyDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string"
+          },
+          "market": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone",
+          "market"
+        ]
+      },
+      "PublicSignupVerifyBodyDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "market": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phone",
+          "code",
+          "market"
+        ]
+      },
+      "PublicSignupCompleteBodyDto": {
+        "type": "object",
+        "properties": {
+          "signupToken": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "object"
+          },
+          "specialty": {
+            "type": "string"
+          },
+          "clinic": {
+            "type": "object"
+          },
+          "planKey": {
+            "type": "string"
+          },
+          "salesRepCode": {
+            "type": "string"
+          },
+          "referralCode": {
+            "type": "string"
+          },
+          "ref": {
+            "type": "string"
+          },
+          "rep": {
+            "type": "string"
+          },
+          "legalAcceptances": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "edition": {
+            "type": "string",
+            "enum": [
+              "CLINIC",
+              "NURSE"
+            ]
+          },
+          "nurseKind": {
+            "type": "string",
+            "enum": [
+              "SOLO",
+              "AGENCY"
+            ]
+          }
+        },
+        "required": [
+          "signupToken",
+          "profile",
+          "specialty",
+          "clinic",
+          "planKey"
+        ]
+      },
+      "PlatformPlansCreateBodyDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "LITE",
+              "PRO",
+              "CLINIC",
+              "ENTERPRISE",
+              "NURSE_LITE",
+              "NURSE_PRO",
+              "NURSE_AGENCY"
+            ]
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "isPublic": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "nameEn"
+        ]
+      },
+      "PlatformPlansCreatePriceBodyDto": {
+        "type": "object",
+        "properties": {
+          "marketId": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "MONTHLY",
+              "ANNUAL"
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "PER_TENANT",
+              "PER_CLINICIAN"
+            ]
+          },
+          "amount": {
+            "type": "object"
+          },
+          "includedClinicians": {
+            "type": "number"
+          },
+          "extraClinicianAmount": {
+            "type": "object",
+            "nullable": true
+          },
+          "cohortKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "validFrom": {
+            "type": "string"
+          },
+          "newVersion": {
+            "type": "boolean"
+          },
+          "preview": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "marketId",
+          "currency",
+          "interval",
+          "unit",
+          "amount"
         ]
       },
       "PatchOnboardingStepDto": {
@@ -31583,9 +35410,257 @@
           "action"
         ]
       },
+      "PlatformSalesRepsRoiBodyDto": {
+        "type": "object",
+        "properties": {
+          "noShowsPreventedPerMonth": {
+            "type": "number"
+          },
+          "feePerVisit": {
+            "type": "number"
+          },
+          "adminHoursSavedPerWeek": {
+            "type": "number"
+          },
+          "adminHourlyCost": {
+            "type": "number"
+          },
+          "kiorexPatientsPerMonth": {
+            "type": "number"
+          },
+          "contributionPerKiorexPatient": {
+            "type": "number"
+          },
+          "planMonthlyAmount": {
+            "type": "number"
+          }
+        }
+      },
+      "PlatformSalesRepsConfirmBodyDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "legalAcceptances": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "PlatformSalesRepsUploadBodyDto": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "dedupeMode": {
+            "type": "string"
+          }
+        }
+      },
+      "PlatformSalesRepsCreateBodyDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateSlotHoldBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "clinicianId": {
+            "type": "string"
+          },
+          "typeId": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "ISO 8601 start of the slot"
+          },
+          "endsAt": {
+            "type": "string"
+          },
+          "externalRef": {
+            "type": "string",
+            "description": "The caller's reference; one live hold per reference"
+          },
+          "visitAddress": {
+            "type": "object",
+            "description": "Required for HOME visit types, ignored (never stored) for in-clinic types"
+          }
+        },
+        "required": [
+          "clinicId",
+          "clinicianId",
+          "typeId",
+          "startsAt",
+          "externalRef"
+        ]
+      },
+      "MarketplaceCancelBookingBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "MarketplaceRescheduleBookingBodyDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string"
+          },
+          "holdId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "startsAt"
+        ]
+      },
+      "MarketplaceUpsertRecordShareConsentsBodyDto": {
+        "type": "object",
+        "properties": {
+          "consents": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "consents"
+        ]
+      },
       "PutProviderProfileDto": {
         "type": "object",
         "properties": {}
+      },
+      "KiorexSettingsReplyBodyDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "KiorexImportRollbackBodyDto": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string"
+          }
+        }
+      },
+      "KiorexConnectConsentBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "termsVersion": {
+            "type": "string"
+          },
+          "feeAcknowledged": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "clinicId",
+          "termsVersion",
+          "feeAcknowledged"
+        ]
+      },
+      "KiorexConnectRequestBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "enrolmentCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicId"
+        ]
+      },
+      "KiorexConnectRefreshBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicId"
+        ]
+      },
+      "KiorexFrontDoorInterestBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicId"
+        ]
+      },
+      "KiorexFrontDoorStartBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicId"
+        ]
+      },
+      "KiorexConnectionDecideBodyDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "connectionId": {
+            "type": "string"
+          },
+          "reasonCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision"
+        ]
       },
       "UpsertPushSubscriptionDto": {
         "type": "object",
@@ -31610,6 +35685,33 @@
           "endpoint",
           "keys"
         ]
+      },
+      "MobileAckBodyDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "MobileUpgradeRequestBodyDto": {
+        "type": "object",
+        "properties": {
+          "featureKey": {
+            "type": "object"
+          },
+          "note": {
+            "type": "object"
+          }
+        }
+      },
+      "MobileApproveBodyDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          }
+        }
       }
     }
   }

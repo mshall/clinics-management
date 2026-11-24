@@ -44,6 +44,7 @@ import { Patient360Service } from "./patient-360.service";
 import { MessagingConsentService } from "./messaging-consent.service";
 import { MessagingConsentItemDto, PutMessagingConsentDto } from "./dto/messaging-consent.dto";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
+import { PatientsMergePatientsBodyDto } from "./patients.controller.dto";
 
 const PATIENT_DOC_UPLOAD_LIMIT = 25 * 1024 * 1024;
 
@@ -439,10 +440,7 @@ export class PatientsController {
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body()
-    body: {
-      sourcePatientId: string;
-      fieldChoices?: Record<string, "target" | "source">;
-    },
+    body: PatientsMergePatientsBodyDto,
   ) {
     return this.patient360.mergePatients(
       requireTenantId(user),

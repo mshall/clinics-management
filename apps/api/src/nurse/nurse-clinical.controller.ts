@@ -12,6 +12,7 @@ import { NurseReportsService } from "./nurse-reports.service";
 import { ShiftService } from "./shift.service";
 import { VisitRecordService, type VisitRecordPatch } from "./visit-record.service";
 import type { VitalsInput } from "./vitals";
+import { NurseClinicalResumePlanBodyDto, NurseClinicalExtendPlanBodyDto, NurseClinicalEndPlanBodyDto, NurseClinicalDeclinePlanRequestBodyDto, NurseClinicalEscalationBodyDto, NurseClinicalBookShiftBodyDto, NurseClinicalCheckInBodyDto, NurseClinicalCheckOutBodyDto, NurseClinicalSetFamilyConsentBodyDto } from "./nurse-clinical.controller.dto";
 
 /** KNCP (care plans), KNREC (visit record, vitals), KNESC (escalation), KNSH (shifts), KNFAM (family), KNRPT (reports). Flags are enforced inside the services (new capabilities only). */
 @ApiTags("nurse")
@@ -53,19 +54,19 @@ export class NurseClinicalController {
 
   @Post("care-plans/:id/resume")
   @HttpCode(200)
-  resumePlan(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { startDate: string; visitAddress: unknown }) {
+  resumePlan(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: NurseClinicalResumePlanBodyDto) {
     return this.plans.resume(requireTenantId(u), u, id, b);
   }
 
   @Post("care-plans/:id/extend")
   @HttpCode(200)
-  extendPlan(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { startDate: string; extraDays: number; visitAddress: unknown }) {
+  extendPlan(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: NurseClinicalExtendPlanBodyDto) {
     return this.plans.extend(requireTenantId(u), u, id, b);
   }
 
   @Post("care-plans/:id/end")
   @HttpCode(200)
-  endPlan(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { reason: "COMPLETED" | "CANCELLED_BY_PATIENT" | "CANCELLED_BY_PROVIDER" | "EXPIRED"; dischargeNote: string }) {
+  endPlan(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: NurseClinicalEndPlanBodyDto) {
     return this.plans.end(requireTenantId(u), u, id, b);
   }
 
@@ -90,7 +91,7 @@ export class NurseClinicalController {
 
   @Post("care-plan-requests/:id/decline")
   @HttpCode(200)
-  declinePlanRequest(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { reason?: string }) {
+  declinePlanRequest(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: NurseClinicalDeclinePlanRequestBodyDto) {
     return this.planRequests.decline(requireTenantId(u), u, id, b?.reason);
   }
 
@@ -129,13 +130,13 @@ export class NurseClinicalController {
   @Post("vitals/:id/escalation")
   @HttpCode(200)
   @RequiresScope("vitals.record")
-  escalation(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { action: string; note?: string }) {
+  escalation(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: NurseClinicalEscalationBodyDto) {
     return this.records.logEscalation(requireTenantId(u), u, id, b);
   }
 
   // ---- shifts ----
   @Post("shifts")
-  bookShift(@CurrentUser() u: JwtUser, @Body() b: { patientId: string; nurseId: string; startsAt: string; durationHours: number }) {
+  bookShift(@CurrentUser() u: JwtUser, @Body() b: NurseClinicalBookShiftBodyDto) {
     return this.shifts.book(requireTenantId(u), u, b);
   }
 
@@ -147,14 +148,14 @@ export class NurseClinicalController {
   @Post("shifts/:id/check-in")
   @HttpCode(200)
   @RequiresScope("home_visits.perform")
-  checkIn(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { lat: number; lng: number }) {
+  checkIn(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: NurseClinicalCheckInBodyDto) {
     return this.shifts.checkIn(requireTenantId(u), u, id, b);
   }
 
   @Post("shifts/:id/check-out")
   @HttpCode(200)
   @RequiresScope("home_visits.perform")
-  checkOut(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { lat: number; lng: number; handoverNote?: string; handoverToNurseId?: string }) {
+  checkOut(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: NurseClinicalCheckOutBodyDto) {
     return this.shifts.checkOut(requireTenantId(u), u, id, b);
   }
 
@@ -170,7 +171,7 @@ export class NurseClinicalController {
   }
 
   @Put("patients/:patientId/family-contacts/:contactId/consent")
-  setFamilyConsent(@CurrentUser() u: JwtUser, @Param("patientId") patientId: string, @Param("contactId") contactId: string, @Body() b: { granted: boolean }) {
+  setFamilyConsent(@CurrentUser() u: JwtUser, @Param("patientId") patientId: string, @Param("contactId") contactId: string, @Body() b: NurseClinicalSetFamilyConsentBodyDto) {
     return this.family.setConsent(requireTenantId(u), u.userId, patientId, contactId, b?.granted === true);
   }
 

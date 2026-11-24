@@ -9,6 +9,7 @@ import { RequiresEntitlement } from "../entitlements/requires-entitlement.decora
 import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import type { DepositPolicy } from "../markets/commercial-config.schema";
 import { type CreateDepositLinkBody, DepositLinkService } from "./deposit-link.service";
+import { DepositLinksUpdatePolicyBodyDto } from "./deposit-links.controller.dto";
 
 /** FS-04 — deposits & payment links for high-risk bookings (Pro+). */
 @ApiTags("appointments")
@@ -43,7 +44,7 @@ export class DepositLinksController {
   updatePolicy(
     @CurrentUser() user: JwtUser,
     @Param("clinicId") clinicId: string,
-    @Body() body: { policy: Partial<DepositPolicy> | null },
+    @Body() body: DepositLinksUpdatePolicyBodyDto,
   ) {
     return this.links.updatePolicy(requireTenantId(user), user, clinicId, body);
   }

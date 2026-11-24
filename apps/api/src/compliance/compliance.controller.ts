@@ -5,6 +5,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { ComplianceService } from "./compliance.service";
+import { ComplianceRecordConsentBodyDto } from "./compliance.controller.dto";
 
 @ApiTags("compliance")
 @ApiBearerAuth("bearer")
@@ -17,7 +18,7 @@ export class ComplianceController {
   recordConsent(
     @CurrentUser() user: JwtUser,
     @Param("patientId") patientId: string,
-    @Body() body: { signerName?: string; signedOnTablet?: boolean; locale?: string; ipAddress?: string },
+    @Body() body: ComplianceRecordConsentBodyDto,
   ) {
     return this.compliance.recordDataProtectionConsent(requireTenantId(user), patientId, body);
   }

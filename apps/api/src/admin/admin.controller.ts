@@ -40,6 +40,7 @@ import { TenantPaymentChannelsService } from "./tenant-payment-channels.service"
 import { CreateTenantPaymentChannelDto } from "./dto/create-tenant-payment-channel.dto";
 import { hasAnyRole, hasAnyRoleInSet, hasRole } from "../common/effective-roles";
 import { AdminOutboxService } from "./admin-outbox.service";
+import { AdminPutSignInMethodBodyDto } from "./admin.controller.dto";
 
 @ApiTags("admin")
 @ApiBearerAuth("bearer")
@@ -287,7 +288,7 @@ export class AdminController {
   @Put("sign-in-method")
   @ApiOperation({ summary: "Set the organisation default sign-in method (PASSWORD | PASSPORT | null = automatic); both methods stay available" })
   @ApiOkResponse()
-  putSignInMethod(@CurrentUser() user: JwtUser, @Body() body: { defaultSignInMethod?: unknown }) {
+  putSignInMethod(@CurrentUser() user: JwtUser, @Body() body: AdminPutSignInMethodBodyDto) {
     if (!hasRole(user, UserRole.GROUP_ADMIN)) throw new ForbiddenException("Only group administrators can change the sign-in default");
     return this.admin.setSignInDefault(requireTenantId(user), user, body?.defaultSignInMethod);
   }

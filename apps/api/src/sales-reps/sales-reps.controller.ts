@@ -20,6 +20,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { ImportsService, type DedupeMode } from "../onboarding/imports/imports.service";
 import { SalesRepsService, type RepCreateTenantInput } from "./sales-reps.service";
+import { PlatformSalesRepsRoiBodyDto, PlatformSalesRepsConfirmBodyDto, PlatformSalesRepsUploadBodyDto, PlatformSalesRepsCreateBodyDto } from "./sales-reps.controller.dto";
 
 @ApiTags("sales-reps")
 @ApiBearerAuth("bearer")
@@ -42,15 +43,7 @@ export class SalesRepsController {
   roi(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      noShowsPreventedPerMonth?: number;
-      feePerVisit?: number;
-      adminHoursSavedPerWeek?: number;
-      adminHourlyCost?: number;
-      kiorexPatientsPerMonth?: number;
-      contributionPerKiorexPatient?: number;
-      planMonthlyAmount?: number;
-    },
+    body: PlatformSalesRepsRoiBodyDto,
   ) {
     return this.reps.roi(user, body);
   }
@@ -73,7 +66,7 @@ export class SalesRepsController {
   confirm(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { code?: string; legalAcceptances?: { document: string; version: string }[] },
+    @Body() body: PlatformSalesRepsConfirmBodyDto,
   ) {
     return this.reps.confirmOwner(user, id, body);
   }
@@ -100,7 +93,7 @@ export class SalesRepsController {
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @UploadedFile() file: Express.Multer.File | undefined,
-    @Body() body: { entity?: string; dedupeMode?: string },
+    @Body() body: PlatformSalesRepsUploadBodyDto,
   ) {
     if (!file) throw new BadRequestException("file is required");
     const actor = await this.reps.importActor(user, id);
@@ -132,7 +125,7 @@ export class PlatformSalesRepsController {
   @Post()
   create(
     @CurrentUser() user: JwtUser,
-    @Body() body: { email?: string; displayName?: string; code?: string; phone?: string; password?: string },
+    @Body() body: PlatformSalesRepsCreateBodyDto,
   ) {
     return this.reps.createRep(user, body);
   }

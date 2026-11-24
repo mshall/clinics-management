@@ -16,6 +16,7 @@ import {
   type SellPackageBody,
   type TakeDepositBody,
 } from "./patient-money.service";
+import { PatientMoneyApproveRefundBodyDto, PatientMoneyRejectRefundBodyDto, PatientMoneyConsumePackageBodyDto, PatientMoneyCancelPackageBodyDto, PatientMoneyApplyDepositBodyDto, PatientMoneyReleaseDepositBodyDto, PatientMoneyMarkDepositPaidBodyDto } from "./patient-money.controller.dto";
 
 /** MN-01 — refunds, credit notes, prepaid packages and deposits (Pro+). */
 @ApiTags("billing")
@@ -42,12 +43,12 @@ export class PatientMoneyController {
   }
 
   @Post("billing/refunds/:id/approve")
-  approveRefund(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { note?: string }) {
+  approveRefund(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatientMoneyApproveRefundBodyDto) {
     return this.money.decideRefund(requireTenantId(user), user, id, "approve", body?.note);
   }
 
   @Post("billing/refunds/:id/reject")
-  rejectRefund(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { note?: string }) {
+  rejectRefund(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatientMoneyRejectRefundBodyDto) {
     return this.money.decideRefund(requireTenantId(user), user, id, "reject", body?.note);
   }
 
@@ -58,7 +59,7 @@ export class PatientMoneyController {
   }
 
   @Post("billing/packages/:id/consume")
-  consumePackage(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { appointmentId?: string | null }) {
+  consumePackage(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatientMoneyConsumePackageBodyDto) {
     return this.money.consumePackage(requireTenantId(user), user, id, body ?? {});
   }
 
@@ -66,7 +67,7 @@ export class PatientMoneyController {
   cancelPackage(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { reason: string; method?: PaymentMethod },
+    @Body() body: PatientMoneyCancelPackageBodyDto,
   ) {
     return this.money.cancelPackage(requireTenantId(user), user, id, body);
   }
@@ -78,7 +79,7 @@ export class PatientMoneyController {
   }
 
   @Post("billing/deposits/:id/apply")
-  applyDeposit(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { appointmentId?: string | null }) {
+  applyDeposit(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatientMoneyApplyDepositBodyDto) {
     return this.money.applyDeposit(requireTenantId(user), user, id, body ?? {});
   }
 
@@ -86,7 +87,7 @@ export class PatientMoneyController {
   releaseDeposit(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { reason: string; outcome?: "RELEASED" | "FORFEITED" },
+    @Body() body: PatientMoneyReleaseDepositBodyDto,
   ) {
     return this.money.releaseDeposit(requireTenantId(user), user, id, body);
   }
@@ -96,7 +97,7 @@ export class PatientMoneyController {
   markDepositPaid(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { method: PaymentMethod; reference?: string },
+    @Body() body: PatientMoneyMarkDepositPaidBodyDto,
   ) {
     if (!canHandlePatientMoney(user)) throw new ForbiddenException("Front desk or finance role required");
     const method = this.money.parseDeskMethod(body?.method);

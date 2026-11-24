@@ -7,6 +7,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import { CashierShiftService } from "./cashier-shift.service";
+import { CashierShiftsOpenBodyDto, CashierShiftsCloseBodyDto, CashierShiftsReviewBodyDto } from "./cashier-shifts.controller.dto";
 
 /** MN-03 — cash drawer shifts. */
 @ApiTags("billing")
@@ -40,19 +41,19 @@ export class CashierShiftsController {
 
   @Post("open")
   @ApiOperation({ summary: "Open the clinic drawer with a float" })
-  open(@CurrentUser() user: JwtUser, @Body() body: { clinicId: string; openingFloat: number }) {
+  open(@CurrentUser() user: JwtUser, @Body() body: CashierShiftsOpenBodyDto) {
     return this.shifts.open(requireTenantId(user), user, body);
   }
 
   @Post(":id/close")
   @ApiOperation({ summary: "Blind count; any variance needs a note; above the market threshold flags review" })
-  close(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { countedCash: number; countedCard?: number; note?: string }) {
+  close(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: CashierShiftsCloseBodyDto) {
     return this.shifts.close(requireTenantId(user), user, id, body);
   }
 
   @Post(":id/review")
   @ApiOperation({ summary: "Owner / finance acknowledges a flagged variance" })
-  review(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { note?: string }) {
+  review(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: CashierShiftsReviewBodyDto) {
     return this.shifts.review(requireTenantId(user), user, id, body ?? {});
   }
 

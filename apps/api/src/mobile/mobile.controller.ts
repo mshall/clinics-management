@@ -7,6 +7,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { MobileAlertsService } from "./mobile-alerts.service";
 import { MobileUpgradeService } from "./mobile-upgrade.service";
 import { MobileService } from "./mobile.service";
+import { MobileInboxQueryDto, MobileAckBodyDto, MobileUpgradeRequestBodyDto, MobileScheduleQueryDto, MobileApproveBodyDto } from "./mobile.controller.dto";
 
 const need = (b: Record<string, unknown>, k: string, max = 300): string => {
   const v = b?.[k];
@@ -40,24 +41,24 @@ export class MobileController {
     return this.svc.setPushToken(u, id, { token: need(b, "token"), provider });
   }
 
-  @Get("inbox") inbox(@CurrentUser() u: JwtUser, @Query() q: { limit?: string; cursor?: string }) { return this.svc.inbox(u, q); }
+  @Get("inbox") inbox(@CurrentUser() u: JwtUser, @Query() q: MobileInboxQueryDto) { return this.svc.inbox(u, q); }
   @Post("inbox/read-all") @HttpCode(200) readAll(@CurrentUser() u: JwtUser) { return this.svc.markAllRead(u); }
   @Post("inbox/:id/read") @HttpCode(200) read(@CurrentUser() u: JwtUser, @Param("id") id: string) { return this.svc.markRead(u, id); }
   @Post("push/test") @HttpCode(200) pushTest(@CurrentUser() u: JwtUser) { return this.svc.pushTest(u); }
 
   @Get("alerts") listAlerts(@CurrentUser() u: JwtUser, @Query("status") status?: string) { requireTenantId(u); return this.alerts.list(u, status === "all" ? "all" : "open"); }
-  @Post("alerts/:id/ack") @HttpCode(200) ack(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { note?: string }) { return this.alerts.ack(u, id, typeof b?.note === "string" ? b.note : undefined); }
+  @Post("alerts/:id/ack") @HttpCode(200) ack(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: MobileAckBodyDto) { return this.alerts.ack(u, id, typeof b?.note === "string" ? b.note : undefined); }
 
   /** Exempt from FEATURE_DISABLED (a Basic org must be able to ask). Idempotent: a repeat for the same feature within 24h returns the original. */
-  @Post("upgrade-request") @HttpCode(200) upgradeRequest(@CurrentUser() u: JwtUser, @Body() b: { featureKey?: unknown; note?: unknown }) { return this.upgrade.request(u, b ?? {}); }
+  @Post("upgrade-request") @HttpCode(200) upgradeRequest(@CurrentUser() u: JwtUser, @Body() b: MobileUpgradeRequestBodyDto) { return this.upgrade.request(u, b ?? {}); }
 
   @Get("summary") summary(@CurrentUser() u: JwtUser) { return this.svc.summary(u); }
-  @Get("schedule") schedule(@CurrentUser() u: JwtUser, @Query() q: { date?: string; clinicId?: string }) { return this.svc.schedule(u, q); }
+  @Get("schedule") schedule(@CurrentUser() u: JwtUser, @Query() q: MobileScheduleQueryDto) { return this.svc.schedule(u, q); }
   @Get("search") search(@CurrentUser() u: JwtUser, @Query("q") q?: string) { return this.svc.search(u, q ?? ""); }
   @Get("prescriptions") prescriptions(@CurrentUser() u: JwtUser, @Query("status") s?: string) { return this.svc.prescriptions(u, s === "signed" ? "signed" : "pending"); }
   @Post("prescriptions/:encounterId/sign") @HttpCode(200) sign(@CurrentUser() u: JwtUser, @Param("encounterId") id: string) { return this.svc.signPrescription(u, id); }
   @Get("lab-results") labResults(@CurrentUser() u: JwtUser, @Query("status") s?: string) { return this.svc.labResults(u, s === "reviewed" ? "reviewed" : "pending"); }
-  @Post("lab-results/:orderId/approve") @HttpCode(200) approve(@CurrentUser() u: JwtUser, @Param("orderId") id: string, @Body() b: { note?: string }) { return this.svc.approveLabResult(u, id, typeof b?.note === "string" ? b.note : undefined); }
+  @Post("lab-results/:orderId/approve") @HttpCode(200) approve(@CurrentUser() u: JwtUser, @Param("orderId") id: string, @Body() b: MobileApproveBodyDto) { return this.svc.approveLabResult(u, id, typeof b?.note === "string" ? b.note : undefined); }
   @Post("vitals") recordVitals(@CurrentUser() u: JwtUser, @Body() b: Record<string, unknown>, @Headers("idempotency-key") idem?: string) { return this.svc.recordVitals(u, b as never, idem); }
   @Get("revenue/snapshot") revenue(@CurrentUser() u: JwtUser) { return this.svc.revenueSnapshot(u); }
 }

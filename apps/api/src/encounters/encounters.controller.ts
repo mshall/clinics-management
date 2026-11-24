@@ -38,6 +38,7 @@ import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
 import { ENCOUNTERS_MUTATE_ROLES, ENCOUNTERS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import { EncountersService } from "./encounters.service";
 import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
+import { EncountersAmendBodyDto } from "./encounters.controller.dto";
 
 const UPLOAD_LIMIT = 25 * 1024 * 1024;
 
@@ -254,7 +255,7 @@ export class EncountersController {
   @Post(":id/amend")
   @ApiOperation({ summary: "Reopen a finalized locked encounter for correction (AMENDED status + reason)" })
   @ApiOkResponse({ type: EncounterDetailDto })
-  async amend(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { reason: string }) {
+  async amend(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: EncountersAmendBodyDto) {
     await this.assertMutate(user);
     return this.encounters.amend(requireTenantId(user), user, id, body.reason ?? "");
   }

@@ -5,6 +5,7 @@ import type { Request } from "express";
 import { PublicAuthRateLimitGuard } from "../common/rate-limit.guard";
 import { FeatureFlagsService, requireFeature } from "../feature-flags/feature-flags-public";
 import { SignupService } from "./signup.service";
+import { PublicSignupRequestOtpBodyDto, PublicSignupVerifyBodyDto, PublicSignupCompleteBodyDto } from "./public-signup.controller.dto";
 
 @ApiTags("public")
 @Controller("public/signup")
@@ -24,7 +25,7 @@ export class PublicSignupController {
   @Post("otp")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Send phone OTP for signup" })
-  requestOtp(@Body() body: { phone: string; market: string }, @Req() req: Request) {
+  requestOtp(@Body() body: PublicSignupRequestOtpBodyDto, @Req() req: Request) {
     const clientIp = clientIpOf(req);
     return this.signup.requestOtp(body, clientIp);
   }
@@ -32,7 +33,7 @@ export class PublicSignupController {
   @Post("verify")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Verify OTP and receive signup token" })
-  verify(@Body() body: { phone: string; code: string; market: string }) {
+  verify(@Body() body: PublicSignupVerifyBodyDto) {
     return this.signup.verifyOtp(body);
   }
 
@@ -42,28 +43,7 @@ export class PublicSignupController {
   @ApiOperation({ summary: "Complete signup and receive session" })
   async complete(
     @Body()
-    body: {
-      signupToken: string;
-      profile: { displayName: string; email: string; password: string };
-      specialty: string;
-      clinic: {
-        nameEn: string;
-        nameAr?: string;
-        city: string;
-        addressEn?: string;
-        addressAr?: string;
-        locationUrl?: string;
-      };
-      planKey: string;
-      salesRepCode?: string;
-      referralCode?: string;
-      ref?: string;
-      rep?: string;
-      legalAcceptances?: { document: string; version: string }[];
-      /** Kiorly Nurse edition sign-up (ADR-031): the Nurse web sends CLINIC|NURSE and, for NURSE, SOLO|AGENCY. */
-      edition?: "CLINIC" | "NURSE";
-      nurseKind?: "SOLO" | "AGENCY";
-    },
+    body: PublicSignupCompleteBodyDto,
   ) {
     const { signupToken, profile, specialty, clinic, planKey, salesRepCode, referralCode, ref, rep, legalAcceptances, edition, nurseKind } =
       body;

@@ -7,6 +7,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import { type SplitPaymentBody, SplitPaymentService } from "./split-payment.service";
+import { SplitPaymentsSetScheduleBodyDto } from "./split-payments.controller.dto";
 
 /** MN-06 — split payments and installment schedules. */
 @ApiTags("billing")
@@ -36,7 +37,7 @@ export class SplitPaymentsController {
 
   @Put("operations/:operationId/installments")
   @ApiOperation({ summary: "Replace the unpaid installments of an operation" })
-  setSchedule(@CurrentUser() user: JwtUser, @Param("operationId") operationId: string, @Body() body: { rows: { dueOn: string; amount: number }[] }) {
+  setSchedule(@CurrentUser() user: JwtUser, @Param("operationId") operationId: string, @Body() body: SplitPaymentsSetScheduleBodyDto) {
     return this.split.setSchedule(requireTenantId(user), user, operationId, body?.rows ?? []);
   }
 }

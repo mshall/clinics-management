@@ -8,6 +8,7 @@ import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practice-public";
 import { PhysioService } from "./physio.service";
+import { PhysioPublicDischargeBodyDto, PhysioPublicProgrammeBodyDto } from "./physio.controller.dto";
 
 /** CL07-PT01..05. Add-on `pack_physio`; writes need the physio template scope (physiotherapists). */
 @ApiTags("physio")
@@ -49,13 +50,13 @@ export class PhysioController {
 
   @Post("plans/:id/discharge")
   @RequiresScope("encounter.template.physio")
-  discharge(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { summary: string }) {
+  discharge(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: PhysioPublicDischargeBodyDto) {
     return this.physio.discharge(requireTenantId(u), u, id, b.summary);
   }
 
   @Put("plans/:id/home-programme")
   @RequiresScope("encounter.template.physio")
-  programme(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: { exercises: Parameters<PhysioService["setHomeProgramme"]>[2] }) {
+  programme(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: PhysioPublicProgrammeBodyDto) {
     return this.physio.setHomeProgramme(requireTenantId(u), id, b.exercises);
   }
 

@@ -8,6 +8,7 @@ import { PublicAuthRateLimitGuard } from "../common/rate-limit.guard";
 import { SignupService } from "../signup/signup.service";
 import { FamilyUpdateService } from "./family-update.service";
 import { NurseEditionService } from "./nurse-edition.service";
+import { NurseEditionCompleteBodyDto, NurseEditionChangeEditionBodyDto } from "./nurse-edition.controller.dto";
 
 @ApiTags("public")
 @Controller("public/nurse")
@@ -35,14 +36,7 @@ export class NursePublicController {
   @UseGuards(PublicAuthRateLimitGuard)
   async complete(
     @Body()
-    body: {
-      signupToken: string;
-      kind: "SOLO" | "AGENCY";
-      profile: { displayName: string; email: string; password: string };
-      practice: { nameEn: string; nameAr?: string; city: string };
-      planKey: string;
-      legalAcceptances?: { document: string; version: string }[];
-    },
+    body: NurseEditionCompleteBodyDto,
   ) {
     const kind = body.kind === "AGENCY" ? "AGENCY" : "SOLO";
     await this.edition.assertSignupAllowed(kind);
@@ -83,7 +77,7 @@ export class NurseEditionController {
 
   /** KNED04 — Kiorex super admin only (403 EDITION_CHANGE_FORBIDDEN for everyone else, including organization owners). */
   @Put("platform/tenants/:tenantId/edition")
-  changeEdition(@CurrentUser() u: JwtUser, @Param("tenantId") tenantId: string, @Body() body: { edition: string; kind?: string | null }) {
+  changeEdition(@CurrentUser() u: JwtUser, @Param("tenantId") tenantId: string, @Body() body: NurseEditionChangeEditionBodyDto) {
     return this.edition.changeEdition(u, tenantId, body.edition, body.kind);
   }
 }

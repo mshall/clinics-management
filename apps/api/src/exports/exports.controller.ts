@@ -8,6 +8,7 @@ import { RequiresSubscriptionAccess } from "../subscriptions/requires-subscripti
 import { SubscriptionAccessAction } from "../subscriptions/subscription-access-policy";
 import { SubscriptionAccessGuard } from "../subscriptions/subscription-access.guard";
 import { TenantExportService } from "./tenant-export.service";
+import { ExportsRequestPatientBodyDto, ExportsStartOffboardingBodyDto, ExportsLegalHoldBodyDto } from "./exports.controller.dto";
 
 @ApiTags("exports")
 @Controller("exports")
@@ -29,7 +30,7 @@ export class ExportsController {
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
   @ApiBearerAuth("bearer")
   @ApiOperation({ summary: "SC-05 — patient-level data subject export" })
-  requestPatient(@CurrentUser() user: JwtUser, @Body() body: { patientId: string }) {
+  requestPatient(@CurrentUser() user: JwtUser, @Body() body: ExportsRequestPatientBodyDto) {
     return this.exports.requestPatientExport(requireTenantId(user), user, body.patientId);
   }
 
@@ -45,7 +46,7 @@ export class ExportsController {
   @UseGuards(JwtAuthGuard, SubscriptionAccessGuard)
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
   @ApiBearerAuth("bearer")
-  startOffboarding(@CurrentUser() user: JwtUser, @Body() body: { legalHold?: boolean }) {
+  startOffboarding(@CurrentUser() user: JwtUser, @Body() body: ExportsStartOffboardingBodyDto) {
     return this.exports.startOffboarding(requireTenantId(user), user, body ?? {});
   }
 
@@ -53,7 +54,7 @@ export class ExportsController {
   @UseGuards(JwtAuthGuard, SubscriptionAccessGuard)
   @RequiresSubscriptionAccess(SubscriptionAccessAction.EXPORT)
   @ApiBearerAuth("bearer")
-  legalHold(@CurrentUser() user: JwtUser, @Body() body: { legalHold: boolean }) {
+  legalHold(@CurrentUser() user: JwtUser, @Body() body: ExportsLegalHoldBodyDto) {
     return this.exports.setLegalHold(requireTenantId(user), user, Boolean(body?.legalHold));
   }
 
