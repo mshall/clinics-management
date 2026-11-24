@@ -18,11 +18,11 @@ import {
   skipOnboardingStep,
   type OnboardingEntityDto,
   type OnboardingProgressDto,
-  type OnboardingStepDto,
   type OnboardingStepKey,
 } from "@/lib/onboarding-api";
 import { cn } from "@/lib/utils";
 import { SETUP_RETURN_KEY } from "./onboarding-checklist";
+import { orderedSetupSteps, setupGroupForStep } from "./setup-groups";
 import { SetupCheck } from "./setup-check";
 
 const WIZARD_INDEX_KEY = "kx.setup.wizardIndex";
@@ -33,10 +33,6 @@ type Props = {
   data: OnboardingProgressDto;
   initialKey?: OnboardingStepKey | null;
 };
-
-function liveSteps(data: OnboardingProgressDto): OnboardingStepDto[] {
-  return data.steps.filter((s) => s.available);
-}
 
 function rememberReturn(pathname: string) {
   try {
@@ -71,7 +67,8 @@ export function SetupWizardDialog({ open, onOpenChange, data, initialKey }: Prop
   const nav = useNavigate();
   const loc = useLocation();
   const qc = useQueryClient();
-  const steps = useMemo(() => liveSteps(data), [data]);
+  // Optional extras are last so the wizard follows the same phase order as the checklist.
+  const steps = useMemo(() => orderedSetupSteps(data.steps), [data]);
   const [index, setIndex] = useState(0);
   const [branchesOpen, setBranchesOpen] = useState(false);
   const [excludeTarget, setExcludeTarget] = useState<OnboardingEntityDto | null>(null);
@@ -177,6 +174,9 @@ export function SetupWizardDialog({ open, onOpenChange, data, initialKey }: Prop
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6" data-testid="setup-wizard-body">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-primary" data-testid="setup-wizard-group">
+              {t(`onboarding.groups.${setupGroupForStep(step.key)}.title`)}
+            </p>
             <div className="mb-3 flex flex-wrap items-center gap-2">
               {!step.required ? (
                 <span className="rounded-full border px-2 py-0.5 text-[11px] font-medium">{t("onboarding.optional")}</span>

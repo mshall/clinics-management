@@ -85,8 +85,30 @@ export const checklist = (page: Page) => page.getByTestId("setup-checklist");
 export const row = (page: Page, key: string) => page.locator(`[data-testid="setup-step"][data-step="${key}"]`);
 export const bar = (page: Page) => page.getByTestId("setup-bar");
 
+/** Walk one-phase-at-a-time nav until the step row is in the DOM (or exhaust phases). */
+export async function revealStep(page: Page, key: string) {
+  await expect(checklist(page)).toBeVisible();
+  if (await row(page, key).count()) return;
+  // Reset to first phase, then walk forward.
+  for (let i = 0; i < 8; i++) {
+    const back = page.getByTestId("setup-phase-back");
+    if (!(await back.isEnabled().catch(() => false))) break;
+    await back.click();
+    await page.waitForTimeout(50);
+  }
+  for (let i = 0; i < 8; i++) {
+    if (await row(page, key).count()) return;
+    const next = page.getByTestId("setup-phase-next");
+    if (!(await next.isEnabled().catch(() => false))) break;
+    await next.click();
+    await page.waitForTimeout(50);
+  }
+  await expect(row(page, key)).toBeVisible({ timeout: 5_000 });
+}
+
 /** Opens a step from the checklist via the sequential setup wizard, then lands on the action screen. */
 export async function openStep(page: Page, key: string, urlPart: RegExp) {
+  await revealStep(page, key);
   const cta = row(page, key).getByTestId("setup-cta");
   await expect(cta).toBeVisible();
   await cta.click();
@@ -114,9 +136,13 @@ export async function openStep(page: Page, key: string, urlPart: RegExp) {
 export async function expectFlipsToDone(page: Page, key: string, nextKey: string | null) {
   await expect(bar(page)).toHaveAttribute("data-success", "true", { timeout: 20_000 });
   await expect(page).toHaveURL(/\/(onboarding)?$/, { timeout: 15_000 });
+  await revealStep(page, key);
   await expect(row(page, key)).toHaveAttribute("data-status", "done");
   await expect(row(page, key)).toHaveAttribute("data-just-done", "true");
-  if (nextKey) await expect(row(page, nextKey)).toHaveAttribute("data-next", "true", { timeout: 5_000 });
+  if (nextKey) {
+    await revealStep(page, nextKey);
+    await expect(row(page, nextKey)).toHaveAttribute("data-next", "true", { timeout: 5_000 });
+  }
 }
 
 export async function progressPercent(page: Page): Promise<number> {

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { createPatient, prisma } from "./nurse-fixtures";
 import {
-  API, addClinic, addStaff, apiSignup, axeClean, bar, checklist, expectFlipsToDone, openStep, phoneFor, progressPercent, row, signIn, uiSignup, uniq,
+  API, addClinic, addStaff, apiSignup, axeClean, bar, checklist, expectFlipsToDone, openStep, phoneFor, progressPercent, revealStep, row, signIn, uiSignup, uniq,
 } from "./quick-setup-helpers";
 
 /**
@@ -26,32 +26,28 @@ test.describe("Quick setup - Clinic journey (fresh Pro organisation)", () => {
     await expect(row(page, "clinic_profile")).toHaveAttribute("data-next", "true");
     await axeClean(page, "[data-testid=setup-checklist]");
 
-    // 1 clinic profile: the licence field is focused, saving flips the step
+    // Required phases first (optional extras last).
+    // 1 clinic profile
     await openStep(page, "clinic_profile", /\/clinics\/[^/]+\?tab=settings/);
     await expect(page.getByTestId("setup-bar-count")).toContainText(/Step 1 of \d+/);
     await expect(page.locator("#clinic-reg-license")).toBeFocused({ timeout: 15_000 });
     await page.locator("#clinic-reg-license").fill("LIC-QS-1001");
     await page.locator("#clinic-reg-license").locator("xpath=ancestor::*[.//button[normalize-space()='Save']][1]").getByRole("button", { name: "Save" }).click();
-    await expectFlipsToDone(page, "clinic_profile", "clinic_logo");
+    await expectFlipsToDone(page, "clinic_profile", "working_hours");
     const afterFirst = await progressPercent(page);
     expect(afterFirst).toBeGreaterThan(0);
     await page.reload();
+    await revealStep(page, "clinic_profile");
     await expect(row(page, "clinic_profile")).toHaveAttribute("data-status", "done");
     expect(await progressPercent(page)).toBe(afterFirst);
 
-    // 2 logo (optional): opens the upload card; completes when a logo is uploaded
-    await openStep(page, "clinic_logo", /tab=settings/);
-    await expect(page.getByTestId("clinic-logo-input")).toBeAttached();
-    await page.getByTestId("clinic-logo-input").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") });
-    await expectFlipsToDone(page, "clinic_logo", "working_hours");
-
-    // 3 working hours: keeping the defaults still needs an explicit confirmation
+    // 2 working hours
     await openStep(page, "working_hours", /tab=settings/);
     await expect(page.locator("#clinic-opening-time")).toBeFocused({ timeout: 15_000 });
     await page.getByRole("button", { name: "Confirm these hours" }).click();
     await expectFlipsToDone(page, "working_hours", "appointment_types");
 
-    // 4 appointment types: edit a fee
+    // 3 appointment types
     await openStep(page, "appointment_types", /tab=settings/);
     const typesCard = page.locator('[data-setup-target="appointment_types"]');
     await typesCard.getByRole("button", { name: "Edit" }).first().click();
@@ -59,35 +55,13 @@ test.describe("Quick setup - Clinic journey (fresh Pro organisation)", () => {
     await typesCard.getByRole("button", { name: "Save" }).click();
     await expectFlipsToDone(page, "appointment_types", "doctor_availability");
 
-    // 5 doctor availability: the dedicated screen for this clinic
+    // 4 doctor availability
     await openStep(page, "doctor_availability", /\/profile\/availability\?.*entity=/);
     await expect(page.getByTestId("availability-editor")).toBeVisible();
     await page.getByTestId("availability-save").click();
-    await expectFlipsToDone(page, "doctor_availability", "invite_receptionist");
+    await expectFlipsToDone(page, "doctor_availability", "first_appointment");
 
-    // 6 invite a receptionist
-    await openStep(page, "invite_receptionist", /\/team/);
-    await expect(page.locator("#invite-contact")).toBeFocused({ timeout: 15_000 });
-    await page.locator("#invite-contact").fill(`reception.${Date.now()}@example.com`);
-    await page.getByRole("button", { name: "Send invitation" }).click();
-    await expectFlipsToDone(page, "invite_receptionist", "whatsapp_reminders");
-
-    // 7 WhatsApp reminders (Pro plan): the owner switches them on
-    await openStep(page, "whatsapp_reminders", /\/admin/);
-    const wa = page.locator('[data-setup-target="whatsapp_reminders"]');
-    await wa.click();
-    await wa.locator("xpath=ancestor::*[.//button[normalize-space()='Save']][1]").getByRole("button", { name: "Save" }).last().click();
-    await expectFlipsToDone(page, "whatsapp_reminders", "import_patients");
-
-    // 8 import patients: CSV through the wizard
-    await openStep(page, "import_patients", /\/onboarding\/import/);
-    await page.getByTestId("import-file").setInputFiles({ name: "patients.csv", mimeType: "text/csv", buffer: Buffer.from(`firstNameEn,lastNameEn,phone,gender\nQs,Patient,${phoneFor(uniq())},F\n`) });
-    await page.getByRole("button", { name: /Check file/ }).click();
-    await expect(page.getByTestId("import-status")).toHaveText("Ready to import", { timeout: 30_000 });
-    await page.getByRole("button", { name: /Import 1 rows/ }).click();
-    await expectFlipsToDone(page, "import_patients", "first_appointment");
-
-    // 9 first appointment: the booking wizard opens by itself; the booking is then made against the API (the 3-step wizard has its own tests)
+    // 5 first appointment
     await openStep(page, "first_appointment", /\/appointments\?.*book=1/);
     await expect(page.getByText(/People & clinic|Step 1/i).first()).toBeVisible({ timeout: 20_000 });
     const tok = await page.evaluate(() => JSON.parse(localStorage.getItem("cms-auth")!).state.accessToken as string);
@@ -96,35 +70,60 @@ test.describe("Quick setup - Clinic journey (fresh Pro organisation)", () => {
     const clinics = (await (await request.get(`${API}/clinics`, { headers: H })).json()) as { id: string }[];
     const types = (await (await request.get(`${API}/scheduling/appointment-types?clinicId=${clinics[0]!.id}`, { headers: H })).json()) as { id: string }[];
     const meFull = (await (await request.get(`${API}/auth/me`, { headers: H })).json()) as { tenantId: string };
-    const patientId = (await prisma.patient.findFirstOrThrow({ where: { tenantId: meFull.tenantId, isSample: false }, select: { id: true } })).id;
+    // Optional import is later; seed a patient so booking has a real chart.
+    const patientId = (await createPatient(meFull.tenantId, "Qs")).id;
     const start = new Date(Date.now() + 125 * 60_000); start.setSeconds(0, 0); // the type needs 120 min notice
     const booked = await request.post(`${API}/appointments`, { headers: H, data: { clinicId: clinics[0]!.id, patientId, clinicianId: me.id, appointmentTypeId: types[0]!.id, startsAt: start.toISOString(), endsAt: new Date(start.getTime() + 1200_000).toISOString() } });
     expect(booked.ok(), await booked.text()).toBeTruthy();
     await expectFlipsToDone(page, "first_appointment", "first_check_in");
 
-    // 10 first check-in, done through the real UI (the appointment page used to crash with "Maximum update depth exceeded"; fixed in VisitCollectionFields).
-    //    The deep link goes straight to the earliest open appointment, the receptionist-style panel checks the patient in with cash, the step flips by itself.
+    // 6 first check-in
     await openStep(page, "first_check_in", /\/appointments\/[^/?]+\?.*setup=first_check_in/);
     await expect(page.getByTestId("quick-check-in-submit")).toBeVisible({ timeout: 20_000 });
     await page.getByTestId("collection-method-CASH_ON_VISIT").click();
     const checkIn = page.waitForResponse((r) => r.url().includes("/front-desk/appointments/") && r.url().includes("/check-in") && r.request().method() === "POST");
     await page.getByTestId("quick-check-in-submit").click();
     expect((await checkIn).ok(), "check-in accepted").toBeTruthy();
-    await expectFlipsToDone(page, "first_check_in", "doctor_verification");
+    await expectFlipsToDone(page, "first_check_in", "clinic_logo");
 
-    // 11-13 the rest open the right screen (their completion needs outside review: doctor verification, Kiorex approval)
+    // Optional extras phase
+    await openStep(page, "clinic_logo", /tab=settings/);
+    await expect(page.getByTestId("clinic-logo-input")).toBeAttached();
+    await page.getByTestId("clinic-logo-input").setInputFiles({ name: "logo.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") });
+    await expectFlipsToDone(page, "clinic_logo", "invite_receptionist");
+
+    await openStep(page, "invite_receptionist", /\/team/);
+    await expect(page.locator("#invite-contact")).toBeFocused({ timeout: 15_000 });
+    await page.locator("#invite-contact").fill(`reception.${Date.now()}@example.com`);
+    await page.getByRole("button", { name: "Send invitation" }).click();
+    await expectFlipsToDone(page, "invite_receptionist", "whatsapp_reminders");
+
+    await openStep(page, "whatsapp_reminders", /\/admin/);
+    const wa = page.locator('[data-setup-target="whatsapp_reminders"]');
+    await wa.click();
+    await wa.locator("xpath=ancestor::*[.//button[normalize-space()='Save']][1]").getByRole("button", { name: "Save" }).last().click();
+    await expectFlipsToDone(page, "whatsapp_reminders", "import_patients");
+
+    await openStep(page, "import_patients", /\/onboarding\/import/);
+    await page.getByTestId("import-file").setInputFiles({ name: "patients.csv", mimeType: "text/csv", buffer: Buffer.from(`firstNameEn,lastNameEn,phone,gender\nQs,Patient,${phoneFor(uniq())},F\n`) });
+    await page.getByRole("button", { name: /Check file/ }).click();
+    await expect(page.getByTestId("import-status")).toHaveText("Ready to import", { timeout: 30_000 });
+    await page.getByRole("button", { name: /Import 1 rows/ }).click();
+    await expectFlipsToDone(page, "import_patients", "doctor_verification");
+
     await openStep(page, "doctor_verification", /\/profile\/verification/);
     await page.getByTestId("setup-bar-back").click();
     await openStep(page, "kiorex_profile", /\/clinics\/[^/]+\?tab=settings/);
     await expect(page.locator('[data-setup-target="kiorex_profile"]')).toBeVisible();
     await page.getByTestId("setup-bar-back").click();
-    await openStep(page, "connect_kiorex", /\/kiorex\?.*setup=connect_kiorex/);
+    await openStep(page, "connect_kiorex", /\/kiorex\/connect\?.*setup=connect_kiorex/);
     await page.getByTestId("setup-bar-skip").click();
     await expect(checklist(page)).toBeVisible();
     // persistence after sign-out / sign-in
     await signIn(page, { email });
     await page.goto("/onboarding");
-    for (const k of ["clinic_profile", "clinic_logo", "working_hours", "appointment_types", "doctor_availability", "invite_receptionist", "whatsapp_reminders", "import_patients", "first_appointment", "first_check_in"]) {
+    for (const k of ["clinic_profile", "working_hours", "appointment_types", "doctor_availability", "first_appointment", "first_check_in", "clinic_logo", "invite_receptionist", "whatsapp_reminders", "import_patients"]) {
+      await revealStep(page, k);
       await expect(row(page, k)).toHaveAttribute("data-status", "done");
     }
     expect(await progressPercent(page)).toBeGreaterThanOrEqual(70);
@@ -139,21 +138,27 @@ test.describe("Quick setup - Clinic multi-entity, roles, plans, locale", () => {
     const second = await addClinic(request, f, "Nile Care Zamalek", { licence: "LIC-Z-1" });
     await signIn(page, f);
     await page.goto("/onboarding");
+    await revealStep(page, "working_hours");
     const hours = row(page, "working_hours");
     await expect(hours.getByTestId("setup-aggregate")).toHaveText(/0 of 2/);
     await setExpanded(hours.getByTestId("setup-toggle"), true);
     await expect(hours.getByTestId("setup-entity")).toHaveCount(2);
     // clinic profile: the 2nd clinic already has its licence (added with one), the 1st does not
+    await revealStep(page, "clinic_profile");
     const profile = row(page, "clinic_profile");
     await expect(profile.getByTestId("setup-aggregate")).toHaveText(/1 of 2/);
     await expect(profile.locator(`[data-entity="${second.id}"]`)).toHaveAttribute("data-status", "done");
     // open the 2nd clinic's hours: the link carries ITS id and the bar names the clinic
+    await revealStep(page, "working_hours");
+    await setExpanded(hours.getByTestId("setup-toggle"), true);
     await hours.locator(`[data-entity="${second.id}"]`).getByTestId("setup-entity-cta").click();
     await expect(page).toHaveURL(new RegExp(`/clinics/${second.id}\\?tab=settings.*entity=${second.id}`));
     await expect(bar(page)).toContainText("Nile Care Zamalek");
     await page.getByRole("button", { name: "Confirm these hours" }).click();
     await expect(bar(page)).toHaveAttribute("data-success", "true", { timeout: 25_000 });
     await expect(page).toHaveURL(/\/onboarding$/);
+    await revealStep(page, "working_hours");
+    await setExpanded(hours.getByTestId("setup-toggle"), true);
     await expect(hours.getByTestId("setup-aggregate")).toHaveText(/1 of 2/);
     await expect(hours).toHaveAttribute("data-status", "pending");
     await expect(hours.locator(`[data-entity="${second.id}"]`)).toHaveAttribute("data-status", "done");
@@ -162,18 +167,23 @@ test.describe("Quick setup - Clinic multi-entity, roles, plans, locale", () => {
     await hours.locator(`[data-entity="${f.clinicId}"]`).getByTestId("setup-entity-cta").click();
     await page.getByRole("button", { name: "Confirm these hours" }).click();
     await expect(bar(page)).toHaveAttribute("data-success", "true", { timeout: 25_000 });
+    await revealStep(page, "working_hours");
     await expect(row(page, "working_hours")).toHaveAttribute("data-status", "done");
     const third = await addClinic(request, f, "Nile Care Heliopolis");
     await page.reload();
+    await revealStep(page, "working_hours");
     await expect(row(page, "working_hours")).toHaveAttribute("data-status", "pending");
     await expect(row(page, "working_hours").getByTestId("setup-aggregate")).toHaveText(/2 of 3/);
     await setExpanded(row(page, "working_hours").getByTestId("setup-toggle"), true);
     await expect(row(page, "working_hours").locator(`[data-entity="${third.id}"]`)).toHaveAttribute("data-status", "pending");
     // collapse / expand the list; per-clinic optional step can be skipped for ONE clinic
+    await revealStep(page, "clinic_logo");
     await setExpanded(row(page, "clinic_logo").getByTestId("setup-toggle"), true);
     await row(page, "clinic_logo").locator(`[data-entity="${third.id}"]`).getByRole("button", { name: /^Skip/ }).click();
     await expect(row(page, "clinic_logo").locator(`[data-entity="${third.id}"]`)).toHaveAttribute("data-status", "skipped");
     await expect(row(page, "clinic_logo").locator(`[data-entity="${f.clinicId}"]`)).toHaveAttribute("data-status", "pending");
+    await revealStep(page, "working_hours");
+    await setExpanded(hours.getByTestId("setup-toggle"), true);
     await setExpanded(hours.getByTestId("setup-toggle"), false);
     await expect(hours.getByTestId("setup-entities")).toBeHidden();
     await axeClean(page, "[data-testid=setup-checklist]");
@@ -184,10 +194,13 @@ test.describe("Quick setup - Clinic multi-entity, roles, plans, locale", () => {
     const bm = await addStaff(f.tenantId, "BRANCH_MANAGER", "bm");
     await signIn(page, bm);
     await expect(checklist(page)).toBeVisible();
+    await revealStep(page, "whatsapp_reminders");
     await expect(row(page, "whatsapp_reminders").getByTestId("setup-cta-disabled")).toBeDisabled();
     await expect(row(page, "whatsapp_reminders").getByTestId("setup-ask-owner")).toContainText("Ask the owner");
     await expect(row(page, "whatsapp_reminders").getByTestId("setup-ask-owner")).toContainText("Owner / group admin");
+    // Connect is hidden for non-admin (removed from the plan, not merely disabled).
     await expect(row(page, "connect_kiorex")).toHaveCount(0);
+    await revealStep(page, "clinic_profile");
     await expect(row(page, "clinic_profile").getByTestId("setup-cta")).toBeEnabled();
     const login = await request.post(`${API}/auth/login`, { data: { email: bm.email, password: bm.password } });
     const t = ((await login.json()) as { accessToken: string }).accessToken;
@@ -199,6 +212,7 @@ test.describe("Quick setup - Clinic multi-entity, roles, plans, locale", () => {
     const f = await apiSignup(request, { planKey: "LITE" });
     await signIn(page, f);
     await page.goto("/onboarding");
+    await revealStep(page, "whatsapp_reminders");
     const wa = row(page, "whatsapp_reminders");
     await expect(wa.getByTestId("setup-upgrade")).toBeVisible();
     await expect(wa.getByTestId("setup-cta")).toHaveCount(0);
@@ -269,10 +283,14 @@ test.describe("Quick setup - Clinic multi-entity, roles, plans, locale", () => {
     expect(Math.abs(box2!.height - box1!.height)).toBeLessThan(2);
     await axeClean(page, "[data-testid=setup-checklist]");
     // keyboard: Enter on the highlighted step's button opens its screen, and the bar is announced as a status region
+    await revealStep(page, "clinic_profile");
     const cta = row(page, "clinic_profile").getByTestId("setup-cta");
     await cta.focus();
     await expect(cta).toBeFocused();
     await page.keyboard.press("Enter");
+    // CTA opens the sequential wizard first
+    await expect(page.getByTestId("setup-wizard")).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId("setup-wizard-cta").click();
     await expect(bar(page)).toBeVisible();
     await expect(bar(page).locator("[role=status]")).toBeVisible();
     await axeClean(page, "[data-testid=setup-bar]");
