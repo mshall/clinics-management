@@ -17,15 +17,17 @@ import { HomeVisitSafetyService } from "./home-visit-safety.service";
 import { HomeVisitService } from "./home-visit.service";
 import { HomeVisitsController } from "./home-visits.controller";
 import { InternalJobKeyGuard } from "./internal-job-key.guard";
-import { MockRouteMapsAdapter, UnwiredRealRouteMapsAdapter } from "./maps/mock-route-maps.adapter";
+import { AmazonRouteMapsAdapter } from "./maps/amazon-route-maps.adapter";
+import { MockRouteMapsAdapter } from "./maps/mock-route-maps.adapter";
+import { mapsConfig } from "../common/provider-env";
 import { ROUTE_MAPS_PORT } from "./maps/route-maps.port";
 
 @Module({
   imports: [AppointmentsModule, AuditModule, FeatureFlagsModule, KiorexModule, MessagingModule, ScopeOfPracticeModule],
   controllers: [HomeVisitsController, HomeVisitInternalController],
   providers: [
-    // MODE=mock|real (KIORLY_PROVIDER_MODE_MAPS, default mock): Amazon Location is the real adapter, wired at provider go-live.
-    { provide: ROUTE_MAPS_PORT, useFactory: () => (isMock("maps") ? new MockRouteMapsAdapter() : new UnwiredRealRouteMapsAdapter()) },
+    // MODE=mock|real (MAPS_MODE / KIORLY_PROVIDER_MODE_MAPS, default mock): Amazon Location Routes is the real adapter (config only).
+    { provide: ROUTE_MAPS_PORT, useFactory: () => (isMock("maps") ? new MockRouteMapsAdapter() : new AmazonRouteMapsAdapter(mapsConfig())) },
     InternalJobKeyGuard,
     HomeVisitConfigService,
     HomeVisitService,

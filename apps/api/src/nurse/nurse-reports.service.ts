@@ -26,7 +26,7 @@ export class NurseReportsService {
     const groups = new Map<string, typeof finished>();
     for (const v of finished) groups.set(`${v.clinicianId}:${v.plannedStartsAt.toISOString().slice(0, 10)}`, [...(groups.get(`${v.clinicianId}:${v.plannedStartsAt.toISOString().slice(0, 10)}`) ?? []), v]);
     let travel = 0;
-    for (const g of groups.values()) travel += this.maps.legs(g.sort((a, b) => a.plannedStartsAt.getTime() - b.plannedStartsAt.getTime()).map((v) => ({ id: v.id, districtId: v.districtId }))).reduce((a, l) => a + l.travelMinutes, 0);
+    for (const g of groups.values()) travel += (await this.maps.legs(g.sort((a, b) => a.plannedStartsAt.getTime() - b.plannedStartsAt.getTime()).map((v) => ({ id: v.id, districtId: v.districtId })))).reduce((a, l) => a + l.travelMinutes, 0);
     return {
       from: q.from.toISOString(),
       to: q.to.toISOString(),

@@ -56,7 +56,7 @@ export class HomeVisitReportsService {
       groups.set(key, [...(groups.get(key) ?? []), v]);
     }
     let total = 0;
-    for (const g of groups.values()) total += this.maps.legs(g.map((v) => ({ id: v.id, districtId: v.districtId }))).reduce((a, l) => a + l.travelMinutes, 0);
+    for (const g of groups.values()) total += (await this.maps.legs(g.map((v) => ({ id: v.id, districtId: v.districtId })))).reduce((a, l) => a + l.travelMinutes, 0);
     return total;
   }
 
