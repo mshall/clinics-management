@@ -568,7 +568,22 @@ export class MarketplaceBookingService {
       }
     }
 
-    const updated = await this.prisma.$transaction(
+    // Two patients moving onto the same slot at once: the Serializable snapshot of the loser predates the winner's commit, so PostgreSQL aborts it (P2034 / 40001).
+    // That is the same answer as an ordinary conflict (409 SLOT_TAKEN with alternatives), never a 500 (EDGE-41).
+    const slotTaken = async () =>
+      new ConflictException({
+        code: SLOT_TAKEN_CODE,
+        message: "Slot already taken",
+        alternatives: await this.nearestAlternatives(appt.tenantId, {
+          clinicId: appt.clinicId,
+          clinicianId: appt.clinicianId,
+          typeId: appt.appointmentTypeId ?? undefined,
+          startsAt: start.toISOString(),
+        } as MarketplaceBookingBody),
+      });
+    let updated;
+    try {
+      updated = await this.prisma.$transaction(
       async (tx) => {
         const lockKey = BigInt(Math.abs(appt.clinicianId.split("").reduce((s, c) => s + c.charCodeAt(0), 0) + start.getTime()));
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
@@ -612,7 +627,12 @@ export class MarketplaceBookingService {
         return row;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+      );
+    } catch (e) {
+      if (e instanceof ConflictException && (e.getResponse() as { code?: string })?.code === SLOT_TAKEN_CODE) throw await slotTaken();
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034") throw await slotTaken();
+      throw e;
+    }
     await this.slots.invalidateAndNotify(updated.tenantId, updated.clinicId, updated.clinicianId, "marketplace_reschedule");
     await this.audit.recordEvent({
       tenantId: updated.tenantId,
