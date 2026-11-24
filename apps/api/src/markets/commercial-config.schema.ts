@@ -69,6 +69,21 @@ const referralSchema = z.object({
   maxPerYear: z.number().int().min(0).max(100),
 });
 
+/**
+ * GRW-P2-W (ADR-048) — provider credit: expiry of promotional and recovery lots and the amounts of the platform's own grants.
+ * Amounts default to 0 (no grant): the founder has not set onboarding or connect-bonus prices (KX-12, NEEDS_HUMAN), so nothing is granted until a pack sets them.
+ */
+export const creditSchema = z.object({
+  onboardingAmount: z.number().min(0).max(1_000_000),
+  connectBonusAmount: z.number().min(0).max(1_000_000),
+  promotionalExpiryMonths: z.number().int().min(1).max(60),
+  recoveryExpiryMonths: z.number().int().min(1).max(120),
+  /** Usage bundle skeleton: off until pricing is decided (KX-12 H-2, H-25); the contracts flag `clinic.usage_bundles` is not launch-locked yet (1.12.1 request). */
+  usageBundlesEnabled: z.boolean().optional(),
+});
+export type CreditConfig = z.infer<typeof creditSchema>;
+export const CREDIT_CONFIG_DEFAULTS: CreditConfig = { onboardingAmount: 0, connectBonusAmount: 0, promotionalExpiryMonths: 12, recoveryExpiryMonths: 24 };
+
 /** ON-07 — field-sales rep commission; optional so existing packs stay valid. */
 const salesRepSchema = z.object({
   commissionPercent: z.number().min(0).max(100),
@@ -124,6 +139,7 @@ export const commercialConfigSchema = z
     lite: liteSchema,
     dunning: dunningSchema,
     referral: referralSchema,
+    credit: creditSchema.optional(),
     salesRep: salesRepSchema.optional(),
     deposits: depositPolicySchema.optional(),
     noShowGuarantee: noShowGuaranteeSchema.optional(),

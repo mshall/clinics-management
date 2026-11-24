@@ -96,3 +96,9 @@ credentials exist. No credentials are ever committed; keys live in Secrets Manag
 - Contract change: optional `lt` field on `POST /marketplace/v1/bookings`; a Clinic flag key for evidence disputes (today env `GROWTH_EVIDENCE_DISPUTES`).
 - Real evidence fetch (`GROWTH_EVIDENCE_MODE=real`) needs partner credentials from Kiorex and a live test.
 - Commission handling defaults for cancelled, no-show and refunded visits per market.
+
+## Provider credit v2 (GRW-P2-W)
+- Amounts of the onboarding credit and the connect bonus per market (`credit.onboardingAmount`, `credit.connectBonusAmount`): default 0, founder decision (KX-12).
+- Usage bundle prices and VAT treatment of credit purchases (H-2, H-25); `credit.usageBundlesEnabled` stays false until then.
+- Counsel: forfeiture of promotional credit when a tenant closes (H-24); wording of the credit screen in Arabic (copy review).
+- Accounting: treatment of provider-sponsored discounts debited from credit (H-26 to H-28, P2-S).

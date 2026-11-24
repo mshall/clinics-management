@@ -1,3 +1,4 @@
+import { CREDIT_LABELS, type CreditSection } from "../credits/credit-statement";
 import { KiorlyLineType } from "@prisma/client";
 import { buildBilingualPdf, type PdfRow, type PdfSection } from "./bilingual-pdf";
 import type { SettlementCalculatorResult } from "./settlement-calculator";
@@ -88,6 +89,8 @@ export type MonthlyStatementDto = {
   skippedBelowMinimum: boolean;
   carryForwardOut: string;
   reconciles: boolean;
+  /** GRW-P2-W: credit section (flag clinic.provider_credit_v2); absent when the wallet has never been used. */
+  credit?: CreditSection & { currency: string };
 };
 
 const CARRY_FORWARD_REF = "carry-forward";
@@ -361,6 +364,21 @@ function statementSection(st: MonthlyStatementDto, lang: "en" | "ar"): PdfSectio
   rows.push({ kind: "pair", label: L.netPayable, value: amt(st.netPayable) });
   rows.push({ kind: "pair", label: `${L.vat} (${st.vatRatePercent}%)`, value: amt(st.vat) });
   rows.push({ kind: "pair", label: L.total, value: amt(st.total), size: 12, bold: true });
+
+  if (st.credit) {
+    const C = CREDIT_LABELS[lang];
+    const cr = st.credit;
+    rows.push({ kind: "gap" }, { kind: "rule" }, { kind: "text", text: C.title, size: 11, bold: true });
+    rows.push({ kind: "pair", label: C.opening, value: amt(cr.opening), size: 9 });
+    const grants = Object.entries(cr.grantsByReason);
+    rows.push({ kind: "pair", label: C.grants, value: amt(grants.reduce((n, [, v]) => n + Number(v), 0).toFixed(2)), size: 9 });
+    for (const [reason, v] of grants) rows.push({ kind: "pair", label: `  ${reason}`, value: amt(v), size: 8 });
+    if (Number(cr.returns) !== 0) rows.push({ kind: "pair", label: C.returns, value: amt(cr.returns), size: 8 });
+    rows.push({ kind: "pair", label: C.consumed, value: neg(cr.consumed), size: 9 });
+    for (const [use, v] of Object.entries(cr.consumptionByUse)) rows.push({ kind: "pair", label: `  ${(C.uses as Record<string, string>)[use] ?? use}`, value: neg(v), size: 8 });
+    if (Number(cr.expiries) !== 0) rows.push({ kind: "pair", label: C.expiries, value: neg(cr.expiries), size: 9 });
+    rows.push({ kind: "pair", label: C.closing, value: amt(cr.closing), size: 9, bold: true });
+  }
 
   rows.push({ kind: "gap" }, { kind: "text", text: L.payments, size: 11, bold: true });
   if (st.payments.length === 0) {

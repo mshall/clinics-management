@@ -111,7 +111,7 @@ describe("CR-09 referral reward on first paid period", () => {
   after(async () => {
     for (const tid of [referredId, referrerId]) {
       if (!tid) continue;
-      await prisma.creditLedgerEntry.deleteMany({ where: { wallet: { tenantId: tid } } });
+      // GRW-P2-W: the ledger is append-only (trigger); deleting the wallet cascades its entries
       await prisma.creditWallet.deleteMany({ where: { tenantId: tid } });
       await prisma.auditLog.deleteMany({ where: { tenantId: tid } });
     }

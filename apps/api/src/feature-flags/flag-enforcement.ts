@@ -54,7 +54,7 @@ export const FLAG_ENFORCEMENT: Record<string, FlagEnforcement> = {
   "nurse.family_updates": { kind: "service", files: ["nurse/family-update.service.ts"] },
   "growth.provider_links": { kind: "controller", files: ["growth/provider-links/provider-links.controller.ts", "mobile/growth-mobile.controller.ts"] },
   "growth.provider_marketing_v2": { kind: "controller", files: ["growth/provider-marketing/provider-marketing.controller.ts", "mobile/growth-marketing-mobile.controller.ts"] },
-  "clinic.provider_credit_v2": { kind: "pending", note: "Provider credit v2 (fee draw-down, dispute-win credit, grants, statements) is not built in this repo yet; registered so the control plane can pre-stage it (contracts 1.12.0, Rev 2.6)" },
-  "clinic.usage_bundles": { kind: "pending", note: "Prepaid usage bundle skeleton is not built in this repo yet; registered so the control plane can pre-stage it (contracts 1.12.0, Rev 2.6)" },
+  "clinic.provider_credit_v2": { kind: "controller", files: ["credits/credits.controller.ts", "credits/credit-fee-drawdown.service.ts", "credits/credit-grants.service.ts", "credits/credit-promotion-hold.service.ts"] },
+  "clinic.usage_bundles": { kind: "service", files: ["credits/usage-bundles/usage-bundle.service.ts"] },
   "nurse.individual_kiorex_listing": { kind: "service", files: ["marketplace/marketplace-listing-eligibility.ts"] },
 };

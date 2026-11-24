@@ -610,6 +610,31 @@ enum CreditReason {
   GOODWILL
   DOWNGRADE_PRORATION
   ADJUSTMENT
+  KIOREX_FEE_OFFSET
+  SUBSCRIPTION_OFFSET
+  DISPUTE_WIN
+  ONBOARDING
+  CONNECT_BONUS
+  USAGE_PURCHASE
+  MARKETING_SPEND
+  SPONSORED_PROMOTION
+  SPONSORED_PROMOTION_REVERSAL
+}
+
+/// GRW-P2-W: provider credit category (drives the default expiry and what a lot may pay for). Never a patient concept.
+enum CreditCategory {
+  SERVICE_RECOVERY
+  ONBOARDING
+  PROMOTIONAL
+  REFERRAL
+  ADJUSTMENT
+}
+
+enum CreditReservationState {
+  RESERVED
+  DEBITED
+  RELEASED
+  REVERSED
 }
 
 enum KiorlyInvoiceStatus {
@@ -1302,6 +1327,7 @@ model Tenant {
   salesRepCode                       String?
   referralCode                       String?
   creditWallet                       CreditWallet?
+  usageUnitLedger                    UsageUnitLedger[]
   referralCodeRow                    ReferralCode?
   referralsGiven                     Referral[]                         @relation("ReferrerTenant")
   referralReceived                   Referral?                          @relation("ReferredTenant")
@@ -4323,6 +4349,7 @@ model CreditWallet {
   updatedAt DateTime            @updatedAt
   tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   entries   CreditLedgerEntry[]
+  reservations CreditReservation[]
 }
 
 model CreditLedgerEntry {
@@ -4339,9 +4366,68 @@ model CreditLedgerEntry {
   note      String?
   createdBy String?
   createdAt DateTime        @default(now())
+  /// GRW-P2-W (migration 20261217100000): append-only, only `remaining` may change (database trigger).
+  category       CreditCategory?
+  campaignRef    String?
+  restrictions   Json?
+  idempotencyKey String?
 
+  @@unique([walletId, idempotencyKey])
   @@index([walletId, createdAt])
   @@index([walletId, expiresAt])
+  @@index([walletId, category])
+}
+
+/// GRW-P2-W: budget hold for a provider-sponsored patient promotion (reserve at booking, debit at completion). Opaque refs only: no patient column.
+model CreditReservation {
+  id              String                 @id @default(cuid())
+  walletId        String
+  wallet          CreditWallet           @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  tenantId        String
+  amount          Decimal                @db.Decimal(14, 2)
+  state           CreditReservationState @default(RESERVED)
+  idempotencyKey  String
+  promotionRef    String
+  holdRef         String
+  debitedAmount   Decimal?               @db.Decimal(14, 2)
+  shortfall       Decimal?               @db.Decimal(14, 2)
+  debitEntryId    String?
+  reversalEntryId String?
+  reservedAt      DateTime               @default(now())
+  settledAt       DateTime?
+
+  @@unique([walletId, idempotencyKey])
+  @@index([walletId, state])
+  @@index([promotionRef])
+}
+
+/// GRW-P2-W: prepaid usage units (never currency). Append-only by trigger.
+model UsageUnitLedger {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  unit            String
+  delta           Int
+  reason          String
+  idempotencyKey  String
+  purchaseEntryId String?
+  createdAt       DateTime @default(now())
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, unit])
+}
+
+/// GRW-P2-W: daily credit reconcile report.
+model CreditReconcileRun {
+  id         String   @id @default(cuid())
+  ranAt      DateTime @default(now())
+  wallets    Int
+  repaired   Int
+  expired    Int
+  mismatches Int
+  details    Json?
+
+  @@index([ranAt])
 }
 
 model KiorlyInvoiceNumberSequence {

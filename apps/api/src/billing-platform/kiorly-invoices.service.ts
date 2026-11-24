@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import {
-  CreditReason,
   KiorlyInvoiceStatus,
   KiorlyLineType,
   MessageChannel,
@@ -15,6 +14,7 @@ import {
 } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { parsePageParams } from "../common/pagination";
+import { CreditFeeDrawdownService } from "../credits/credit-fee-drawdown.service";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { kiorlyInvoiceDueDaysFromMarket } from "./kiorly-invoice.config";
@@ -79,7 +79,12 @@ export class KiorlyInvoicesService {
     private readonly prisma: PrismaService,
     private readonly creditWallet: CreditWalletService,
     private readonly kiorlyPayments: KiorlyPaymentService,
-  ) {}
+    drawdown?: CreditFeeDrawdownService,
+  ) {
+    // GRW-P2-W: credit pays first (first-expiring first, per use), the invoice keeps the remainder
+    this.drawdown = drawdown ?? new CreditFeeDrawdownService(creditWallet);
+  }
+  private readonly drawdown: CreditFeeDrawdownService;
 
   assertDraftForLineMutation(invoice: Pick<KiorlyInvoice, "status">): void {
     if (invoice.status !== KiorlyInvoiceStatus.DRAFT) {
@@ -234,11 +239,8 @@ export class KiorlyInvoicesService {
     const dueAt = new Date(issuedAt.getTime() + dueDays * 86_400_000);
 
     if (invoice.creditsApplied.gt(0)) {
-      await this.creditWallet.consume(tenantId, invoice.creditsApplied.toFixed(2), CreditReason.ADJUSTMENT, {
-        createdBy: actorUserId,
-        invoiceId,
-        note: `Credits applied to Kiorly invoice ${invoice.number}`,
-      });
+      const lines = await this.prisma.kiorlyInvoiceLine.findMany({ where: { invoiceId }, select: { id: true, type: true, amount: true }, orderBy: { createdAt: "asc" } });
+      await this.drawdown.consumeForInvoice(tenantId, { id: invoiceId, number: invoice.number, creditsApplied: invoice.creditsApplied }, lines, actorUserId);
     }
 
     await this.prisma.$transaction(async (tx) => {

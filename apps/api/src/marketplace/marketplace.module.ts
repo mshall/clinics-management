@@ -3,6 +3,7 @@ import { AuditModule } from "../audit/audit.module";
 import { AppointmentsModule } from "../appointments/appointments.module";
 import { ComplianceModule } from "../compliance/compliance.module";
 import { PatientsModule } from "../patients/patients.module";
+import { CreditsModule } from "../credits/credits.module";
 import { BillingPlatformModule } from "../billing-platform/billing-platform.module";
 import { BillingModule } from "../billing/billing.module";
 import { IntegrationsModule } from "../integrations/integrations.module";
@@ -59,6 +60,7 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
     ComplianceModule,
     PatientsModule,
     BillingPlatformModule,
+    CreditsModule,
     BillingModule,
     RecordShareModule,
     KiorexModule,

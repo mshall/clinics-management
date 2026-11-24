@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import "../credits/credits-i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -348,6 +350,7 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
       <CardHeader>
         <CardTitle className="text-base">{t("admin.billing.wallet.title", "Credit wallet")}</CardTitle>
         <CardDescription>{t("admin.billing.wallet.hint")}</CardDescription>
+        <Link to="/credit" className="text-sm font-medium text-primary underline-offset-4 hover:underline" data-testid="credit-details-link">{t("credits.openDetails", "Credit details, expiry and statement")}</Link>
       </CardHeader>
       <CardContent className="space-y-4">
         {walletQuery.isPending ? (

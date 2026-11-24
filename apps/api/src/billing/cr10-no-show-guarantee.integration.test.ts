@@ -177,7 +177,7 @@ describe("CR-10 no-show guarantee service", () => {
   after(async () => {
     if (tenantId) {
       await prisma.appointment.deleteMany({ where: { tenantId } });
-      await prisma.creditLedgerEntry.deleteMany({ where: { wallet: { tenantId } } });
+      // GRW-P2-W: the ledger is append-only (trigger); deleting the wallet cascades its entries
       await prisma.creditWallet.deleteMany({ where: { tenantId } });
       await prisma.auditLog.deleteMany({ where: { tenantId } });
       await prisma.onboardingProgress.deleteMany({ where: { tenantId } });
