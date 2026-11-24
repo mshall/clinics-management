@@ -145,7 +145,8 @@ export class ProviderLinksService {
     return { items: await this.toDtos(tenantId, rows) };
   }
 
-  private async toDtos(tenantId: string, rows: ProviderReferralLink[]): Promise<LinkDto[]> {
+  /** Also used by the staff-app Growth controller (doctor-scoped read). */
+  async toDtos(tenantId: string, rows: ProviderReferralLink[]): Promise<LinkDto[]> {
     if (!rows.length) return [];
     const since = utcDay(new Date(Date.now() - 29 * 86_400_000));
     const [sums, clinics, users] = await Promise.all([

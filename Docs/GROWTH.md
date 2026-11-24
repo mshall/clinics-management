@@ -1,4 +1,4 @@
-# Growth and Marketing (GRW-P1-D1 provider links, D2 commission decisions)
+# Growth and Marketing (GRW-P1-D1 provider links, D2 commission decisions, L staff app)
 
 Status: As-built on branch `kiorex`, 24 Nov 2026. Every default marked PROPOSED_DEFAULT is a founder decision pending. Nothing deployed or pushed.
 
@@ -28,3 +28,10 @@ Bookings through a provider's own links, QR codes or widget never carry a Kiorex
 
 ## Honest gaps
 Staff app Growth tab (later package). Server PDF. `lt` not in the contract. Real evidence fetch untested. The Marketing role is approximated. Widget host and kiorly.link are NEEDS_HUMAN. Kiorex-side verification of `lt` and the canonical page routes belong to packages B/C/E. The doctor-link Playwright case skips when the seeded clinic has no listed doctor.
+
+## L staff app Growth tab (GRW-P1-L)
+- API `apps/api/src/mobile/growth-mobile.{controller,service}.ts` (module `ProviderLinksModule`), all under the `/mobile/*` plan gate (`mobile_staff_app`, 403 `FEATURE_DISABLED`). `GET /mobile/growth` returns the whole tab in one call (level, plan limits, profile URL, links with last-30-day counts, 30-day performance, up to 5 recommendations, month fee statement summary for admins, `webGrowthUrl`); `GET /mobile/growth/links`; `GET /mobile/growth/qr?linkId=` (SVG, profile QR when omitted); `POST /mobile/growth/links` (flag `growth.provider_links`, plan link limit); `PATCH /mobile/growth/links/:id` (pause or resume only, revoke is web-only).
+- Module key `clinic.growth`: GROUP_ADMIN, CLINIC_ADMIN, BRANCH_MANAGER, tenant owner (admin), GROUP_SUPERVISOR (read), CLINIC_ASSISTANT (marketing: create, pause), PHYSICIAN (doctor level: only their own DOCTOR links and profile, no performance, no fee statement, no create). Front desk, call centre, finance, HR and the nurse role get 403 `MODULE_NOT_ALLOWED`. The doctor level is PROPOSED_DEFAULT with the rest of the D1 matrix.
+- No patient data is returned anywhere: counts, link codes, money. The fee statement block carries the period, totals, decision counts and the reconciliation verdict only.
+- Tests: `mobile/growth-mobile.node.test.ts`; end to end `e2e/test/27-growth-provider-journeys.e2e.ts`; app `kiorly/e2e-web/clinic-growth.spec.ts`.
+

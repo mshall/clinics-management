@@ -61,6 +61,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "admin/platform-admin.controller.ts": { kind: "platform" },
   /** Kiorly: gated by MobileInterceptor (`mobile_staff_app`), with the ADR-025 safety-alert routes open on every plan. */
   "mobile/mobile.controller.ts": { kind: "open" },
+  "mobile/growth-mobile.controller.ts": { kind: "open" }, // /mobile/* is plan-gated by MobilePlanGuard (mobile_staff_app); the module key clinic.growth scopes roles
   "admin/admin.controller.ts": { kind: "open" },
   "admin/data-explorer/admin-data-explorer.controller.ts": { kind: "gated", entitlement: "mod_data_explorer" },
   /** Token download only (no JWT); token proves access to a READY org backup artifact. */
