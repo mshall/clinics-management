@@ -41,6 +41,8 @@ export type SetupClinicSnap = {
   availabilityConfigured: boolean;
   /** Marketplace listing ready (bookable type + verified physician). */
   kiorexListingReady: boolean;
+  /** Owner opted this branch out of Kiorex marketplace listing (providerSettings). */
+  kiorexExcludedFromMarketplace: boolean;
 };
 
 export type SetupSnapshot = {
@@ -136,7 +138,9 @@ export const SETUP_DEFS: Def[] = [
   { key: "invite_receptionist", scope: "org", required: false, roles: ADMINS, editions: ["CLINIC", "NURSE"],
     doneOrg: (s) => s.staffInvited, href: () => withSetup("/team", "invite_receptionist") },
   { key: "whatsapp_reminders", scope: "org", required: false, roles: ["group_admin"], needsEntitlement: "whatsapp", editions: ["CLINIC"],
-    doneOrg: (s) => s.whatsAppRemindersEnabled, href: () => withSetup("/admin?section=organization", "whatsapp_reminders") },
+    doneOrg: (s) => s.whatsAppRemindersEnabled,
+    // Hash must stay after query params — withSetup appends ?/&setup=…
+    href: () => `${withSetup("/admin?section=organization", "whatsapp_reminders")}#whatsapp-reminders` },
   { key: "import_patients", scope: "org", required: false, roles: FRONT, editions: ["CLINIC", "NURSE"],
     doneOrg: (s) => s.patientCount > 0, href: () => withSetup("/onboarding/import", "import_patients") },
   { key: "first_appointment", scope: "org", required: true, roles: FRONT, editions: ["CLINIC", "NURSE"],
@@ -146,11 +150,14 @@ export const SETUP_DEFS: Def[] = [
   { key: "doctor_verification", scope: "org", required: false, roles: [...ADMINS, "physician"], editions: ["CLINIC"],
     doneOrg: (s) => s.doctorVerified, href: () => withSetup("/profile/verification", "doctor_verification") },
   { key: "kiorex_profile", scope: "clinic", required: false, roles: ADMINS, editions: ["CLINIC"],
-    doneClinic: (c) => c.kiorexListingReady,
+    doneClinic: (c) => c.kiorexListingReady || c.kiorexExcludedFromMarketplace,
     href: (id) => withSetup(`/clinics/${id}?tab=settings`, "kiorex_profile", id) },
   { key: "connect_kiorex", scope: "org", required: false, hideIfCannot: true, roles: ["group_admin", "clinic_admin"], editions: ["CLINIC", "NURSE"],
     doneOrg: (s) => ["REQUESTED", "IN_REVIEW", "CHANGES_REQUESTED", "APPROVED", "PAUSED"].includes(s.kiorexConnectStatus ?? ""),
-    href: () => withSetup("/kiorex", "connect_kiorex") },
+    href: (_id, s) => {
+      const live = ["REQUESTED", "IN_REVIEW", "CHANGES_REQUESTED", "APPROVED", "PAUSED"].includes(s?.kiorexConnectStatus ?? "");
+      return withSetup(live ? "/kiorex" : "/kiorex/connect", "connect_kiorex");
+    } },
   // GRW-P1-D1: links work standalone (no Kiorex connection needed); marketing staff share the step with the admins
   { key: "growth_links", scope: "org", required: false, roles: ADMINS, editions: ["CLINIC"],
     doneOrg: (s) => (s.referralLinkCount ?? 0) > 0, href: () => withSetup("/kiorex/growth", "growth_links") },

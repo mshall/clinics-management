@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import type { PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh } from "@/components/sortable-th";
@@ -60,9 +60,33 @@ import { AdminKiorexChargesPanel } from "./admin-kiorex-charges-panel";
 import { LiteAdminSettings } from "./lite-admin-settings";
 import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
+type GroupAdminSection = "clinics" | "users" | "patients" | "organization" | "data" | "governance" | "insights";
+type ClinicAdminSection = "staff" | "organization" | "governance" | "insights";
+
+const GROUP_ADMIN_SECTIONS = new Set<string>([
+  "clinics",
+  "users",
+  "patients",
+  "organization",
+  "data",
+  "governance",
+  "insights",
+]);
+const CLINIC_ADMIN_SECTIONS = new Set<string>(["staff", "organization", "governance", "insights"]);
+
+function parseGroupAdminSection(raw: string | null): GroupAdminSection {
+  return raw && GROUP_ADMIN_SECTIONS.has(raw) ? (raw as GroupAdminSection) : "clinics";
+}
+
+function parseClinicAdminSection(raw: string | null): ClinicAdminSection {
+  return raw && CLINIC_ADMIN_SECTIONS.has(raw) ? (raw as ClinicAdminSection) : "staff";
+}
+
 export function AdminPage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { hash } = useLocation();
   const authUser = useAuthStore((s) => s.user);
   const refreshSession = useAuthStore((s) => s.refreshSessionFromServer);
   const orgBaseCurrency = useOrgBaseCurrency();
@@ -241,16 +265,32 @@ export function AdminPage() {
   }, [tenantRows, tfName, tfUsers, tfClinics, tfRegistered, tfPatients]);
 
 
-  const [adminSection, setAdminSection] = useState<
-    "clinics" | "users" | "patients" | "organization" | "data" | "governance" | "insights"
-  >(() => {
-    // Quick setup deep link: /admin?section=organization opens that section (e.g. WhatsApp reminders)
-    const s = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search).get("section");
-    return s === "organization" || s === "users" || s === "patients" || s === "data" || s === "governance" || s === "insights" ? s : "clinics";
-  });
-  const [clinicAdminSection, setClinicAdminSection] = useState<"staff" | "organization" | "governance" | "insights">(
-    "staff",
+  // Side-nav deep links and in-page SectionNav share ?section= so the URL stays the source of truth.
+  const adminSection = parseGroupAdminSection(searchParams.get("section"));
+  const clinicAdminSection = parseClinicAdminSection(searchParams.get("section"));
+  const setAdminSection = useCallback(
+    (id: GroupAdminSection) => {
+      setSearchParams({ section: id }, { replace: true });
+    },
+    [setSearchParams],
   );
+  const setClinicAdminSection = useCallback(
+    (id: ClinicAdminSection) => {
+      setSearchParams({ section: id }, { replace: true });
+    },
+    [setSearchParams],
+  );
+  // Quick-setup / wizard deep-link: scroll to the WhatsApp reminders card once the org section is painted.
+  useEffect(() => {
+    if (hash !== "#whatsapp-reminders") return;
+    if (adminSection !== "organization" && clinicAdminSection !== "organization") return;
+    const id = window.setTimeout(() => {
+      const el = document.getElementById("whatsapp-reminders");
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      el?.focus?.({ preventScroll: true });
+    }, 80);
+    return () => window.clearTimeout(id);
+  }, [hash, adminSection, clinicAdminSection]);
   const [feeDraft, setFeeDraft] = useState("");
   const [currencyDraft, setCurrencyDraft] = useState<string>(orgBaseCurrency);
   const [trnDraft, setTrnDraft] = useState("");

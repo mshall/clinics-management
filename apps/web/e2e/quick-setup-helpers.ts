@@ -85,11 +85,24 @@ export const checklist = (page: Page) => page.getByTestId("setup-checklist");
 export const row = (page: Page, key: string) => page.locator(`[data-testid="setup-step"][data-step="${key}"]`);
 export const bar = (page: Page) => page.getByTestId("setup-bar");
 
-/** Opens a step from the checklist (its primary button) and checks the contextual bar. */
+/** Opens a step from the checklist via the sequential setup wizard, then lands on the action screen. */
 export async function openStep(page: Page, key: string, urlPart: RegExp) {
   const cta = row(page, key).getByTestId("setup-cta");
   await expect(cta).toBeVisible();
   await cta.click();
+  const wizard = page.getByTestId("setup-wizard");
+  await expect(wizard).toBeVisible({ timeout: 10_000 });
+  const doThis = page.getByTestId("setup-wizard-cta");
+  if (await doThis.isVisible().catch(() => false)) {
+    await doThis.click();
+  } else {
+    // Multi-branch steps: expand clinics and open the first pending entity.
+    const toggle = page.getByTestId("setup-wizard-branches-toggle");
+    if (await toggle.isVisible().catch(() => false)) {
+      if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+      await page.getByTestId("setup-wizard-entity").filter({ has: page.getByRole("button", { name: /Open|فتح/i }) }).first().getByRole("button", { name: /Open|فتح/i }).click();
+    }
+  }
   await expect(page).toHaveURL(urlPart);
   await expect(bar(page)).toBeVisible();
   await expect(bar(page)).toHaveAttribute("data-step", key);

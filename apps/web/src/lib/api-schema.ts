@@ -33,6 +33,8 @@ export type ClinicDto = components["schemas"]["ClinicDto"] & {
   recordStatus?: "ACTIVE" | "INACTIVE";
   disabledAt?: string | null;
   createdAt?: string;
+  /** Branch opted out of Kiorex marketplace listing (clinic settings / quick setup). */
+  kiorexExcludedFromMarketplace?: boolean;
 };
 /** OpenAPI snapshot + fields added in API after last codegen */
 export type GroupOverviewKpisDto = components["schemas"]["GroupOverviewKpisDto"] & {

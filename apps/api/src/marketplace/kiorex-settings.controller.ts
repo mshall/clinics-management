@@ -22,8 +22,11 @@ export class KiorexSettingsController {
   ) {}
 
   @Get("overview")
-  @ApiOperation({ summary: "Kiorex performance for a clinic and month: views, bookings, attendance, commission, free progress, rating (KX-10)" })
-  overview(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId: string, @Query("period") period?: string) {
+  @ApiOperation({
+    summary:
+      "Kiorex performance for a clinic or the whole organization and month: views, bookings, attendance, commission, free progress, rating (KX-10). Omit clinicId or pass clinicId=all for organization scope.",
+  })
+  overview(@CurrentUser() user: JwtUser, @Query("clinicId") clinicId?: string, @Query("period") period?: string) {
     return this.overviewSvc.overview(user, clinicId, period);
   }
 

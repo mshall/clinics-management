@@ -4,7 +4,7 @@ import { buildSetupPlan, canPerformStep, skipKey, SETUP_SKIPPED, type SetupClini
 
 const clinic = (id: string, over: Partial<SetupClinicSnap> = {}): SetupClinicSnap => ({
   id, nameEn: `Clinic ${id}`, nameAr: `عيادة ${id}`, logoUrl: null, hasInvoiceLogo: false, licenseNumber: "SELF-SERVE-PENDING",
-  openingTime: "09:00", closingTime: "00:00", hoursConfirmed: false, appointmentTypesConfigured: false, availabilityConfigured: false, kiorexListingReady: false, ...over,
+  openingTime: "09:00", closingTime: "00:00", hoursConfirmed: false, appointmentTypesConfigured: false, availabilityConfigured: false, kiorexListingReady: false, kiorexExcludedFromMarketplace: false, ...over,
 });
 const snap = (over: Partial<SetupSnapshot> = {}): SetupSnapshot => ({
   edition: "CLINIC", nurseKind: null, planKey: "PRO", whatsAppEntitled: true, clinics: [clinic("a")], whatsAppRemindersEnabled: false,
@@ -78,8 +78,24 @@ describe("quick setup plan", () => {
   it("Connect to Kiorex is optional, org-level and detected from the connection status", () => {
     const pending = step(buildSetupPlan(snap(), {}, owner), "connect_kiorex");
     assert.equal(pending.required, false);
-    assert.equal(pending.href, "/kiorex?setup=connect_kiorex");
-    assert.equal(step(buildSetupPlan(snap({ kiorexConnectStatus: "REQUESTED" }), {}, owner), "connect_kiorex").status, "done");
+    assert.equal(pending.href, "/kiorex/connect?setup=connect_kiorex");
+    const live = step(buildSetupPlan(snap({ kiorexConnectStatus: "REQUESTED" }), {}, owner), "connect_kiorex");
+    assert.equal(live.status, "done");
+    assert.equal(live.href, "/kiorex?setup=connect_kiorex");
+  });
+
+  it("WhatsApp reminders deep-links to org admin with hash after query params", () => {
+    const href = step(buildSetupPlan(snap(), {}, owner), "whatsapp_reminders").href;
+    assert.match(href, /^\/admin\?section=organization&setup=whatsapp_reminders#whatsapp-reminders$/);
+  });
+
+  it("excluding a branch from Kiorex marketplace counts the clinic profile step done", () => {
+    const p = buildSetupPlan(
+      snap({ clinics: [clinic("a", { kiorexExcludedFromMarketplace: true })] }),
+      {},
+      owner,
+    );
+    assert.equal(step(p, "kiorex_profile").status, "done");
   });
 
   it("Connect to Kiorex is hidden for roles that are not owner/admin", () => {

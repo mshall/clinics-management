@@ -272,7 +272,10 @@ export class OnboardingService {
     const clinics: SetupClinicSnap[] = tenant.clinics.map((c) => {
       const own = types.filter((t) => t.clinicId === c.id || t.clinicId === null);
       const tpl = templates.filter((t) => t.clinicId === c.id);
-      const ps = (c.providerSettings ?? {}) as { setupHoursConfirmedAt?: string };
+      const ps = (c.providerSettings ?? {}) as {
+        setupHoursConfirmedAt?: string;
+        kiorexExcludedFromMarketplace?: boolean;
+      };
       const hasListingType = listingTypes.some((t) => t.clinicId === c.id || t.clinicId === null);
       return {
         id: c.id,
@@ -287,6 +290,7 @@ export class OnboardingService {
         appointmentTypesConfigured: configured(own, c.createdAt),
         availabilityConfigured: tpl.some((t) => t.updatedAt.getTime() > t.createdAt.getTime() + CONFIGURED_SLACK_MS),
         kiorexListingReady: hasListingType && verifiedPhysicians > 0,
+        kiorexExcludedFromMarketplace: Boolean(ps.kiorexExcludedFromMarketplace),
       };
     });
     void clinicIds;

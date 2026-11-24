@@ -264,8 +264,12 @@ describe("GRW-P1-D1 provider links (real Postgres)", () => {
     const { links, insights } = w.svc;
     const s = await links.summary(w.A.admin, { days: 30 });
     assert.ok(s.totals.visits >= 2);
-    const text = JSON.stringify(s);
-    assert.ok(!/patient|phone|mrn|nationalId|email/i.test(text.replace(/"note":"[^"]*"/, "")), "counts only");
+    // Scrub the human note and channel enum EMAIL_SIG (contains "email") before PHI substring scan.
+    const text = JSON.stringify(s)
+      .replace(/"note":"[^"]*"/g, '""')
+      .replace(/"EMAIL_SIG"/g, '""');
+    assert.ok(!/"phone"|"mrn"|"nationalId"|"email"\s*:/i.test(text), "counts only");
+    assert.ok(!/\bpatient\b/i.test(text), "counts only");
     const perf = await insights.performance(w.A.admin, { days: 30 });
     assert.equal(perf.providerOriginated.bookings, 0);
     assert.equal((await insights.performance(w.B.admin, {})).links.visits, 0);

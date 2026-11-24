@@ -55,14 +55,28 @@ export class KiorexOverviewService {
     return { accepted, rejected };
   }
 
-  async overview(user: JwtUser, clinicId: string, periodRaw?: string) {
-    if (!clinicId) throw new BadRequestException("clinicId is required");
-    const clinic = await this.prisma.clinic.findFirst({
-      where: { id: clinicId, tenantId: user.tenantId ?? undefined },
-      select: { id: true, tenantId: true, defaultCurrency: true },
-    });
-    if (!clinic) throw new NotFoundException("Clinic not found");
-    this.listings.assertClinicManage(user, clinic.tenantId);
+  /**
+   * Performance for one branch, or the whole organization when `clinicId` is omitted / `all`.
+   * Branch managers and clinic/group admins may request either scope (same manage gate as KX-10).
+   */
+  async overview(user: JwtUser, clinicId: string | undefined, periodRaw?: string) {
+    if (!user.tenantId) throw new BadRequestException("Tenant context required");
+    this.listings.assertClinicManage(user, user.tenantId);
+
+    const raw = clinicId?.trim() ?? "";
+    const orgWide = !raw || raw.toLowerCase() === "all";
+
+    let clinic: { id: string; tenantId: string; defaultCurrency: string } | null = null;
+    if (!orgWide) {
+      clinic = await this.prisma.clinic.findFirst({
+        where: { id: raw, tenantId: user.tenantId },
+        select: { id: true, tenantId: true, defaultCurrency: true },
+      });
+      if (!clinic) throw new NotFoundException("Clinic not found");
+    }
+
+    const tenantId = clinic?.tenantId ?? user.tenantId;
+    const clinicScope = clinic ? { clinicId: clinic.id } : {};
 
     let period;
     try {
@@ -72,11 +86,11 @@ export class KiorexOverviewService {
     }
     const range = { gte: period.periodStart, lt: period.periodEnd };
 
-    const [appointments, charges, views, ratings] = await Promise.all([
+    const [appointments, charges, views, ratings, tenant] = await Promise.all([
       this.prisma.appointment.findMany({
         where: {
-          tenantId: clinic.tenantId,
-          clinicId: clinic.id,
+          tenantId,
+          ...clinicScope,
           bookingSource: { in: [...KIOREX_OVERVIEW_SOURCES] },
           startsAt: range,
           patient: { isSample: false },
@@ -84,17 +98,20 @@ export class KiorexOverviewService {
         select: { startsAt: true, status: true, bookingSource: true, isNewPatientAtBooking: true },
       }),
       this.prisma.kiorexCommissionCharge.findMany({
-        where: { tenantId: clinic.tenantId, clinicId: clinic.id, attendedAt: range },
+        where: { tenantId, ...clinicScope, attendedAt: range },
         select: { amount: true, status: true, attendedAt: true, currency: true },
       }),
       this.prisma.kiorexProfileViewDaily.findMany({
-        where: { tenantId: clinic.tenantId, clinicId: clinic.id, day: range },
+        where: { tenantId, ...clinicScope, day: range },
         select: { day: true, views: true },
       }),
       this.prisma.kiorexRating.findMany({
-        where: { tenantId: clinic.tenantId, clinicId: clinic.id },
+        where: { tenantId, ...clinicScope },
         select: { averageRating: true, reviewCount: true },
       }),
+      orgWide
+        ? this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { baseCurrency: true } })
+        : Promise.resolve(null),
     ]);
 
     const figures = summarizeKiorexOverview(period.periodStart, period.periodEnd, appointments, charges, views);
@@ -107,9 +124,10 @@ export class KiorexOverviewService {
     }
 
     return {
-      clinicId: clinic.id,
+      clinicId: clinic?.id ?? null,
+      scope: clinic ? ("clinic" as const) : ("organization" as const),
       periodKey: period.periodKey,
-      currency: charges[0]?.currency ?? clinic.defaultCurrency,
+      currency: charges[0]?.currency ?? clinic?.defaultCurrency ?? tenant?.baseCurrency ?? "EGP",
       ...figures,
       rating: weightedKiorexRating(ratings),
       /** Tenant-wide (all branches): Kiorex commission offset against the Kiorly subscription (CR-07). */

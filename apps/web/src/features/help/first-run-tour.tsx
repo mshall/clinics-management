@@ -17,7 +17,7 @@ function tourDone(userId: string): boolean {
   }
 }
 
-/** Non-blocking 5-step first-run card (ON-08). Auto-opens once on the setup checklist; reopen from Help. */
+/** Role-based product tour (ON-08). Auto-opens once on the setup checklist; reopen from Help or side-nav Quick tour. */
 export function FirstRunTour() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -50,49 +50,77 @@ export function FirstRunTour() {
     setOpen(false);
   };
   const base = `help.tour.${group}.${step.id}`;
+  const shotSrc = step.screenshot ?? `/tour/${group}-${step.id}.svg`;
 
   return (
     <div
       role="dialog"
-      aria-modal="false"
+      aria-modal="true"
       aria-labelledby="first-run-tour-title"
       data-testid="first-run-tour"
-      className="fixed bottom-4 inset-s-4 z-40 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-border bg-card p-4 shadow-lg"
+      className="fixed bottom-4 inset-s-4 z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border bg-card shadow-lg"
     >
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <p className="text-xs text-muted-foreground">{t("help.tour.progress", { current: index + 1, total: steps.length })}</p>
-        <button type="button" onClick={close} className="rounded-sm opacity-70 hover:opacity-100" aria-label={t("help.tour.skip")}>
+      <div className="relative aspect-[16/10] w-full bg-muted">
+        <img
+          src={shotSrc}
+          alt=""
+          className="size-full object-cover object-top"
+          data-testid="tour-screenshot"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+        <button
+          type="button"
+          onClick={close}
+          className="absolute end-2 top-2 rounded-md bg-background/90 p-1.5 text-foreground shadow-sm opacity-90 hover:opacity-100"
+          aria-label={t("help.tour.close", "Close tour")}
+          data-testid="tour-close"
+        >
           <X className="size-4" />
         </button>
       </div>
-      <h2 id="first-run-tour-title" className="text-base font-semibold">
-        {t(`${base}.title`)}
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">{t(`${base}.body`)}</p>
-      {create.error ? <p className="mt-2 text-sm text-destructive">{(create.error as Error).message}</p> : null}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>
-          {t("help.tour.back")}
-        </Button>
-        <div className="flex gap-2">
-          {step.path ? (
-            <Button variant="outline" size="sm" onClick={() => navigate(step.path!)}>
-              {t("help.tour.show")}
-            </Button>
-          ) : null}
-          {step.samplePatient ? (
-            <Button
-              size="sm"
-              disabled={create.isPending}
-              data-testid="tour-sample-patient"
-              onClick={() => create.mutate(undefined, { onSuccess: close })}
-            >
-              {t("help.sample.try")}
-            </Button>
-          ) : null}
-          <Button size="sm" variant={step.samplePatient ? "ghost" : "default"} onClick={last ? close : () => setIndex((i) => i + 1)} data-testid="tour-next">
-            {last ? t("help.tour.done") : t("help.tour.next")}
+      <div className="space-y-3 p-4">
+        <p className="text-xs text-muted-foreground">{t("help.tour.progress", { current: index + 1, total: steps.length })}</p>
+        <h2 id="first-run-tour-title" className="text-base font-semibold">
+          {t(`${base}.title`)}
+        </h2>
+        <p className="text-sm text-muted-foreground">{t(`${base}.body`)}</p>
+        {create.error ? <p className="text-sm text-destructive">{(create.error as Error).message}</p> : null}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <Button type="button" variant="ghost" size="sm" disabled={index === 0} onClick={() => setIndex((i) => i - 1)} data-testid="tour-back">
+            {t("help.tour.back")}
           </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={close} data-testid="tour-close-footer">
+              {t("help.tour.close", "Close")}
+            </Button>
+            {step.path ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => navigate(step.path!)}>
+                {t("help.tour.show")}
+              </Button>
+            ) : null}
+            {step.samplePatient ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled={create.isPending}
+                data-testid="tour-sample-patient"
+                onClick={() => create.mutate(undefined, { onSuccess: close })}
+              >
+                {t("help.sample.try")}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant={step.samplePatient ? "ghost" : "default"}
+              onClick={last ? close : () => setIndex((i) => i + 1)}
+              data-testid="tour-next"
+            >
+              {last ? t("help.tour.done") : t("help.tour.next")}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

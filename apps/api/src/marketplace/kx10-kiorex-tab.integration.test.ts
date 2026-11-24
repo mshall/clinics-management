@@ -331,4 +331,17 @@ describe("KX-10 Kiorex tab (settings + performance)", () => {
     const physician: JwtUser = { userId: physicianId, tenantId, email: "x", role: UserRole.PHYSICIAN };
     await assert.rejects(overview.overview(physician, clinicId, period));
   });
+
+  it("overview with clinicId=all (or omitted) returns organization scope across branches", async () => {
+    const orgAll = await overview.overview(admin, "all", period);
+    assert.equal(orgAll.scope, "organization");
+    assert.equal(orgAll.clinicId, null);
+    const orgOmit = await overview.overview(admin, undefined, period);
+    assert.equal(orgOmit.scope, "organization");
+    assert.equal(orgOmit.bookings, orgAll.bookings);
+    const single = await overview.overview(admin, clinicId, period);
+    assert.equal(single.scope, "clinic");
+    assert.equal(single.clinicId, clinicId);
+    assert.equal(orgAll.bookings, single.bookings);
+  });
 });
