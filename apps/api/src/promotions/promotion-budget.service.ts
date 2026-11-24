@@ -125,7 +125,7 @@ export class PromotionBudgetService {
       await enqueuePromotionEvent(this.outbox, tx, p.tenantId, PROMOTION_EVENT.RESERVED, p.id, discountPayload({ promotionId: p.id, version: v.version, reservationRef, bookingRef: i.bookingRef, amountMinor: i.amountMinor, currency: i.currency }, now));
       await this.syncExhausted(tx, p, v, now);
       return { ok: true, reservationRef, expiresAt, replay: false } as const;
-    }, { timeout: 20_000 }));
+    }, { timeout: 20_000, maxWait: 20_000 }));
   }
 
   /** Releases an unspent hold (cancelled, expired, not confirmed, or a booking that could not use the discount). Idempotent; an unknown or already released reservation is a no-op. */
@@ -146,7 +146,7 @@ export class PromotionBudgetService {
       if (p && v) await this.syncExhausted(tx, p, v);
       return { released: true };
     };
-    return tx0 ? run(tx0) : this.retry(() => this.prisma.$transaction(run, { timeout: 20_000 }));
+    return tx0 ? run(tx0) : this.retry(() => this.prisma.$transaction(run, { timeout: 20_000, maxWait: 20_000 }));
   }
 
   /**
@@ -203,7 +203,7 @@ export class PromotionBudgetService {
       await enqueuePromotionEvent(this.outbox, tx, tenantId, PROMOTION_EVENT.DEBITED, r.promotionId, discountPayload({ promotionId: r.promotionId, version: ver.version, reservationRef: r.reservationRef, bookingRef: r.bookingRef, amountMinor: r.amountMinor, currency: r.currency }, now));
       return { state: "DEBITED", debitedMinor, shortfallMinor };
     };
-    return tx0 ? run(tx0) : this.retry(() => this.prisma.$transaction(run, { timeout: 20_000 }));
+    return tx0 ? run(tx0) : this.retry(() => this.prisma.$transaction(run, { timeout: 20_000, maxWait: 20_000 }));
   }
 
   /** The visit was cancelled or a no-show before completion: the hold is released (no discount was earned). */
@@ -233,7 +233,7 @@ export class PromotionBudgetService {
       const p = await this.load(tx, r.promotionId); const v = p && this.current(p); if (p && v) await this.syncExhausted(tx, p, v);
       return { reversed: true };
     };
-    return tx0 ? run(tx0) : this.retry(() => this.prisma.$transaction(run, { timeout: 20_000 }));
+    return tx0 ? run(tx0) : this.retry(() => this.prisma.$transaction(run, { timeout: 20_000, maxWait: 20_000 }));
   }
 
   /** Sweeper: a hold that never became a booking expires with its slot hold (plus the grace) and its budget is released. */
