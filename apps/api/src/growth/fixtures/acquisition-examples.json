@@ -1,0 +1,103 @@
+{
+  "_source": "Copied from kiorex-contracts 1.10.0 fixtures/growth-v1.10/ (Clinic does not vendor the package; re-copy when the contract version changes). ARCH section 6.7: acquisition block examples for POST /marketplace/v1/bookings (contracts 1.10.0). Every entry validates against components.schemas.AcquisitionBlock.",
+  "valid": {
+    "providerLedExplicitChannel": {
+      "origin": "PROVIDER_LED",
+      "decisionId": "atd_01JF3ZC111",
+      "policyVersion": "agp_01JF3Z0000",
+      "reason": "EXPLICIT_PROVIDER_CHANNEL",
+      "evidenceHash": "fd734d36fd2b727907a156dbdb6c4b4c4da81c0b09f5c6ad6b09c7a111759349",
+      "touch": {
+        "kind": "PROVIDER_QR",
+        "ref": "7K2M9X4Q",
+        "at": "2027-03-04T09:00:00.000Z"
+      }
+    },
+    "providerLedPriorTouch": {
+      "origin": "PROVIDER_LED",
+      "decisionId": "atd_01JF3ZC112",
+      "policyVersion": "agp_01JF3Z0000",
+      "reason": "PRIOR_PROVIDER_TOUCH",
+      "evidenceHash": "fd734d36fd2b727907a156dbdb6c4b4c4da81c0b09f5c6ad6b09c7a111759349",
+      "touch": {
+        "kind": "PROVIDER_LINK",
+        "ref": "7K2M9X4Q",
+        "at": "2027-02-20T08:00:00.000Z"
+      }
+    },
+    "marketplaceTouch": {
+      "origin": "MARKETPLACE",
+      "decisionId": "atd_01JF3ZC113",
+      "policyVersion": "agp_01JF3Z0000",
+      "reason": "MARKETPLACE_TOUCH",
+      "evidenceHash": "fd734d36fd2b727907a156dbdb6c4b4c4da81c0b09f5c6ad6b09c7a111759349",
+      "touch": {
+        "kind": "ORGANIC_SEARCH",
+        "ref": "google",
+        "at": "2027-03-04T08:50:00.000Z"
+      }
+    },
+    "unattributed": {
+      "origin": "UNATTRIBUTED",
+      "decisionId": "atd_01JF3ZC114",
+      "policyVersion": "agp_01JF3Z0000",
+      "reason": "NO_PROVIDER_EVIDENCE",
+      "evidenceHash": "57e73a57ce364f9e469f909d77f28a2bf7685c07b320f882797a3275d0f3276d"
+    },
+    "futureReasonCodeTolerated": {
+      "origin": "MARKETPLACE",
+      "decisionId": "atd_01JF3ZC115",
+      "policyVersion": "agp_01JF3Z0001",
+      "reason": "SOME_FUTURE_REASON",
+      "evidenceHash": "57e73a57ce364f9e469f909d77f28a2bf7685c07b320f882797a3275d0f3276d",
+      "addedLaterField": true
+    }
+  },
+  "invalid": {
+    "missingEvidenceHash": {
+      "origin": "PROVIDER_LED",
+      "decisionId": "d",
+      "policyVersion": "p",
+      "reason": "EXPLICIT_PROVIDER_CHANNEL"
+    },
+    "badOrigin": {
+      "origin": "WHATEVER",
+      "decisionId": "d",
+      "policyVersion": "p",
+      "reason": "EXPLICIT_PROVIDER_CHANNEL",
+      "evidenceHash": "57e73a57ce364f9e469f909d77f28a2bf7685c07b320f882797a3275d0f3276d"
+    },
+    "shortHash": {
+      "origin": "PROVIDER_LED",
+      "decisionId": "d",
+      "policyVersion": "p",
+      "reason": "EXPLICIT_PROVIDER_CHANNEL",
+      "evidenceHash": "abc"
+    },
+    "upperHash": {
+      "origin": "PROVIDER_LED",
+      "decisionId": "d",
+      "policyVersion": "p",
+      "reason": "EXPLICIT_PROVIDER_CHANNEL",
+      "evidenceHash": "57E73A57CE364F9E469F909D77F28A2BF7685C07B320F882797A3275D0F3276D"
+    },
+    "lowerReason": {
+      "origin": "PROVIDER_LED",
+      "decisionId": "d",
+      "policyVersion": "p",
+      "reason": "explicit",
+      "evidenceHash": "57e73a57ce364f9e469f909d77f28a2bf7685c07b320f882797a3275d0f3276d"
+    },
+    "touchWithoutRef": {
+      "origin": "PROVIDER_LED",
+      "decisionId": "d",
+      "policyVersion": "p",
+      "reason": "EXPLICIT_PROVIDER_CHANNEL",
+      "evidenceHash": "57e73a57ce364f9e469f909d77f28a2bf7685c07b320f882797a3275d0f3276d",
+      "touch": {
+        "kind": "PROVIDER_QR",
+        "at": "2027-03-04T09:00:00.000Z"
+      }
+    }
+  }
+}

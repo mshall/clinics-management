@@ -264,6 +264,16 @@ export const CLINIC_FLAG_DEFINITIONS: readonly FlagDefinition[] = [
     whenOffAr: "تُرفض أكواد المندوبين عند التسجيل؛ تُحترم العمولات المكتسبة",
   }),
   clinic({
+    key: "growth.provider_links",
+    scopes: GMO,
+    class: "Module",
+    dependsOn: [],
+    descriptionEn: "Provider referral links, QR codes and printable posters (growth engine, contracts 1.10.0)",
+    descriptionAr: "روابط الإحالة ورموز QR والملصقات المطبوعة للمزوّد (محرك النمو، العقود 1.10.0)",
+    whenOffEn: "No new links, QR codes or posters can be created; existing links keep resolving and counting; bookings through them stay provider-led and never carry a Kiorex fee",
+    whenOffAr: "لا يمكن إنشاء روابط أو رموز QR أو ملصقات جديدة؛ تظل الروابط القائمة تعمل وتُحتسب؛ تبقى الحجوزات عبرها من المزوّد ولا تتحمل رسم كيوريكس",
+  }),
+  clinic({
     key: "clinic.profession.physiotherapy",
     scopes: GM,
     class: "Module",

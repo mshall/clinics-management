@@ -524,6 +524,8 @@ enum CommissionDisputeReason {
   DID_NOT_ATTEND
   DUPLICATE
   OTHER
+  /// Growth engine (GRW-P1-D0): the provider shows Kiorex attribution evidence that the booking was provider-led (auto-approvable when the signed evidence confirms it).
+  PROVIDER_LED_EVIDENCE
 }
 
 enum CommissionDisputeStatus {
@@ -1307,6 +1309,8 @@ model Tenant {
   kiorlyPaymentMethods               KiorlyPaymentMethod[]
   kiorlyPayments                     KiorlyPayment[]
   kiorexCommissionCharges            KiorexCommissionCharge[]
+  providerReferralLinks              ProviderReferralLink[]
+  bookingWidgetConfigs               BookingWidgetConfig[]
   commissionDisputes                 CommissionDispute[]
   clinicianVerifications             ClinicianVerification[]
   professionalRegistrations          ProfessionalRegistration[]
@@ -1798,6 +1802,8 @@ model Clinic {
   appointmentSeries               AppointmentSeries[]
   appointmentWaitlist             AppointmentWaitlistEntry[]
   kiorexCommissionCharges         KiorexCommissionCharge[]
+  providerReferralLinks           ProviderReferralLink[]
+  bookingWidgetConfig             BookingWidgetConfig?
   marketplaceListings             MarketplaceListing[]
   slotHolds                       SlotHold[]
   /// When false, Kiorex bookings stay SCHEDULED until front desk confirms (KX-04).
@@ -2547,6 +2553,10 @@ model Appointment {
   notes                        String?
   bookingSource                BookingSource                @default(FRONT_DESK)
   attributionJson              Json?
+  /// Growth engine (GRW-P1-D0): commission-relevant origin from the Kiorex attribution decision. Null = UNATTRIBUTED, today's rules apply unchanged.
+  acquisitionOrigin            AcquisitionOrigin?
+  acquisitionDecisionRef       String?
+  acquisitionPolicyVersion     String?
   isNewPatientAtBooking        Boolean?
   newPatientCheckedAt          DateTime?
   satisfactionSurveys          SatisfactionSurveyResponse[]
@@ -2571,6 +2581,7 @@ model Appointment {
   encounters                   Encounter[]
   rescheduleToken              AppointmentRescheduleToken?
   kiorexCommissionCharge       KiorexCommissionCharge?
+  kiorexCommissionDecisions    KiorexCommissionDecision[]
   createdAt                    DateTime                     @default(now())
   updatedAt                    DateTime                     @updatedAt
 
@@ -5415,4 +5426,129 @@ model HandoffCode {
   usedAt    DateTime?
 
   @@index([expiresAt])
+}
+
+// ───────────────────────── growth engine: provider links, widget settings, commission decisions (GRW-P1-D0, ARCH sections 4.2, 6.7, 11) ─────────────────────────
+// Links work standalone (no Kiorex connection needed) and never carry a Kiorex fee. KiorexCommissionDecision is append-only (DB trigger in migration 20261128110000_growth_links_attribution).
+
+enum ReferralLinkOwnerScope {
+  ORG
+  CLINIC
+  BRANCH
+  DOCTOR
+  DESK
+}
+
+enum ReferralLinkChannelKind {
+  WEB_LINK
+  QR_POSTER
+  QR_DESK
+  SOCIAL
+  SMS
+  WHATSAPP_SHARE
+  EMAIL_SIG
+  GOOGLE_PROFILE
+}
+
+enum ReferralLinkStatus {
+  ACTIVE
+  PAUSED
+  REVOKED
+}
+
+/// Commission-relevant acquisition origin (ARCH 6.1). Mirrors @kiorex/contracts ACQUISITION_ORIGINS; Clinic keeps its own copy (src/growth/acquisition-contract.ts).
+enum AcquisitionOrigin {
+  PROVIDER_LED
+  MARKETPLACE
+  UNATTRIBUTED
+}
+
+enum CommissionDecisionKind {
+  CHARGE
+  NO_CHARGE
+  WAIVED
+}
+
+/// A provider-owned tracking link or QR. `code` is 8 Crockford base32 characters (no I, L, O, U), globally unique; branchRef is a child Clinic id.
+model ProviderReferralLink {
+  id          String                  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId    String
+  clinic      Clinic                  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinicianId String?
+  branchRef   String?
+  deskLabel   String?
+  ownerScope  ReferralLinkOwnerScope  @default(CLINIC)
+  channelKind ReferralLinkChannelKind @default(WEB_LINK)
+  code        String                  @unique
+  label       String
+  status      ReferralLinkStatus      @default(ACTIVE)
+  createdBy   String
+  revokedAt   DateTime?
+  revokedBy   String?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  daily ProviderReferralLinkDaily[]
+
+  @@index([tenantId, status])
+  @@index([clinicId, status])
+}
+
+/// Counters only (never patient data): visits counted without cookies, bookings and attended derived from appointments carrying the link.
+model ProviderReferralLinkDaily {
+  linkId    String
+  link      ProviderReferralLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  tenantId  String
+  date      DateTime             @db.Date
+  visits    Int                  @default(0)
+  bookings  Int                  @default(0)
+  attended  Int                  @default(0)
+  updatedAt DateTime             @updatedAt
+
+  @@id([linkId, date])
+  @@index([tenantId, date])
+}
+
+/// Org-owned widget settings. allowedOrigins: JSON array of exact https origins, at most 10 (CHECK in the migration); changes are audited by D1 and projected to Kiorex as PROVIDER_PROFILE_UPDATED.widgetOrigins.
+model BookingWidgetConfig {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId       String   @unique
+  clinic         Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  enabled        Boolean  @default(false)
+  allowedOrigins Json     @default("[]")
+  theme          String   @default("auto")
+  locale         String   @default("ar")
+  updatedBy      String?
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+/// Append-only explanation of why a Kiorex fee was or was not applied (1:1 per appointment and policy version). Written by the commission service at check-in.
+model KiorexCommissionDecision {
+  id            String                 @id @default(cuid())
+  tenantId      String
+  clinicId      String
+  appointmentId String
+  appointment   Appointment            @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  policyVersion String
+  origin        AcquisitionOrigin
+  bookingSource BookingSource
+  isNewPatient  Boolean
+  decision      CommissionDecisionKind
+  reasonCodes   String[]
+  rateId        String?
+  amount        Decimal?               @db.Decimal(14, 2)
+  currency      String?
+  inputsHash    String
+  createdAt     DateTime               @default(now())
+
+  @@unique([appointmentId, policyVersion])
+  @@index([tenantId, createdAt])
+  @@index([clinicId, createdAt])
 }

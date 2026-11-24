@@ -1,0 +1,90 @@
+{
+  "_source": "Copied from kiorex-contracts 1.10.0 fixtures/growth-v1.10/ (Clinic does not vendor the package; re-copy when the contract version changes). kiorex-contracts 1.10.0 test/growth.test.ts. Clinic copies these into apps/api/src/growth/fixtures/ (it does not vendor the package) and proves its copy of the helpers against them.",
+  "canonicalJson": [
+    {
+      "input": {
+        "b": 1,
+        "a": [
+          {
+            "z": null,
+            "x": "é"
+          }
+        ],
+        "c": true
+      },
+      "output": "{\"a\":[{\"x\":\"é\",\"z\":null}],\"b\":1,\"c\":true}"
+    },
+    {
+      "input": {
+        "k": "v",
+        "n": [
+          3,
+          1,
+          2
+        ]
+      },
+      "output": "{\"k\":\"v\",\"n\":[3,1,2]}"
+    }
+  ],
+  "inputsHash": [
+    {
+      "name": "explicit provider channel, two touches (order-insensitive input)",
+      "inputs": {
+        "booking": {
+          "id": "kx_bk_01JF3ZC000",
+          "orgId": "org_01JF3ZH000",
+          "clinicId": "clinic_01JF3Z7ZZZ",
+          "doctorId": "clin_01JF3Z7AAA",
+          "createdAt": "2027-03-04T09:12:44.000Z",
+          "channel": "CLINIC_LINK",
+          "hasValidLt": true
+        },
+        "touches": [
+          {
+            "id": "tch_02",
+            "occurredAt": "2027-03-04T09:00:00.000Z"
+          },
+          {
+            "id": "tch_01",
+            "occurredAt": "2027-03-03T08:00:00.000Z"
+          }
+        ],
+        "policyVersion": "agp_01JF3Z0000",
+        "precedence": "PROVIDER_FIRST"
+      },
+      "hash": "fd734d36fd2b727907a156dbdb6c4b4c4da81c0b09f5c6ad6b09c7a111759349"
+    },
+    {
+      "name": "no touches, marketplace channel",
+      "inputs": {
+        "booking": {
+          "id": "kx_bk_01JF3ZC999",
+          "orgId": "org_01JF3ZH000",
+          "createdAt": "2027-01-01T00:00:00.000Z",
+          "channel": "MARKETPLACE"
+        },
+        "touches": [],
+        "policyVersion": "agp_01JF3Z0000"
+      },
+      "hash": "57e73a57ce364f9e469f909d77f28a2bf7685c07b320f882797a3275d0f3276d"
+    }
+  ],
+  "widgetOrigins": {
+    "valid": [
+      "https://clinic.example.com",
+      "https://www.nile-clinic.eg",
+      "https://book.example.com:8443"
+    ],
+    "invalid": [
+      "http://clinic.example.com",
+      "https://*.example.com",
+      "https://example.com/path",
+      "https://example.com?x=1",
+      "https://localhost",
+      "clinic.example.com",
+      "https://EXAMPLE.com",
+      "https://a_b.example.com",
+      ""
+    ]
+  }
+}
