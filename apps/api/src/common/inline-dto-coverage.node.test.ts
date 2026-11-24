@@ -128,3 +128,24 @@ describe("the former Record<string, unknown> bodies are validated DTOs (EDGE clo
     for (const bad of [undefined, null, [], "x", 5, deep(10), { s: "x".repeat(2000) }, JSON.parse('{"__proto__":{"x":1}}')]) assert.throws(() => bounded.transform(bad), BadRequestException);
   });
 });
+
+describe("nested objects are required, not just validated when present (a TypeError is a 500 now)", () => {
+  it("collect-visit-balance and the provider profile reject a body without the nested object", async () => {
+    const { CollectVisitBalanceDto } = await import("../front-desk/dto/collect-visit-balance.dto");
+    const { PutProviderProfileDto } = await import("../marketplace/dto/put-provider-profile.dto");
+    await rejects(() => run(CollectVisitBalanceDto, {}));
+    await rejects(() => run(PutProviderProfileDto, {}));
+  });
+  it("no @ValidateNested() property is left without @IsDefined / @IsOptional / @ValidateIf (ratchet)", () => {
+    const offenders: string[] = [];
+    const dtoFiles = (dir: string): string[] => readdirSync(dir).flatMap((n) => { const p = join(dir, n); return statSync(p).isDirectory() ? dtoFiles(p) : /\.dto\.ts$/.test(p) ? [p] : []; });
+    for (const f of dtoFiles(SRC)) {
+      const text = readFileSync(f, "utf8");
+      for (const m of text.matchAll(/((?:[ \t]*@\w+\([^\n]*\)\n|[ \t]*\/\/[^\n]*\n)+)[ \t]*(\w+)(\?|!)?:[^;\n]+;/g)) {
+        const dec = m[1] ?? "";
+        if (dec.includes("@ValidateNested") && !/@(IsOptional|IsDefined|ValidateIf|IsNotEmptyObject)\b/.test(dec) && !dec.includes("each: true") && m[3] !== "?") offenders.push(`${f.slice(SRC.length + 1)}: ${m[2]}`);
+      }
+    }
+    assert.deepEqual(offenders, []);
+  });
+});
