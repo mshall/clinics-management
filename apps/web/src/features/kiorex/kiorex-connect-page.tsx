@@ -22,7 +22,14 @@ const TONE: Record<ConnectStepStatus, string> = { done: "text-emerald-700 dark:t
 
 function detailText(t: TFunction, s: ConnectStepDto): string {
   const d = (s.detail ?? {}) as Record<string, number | string[]>;
-  if (s.key === "credentials") return [t("kiorexConnect.detail.verified", d), Number(d.pending) > 0 ? t("kiorexConnect.detail.pending", d) : ""].filter(Boolean).join(" · ");
+  if (s.key === "credentials") {
+    return [
+      t("kiorexConnect.detail.verified", d),
+      Number(d.pending) > 0 ? t("kiorexConnect.detail.pending", d) : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
   if (s.key === "appointment_types") return t("kiorexConnect.detail.bookable", { withFee: d.withFee });
   if (s.key === "availability" || s.key === "profile") return t("kiorexConnect.detail.doctors", d);
   if (s.key === "live") return t("kiorexConnect.detail.live", d);

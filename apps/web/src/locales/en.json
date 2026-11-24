@@ -7,6 +7,7 @@
     "orgPlanHint": "Your organization's current Kiorly plan",
     "orgSpecialty": "Specialty",
     "orgWorkspace": "Organization workspace",
+    "orgIdentityHint": "Organization, specialty, and plan",
     "newVersionAvailable": "A new version is available. Reload to get the latest fixes (save your work first).",
     "reloadNow": "Reload now"
   },

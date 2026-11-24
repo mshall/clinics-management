@@ -7,7 +7,6 @@ import { AppNavLinks } from "@/components/app-nav-links";
 import { DateRangeBar } from "@/components/date-range-bar";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { OrgIdentityBar } from "@/components/org-identity-bar";
@@ -125,26 +124,17 @@ export function AppShell() {
           </div>
           {orgName ? (
             <div className="ms-1 min-w-0 flex-1 basis-0 md:ms-0 md:max-w-md lg:max-w-xl xl:max-w-2xl">
-              <OrgIdentityBar name={orgName} specialtyLabel={orgSpecialtyLabel} />
+              <OrgIdentityBar
+                name={orgName}
+                specialtyLabel={orgSpecialtyLabel}
+                planLabel={orgPlanKey ? orgPlanLabel(orgPlanKey, t) : null}
+              />
             </div>
           ) : (
             <div className="min-w-0 flex-1" aria-hidden />
           )}
           <div className="ms-auto flex min-w-0 shrink-0 items-center justify-end gap-0.5 sm:gap-1.5">
             <GlobalPatientSearch />
-            {orgPlanKey ? (
-              <Badge
-                variant="outline"
-                className="hidden max-w-36 shrink-0 gap-1 border-sky-500/30 bg-sky-500/10 font-semibold text-sky-800 sm:inline-flex dark:text-sky-300 sm:max-w-40"
-                data-testid="header-org-plan"
-                title={t("app.orgPlanHint", "Your organization's current Kiorly plan")}
-              >
-                <span className="hidden text-[10px] font-medium uppercase tracking-wide text-sky-800 dark:text-sky-200 sm:inline">
-                  {t("app.orgPlan", "Plan")}
-                </span>
-                <span className="truncate">{orgPlanLabel(orgPlanKey, t)}</span>
-              </Badge>
-            ) : null}
             {user ? (
               <span className="hidden max-w-[16rem] items-center gap-2 truncate border-s border-border/70 ps-3 text-sm leading-tight lg:inline-flex">
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground" aria-hidden>{user.displayName.trim().charAt(0).toUpperCase()}</span>
