@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
-import * as bcrypt from "bcryptjs";
+import { passwordHasher } from "./password-hasher";
 import { createHash, randomBytes } from "node:crypto";
 import { jwtVerify } from "jose";
 import { AuditService } from "../audit/audit.service";
@@ -104,7 +104,7 @@ export class KiorexOidcService {
       where: { id: userId, deletedAt: null, deactivatedAt: null },
       select: { passwordHash: true },
     });
-    if (!user?.passwordHash || !password || !bcrypt.compareSync(password, user.passwordHash)) {
+    if (!user?.passwordHash || !password || !(await passwordHasher.compare(password, user.passwordHash))) {
       throw new UnauthorizedException("Password confirmation failed");
     }
     const existing = await this.prisma.kiorexIdentityLink.findUnique({ where: { userId } });
@@ -119,7 +119,7 @@ export class KiorexOidcService {
 
   async unlink(userId: string, password: string) {
     const user = await this.prisma.user.findFirst({ where: { id: userId }, select: { passwordHash: true, tenantId: true } });
-    if (!user?.passwordHash || !bcrypt.compareSync(password ?? "", user.passwordHash)) {
+    if (!user?.passwordHash || !(await passwordHasher.compare(password ?? "", user.passwordHash))) {
       throw new UnauthorizedException("Password confirmation failed");
     }
     const link = await this.prisma.kiorexIdentityLink.findUnique({ where: { userId } });

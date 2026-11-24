@@ -137,7 +137,7 @@ describe("FawryPay (faked HTTP)", () => {
     await assert.rejects(fawry().refund({ providerRef: "x", amount: "1.00", currency: "EGP", idempotencyKey: "k" }), PspError);
   });
   it("has no card tokens either", async () => {
-    await assert.rejects(fawry().createCardSession(), PspError); assert.equal(fawry().tokenizeFromWebhook(), null);
+    await assert.rejects(fawry().createCardSession({} as never), PspError); assert.equal(fawry().tokenizeFromWebhook(), null);
   });
 });
 
