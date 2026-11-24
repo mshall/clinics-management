@@ -39,7 +39,6 @@ export class KiorexOidcService {
   private readonly log = new Logger(KiorexOidcService.name);
   private portPromise: Promise<KiorexOidcPort> | null = null;
   private portOverride: KiorexOidcPort | null = null;
-  private readonly seenJti = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -276,10 +275,15 @@ export class KiorexOidcService {
     const jti = typeof payload.jti === "string" ? payload.jti : undefined;
     if (!sub && !sid) throw new BadRequestException("logout token needs sub or sid");
     if (!jti) throw new BadRequestException("logout token needs jti");
+    // replay cache in Postgres: shared by every API instance (an in-memory map accepted a replay that landed on another instance)
     const now = Date.now();
-    for (const [k, exp] of this.seenJti) if (exp < now) this.seenJti.delete(k);
-    if (this.seenJti.has(jti)) throw new BadRequestException("logout token replayed");
-    this.seenJti.set(jti, ((payload.exp ?? 0) as number) * 1000 || now + 120_000);
+    try {
+      await this.prisma.kiorexLogoutTokenSeen.create({ data: { jti, expiresAt: new Date(Math.max(((payload.exp ?? 0) as number) * 1000 || now + 120_000, now) + 5 * 60_000) } });
+    } catch (e) {
+      if ((e as { code?: string }).code === "P2002") throw new BadRequestException("logout token replayed");
+      throw e;
+    }
+    void this.prisma.kiorexLogoutTokenSeen.deleteMany({ where: { expiresAt: { lt: new Date(now) } } }).catch(() => undefined);
 
     const subjectDeleted = KX_SUBJECT_DELETED in events;
     const revokedAt = new Date();

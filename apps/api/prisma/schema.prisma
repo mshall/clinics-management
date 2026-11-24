@@ -4540,6 +4540,15 @@ model KiorexIdentityLink {
   @@unique([issuer, subject])
 }
 
+/// KCV-201 — jti of every accepted Kiorex Passport logout_token (back-channel-logout replay protection, shared by all API instances). Purged after the token's own expiry.
+model KiorexLogoutTokenSeen {
+  jti       String   @id
+  seenAt    DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
 /// KCV-201 — short-lived authorization-code + PKCE transaction (state is the primary key) and post-callback MFA ticket.
 model KiorexOidcTransaction {
   state        String   @id

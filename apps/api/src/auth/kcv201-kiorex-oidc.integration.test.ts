@@ -196,6 +196,11 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
     assert.deepEqual(await svc.backchannelLogout(tok), { revoked: 1 });
     assert.ok((await prisma.userSession.findUniqueOrThrow({ where: { id: s.sessionId } })).revokedAt);
     await assert.rejects(() => svc.backchannelLogout(tok), /replayed/);
+    // a SECOND API instance (own service object, same database) refuses the same token: the replay cache is shared, not per process
+    const otherInstance = new KiorexOidcService(prismaSvc, {} as never, new AuditService(prismaSvc), { isEnabledForUser: async () => true } as never);
+    otherInstance.setPortForTests(port());
+    await assert.rejects(() => otherInstance.backchannelLogout(tok), /replayed/);
+    assert.equal(await prisma.kiorexLogoutTokenSeen.count(), 1);
     const badAud = await logoutToken({ sid: "x" }, { aud: "other" });
     await assert.rejects(() => svc.backchannelLogout(badAud), /invalid logout token/);
     const other = await generateKeyPair("RS256");
