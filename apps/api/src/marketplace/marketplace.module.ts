@@ -39,6 +39,8 @@ import { KiorexImportService } from "./kiorex-import.service";
 import { KiorexModule } from "../kiorex/kiorex.module";
 import { KiorexConnectController } from "./kiorex-connect.controller";
 import { KiorexConnectService } from "./kiorex-connect.service";
+import { KiorexFrontDoorController } from "./kiorex-front-door.controller";
+import { KiorexFrontDoorService } from "./kiorex-front-door.service";
 import { KiorexConnectionController } from "./kiorex-connection.controller";
 
 @Module({
@@ -68,6 +70,7 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
     PublicBookingPageController,
     KiorexImportController,
     KiorexConnectController,
+    KiorexFrontDoorController,
     KiorexConnectionController,
   ],
   providers: [
@@ -89,6 +92,7 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
     MarketplaceWaitlistService,
     KiorexImportService,
     KiorexConnectService,
+    KiorexFrontDoorService,
   ],
   exports: [MarketplaceListingService, PlatformIntegrationClientService, MarketplaceProviderProfileService],
 })

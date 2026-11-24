@@ -23,6 +23,10 @@ interface ConnectDoc {
   /** AES-GCM sealed (field-crypto) intake key Kiorex issued once at the first request; signs every later request. The enrolment code itself is never stored. */
   intakeKeyEnc?: string;
   kiorex?: { status: string; reason?: string | null; at: string };
+  /** Front door (ADR-040): the wizard was started; the Kiorex tab was viewed while standalone; a Talk to us lead was sent. */
+  wizardStartedAt?: string;
+  interestAt?: string;
+  lead?: { at: string };
 }
 
 /** Kiorex API base for the signed connection request: derived from the existing outbox webhook URL (no new secret, PHI-free body). */
@@ -68,13 +72,13 @@ export class KiorexConnectService {
     @Optional() private readonly flags?: FeatureFlagsService,
   ) {}
 
-  private doc(raw: unknown): ConnectDoc | undefined { return (raw as { kiorexConnect?: ConnectDoc } | null | undefined)?.kiorexConnect; }
-  private async saveDoc(tenantId: string, next: ConnectDoc) {
+  doc(raw: unknown): ConnectDoc | undefined { return (raw as { kiorexConnect?: ConnectDoc } | null | undefined)?.kiorexConnect; }
+  async saveDoc(tenantId: string, next: ConnectDoc) {
     const t = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { providerSettings: true } });
     await this.prisma.tenant.update({ where: { id: tenantId }, data: { providerSettings: { ...((t.providerSettings ?? {}) as Prisma.JsonObject), kiorexConnect: next as unknown as Prisma.JsonObject } } });
   }
 
-  private async loadClinic(user: JwtUser, clinicId: string) {
+  async loadClinic(user: JwtUser, clinicId: string) {
     if (!clinicId) throw new BadRequestException("clinicId is required");
     const clinic = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId: user.tenantId ?? undefined }, select: { id: true, tenantId: true, latitude: true, longitude: true, addressEn: true, addressAr: true, tenant: { select: { id: true, edition: true, name: true, nameAr: true, providerSettings: true, market: { select: { code: true, clinicalConfig: true } } } } } });
     if (!clinic) throw new NotFoundException("Clinic not found");

@@ -1,0 +1,21 @@
+/** Functional labels of the state-aware Kiorex tab (states, live dashboard). Marketing wording is NOT here: see kiorex-marketing-strings.ts. */
+export const doorEn = {
+  state: { NOT_CONNECTED: "Not connected", IN_PROGRESS: "Connecting", WAITING: "Waiting for Kiorex", LIVE: "Live on Kiorex", ATTENTION: "Needs attention" },
+  progress: { title: "Your connection to Kiorex", next: "Next step", allDone: "Every step is done", open: "Open the full checklist", step: "Step {{n}}", of: "{{done}} of {{total}} done" },
+  waiting: { title: "Kiorex is reviewing your request", body: "You do not need to do anything. Kiorex reviews it and your listings go live automatically once approved. This page refreshes by itself.", next: "What happens next", n1: "The Kiorex team checks your documents and details.", n2: "If something is missing they ask for a change and you see it here.", n3: "When approved, your doctors appear in Kiorex search." },
+  attention: { PAUSED: "Your Kiorex listing is paused", CHANGES_REQUESTED: "Kiorex asked for changes", REJECTED: "Your request was not approved", fix: "What is missing", howTo: "Fix the open steps in the checklist, then send the request again.", howToPaused: "Contact Kiorex support to resume. Patients cannot book you meanwhile." },
+  live: { title: "Kiorex at a glance", month: "This month", bookings: "Kiorex bookings", attended: "Attended", newPatients: "New patients", fees: "Kiorex fees charged", feesHint: "{{visits}} charged visits", rating: "Rating", noRating: "No reviews yet", reviews: "{{count}} reviews", listings: "Listings", listingsHint: "Per doctor and branch", recent: "Recent Kiorex bookings", noRecent: "No Kiorex bookings yet.", channel: { marketplace: "Kiorex", whatsapp: "WhatsApp" }, pause: "Pause", resume: "Resume", pausedByYou: "Paused by you", settings: "Connection settings", doctor: "Doctor", status: "Status", when: "When", via: "Via", appt: { SCHEDULED: "Scheduled", CONFIRMED: "Confirmed", CHECKED_IN: "Checked in", COMPLETED: "Completed", CANCELLED: "Cancelled", NO_SHOW: "No show", IN_PROGRESS: "In progress", RESCHEDULED: "Rescheduled" } },
+  unavailable: "Kiorex information is available to clinic owners and managers.",
+  loading: "Loading",
+} as const;
+type W<T> = T extends string ? string : { [K in keyof T]: W<T[K]> };
+export type DoorStrings = W<typeof doorEn>;
+export const doorAr: DoorStrings = {
+  state: { NOT_CONNECTED: "غير مرتبط", IN_PROGRESS: "جار الربط", WAITING: "بانتظار كيوريكس", LIVE: "مفعل على كيوريكس", ATTENTION: "يحتاج انتباها" },
+  progress: { title: "ربطك بكيوريكس", next: "الخطوة التالية", allDone: "اكتملت كل الخطوات", open: "افتح القائمة الكاملة", step: "الخطوة {{n}}", of: "تم {{done}} من {{total}}" },
+  waiting: { title: "كيوريكس يراجع طلبك", body: "لا تحتاج إلى فعل شيء. يراجعه كيوريكس وتصبح قوائمك مفعلة تلقائيا بعد الموافقة. تتحدث هذه الصفحة تلقائيا.", next: "ماذا يحدث بعد ذلك", n1: "يتحقق فريق كيوريكس من مستنداتك وبياناتك.", n2: "إذا نقص شيء يطلبون تعديلا وتراه هنا.", n3: "عند الموافقة يظهر أطباؤك في بحث كيوريكس." },
+  attention: { PAUSED: "تم إيقاف ظهورك على كيوريكس", CHANGES_REQUESTED: "طلب كيوريكس تعديلات", REJECTED: "لم تتم الموافقة على طلبك", fix: "ما الناقص", howTo: "أصلح الخطوات المفتوحة في القائمة ثم أرسل الطلب مرة أخرى.", howToPaused: "تواصل مع دعم كيوريكس للاستئناف. لا يستطيع المرضى الحجز عندك في هذه الأثناء." },
+  live: { title: "كيوريكس في لمحة", month: "هذا الشهر", bookings: "حجوزات كيوريكس", attended: "حضروا", newPatients: "مرضى جدد", fees: "رسوم كيوريكس المحتسبة", feesHint: "{{visits}} زيارات محتسبة", rating: "التقييم", noRating: "لا تقييمات بعد", reviews: "{{count}} تقييمات", listings: "القوائم", listingsHint: "لكل طبيب وفرع", recent: "آخر حجوزات كيوريكس", noRecent: "لا توجد حجوزات من كيوريكس بعد.", channel: { marketplace: "كيوريكس", whatsapp: "واتساب" }, pause: "إيقاف", resume: "استئناف", pausedByYou: "أوقفته أنت", settings: "إعدادات الربط", doctor: "الطبيب", status: "الحالة", when: "الموعد", via: "عبر", appt: { SCHEDULED: "مجدول", CONFIRMED: "مؤكد", CHECKED_IN: "تم الاستقبال", COMPLETED: "مكتمل", CANCELLED: "ملغي", NO_SHOW: "لم يحضر", IN_PROGRESS: "جار", RESCHEDULED: "أعيدت جدولته" } },
+  unavailable: "معلومات كيوريكس متاحة لأصحاب العيادة والمديرين.",
+  loading: "جار التحميل",
+};
