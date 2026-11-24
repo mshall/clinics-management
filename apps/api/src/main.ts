@@ -16,11 +16,13 @@ import { webBuildIdMiddleware } from "./common/web-build-id.middleware";
 import compressionMiddleware from "compression";
 import { json, type NextFunction, type Request, type Response } from "express";
 import { assertProviderEnv } from "./common/provider-env";
+import { warnIfLeadSigningMissing } from "./common/lead-signing-status";
 
 async function bootstrap() {
   bootstrapTelemetry();
   applyStagingEnvDefaults();
   assertProviderEnv(); // fail fast: MODE=real but URL/credentials missing
+  warnIfLeadSigningMissing(); // production without KIOREX_LEAD_SIGNING_SECRET: a notice only (names, never values)
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
   // Org-onboarding import chunks carry base64 documents: a larger JSON limit on that HMAC path only (the signature is verified over the raw bytes).

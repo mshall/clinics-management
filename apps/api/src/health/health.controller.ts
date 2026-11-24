@@ -2,6 +2,7 @@ import { Controller, Get, ServiceUnavailableException } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { PrismaService } from "../prisma/prisma.service";
 import { providerStatus } from "../common/provider-env";
+import { leadSigningStatus } from "../common/lead-signing-status";
 
 @ApiTags("health")
 @Controller("health")
@@ -37,7 +38,7 @@ export class HealthController {
   async ready() {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-      return { status: "ok", database: "ok", providers: providerStatus() };
+      return { status: "ok", database: "ok", providers: providerStatus(), leadSigning: leadSigningStatus() };
     } catch {
       throw new ServiceUnavailableException({ status: "degraded", database: "unavailable" });
     }

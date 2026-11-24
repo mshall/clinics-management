@@ -157,6 +157,18 @@ variable "telehealth_turn_secret" {
   default     = false
 }
 
+variable "lead_signing_secret" {
+  description = "ADR-040: create the EMPTY partner-lead signing secret container (value via kiorex-platform scripts/setup-partner-lead-secret.sh)."
+  type        = bool
+  default     = false
+}
+
+variable "lead_signing_secret_inject" {
+  description = "ADR-040: wire the container into the runtime env (only after the script has written a value)."
+  type        = bool
+  default     = false
+}
+
 variable "placeholder_secrets" {
   description = "Secret containers populated by a human."
   type        = set(string)

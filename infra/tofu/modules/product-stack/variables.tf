@@ -269,6 +269,18 @@ variable "telehealth_turn_secret" {
   default     = false
 }
 
+variable "lead_signing_secret" {
+  description = "ADR-040 front door: create the EMPTY Secrets Manager container for the partner-lead signing secret (kiorex-platform: /kiorex-platform/<env>/partner-lead-signing = PARTNER_LEAD_SIGNING_SECRET; products: /<product>/<env>/kiorex-lead-signing = KIOREX_LEAD_SIGNING_SECRET). The value is written ONLY by kiorex-platform scripts/setup-partner-lead-secret.sh, never by OpenTofu."
+  type        = bool
+  default     = false
+}
+
+variable "lead_signing_secret_inject" {
+  description = "Wire the container into the App Runner runtime env. Set true ONLY after scripts/setup-partner-lead-secret.sh <env> has written a value (App Runner cannot start an instance whose secret has no value). Requires lead_signing_secret."
+  type        = bool
+  default     = false
+}
+
 variable "placeholder_secrets" {
   description = "Secret containers populated by a human (PSP keys, HMAC client secrets, WhatsApp tokens)."
   type        = set(string)
