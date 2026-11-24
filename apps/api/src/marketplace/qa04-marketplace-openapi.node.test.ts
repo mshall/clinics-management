@@ -138,17 +138,16 @@ describe("QA-04 marketplace OpenAPI contract", () => {
     }
   });
 
-  it("booking channel enum stays MARKETPLACE | CLINIC_LINK", () => {
+  it("booking channel enum keeps MARKETPLACE | CLINIC_LINK (1.6.0 appends KIOREX_WHATSAPP)", () => {
     const spec = loadSpec();
     const consumer = loadConsumer();
     const booking = spec.paths["/bookings"]?.post;
     const channelEnum =
       booking?.requestBody?.content?.["application/json"]?.schema?.properties?.channel?.enum ?? [];
-    assert.deepEqual(
-      [...channelEnum].sort(),
-      [...consumer.bookingChannelEnum].sort(),
-      "breaking: booking.channel enum changed",
-    );
+    // contracts 1.12.0 (marketplace 1.6.0) only APPENDS KIOREX_WHATSAPP; the consumer fixture lists what Kiorex sends today, so it may be a subset.
+    const added = (channelEnum as string[]).filter((c) => !(consumer.bookingChannelEnum as string[]).includes(c));
+    assert.deepEqual(added.filter((c) => c !== "KIOREX_WHATSAPP"), [], "breaking: booking.channel enum changed");
+    for (const c of consumer.bookingChannelEnum as string[]) assert.ok(channelEnum.includes(c), `breaking: booking.channel lost ${c}`);
   });
 
   it("consumer contract fixture is published for the Kiorex repo", () => {
@@ -160,7 +159,7 @@ describe("QA-04 marketplace OpenAPI contract", () => {
 
   it("GRW-P1-D2 contracts 1.4.0: the copy documents the optional signed acquisition block, its error codes and keeps the old fields", () => {
     const spec = loadSpec() as OpenApiSpec & { components: { schemas: Record<string, { required?: string[]; properties?: Record<string, { enum?: string[] }> }> } };
-    assert.match(spec.info.version, /^1\.(4|5)\.\d+$/, "1.4.0 added the acquisition block; 1.5.0 (contracts 1.11.0) only adds");
+    assert.match(spec.info.version, /^1\.(4|5|6)\.\d+$/, "1.4.0 added the acquisition block; 1.5.0 (contracts 1.11.0) and 1.6.0 (contracts 1.12.0) only add");
     const body = spec.paths["/bookings"]?.post?.requestBody?.content?.["application/json"]?.schema?.properties as Record<string, unknown>;
     for (const f of ["channel", "bookingPageSlug", "attribution", "acquisition"]) assert.ok(f in body, `booking request lost ${f}`);
     assert.deepEqual(body.acquisition, { $ref: "#/components/schemas/AcquisitionBlock" });

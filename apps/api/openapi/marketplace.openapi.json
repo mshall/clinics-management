@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Kiorex Marketplace API",
-    "version": "1.5.0",
-    "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers. v1.2.0 (KX-09 Rev 2.3, additive): provider sync profession/edition/home-visit fields, serviceLocation+district on slots, visitAddress on holds, 422 OUT_OF_COVERAGE, care-plan-requests (P3 draft). The same client serves both Kiorly editions (Clinic and Nurse). v1.4.0 (growth engine, contracts 1.10.0, additive): optional signed `acquisition` block on POST /bookings (origin, decisionId, policyVersion, reason, evidenceHash) stored and frozen on the appointment; absent = UNATTRIBUTED and today's rules. Evidence can only remove a Kiorex fee (PROVIDER_LED), never add one. v1.5.0 (contracts 1.11.0, additive): optional `lt` on POST /bookings; signed link registry lookup GET /referral-links/{code} and reconciliation feed GET /referral-links."
+    "version": "1.6.0",
+    "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers. v1.2.0 (KX-09 Rev 2.3, additive): provider sync profession/edition/home-visit fields, serviceLocation+district on slots, visitAddress on holds, 422 OUT_OF_COVERAGE, care-plan-requests (P3 draft). The same client serves both Kiorly editions (Clinic and Nurse). v1.4.0 (contracts 1.10.0, additive): optional signed `acquisition` block on POST /bookings (growth attribution evidence, ARCH section 6.7); a Clinic that does not know it ignores it and treats the booking as UNATTRIBUTED; booking GET and every response are unchanged. v1.5.0 (contracts 1.11.0, additive): optional Clinic link token `lt` on POST /bookings (GRW-P1-C/D1: a valid, unexpired token of an ACTIVE referral link of the booking organisation makes the booking provider-led; it can only remove a commission); signed link-registry lookup `GET /referral-links/{code}` and reconciliation list `GET /referral-links` (a code is known to Kiorex before its first token; revocations are visible). v1.6.0 (contracts 1.12.0, additive): booking `channel` accepts KIOREX_WHATSAPP; the Kiorex pay-link registration call is documented (`POST /pay/links`, hosted on Kiorex, called by Kiorly); provider listings may declare `modalities` including VIDEO; events WAITLIST_OFFER_CREATED/EXPIRED, optional Rx `items[]` and optional `followUp.intervalDays` on the visit summary; waitlist join/leave and slot capacity were already documented in 1.1.0 and are unchanged. Rewards never reach the clinic: no referral or reward field exists on any marketplace call."
   },
   "servers": [
     {
@@ -519,9 +519,10 @@
                     "type": "string",
                     "enum": [
                       "MARKETPLACE",
-                      "CLINIC_LINK"
+                      "CLINIC_LINK",
+                      "KIOREX_WHATSAPP"
                     ],
-                    "description": "CLINIC_LINK when booked from the clinic's own booking page (KX-09); never commissioned"
+                    "description": "CLINIC_LINK when booked from the clinic's own booking page (KX-09); never commissioned. KIOREX_WHATSAPP (1.6.0): booked in the Kiorex WhatsApp assistant; commissioned like MARKETPLACE unless PROVIDER_LED evidence applies. A Clinic that does not accept it answers 400 and Kiorex falls back to MARKETPLACE with attribution.source=kiorex_whatsapp."
                   },
                   "bookingPageSlug": {
                     "type": "string",
@@ -1540,6 +1541,65 @@
           }
         }
       }
+    },
+    "/pay/links": {
+      "servers": [
+        {
+          "url": "/api/v1",
+          "description": "Hosted on Kiorex (not under /marketplace/v1)"
+        }
+      ],
+      "post": {
+        "operationId": "payRegisterLink",
+        "summary": "Kiorly registers a deposit pay link with Kiorex Pay (product-key HMAC, kiorly-clinic only)",
+        "description": "Documented in 1.6.0 (it has been implemented in Kiorex since PAY-03). Idempotent on `token`. Kiorex later calls POST /deposit-links/{token}/paid when the patient pays.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "clinicId",
+                  "amountMinor"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "clinicId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "amountMinor": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "externalRef": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Link registered (token, clinicId, amountMinor, currency, status OPEN|PAID|EXPIRED, expiresAt)"
+          },
+          "403": {
+            "description": "PRODUCT_NOT_ALLOWED: only Kiorly Clinic may register pay links"
+          }
+        }
+      }
     }
   },
   "webhooks": {
@@ -1743,6 +1803,18 @@
           "assignsClinician": {
             "type": "boolean",
             "description": "Agencies only: the agency assigns a clinician after booking (HOME_VISIT_ASSIGNED event)."
+          },
+          "modalities": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "IN_CLINIC",
+                "VIDEO",
+                "HOME_VISIT"
+              ]
+            },
+            "description": "Care modalities the listing offers (additive, 1.6.0). VIDEO means the provider offers telemedicine; absent = IN_CLINIC (and HOME_VISIT per serviceLocations)."
           }
         }
       },
