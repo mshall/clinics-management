@@ -1,10 +1,10 @@
 import * as React from "react";
-import { buildScene, langOf, PALETTE, productName, PULSE_LENGTH, type Product, type Tone, type Variant } from "../shared/logo-scene";
+import { buildScene, langOf, markName, PALETTE, productName, PULSE_LENGTH, type Product, type Tone, type Variant } from "../shared/logo-scene";
 
 export interface KiorexLogoProps extends Omit<React.SVGProps<SVGSVGElement>, "ref" | "height"> {
   variant?: Variant;
   tone?: Tone;
-  /** "kiorex" (default) | "clinic" | "lab" | "pharmacy" ("Kiorly <Product> by Kiorex", each with its own accent) | "passport" (adds PASSPORT) | "nurse" (Nurse Rose accent). "kiorly" = deprecated alias of "clinic". */
+  /** "kiorex" (default) | "staff" (the Kiorly staff app / Kiorly Home brand: Indigo + Periwinkle, KIORLY, no sub-line) | "clinic" | "lab" | "pharmacy" ("Kiorly <Product> by Kiorex", each with its own accent) | "passport" (adds PASSPORT) | "nurse" (Nurse Rose accent). "kiorly" = deprecated alias of "clinic". */
   product?: Product;
   /** UI language: "ar" (or ar-*) draws the Arabic wordmark (HarfBuzz-shaped outlines, mark on the right, words RTL) for clinic/lab/pharmacy; anything else = Latin. The artwork is identical. */
   lang?: string;
@@ -23,7 +23,7 @@ export function KiorexLogo({ variant = "lockup", tone = "color", product = "kior
   const scene = React.useMemo(() => buildScene(variant, product, L), [variant, product, L]);
   const pal = PALETTE[tone];
   const [x, y, w, h] = scene.viewBox;
-  const label = title ?? (variant === "mark" ? "Kiorex mark" : productName(product, L));
+  const label = title ?? (variant === "mark" ? markName(product) : productName(product, L));
   const px = typeof height === "number" ? height : undefined;
   return (
     <svg

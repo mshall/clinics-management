@@ -4,8 +4,7 @@ import assert from "node:assert/strict";
 import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { KX_CONTROL_CLASS, KxControlPair, KxLanguageToggle, KxThemeToggle } from "./KxControls";
-import { withThemeTransition } from "./theme-transition";
+import { KX_CONTROL_CLASS, KxControlPair, KxLanguageToggle, KxThemeToggle, KX_LANGUAGES, kxMenuNext, withThemeTransition } from "./KxControls";
 
 (globalThis as { React?: typeof React }).React = React;
 const noop = () => {};
@@ -17,20 +16,20 @@ test("controls are >= 40px, keyboard focus-visible ring, motion-reduce safe", ()
   assert.match(KX_CONTROL_CLASS, /focus-visible:ring-2/); assert.match(KX_CONTROL_CLASS, /motion-reduce:transition-none/);
 });
 
-test("language toggle shows the globe and the CURRENT code, labelled in the UI language", () => {
+test("language control is ONE button: globe + current code + chevron, a menu button (not two pills)", () => {
   const en = renderToStaticMarkup(createElement(KxLanguageToggle, { lang: "en", onChange: noop, labels: LL }));
-  assert.match(en, />EN</); assert.match(en, /lucide-globe/); assert.match(en, /aria-label="Language: EN · Arabic"/); assert.match(en, /title="Language: EN · Arabic"/);
-  const ar = renderToStaticMarkup(createElement(KxLanguageToggle, { lang: "ar-EG", onChange: noop, labels: { language: "اللغة", english: "الإنجليزية", arabic: "العربية" } }));
-  assert.match(ar, />AR</); assert.match(ar, /aria-label="اللغة: AR · الإنجليزية"/);
-  assert.match(en, /<button type="button"/, "native button = keyboard accessible");
+  assert.match(en, />EN</); assert.match(en, /lucide-globe/); assert.match(en, /lucide-chevron-down/);
+  assert.match(en, /aria-label="Language: EN · English"/); assert.match(en, /aria-haspopup="menu"/); assert.match(en, /aria-expanded="false"/);
+  assert.equal((en.match(/<button/g) ?? []).length, 1, "closed menu renders a single button");
+  assert.doesNotMatch(en, /role="menu"/);
+  const ar = renderToStaticMarkup(createElement(KxLanguageToggle, { lang: "ar-EG", onChange: noop, labels: { language: "اللغة" } }));
+  assert.match(ar, />AR</); assert.match(ar, /aria-label="اللغة: AR · العربية"/);
 });
 
-test("language toggle switches to the other language", () => {
-  let got = "";
-  const el = KxLanguageToggle({ lang: "en", onChange: (l) => { got = l; }, labels: LL }) as React.ReactElement<{ onClick: () => void }>;
-  el.props.onClick(); assert.equal(got, "ar");
-  const el2 = KxLanguageToggle({ lang: "ar", onChange: (l) => { got = l; }, labels: LL }) as React.ReactElement<{ onClick: () => void }>;
-  el2.props.onClick(); assert.equal(got, "en");
+test("language menu lists each language in its own script, marks the current one and is keyboard navigable", () => {
+  assert.deepEqual(KX_LANGUAGES.map((l) => l.name), ["العربية", "English"]);
+  assert.equal(kxMenuNext("ArrowDown", 0, 2), 1); assert.equal(kxMenuNext("ArrowDown", 1, 2), 0);
+  assert.equal(kxMenuNext("ArrowUp", 0, 2), 1); assert.equal(kxMenuNext("Home", 1, 2), 0); assert.equal(kxMenuNext("End", 0, 2), 1); assert.equal(kxMenuNext("a", 0, 2), -1);
 });
 
 test("theme toggle renders sun, moon and monitor; only the active one is visible; cycles light, dark, system", () => {

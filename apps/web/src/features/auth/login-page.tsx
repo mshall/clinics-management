@@ -8,6 +8,7 @@ import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
 import { useSignInMethod } from "@/components/use-sign-in-method";
 import { SwitchProductLink } from "@/components/switch-product-link";
 import { KiorexLogo } from "@/brand/components/web/KiorexLogo";
+import { KxBrandBackdrop } from "@/brand/components/web/KxBrandBackdrop";
 import { Pulse } from "@/brand/ui-kit";
 import { useNurseEditionDom } from "@/lib/use-nurse-edition-dom";
 import { currentNavigationType, wantsPassportAutostart, readHandoff, withoutHandoff } from "@/lib/kiorly-home";
@@ -185,9 +186,8 @@ export function LoginPage() {
   const points = ["a", "b", "c"] as const;
   return (
     <div className="grid min-h-screen lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]" data-testid="login-split">
-      <aside className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:sticky lg:top-0 lg:flex lg:h-screen" data-testid="login-brand-panel" style={{ background: "linear-gradient(145deg,#3730A3 0%,#2B2680 55%,#0A4F7A 100%)" }}>
-        <div aria-hidden className="pointer-events-none absolute -inset-e-24 -top-24 size-96 rounded-full bg-white/5" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-32 -inset-s-20 size-112 rounded-full bg-white/5" />
+      <aside className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:sticky lg:top-0 lg:flex lg:h-screen" data-testid="login-brand-panel">
+        <KxBrandBackdrop />
         <div className="relative w-fit"><KiorexLogo variant="lockup" product={nurse ? "nurse" : "clinic"} lang={i18n.language} tone="inverse" height={48} /><p data-kx-tagline className="mt-1 text-xs text-white/70">{t("app.tagline")}</p></div>
         <div className="relative max-w-md space-y-6">
           <h2 className="text-balance text-3xl font-semibold leading-tight">{t(`auth.${hero}.headline`)}</h2>
