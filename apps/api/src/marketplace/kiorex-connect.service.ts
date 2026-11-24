@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
-import { createHmac } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
+import { decryptClinicianNationalId as openField, encryptClinicianNationalId as sealField } from "../clinician-verification/field-crypto";
 import { ListingStatus, Prisma, VerificationStatus } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { JwtUser } from "../auth/jwt-user";
@@ -19,6 +20,8 @@ interface ConnectDoc {
   startedAt?: string;
   consent?: { at: string; userId: string; termsVersion: string; feeAcknowledged: boolean; feeSnapshot: unknown };
   request?: { id: string; token: string; submittedAt: string };
+  /** AES-GCM sealed (field-crypto) intake key Kiorex issued once at the first request; signs every later request. The enrolment code itself is never stored. */
+  intakeKeyEnc?: string;
   kiorex?: { status: string; reason?: string | null; at: string };
 }
 
@@ -29,9 +32,19 @@ export function kiorexApiBase(env: Record<string, string | undefined> = process.
   return url.replace(/\/+$/, "").replace(/\/webhooks\/kiorly$/, "");
 }
 
-/** Signed exactly like the outbox webhook: sha256=HMAC(secret, `${ts}.${rawBody}`). */
+/** `sha256=HMAC(key, "<ts>.<rawBody>")` as the outbox webhook is signed; `key` for the intake is hex(sha256(secret)), see deriveIntakeSigningKey. */
 export function signConnectBody(secret: string, ts: number, body: string): string {
   return `sha256=${createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex")}`;
+}
+
+/** Intake auth (kiorex-contracts 1.9.0): the first request is signed with the one-time enrolment code from Kiorex ops, later ones with the issued intake key. */
+export const deriveIntakeSigningKey = (secret: string): string => createHash("sha256").update(secret, "utf8").digest("hex");
+export const newIntakeNonce = (): string => randomBytes(18).toString("base64url");
+export const enrolmentIdOf = (code: string): string | undefined => /^(kxe_[A-Za-z0-9_-]{8,16})\.[A-Za-z0-9_-]{32,64}$/.exec(code.trim())?.[1];
+export function intakeHeaders(secret: string, ts: number, body: string, enrolmentCode?: string): Record<string, string> {
+  const h: Record<string, string> = { "content-type": "application/json", "X-Kiorly-Timestamp": String(ts), "X-Kiorly-Signature": signConnectBody(deriveIntakeSigningKey(secret), ts, body) };
+  const id = enrolmentCode ? enrolmentIdOf(enrolmentCode) : undefined; if (id) h["X-Kiorex-Enrolment"] = id;
+  return h;
 }
 
 const BLANK_MISSING = (p: ReturnType<typeof parseProviderProfileJson>, hasGeo: boolean, hasAddr: boolean): string[] => {
@@ -122,7 +135,7 @@ export class KiorexConnectService {
     let feeCard: unknown = null;
     try { feeCard = await this.fees.listPublic(market); } catch { feeCard = null; }
     return {
-      clinicId, tenantId, legacy, status: connectStatus, edition, market, progress: legacy ? 100 : connectProgressPct(steps), canRequest: !legacy && canRequestGoLive(steps) && (connectStatus === "CONSENTED" || connectStatus === "CHANGES_REQUESTED" || connectStatus === "REJECTED"),
+      clinicId, tenantId, legacy, enrolmentCodeRequired: !doc?.intakeKeyEnc, status: connectStatus, edition, market, progress: legacy ? 100 : connectProgressPct(steps), canRequest: !legacy && canRequestGoLive(steps) && (connectStatus === "CONSENTED" || connectStatus === "CHANGES_REQUESTED" || connectStatus === "REJECTED"),
       steps, doctors: doctors.map((d) => ({ ...d, ready: d.verification === "VERIFIED" && d.hasAvailability && d.profilePercent >= PROVIDER_PROFILE_COMPLETENESS_MIN })),
       kiorex: doc?.kiorex ?? null, requestId: doc?.request?.id ?? null, consent: doc?.consent ? { at: doc.consent.at, termsVersion: doc.consent.termsVersion, feeAcknowledged: doc.consent.feeAcknowledged } : null,
       termsVersion: KIOREX_TERMS_VERSION, feeCard,
@@ -145,45 +158,48 @@ export class KiorexConnectService {
   }
 
   /** Request to go live: DRAFT -> PENDING_VERIFICATION. Idempotent (re-send refreshes the PHI-free readiness snapshot). */
-  async requestLive(user: JwtUser, clinicId: string) {
+  async requestLive(user: JwtUser, clinicId: string, enrolmentCode?: string) {
     const state = await this.get(user, clinicId, { pull: false });
     if (state.legacy) throw new ConflictException({ code: "ALREADY_CONNECTED", message: "This organisation is already connected" });
-    if (state.status === "REQUESTED") return this.resend(user, clinicId, state);
+    if (state.status === "REQUESTED") return this.resend(user, clinicId, state, enrolmentCode);
     if (!state.canRequest) throw new ConflictException({ code: "CONNECT_NOT_READY", message: "Finish every step before requesting to go live", open: state.steps.filter((s) => !s.optional && !["request", "live"].includes(s.key) && s.status !== "done").map((s) => s.key) });
     const clinic = await this.loadClinic(user, clinicId);
     const doc = this.doc(clinic.tenant.providerSettings)!;
-    const sent = await this.send(clinic, state, doc);
-    await this.saveDoc(clinic.tenantId, { ...doc, status: "REQUESTED", request: { id: sent.id, token: sent.statusToken ?? doc.request?.token ?? "", submittedAt: new Date().toISOString() } });
+    const sent = await this.send(clinic, state, doc, enrolmentCode);
+    await this.saveDoc(clinic.tenantId, { ...doc, status: "REQUESTED", request: { id: sent.id, token: sent.statusToken ?? doc.request?.token ?? "", submittedAt: new Date().toISOString() }, ...(sent.intakeKey ? { intakeKeyEnc: sealField(sent.intakeKey) } : {}) });
     await this.listings.recomputeTenantListings(clinic.tenantId);
     await this.audit.recordEvent({ tenantId: clinic.tenantId, actorId: user.userId, clinicId, action: "kiorex.connect.requested", resource: "Tenant", resourceId: clinic.tenantId, metadata: { requestId: sent.id } });
     return this.get(user, clinicId, { pull: false });
   }
 
-  private async resend(user: JwtUser, clinicId: string, state: Awaited<ReturnType<KiorexConnectService["get"]>>) {
+  private async resend(user: JwtUser, clinicId: string, state: Awaited<ReturnType<KiorexConnectService["get"]>>, enrolmentCode?: string) {
     const clinic = await this.loadClinic(user, clinicId);
     const doc = this.doc(clinic.tenant.providerSettings)!;
-    await this.send(clinic, state, doc);
+    const sent = await this.send(clinic, state, doc, enrolmentCode);
+    if (sent.intakeKey) await this.saveDoc(clinic.tenantId, { ...doc, intakeKeyEnc: sealField(sent.intakeKey) });
     return state;
   }
 
-  private async send(clinic: Awaited<ReturnType<KiorexConnectService["loadClinic"]>>, state: Awaited<ReturnType<KiorexConnectService["get"]>>, doc: ConnectDoc): Promise<{ id: string; statusToken?: string }> {
-    const base = kiorexApiBase(); const secret = process.env.KIOREX_OUTBOX_WEBHOOK_SECRET?.trim();
-    if (!base || !secret) throw new ConflictException({ code: "KIOREX_NOT_CONFIGURED", message: "Kiorex connection is not configured for this deployment" });
+  private async send(clinic: Awaited<ReturnType<KiorexConnectService["loadClinic"]>>, state: Awaited<ReturnType<KiorexConnectService["get"]>>, doc: ConnectDoc, enrolmentCode?: string): Promise<{ id: string; statusToken?: string; intakeKey?: string }> {
+    const base = kiorexApiBase(); const code = enrolmentCode?.trim() || undefined; const intakeKey = doc.intakeKeyEnc ? openField(doc.intakeKeyEnc) ?? undefined : undefined;
+    if (!base) throw new ConflictException({ code: "KIOREX_NOT_CONFIGURED", message: "Kiorex connection is not configured for this deployment" });
+    if (code && !enrolmentIdOf(code)) throw new BadRequestException({ code: "ENROLMENT_CODE_INVALID", message: "That enrolment code is not valid. Copy it exactly as Kiorex gave it to you" });
+    if (!code && !intakeKey) throw new ConflictException({ code: "ENROLMENT_CODE_REQUIRED", message: "Enter the enrolment code Kiorex gave you" });
     const ready = state.doctors.filter((d) => d.ready).length;
     const body = JSON.stringify({
-      kind: clinic.tenant.edition === "NURSE" ? "NURSE" : "CLINIC", orgRef: clinic.tenantId, name: clinic.tenant.name, nameAr: clinic.tenant.nameAr ?? undefined, market: state.market,
+      nonce: newIntakeNonce(), kind: clinic.tenant.edition === "NURSE" ? "NURSE" : "CLINIC", orgRef: clinic.tenantId, name: clinic.tenant.name, nameAr: clinic.tenant.nameAr ?? undefined, market: state.market,
       locale: "en",
       readiness: { counts: { doctors: state.doctors.length, ready, verified: state.doctors.filter((d) => d.verification === "VERIFIED").length }, documents: { doctorCredentials: state.doctors.some((d) => d.verification === "VERIFIED") }, termsAcceptedAt: doc.consent?.at, termsVersion: doc.consent?.termsVersion, steps: state.steps.map((s) => ({ key: s.key, status: s.status })) },
     });
     const ts = Math.floor(Date.now() / 1000);
     let res: Response;
     try {
-      res = await fetch(`${base}/partners/v1/connection-requests`, { method: "POST", headers: { "content-type": "application/json", "X-Kiorly-Timestamp": String(ts), "X-Kiorly-Signature": signConnectBody(secret, ts, body) }, body, signal: AbortSignal.timeout(8000) });
+      res = await fetch(`${base}/partners/v1/connection-requests`, { method: "POST", headers: intakeHeaders(code ?? intakeKey!, ts, body, code), body, signal: AbortSignal.timeout(8000) });
     } catch {
       throw new ConflictException({ code: "KIOREX_UNREACHABLE", message: "Kiorex could not be reached; nothing was sent. Try again." });
     }
-    if (!res.ok) throw new ConflictException({ code: "KIOREX_REJECTED_REQUEST", status: res.status, message: "Kiorex did not accept the request" });
-    return (await res.json()) as { id: string; statusToken?: string };
+    if (!res.ok) throw new ConflictException({ code: res.status === 401 ? "ENROLMENT_CODE_REJECTED" : res.status === 429 ? "KIOREX_BUSY" : "KIOREX_REJECTED_REQUEST", status: res.status, message: res.status === 401 ? "Kiorex did not accept the enrolment code. Check it, or ask Kiorex for a new one" : "Kiorex did not accept the request" });
+    return (await res.json()) as { id: string; statusToken?: string; intakeKey?: string };
   }
 
   /** Best-effort poll of Kiorex for the decision (the push endpoint is the primary path). */

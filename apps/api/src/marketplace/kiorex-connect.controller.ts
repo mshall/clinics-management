@@ -24,7 +24,7 @@ export class KiorexConnectController {
   @Post("request")
   @HttpCode(200)
   @ApiOperation({ summary: "Request to go live: listings DRAFT -> PENDING_VERIFICATION, then LIVE once Kiorex ops approves" })
-  request(@CurrentUser() user: JwtUser, @Body() body: { clinicId: string }) { return this.connect.requestLive(user, body.clinicId); }
+  request(@CurrentUser() user: JwtUser, @Body() body: { clinicId: string; enrolmentCode?: string }) { return this.connect.requestLive(user, body.clinicId, typeof body.enrolmentCode === "string" ? body.enrolmentCode.slice(0, 120) : undefined); }
 
   @Post("refresh")
   @HttpCode(200)
