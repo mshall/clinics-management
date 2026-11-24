@@ -8,6 +8,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { MessagingService } from "./messaging.service";
+import { MessagingSendBodyDto } from "./messaging.controller.dto";
 
 @ApiTags("messaging")
 @ApiBearerAuth("bearer")
@@ -26,15 +27,7 @@ export class MessagingController {
   send(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      patientId?: string;
-      appointmentId?: string;
-      channel: MessageChannel;
-      toPhone: string;
-      templateKey?: string;
-      body: string;
-      variables?: Record<string, string>;
-    },
+    body: MessagingSendBodyDto,
   ) {
     return this.messaging.queueMessage(requireTenantId(user), body);
   }

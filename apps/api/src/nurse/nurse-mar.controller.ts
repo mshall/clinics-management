@@ -9,6 +9,7 @@ import { RequiresScope, ScopeGuard } from "../scope-of-practice/scope-of-practic
 import { DoctorOrderService } from "./doctor-order.service";
 import { MedicationAdministrationService, type AdministrationInput } from "./medication-administration.service";
 import type { OrderLine } from "./mar-safety";
+import { NurseMarPhotoOrderBodyDto } from "./nurse-mar.controller.dto";
 
 /**
  * KNMAR01-03. `nurse.mar` (launch-locked, GKN1) decides whether the STRUCTURED MAR screens/endpoints exist (OFF: medication is free text in the
@@ -27,7 +28,7 @@ export class NurseMarController {
 
   @Post("orders/photo")
   @RequiresScope("mar.administer")
-  photoOrder(@CurrentUser() u: JwtUser, @Body() b: { patientId: string; prescriberName: string; orderedOn: string; expiresOn: string; controlled?: boolean; lines: OrderLine[]; documentKey?: string }) {
+  photoOrder(@CurrentUser() u: JwtUser, @Body() b: NurseMarPhotoOrderBodyDto) {
     return this.orders.createFromPhoto(requireTenantId(u), u, b);
   }
 

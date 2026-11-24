@@ -7,6 +7,7 @@ import type { JwtUser } from "../../auth/jwt-user";
 import { requireTenantId } from "../../auth/require-tenant";
 import { PublicAuthRateLimitGuard } from "../../common/rate-limit.guard";
 import { assertCanInvite, InvitationsService } from "./invitations.service";
+import { PublicInvitationsCreateBodyDto, PublicInvitationsAcceptBodyDto } from "./invitations.controller.dto";
 
 @ApiTags("invitations")
 @ApiBearerAuth("bearer")
@@ -26,7 +27,7 @@ export class InvitationsController {
   @ApiOperation({ summary: "Invite staff by WhatsApp or email (402 when over seat limit)" })
   create(
     @CurrentUser() user: JwtUser,
-    @Body() body: { phoneOrEmail: string; roles: UserRole[]; displayName?: string; clinicIds?: string[] },
+    @Body() body: PublicInvitationsCreateBodyDto,
   ) {
     return this.invitations.create(user, requireTenantId(user), body);
   }
@@ -59,7 +60,7 @@ export class PublicInvitationsController {
   @Post(":token/accept")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Accept invitation and set password" })
-  accept(@Param("token") token: string, @Body() body: { password: string; email?: string; displayName?: string }) {
+  accept(@Param("token") token: string, @Body() body: PublicInvitationsAcceptBodyDto) {
     return this.invitations.accept(token, body);
   }
 }

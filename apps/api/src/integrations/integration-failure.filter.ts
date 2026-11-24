@@ -55,9 +55,9 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
         res.status(exception.getStatus()).json(exception.getResponse());
         return;
       }
-      // ~115 controller parameters are typed inline (`@Body() body: { code: string }`), which class-validator cannot validate, so a body that omits or mistypes a field reaches the service and
-      // dereferences undefined. On a mutating request that is the caller's error (400), not a server fault. The TypeError is still logged at error level so a genuine bug stays visible;
-      // the lasting fix is a DTO class per endpoint (EDGE-49 residual risk).
+      // The inline-typed `@Body() b: { ... }` parameters are DTO classes now (src/common/inline-dto-coverage.node.test.ts keeps it that way), so a missing or mistyped field is a 400 from the
+      // ValidationPipe. What is left are the free-form `Record<string, unknown>` bodies, which services parse themselves: a body that omits a field there can still dereference undefined.
+      // On a mutating request that is the caller's error (400), not a server fault, so this net stays for them. The TypeError is still logged at error level so a genuine bug stays visible.
       const rq = req as unknown as { method?: string };
       if (exception instanceof TypeError && /Cannot read properties of (undefined|null)|is not iterable|undefined is not/.test(exception.message) && ["POST", "PUT", "PATCH"].includes(rq.method ?? "")) {
         this.logger.error(exception);

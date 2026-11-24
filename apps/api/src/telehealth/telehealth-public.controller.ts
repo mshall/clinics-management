@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { consumeRateLimit } from "../common/rate-limit";
 import { TelehealthException } from "./telehealth.errors";
 import { TelehealthService } from "./telehealth.service";
+import { TelehealthPublicPostBodyDto, TelehealthPublicModeBodyDto } from "./telehealth-public.controller.dto";
 
 /** Patient-facing token endpoints (no login). Tokens are bearer secrets: never logged, responses are no-store. */
 @ApiTags("telehealth-public")
@@ -50,7 +51,7 @@ export class TelehealthPublicController {
 
   @Post("signals")
   @HttpCode(200)
-  async post(@Param("token") token: string, @Body() body: { type?: string; payload?: unknown }, @Req() req: { ip?: string }, @Res({ passthrough: true }) res: { setHeader: (k: string, v: string) => void }) {
+  async post(@Param("token") token: string, @Body() body: TelehealthPublicPostBodyDto, @Req() req: { ip?: string }, @Res({ passthrough: true }) res: { setHeader: (k: string, v: string) => void }) {
     this.guard(token, req.ip, "sigpost", 300);
     this.noStore(res);
     return this.svc.postSignal({ token }, body ?? {});
@@ -65,7 +66,7 @@ export class TelehealthPublicController {
 
   @Post("mode")
   @HttpCode(200)
-  async mode(@Param("token") token: string, @Body() body: { mode?: string }, @Req() req: { ip?: string }) {
+  async mode(@Param("token") token: string, @Body() body: TelehealthPublicModeBodyDto, @Req() req: { ip?: string }) {
     this.guard(token, req.ip, "mode", 30);
     return this.svc.setMode({ token }, String(body?.mode ?? ""));
   }

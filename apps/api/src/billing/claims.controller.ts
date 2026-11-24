@@ -9,6 +9,7 @@ import { EntitlementGuard } from "../entitlements/entitlement.guard";
 import { RequiresEntitlement } from "../entitlements/requires-entitlement.decorator";
 import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { ClaimsService } from "./claims.service";
+import { ClaimsUpsertPayerBodyDto, ClaimsCreateBatchBodyDto, ClaimsRejectLineBodyDto, ClaimsImportRemittanceBodyDto } from "./claims.controller.dto";
 
 /** MN-05 — company contracts & TPA claims. */
 @ApiTags("claims")
@@ -30,7 +31,7 @@ export class ClaimsController {
   @ApiOperation({ summary: "Create or update a payer company" })
   upsertPayer(
     @CurrentUser() user: JwtUser,
-    @Body() body: { id?: string; nameEn: string; nameAr?: string; contractRef?: string; active?: boolean },
+    @Body() body: ClaimsUpsertPayerBodyDto,
   ) {
     return this.claims.upsertPayer(requireTenantId(user), user, body);
   }
@@ -57,13 +58,7 @@ export class ClaimsController {
   createBatch(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      payerCompanyId: string;
-      periodFrom: string;
-      periodTo: string;
-      currency?: string;
-      invoiceIds?: string[];
-    },
+    body: ClaimsCreateBatchBodyDto,
   ) {
     return this.claims.createBatch(requireTenantId(user), user, body);
   }
@@ -76,7 +71,7 @@ export class ClaimsController {
 
   @Post("lines/:id/reject")
   @ApiOperation({ summary: "Reject a claim line with a reason" })
-  rejectLine(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { reason: string }) {
+  rejectLine(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: ClaimsRejectLineBodyDto) {
     return this.claims.rejectLine(requireTenantId(user), user, id, body.reason);
   }
 
@@ -91,13 +86,7 @@ export class ClaimsController {
   importRemittance(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      payerCompanyId: string;
-      batchId?: string;
-      reference: string;
-      currency?: string;
-      lines: { externalRef: string; amount: number }[];
-    },
+    body: ClaimsImportRemittanceBodyDto,
   ) {
     return this.claims.importRemittance(requireTenantId(user), user, body);
   }

@@ -20,6 +20,7 @@ import { REPORTS_VIEW_ROLES } from "../user-nav-tabs/nav-tab-module-roles";
 import { KiorexImpactService } from "./kiorex-impact.service";
 import { ReportsExportService } from "./reports-export.service";
 import { ReportsService } from "./reports.service";
+import { ReportsPutScheduleBodyDto } from "./reports.controller.dto";
 
 @ApiTags("reports")
 @ApiBearerAuth("bearer")
@@ -252,15 +253,7 @@ export class ReportsController {
   async putSchedule(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      enabled?: boolean;
-      format?: string;
-      reportKeys?: string[];
-      channelEmail?: boolean;
-      channelWhatsApp?: boolean;
-      dayOfWeek?: number;
-      hourLocal?: number;
-    },
+    body: ReportsPutScheduleBodyDto,
   ) {
     await this.assertView(user);
     return this.exports.putSchedule(requireTenantId(user), body ?? {});

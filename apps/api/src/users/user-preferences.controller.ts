@@ -4,6 +4,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { UserPreferencesService } from "./user-preferences.service";
+import { UserPreferencesPutBodyDto } from "./user-preferences.controller.dto";
 
 /** The signed-in person's own preferences. No role check: it only ever touches the caller's row. */
 @ApiTags("users")
@@ -17,5 +18,5 @@ export class UserPreferencesController {
   get(@CurrentUser() user: JwtUser) { return this.prefs.getDismissed(user.userId); }
 
   @Put("dismissed-cards") @ApiOperation({ summary: "Replace the list of dismissed card keys" }) @ApiOkResponse()
-  put(@CurrentUser() user: JwtUser, @Body() body: { keys?: unknown }) { return this.prefs.setDismissed(user.userId, body?.keys); }
+  put(@CurrentUser() user: JwtUser, @Body() body: UserPreferencesPutBodyDto) { return this.prefs.setDismissed(user.userId, body?.keys); }
 }

@@ -13,6 +13,7 @@ import { HomeVisitExecService } from "./home-visit-exec.service";
 import { HomeVisitReportsService } from "./home-visit-reports.service";
 import { HomeVisitSafetyService } from "./home-visit-safety.service";
 import { HomeVisitService } from "./home-visit.service";
+import { HomeVisitsPutSafetyContactBodyDto, HomeVisitsAssignBodyDto, HomeVisitsDepartBodyDto, HomeVisitsArriveBodyDto, HomeVisitsFinishBodyDto, HomeVisitsAbortBodyDto, HomeVisitsSosBodyDto } from "./home-visits.controller.dto";
 
 /**
  * Home visits (HV*). Flag use: only NEW capabilities are gated (`clinic.home_visits` on booking / enabling, `clinic.home_route_view`,
@@ -62,7 +63,7 @@ export class HomeVisitsController {
   }
 
   @Put("safety-contact")
-  putSafetyContact(@CurrentUser() u: JwtUser, @Body() body: { name: string; phone: string }) {
+  putSafetyContact(@CurrentUser() u: JwtUser, @Body() body: HomeVisitsPutSafetyContactBodyDto) {
     return this.config.setSafetyContact(requireTenantId(u), u, body);
   }
 
@@ -129,7 +130,7 @@ export class HomeVisitsController {
 
   @Post(":id/assign")
   @HttpCode(200)
-  assign(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { clinicianId: string }) {
+  assign(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: HomeVisitsAssignBodyDto) {
     return this.homeVisits.assign(requireTenantId(u), u, id, body.clinicianId);
   }
 
@@ -137,35 +138,35 @@ export class HomeVisitsController {
   @Post(":id/depart")
   @HttpCode(200)
   @RequiresScope("home_visits.perform")
-  depart(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { lat?: number; lng?: number; etaMinutes?: number }) {
+  depart(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: HomeVisitsDepartBodyDto) {
     return this.exec.depart(requireTenantId(u), u, id, body ?? {});
   }
 
   @Post(":id/arrive")
   @HttpCode(200)
   @RequiresScope("home_visits.perform")
-  arrive(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { lat: number; lng: number }) {
+  arrive(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: HomeVisitsArriveBodyDto) {
     return this.exec.arrive(requireTenantId(u), u, id, body ?? ({} as never));
   }
 
   @Post(":id/finish")
   @HttpCode(200)
   @RequiresScope("home_visits.perform")
-  finish(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { lat?: number; lng?: number }) {
+  finish(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: HomeVisitsFinishBodyDto) {
     return this.exec.finish(requireTenantId(u), u, id, body ?? {});
   }
 
   @Post(":id/abort-unsafe")
   @HttpCode(200)
   @RequiresScope("home_visits.perform")
-  abort(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { reason: string; reasonCategory?: string; lat?: number; lng?: number }) {
+  abort(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: HomeVisitsAbortBodyDto) {
     return this.exec.abortUnsafe(requireTenantId(u), u, id, body ?? ({} as never));
   }
 
   @Post(":id/sos")
   @HttpCode(200)
   @RequiresScope("home_visits.perform")
-  sos(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { lat: number; lng: number }) {
+  sos(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: HomeVisitsSosBodyDto) {
     return this.exec.sos(requireTenantId(u), u, id, body ?? ({} as never));
   }
 

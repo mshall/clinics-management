@@ -7,6 +7,7 @@ import { ClinicBookingPageService, type PutBookingSlugBody } from "./clinic-book
 import { KiorexOverviewService } from "./kiorex-overview.service";
 import { KiorexReviewsService } from "./kiorex-reviews.service";
 import { KiorexSettingsService, type PutKiorexSettingsBody } from "./kiorex-settings.service";
+import { KiorexSettingsReplyBodyDto } from "./kiorex-settings.controller.dto";
 
 @ApiTags("kiorex")
 @ApiBearerAuth()
@@ -46,7 +47,7 @@ export class KiorexSettingsController {
 
   @Post("reviews/:id/reply")
   @ApiOperation({ summary: "Reply to a Kiorex review; Kiorex publishes and moderates it (KX-08)" })
-  reply(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: { text: string }) {
+  reply(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: KiorexSettingsReplyBodyDto) {
     return this.reviews.reply(user, id, body?.text);
   }
 

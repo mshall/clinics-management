@@ -6,6 +6,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { PlansService } from "./plans.service";
 import { PriceIndexationService } from "./price-indexation.service";
+import { PlatformPlansCreateBodyDto, PlatformPlansCreatePriceBodyDto } from "./platform-plans.controller.dto";
 
 @ApiTags("admin-platform")
 @ApiBearerAuth("bearer")
@@ -38,13 +39,7 @@ export class PlatformPlansController {
   create(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      key: PlanKey;
-      nameEn: string;
-      nameAr?: string;
-      isPublic?: boolean;
-      sortOrder?: number;
-    },
+    body: PlatformPlansCreateBodyDto,
   ) {
     return this.plans.createPlan(user, body);
   }
@@ -78,19 +73,7 @@ export class PlatformPlansController {
     @CurrentUser() user: JwtUser,
     @Param("planId") planId: string,
     @Body()
-    body: {
-      marketId: string;
-      currency: string;
-      interval: BillingInterval;
-      unit: PriceUnit;
-      amount: number | string;
-      includedClinicians?: number;
-      extraClinicianAmount?: number | string | null;
-      cohortKey?: string | null;
-      validFrom?: string;
-      newVersion?: boolean;
-      preview?: boolean;
-    },
+    body: PlatformPlansCreatePriceBodyDto,
   ) {
     return this.plans.createPlanPrice(user, planId, body);
   }

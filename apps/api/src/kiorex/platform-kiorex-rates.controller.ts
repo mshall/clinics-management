@@ -5,6 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { KiorexCommissionService } from "./kiorex-commission.service";
+import { PlatformKiorexRatesCreateBodyDto, PlatformKiorexRatesPatchMarketSettingsBodyDto } from "./platform-kiorex-rates.controller.dto";
 
 @ApiTags("admin-platform")
 @ApiBearerAuth("bearer")
@@ -24,21 +25,7 @@ export class PlatformKiorexRatesController {
   create(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      marketId: string;
-      specialty?: ClinicalSpecialty | null;
-      feeType: FeeType;
-      amount?: number | null;
-      percent?: number | null;
-      minAmount?: number | null;
-      maxAmount?: number | null;
-      benchmarkFlat?: number | null;
-      benchmarkPercent?: number | null;
-      benchmarkSource?: string | null;
-      benchmarkCheckedAt?: string | null;
-      validFrom?: string;
-      validTo?: string | null;
-    },
+    body: PlatformKiorexRatesCreateBodyDto,
   ) {
     return this.kiorex.create(user, body);
   }
@@ -48,7 +35,7 @@ export class PlatformKiorexRatesController {
   patchMarketSettings(
     @CurrentUser() user: JwtUser,
     @Param("marketId") marketId: string,
-    @Body() body: { benchmarkTargetRatio?: number; liteMonthlyCap?: number | null },
+    @Body() body: PlatformKiorexRatesPatchMarketSettingsBodyDto,
   ) {
     return this.kiorex.patchMarketSettings(user, marketId, body);
   }

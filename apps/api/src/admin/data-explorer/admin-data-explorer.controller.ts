@@ -34,6 +34,7 @@ import { RequiresSubscriptionAccess } from "../../subscriptions/requires-subscri
 import { SubscriptionAccessAction } from "../../subscriptions/subscription-access-policy";
 import { Patient360Service } from "../../patients/patient-360.service";
 import { assertDataExplorerAccess, assertExplorerTenant } from "./data-explorer-access";
+import { AdminDataExplorerStartExportJobBodyDto } from "./admin-data-explorer.controller.dto";
 
 const IMPORT_TMP_DIR = join(process.cwd(), ".data", "imports");
 mkdirSync(IMPORT_TMP_DIR, { recursive: true });
@@ -83,7 +84,7 @@ export class AdminDataExplorerController {
   @ApiOperation({ summary: "Start async organization export (SQL, documents ZIP, or full backup ZIP)" })
   startExportJob(
     @CurrentUser() user: JwtUser,
-    @Body() body: { format: OrgBackupFormat; tables?: string[] },
+    @Body() body: AdminDataExplorerStartExportJobBodyDto,
   ) {
     return this.orgBackup.startExport(user, body.format, body.tables);
   }

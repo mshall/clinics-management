@@ -4,6 +4,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { CommissionDecisionsService } from "./commission-decisions.service";
+import { CommissionDecisionsOverrideBodyDto } from "./commission-decisions.controller.dto";
 
 /** GRW-P1-D2: why a Kiorex fee was or was not applied, the provider statement with reconciliation, and the audited platform override. */
 @ApiTags("kiorex")
@@ -27,7 +28,7 @@ export class CommissionDecisionsController {
 
   @Post("platform/kiorex/commission-decisions/override")
   @ApiOperation({ summary: "Platform super admin only: waive an active charge (GOODWILL_WAIVER or POLICY_CORRECTION); removal only, note required, audited, emits CommissionAdjusted" })
-  override(@CurrentUser() user: JwtUser, @Body() body: { appointmentId?: string; reason?: string; note?: string }) {
+  override(@CurrentUser() user: JwtUser, @Body() body: CommissionDecisionsOverrideBodyDto) {
     return this.decisions.override(user, body ?? {});
   }
 }

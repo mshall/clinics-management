@@ -53,6 +53,7 @@ import {
 } from "./operation-stage-roles";
 import { OperationsService } from "./operations.service";
 import { NavTabAccessService } from "../user-nav-tabs/nav-tab-access.service";
+import { OperationsResetClinicalBodyDto, OperationsAddSupplyBodyDto, OperationsSetInstallmentsBodyDto } from "./operations.controller.dto";
 
 const UPLOAD_LIMIT = 25 * 1024 * 1024;
 
@@ -359,7 +360,7 @@ export class OperationsController {
   async resetClinical(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body?: { clearPrescription?: boolean },
+    @Body() body?: OperationsResetClinicalBodyDto,
   ): Promise<{ ok: true }> {
     await this.assertStage2Access(user);
     return this.operations.resetClinical(requireTenantId(user), id, user, body);
@@ -399,7 +400,7 @@ export class OperationsController {
   async addSupply(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { itemName: string; quantity?: number; unit?: string; catalogCode?: string },
+    @Body() body: OperationsAddSupplyBodyDto,
   ) {
     await this.assertStage2Access(user);
     return this.operations.addSupply(requireTenantId(user), id, body);
@@ -409,7 +410,7 @@ export class OperationsController {
   async setInstallments(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { rows: { dueOn: string; amount: number }[] },
+    @Body() body: OperationsSetInstallmentsBodyDto,
   ) {
     await this.assertStatusAccess(user);
     return this.operations.setInstallments(requireTenantId(user), id, body.rows ?? []);

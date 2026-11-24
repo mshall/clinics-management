@@ -4,6 +4,7 @@ import { KiorexImportService, type ImportRecordsBody } from "./kiorex-import.ser
 import { MarketplaceAuthGuard } from "./marketplace-auth.guard";
 import { MarketplaceClient } from "./marketplace-client.decorator";
 import type { PlatformIntegrationClientService } from "./platform-integration-client.service";
+import { KiorexImportRollbackBodyDto } from "./kiorex-import.controller.dto";
 
 type Principal = Awaited<ReturnType<PlatformIntegrationClientService["authenticate"]>>;
 
@@ -29,7 +30,7 @@ export class KiorexImportController {
   @Post(":batchId/rollback")
   @HttpCode(200)
   @ApiOperation({ summary: "DRAFT: remove everything a batch created (rows and stored files)" })
-  rollback(@MarketplaceClient() client: Principal, @Param("batchId") batchId: string, @Body() body: { orgId?: string }) {
+  rollback(@MarketplaceClient() client: Principal, @Param("batchId") batchId: string, @Body() body: KiorexImportRollbackBodyDto) {
     return this.imports.rollback(client, batchId, body);
   }
 }

@@ -6,6 +6,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { RecordShareService } from "./record-share.service";
+import { RecordShareClinicPutRecordShareConsentBodyDto } from "./record-share-clinic.controller.dto";
 
 /** KX-11 — clinic UI toggles (kept out of PatientsModule to avoid Nest import cycles). */
 @ApiTags("patients")
@@ -27,7 +28,7 @@ export class RecordShareClinicController {
   putRecordShareConsent(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { consents: { scope: string; granted: boolean }[] },
+    @Body() body: RecordShareClinicPutRecordShareConsentBodyDto,
   ) {
     return this.recordShare.upsertConsents(requireTenantId(user), id, body?.consents ?? [], "CLINIC");
   }

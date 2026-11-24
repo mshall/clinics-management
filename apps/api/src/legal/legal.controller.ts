@@ -7,6 +7,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { LegalAcceptanceService } from "./legal-acceptance.service";
+import { LegalAcceptBodyDto } from "./legal.controller.dto";
 
 @ApiTags("legal")
 @ApiBearerAuth("bearer")
@@ -26,7 +27,7 @@ export class LegalController {
   @ApiOperation({ summary: "Record versioned legal acceptance" })
   accept(
     @CurrentUser() user: JwtUser,
-    @Body() body: { acceptances: { document: string; version: string }[] },
+    @Body() body: LegalAcceptBodyDto,
     @Req() req: Request,
   ) {
     const tenantId = requireTenantId(user);

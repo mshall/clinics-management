@@ -24,6 +24,7 @@ import { DrugCatalogService } from "./drug-catalog.service";
 import { ClinicalOrdersService } from "./clinical-orders.service";
 import { SpecialtyPacksService } from "./specialty-packs.service";
 import { RequiresScope, ScopeGuard, ScopeOfPracticeService } from "../scope-of-practice/scope-of-practice-public";
+import { ClinicalCreateShortcutBodyDto, ClinicalFavIcdBodyDto, ClinicalLetterBodyDto, ClinicalRxCheckBodyDto, ClinicalSafetyCheckBodyDto, ClinicalCreateOrderBodyDto, ClinicalPatchOrderBodyDto, ClinicalUpsertDentalToothBodyDto, ClinicalPhysioPlanBodyDto } from "./clinical.controller.dto";
 
 @ApiTags("clinical")
 @ApiBearerAuth("bearer")
@@ -80,7 +81,7 @@ export class ClinicalController {
   }
 
   @Post("shortcuts")
-  createShortcut(@CurrentUser() user: JwtUser, @Body() body: { type: ClinicalShortcutType; label: string; trigger?: string; payload: unknown }) {
+  createShortcut(@CurrentUser() user: JwtUser, @Body() body: ClinicalCreateShortcutBodyDto) {
     return this.clinical.saveShortcut(requireTenantId(user), user, body);
   }
 
@@ -95,7 +96,7 @@ export class ClinicalController {
   }
 
   @Post("icd10/favorites")
-  favIcd(@CurrentUser() user: JwtUser, @Body() body: { icd10Code: string }) {
+  favIcd(@CurrentUser() user: JwtUser, @Body() body: ClinicalFavIcdBodyDto) {
     return this.clinical.addDiagnosisFavorite(requireTenantId(user), user, body.icd10Code);
   }
 
@@ -114,7 +115,7 @@ export class ClinicalController {
   }
 
   @Post("letters")
-  letter(@CurrentUser() user: JwtUser, @Body() body: { type: ClinicalLetterType; patientId: string; encounterId?: string; fields?: Record<string, string> }) {
+  letter(@CurrentUser() user: JwtUser, @Body() body: ClinicalLetterBodyDto) {
     return this.clinical.generateLetter(requireTenantId(user), user, body);
   }
 
@@ -134,10 +135,7 @@ export class ClinicalController {
   rxCheck(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      patientId: string;
-      items: { drugName: string; drugProductId?: string | null }[];
-    },
+    body: ClinicalRxCheckBodyDto,
   ) {
     return this.rxSafety.checkRx(requireTenantId(user), body.patientId, body.items ?? []);
   }
@@ -146,12 +144,7 @@ export class ClinicalController {
   @Post("medications/safety-check")
   safetyCheck(
     @CurrentUser() user: JwtUser,
-    @Body() body: {
-      patientId: string;
-      drugName: string;
-      drugProductId?: string;
-      existingDrugNames?: string[];
-    },
+    @Body() body: ClinicalSafetyCheckBodyDto,
   ) {
     return this.safety.checkMedicationSafety(
       requireTenantId(user),
@@ -177,14 +170,7 @@ export class ClinicalController {
   createOrder(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      clinicId: string;
-      patientId: string;
-      encounterId?: string;
-      kind: ClinicalOrderKind;
-      notes?: string;
-      items: { code?: string; nameEn: string; nameAr?: string }[];
-    },
+    body: ClinicalCreateOrderBodyDto,
   ) {
     return this.orders.create(requireTenantId(user), user.userId, body);
   }
@@ -195,12 +181,7 @@ export class ClinicalController {
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
     @Body()
-    body: {
-      status?: ClinicalOrderStatus;
-      resultsJson?: unknown;
-      notes?: string;
-      items?: { id?: string; resultValue?: string; resultUnit?: string; resultFlag?: string }[];
-    },
+    body: ClinicalPatchOrderBodyDto,
   ) {
     return this.orders.patch(requireTenantId(user), id, body);
   }
@@ -244,7 +225,7 @@ export class ClinicalController {
   upsertDentalTooth(
     @CurrentUser() user: JwtUser,
     @Param("patientId") patientId: string,
-    @Body() body: { toothFdi: number; status?: string; planNote?: string; feeAmount?: number },
+    @Body() body: ClinicalUpsertDentalToothBodyDto,
   ) {
     return this.packs.upsertDentalTooth(requireTenantId(user), patientId, body);
   }
@@ -260,14 +241,7 @@ export class ClinicalController {
   physioPlan(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      clinicId: string;
-      patientId: string;
-      clinicianId: string;
-      label: string;
-      sessionCount: number;
-      notes?: string;
-    },
+    body: ClinicalPhysioPlanBodyDto,
   ) {
     return this.packs.createPhysioPlan(requireTenantId(user), body);
   }

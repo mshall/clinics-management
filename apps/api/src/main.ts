@@ -1,7 +1,8 @@
 import "reflect-metadata";
 import { bootstrapTelemetry } from "./observability/telemetry.bootstrap";
 import { applyStagingEnvDefaults } from "./staging/staging-profile";
-import { RequestMethod, ValidationPipe } from "@nestjs/common";
+import { RequestMethod } from "@nestjs/common";
+import { AppValidationPipe } from "./common/lenient-dto";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
@@ -67,11 +68,7 @@ async function bootstrap() {
   });
   app.useGlobalPipes(
     new RejectNulBytesPipe(),
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    })
+    new AppValidationPipe()
   );
 
   if (swaggerEnabled()) { // off in production unless SWAGGER_ENABLED=true

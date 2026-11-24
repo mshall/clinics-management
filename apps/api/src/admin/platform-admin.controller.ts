@@ -22,6 +22,7 @@ import { SettlementService } from "../billing-platform/settlement.service";
 import { PlatformMoneyAuditService } from "../audit/platform-money-audit.service";
 import { SalesKitService } from "../staging/sales-kit.service";
 import type { SalesRoiInput } from "../staging/sales-roi";
+import { PlatformAdminVerifyKiorlyPaymentBodyDto, PlatformAdminGrantCreditsBodyDto, PlatformAdminRunSettlementBodyDto, PlatformAdminExtendTrialBodyDto, PlatformAdminSetPlanBodyDto, PlatformAdminPutEntitlementOverrideBodyDto, PlatformAdminResetSalesDemoBodyDto } from "./platform-admin.controller.dto";
 
 @ApiTags("admin-platform")
 @ApiBearerAuth("bearer")
@@ -302,7 +303,7 @@ export class PlatformAdminController {
   verifyKiorlyPayment(
     @CurrentUser() user: JwtUser,
     @Param("id") id: string,
-    @Body() body: { approved: boolean },
+    @Body() body: PlatformAdminVerifyKiorlyPaymentBodyDto,
   ) {
     return this.platform.verifyKiorlyPayment(user, id, body);
   }
@@ -313,13 +314,7 @@ export class PlatformAdminController {
     @CurrentUser() user: JwtUser,
     @Param("tenantId") tenantId: string,
     @Body()
-    body: {
-      amount: number;
-      reason: string;
-      expiresAt?: string | null;
-      note?: string;
-      secondApproverUserId?: string;
-    },
+    body: PlatformAdminGrantCreditsBodyDto,
   ) {
     return this.platform.grantTenantCredits(user, tenantId, {
       ...body,
@@ -331,7 +326,7 @@ export class PlatformAdminController {
   @ApiOperation({ summary: "Run monthly Kiorly settlement for one or all tenants (platform super admin)" })
   runSettlement(
     @CurrentUser() user: JwtUser,
-    @Body() body: { period: string; tenantIds?: string[] },
+    @Body() body: PlatformAdminRunSettlementBodyDto,
   ) {
     return this.settlement.runForPlatform(user, body);
   }
@@ -341,7 +336,7 @@ export class PlatformAdminController {
   extendTrial(
     @CurrentUser() user: JwtUser,
     @Param("tenantId") tenantId: string,
-    @Body() body: { days: number; reason: string; trialConfigOverride?: Record<string, unknown> },
+    @Body() body: PlatformAdminExtendTrialBodyDto,
   ) {
     return this.platform.extendTenantTrial(user, tenantId, body);
   }
@@ -354,13 +349,7 @@ export class PlatformAdminController {
     @CurrentUser() user: JwtUser,
     @Param("tenantId") tenantId: string,
     @Body()
-    body: {
-      planKey: "LITE" | "PRO" | "CLINIC" | "ENTERPRISE";
-      reason: string;
-      interval?: "MONTHLY" | "ANNUAL" | "YEARLY";
-      clinicianSeats?: number;
-      status?: "ACTIVE" | "TRIALING";
-    },
+    body: PlatformAdminSetPlanBodyDto,
   ) {
     const intervalRaw = body.interval === "YEARLY" ? "ANNUAL" : body.interval;
     return this.platform.setTenantPlan(user, tenantId, {
@@ -378,7 +367,7 @@ export class PlatformAdminController {
     @CurrentUser() user: JwtUser,
     @Param("tenantId") tenantId: string,
     @Param("key") key: string,
-    @Body() body: { valueJson: unknown; reason: string; expiresAt?: string | null },
+    @Body() body: PlatformAdminPutEntitlementOverrideBodyDto,
   ) {
     return this.platform.putTenantEntitlementOverride(user, tenantId, key, body);
   }
@@ -398,7 +387,7 @@ export class PlatformAdminController {
   @Post("demo/reset")
   @ApiOperation({ summary: "GT-05 — reset sales demo pilot tenants (Lite/Pro/Clinic) in under 60s" })
   @ApiOkResponse()
-  resetSalesDemo(@CurrentUser() user: JwtUser, @Body() body: { tier?: string }) {
+  resetSalesDemo(@CurrentUser() user: JwtUser, @Body() body: PlatformAdminResetSalesDemoBodyDto) {
     return this.salesKit.resetDemo(user, body);
   }
 

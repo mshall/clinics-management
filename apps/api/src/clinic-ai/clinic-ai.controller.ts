@@ -8,6 +8,7 @@ import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { FeatureGuard, RequiresFeature } from "../feature-flags/feature-flags-public";
 import { ClinicAiService } from "./clinic-ai.service";
+import { ClinicAiStartScribeBodyDto, ClinicAiUploadAudioBodyDto, ClinicAiStopScribeBodyDto } from "./clinic-ai.controller.dto";
 
 @ApiTags("clinic-ai")
 @ApiBearerAuth("bearer")
@@ -35,7 +36,7 @@ export class ClinicAiController {
   startScribe(
     @CurrentUser() user: JwtUser,
     @Param("encounterId") encounterId: string,
-    @Body() body: { patientConsent?: boolean; retainAudioAfterSignOff?: boolean },
+    @Body() body: ClinicAiStartScribeBodyDto,
   ) {
     return this.clinicAi.startScribeSession(requireTenantId(user), encounterId, {
       patientConsent: Boolean(body?.patientConsent),
@@ -55,7 +56,7 @@ export class ClinicAiController {
   uploadAudio(
     @CurrentUser() user: JwtUser,
     @Param("sessionId") sessionId: string,
-    @Body() body: { seq: number; mimeType?: string; payloadB64: string },
+    @Body() body: ClinicAiUploadAudioBodyDto,
   ) {
     return this.clinicAi.uploadAudioChunk(requireTenantId(user), sessionId, body);
   }
@@ -66,7 +67,7 @@ export class ClinicAiController {
   stopScribe(
     @CurrentUser() user: JwtUser,
     @Param("sessionId") sessionId: string,
-    @Body() body?: { audioSeconds?: number },
+    @Body() body?: ClinicAiStopScribeBodyDto,
   ) {
     return this.clinicAi.stopScribeSession(requireTenantId(user), sessionId, body);
   }

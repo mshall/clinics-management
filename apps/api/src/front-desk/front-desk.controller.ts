@@ -24,6 +24,7 @@ import { requireTenantId } from "../auth/require-tenant";
 import { CollectVisitBalanceDto } from "./dto/collect-visit-balance.dto";
 import { FrontDeskCheckInDto } from "./dto/check-in.dto";
 import { FrontDeskService } from "./front-desk.service";
+import { FrontDeskCallTicketBodyDto, FrontDeskPutPrintSettingsBodyDto, FrontDeskPrintReceiptBodyDto } from "./front-desk.controller.dto";
 
 @ApiTags("front-desk")
 @ApiBearerAuth("bearer")
@@ -60,7 +61,7 @@ export class FrontDeskController {
   }
 
   @Post("call-ticket")
-  callTicket(@CurrentUser() user: JwtUser, @Body() body: { clinicId: string; ticketNumber: number }) {
+  callTicket(@CurrentUser() user: JwtUser, @Body() body: FrontDeskCallTicketBodyDto) {
     return this.frontDesk.callTicket(requireTenantId(user), body.clinicId, body.ticketNumber);
   }
 
@@ -133,7 +134,7 @@ export class FrontDeskController {
   @ApiOperation({ summary: "UX-04 save thermal printer profile" })
   putPrintSettings(
     @CurrentUser() user: JwtUser,
-    @Body() body: { clinicId: string; thermalPrinterProfileId: string },
+    @Body() body: FrontDeskPutPrintSettingsBodyDto,
   ) {
     return this.frontDesk.putPrintSettings(requireTenantId(user), body.clinicId, body.thermalPrinterProfileId);
   }
@@ -166,16 +167,7 @@ export class FrontDeskController {
   async printReceipt(
     @CurrentUser() user: JwtUser,
     @Body()
-    body: {
-      clinicId: string;
-      patientName: string;
-      receiptNumber?: string;
-      lines?: { label: string; amount: string }[];
-      total: string;
-      currency?: string;
-      method?: string;
-      locale?: "en" | "ar";
-    },
+    body: FrontDeskPrintReceiptBodyDto,
   ) {
     const result = await this.frontDesk.thermalPaymentReceipt(requireTenantId(user), body);
     return new StreamableFile(result.pdf, {

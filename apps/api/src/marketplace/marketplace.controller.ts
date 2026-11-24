@@ -17,6 +17,8 @@ import { CarePlanRequestService, type CarePlanRequestBody } from "../nurse/care-
 import { LabSampleService, type LabStatusPush } from "../nurse/lab-sample.service";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplaceWaitlistService, type MarketplaceWaitlistJoinBody } from "./marketplace-waitlist.service";
+import { MarketplaceCancelBookingBodyDto, MarketplaceRescheduleBookingBodyDto, MarketplaceUpsertRecordShareConsentsBodyDto } from "./marketplace.controller.dto";
+import { CreateSlotHoldBodyDto } from "./slot-hold.dto";
 
 @ApiTags("marketplace")
 @Controller("marketplace/v1")
@@ -125,8 +127,8 @@ export class MarketplaceController {
   @Post("holds")
   @ApiOperation({ summary: "Reserve a slot for 5 minutes (KX-04)" })
   @ApiHeader({ name: "X-Kiorly-Client-Key", required: true })
-  createHold(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Body() body: Record<string, unknown>) {
-    return this.holds.createHold(client, body as never);
+  createHold(@MarketplaceClient() client: PlatformIntegrationPrincipal, @Body() body: CreateSlotHoldBodyDto) {
+    return this.holds.createHold(client, body);
   }
 
   @Delete("holds/:id")
@@ -158,7 +160,7 @@ export class MarketplaceController {
   cancelBooking(
     @MarketplaceClient() client: PlatformIntegrationPrincipal,
     @Param("externalRef") externalRef: string,
-    @Body() body: { reason?: string },
+    @Body() body: MarketplaceCancelBookingBodyDto,
   ) {
     return this.bookings.cancelByPatient(client, externalRef, body ?? {});
   }
@@ -169,7 +171,7 @@ export class MarketplaceController {
   rescheduleBooking(
     @MarketplaceClient() client: PlatformIntegrationPrincipal,
     @Param("externalRef") externalRef: string,
-    @Body() body: { startsAt: string; endsAt?: string; holdId?: string },
+    @Body() body: MarketplaceRescheduleBookingBodyDto,
   ) {
     return this.bookings.rescheduleByPatient(client, externalRef, body);
   }
@@ -292,7 +294,7 @@ export class MarketplaceController {
   @ApiOperation({ summary: "Upsert record-share consents from the Kiorex patient app" })
   async upsertRecordShareConsents(
     @Param("id") patientId: string,
-    @Body() body: { consents: { scope: string; granted: boolean }[] },
+    @Body() body: MarketplaceUpsertRecordShareConsentsBodyDto,
   ) {
     return this.recordShare.upsertFromMarketplace(patientId, body?.consents ?? []);
   }
