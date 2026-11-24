@@ -20,3 +20,11 @@ test("dev test users are only the documented synthetic personas and passwords", 
 test("the panel and its credentials are absent from a production build (and present in a development build)", { timeout: 240_000 }, () => {
   execFileSync("node", [path.join(here, "../../scripts/check-no-dev-test-users.mjs")], { stdio: "pipe", cwd: path.join(here, "../..") });
 });
+
+test("the DEV chip uses dark coral ink on the coral pill (axe colour-contrast AA), never white", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(path.join(here, "dev-test-users.tsx"), "utf8");
+  const chip = /<span className="[^"]*">DEV<\/span>/.exec(src)?.[0] ?? "";
+  assert.match(chip, /coral-950/);
+  assert.doesNotMatch(chip, /text-white/);
+});
