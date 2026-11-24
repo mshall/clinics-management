@@ -14,8 +14,9 @@ import { MobileInterceptor } from "./mobile.interceptor";
 import { MobileUpgradeService } from "./mobile-upgrade.service";
 import { MobileService } from "./mobile.service";
 import { createPrismaClient } from "../prisma/create-prisma-client";
+import { ensureMobileDemoTenants } from "./ensure-mobile-demo.fixture";
 
-/** Needs `npm run db:seed:demo` + `npm run db:seed:mobile` (demo tenants na = PRO, bs = BASIC, nsolo = NURSE_PRO, Kiorly Clinic Group = ENTERPRISE). */
+/** Self-seeding: `ensureMobileDemoTenants` runs `db:seed:demo` + `db:seed:mobile` when the tenants are missing (demo tenants na = PRO, bs = BASIC, nsolo = NURSE_PRO, Kiorly Clinic Group = ENTERPRISE). */
 const prisma = createPrismaClient();
 const p = prisma as unknown as PrismaService;
 const audit = new AuditService(p);
@@ -42,6 +43,7 @@ const code = async (fn: () => Promise<unknown>) => { try { await fn(); return nu
 describe("Kiorly backend (real DB)", () => {
   before(async () => {
     await prisma.$connect();
+    await ensureMobileDemoTenants(prisma);
     snaps.setSnapshotForTests(null);
     await prisma.mobileAlertAck.deleteMany({ where: { tenantId: { in: ["demo_t_bs", "demo_t_na"] } } });
     await prisma.vitalsObservation.updateMany({ where: { id: { in: ["demo_vit_bs_crit", "demo_vit_na_crit"] } }, data: { escalatedAt: null } });

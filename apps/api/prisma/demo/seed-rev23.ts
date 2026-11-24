@@ -167,6 +167,11 @@ export async function seedRev23(prisma: PrismaClient, opts: { at: (off: number, 
   await prisma.clinicianVerification.upsert({ where: { userId: "demo_u_df_samah" }, update: { status: "EXPIRED", reverifyReason: "LICENCE_EXPIRED", nextReverifyAt: at(-12, 0) }, create: { id: "demo_v_df_samah_x", userId: "demo_u_df_samah", tenantId: T.df, status: "EXPIRED" } }).catch(() => undefined);
   regRows.push({ id: "demo_pr_df_samah_1", tenantId: T.df, userId: "demo_u_df_samah", verificationId: "demo_v_df_samah", profession: "PHYSICIAN", registerCode: "EG_MOH_LICENCE", registrationNumber: "DEMO-MOH-D-SAMAH", issuedAt: at(-900, 0), expiresAt: at(-12, 0), status: "EXPIRED" });
   await many(prisma, "clinicianVerification", verRows);
+  // `ClinicianVerification.userId` is unique: when the base demo seed already created a verification for a user, `skipDuplicates` skipped the rev23 row above and
+  // the registration would point at an id that does not exist (FK violation on a fresh database). Point it at the verification the user really has.
+  const haveVer = new Map((await prisma.clinicianVerification.findMany({ where: { userId: { in: [...new Set(regRows.map((r) => r.userId as string))] } }, select: { id: true, userId: true } })).map((x) => [x.userId, x.id]));
+  const verIds = new Set(haveVer.values());
+  for (const r of regRows) if (r.verificationId && !verIds.has(r.verificationId)) r.verificationId = haveVer.get(r.userId) ?? null;
   await many(prisma, "professionalRegistration", regRows);
 
   // ──────────────────────────── 4. availability, home settings, listings, entitlements, identity links ────────────────────────────

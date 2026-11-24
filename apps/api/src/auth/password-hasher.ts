@@ -27,13 +27,16 @@ export class PasswordHasher {
   private spawn() {
     const w = new Worker(WORKER_SOURCE, { eval: true, workerData: { bcryptPath: require.resolve("bcryptjs") } });
     const entry = { w, pending: new Map<number, Job>() };
-    w.unref();
     w.on("message", (m: { id: number; ok: boolean; value?: boolean | string; error?: string }) => {
       const job = entry.pending.get(m.id); entry.pending.delete(m.id);
+      if (entry.pending.size === 0) w.unref(); // idle again: never hold the process open
       if (job) m.ok ? job.resolve(m.value as boolean | string) : job.reject(new Error(m.error));
     });
     const fail = (e: Error) => { for (const j of entry.pending.values()) j.reject(e); entry.pending.clear(); this.workers = this.workers.filter((x) => x !== entry); };
     w.on("error", fail); w.on("exit", () => fail(new Error("password worker exited")));
+    // unref AFTER the listeners (and again whenever the queue drains): Node re-refs the worker's message port when a 'message' listener is attached, so an earlier unref() left an idle worker holding the
+    // process open (a `node --test` file that logged in once never exited, which hung the single-invocation integration run after the KCV-201 file).
+    w.unref();
     this.workers.push(entry);
     return entry;
   }
@@ -43,7 +46,7 @@ export class PasswordHasher {
     try {
       const entry = this.workers.length < this.size ? this.spawn() : this.workers.reduce((x, y) => (y.pending.size < x.pending.size ? y : x));
       const id = ++this.seq;
-      return new Promise((resolve, reject) => { entry.pending.set(id, { resolve, reject }); entry.w.postMessage({ id, op, a, b }); });
+      return new Promise((resolve, reject) => { entry.pending.set(id, { resolve, reject }); entry.w.ref(); /* an in-flight job keeps the process alive until it answers */ entry.w.postMessage({ id, op, a, b }); });
     } catch {
       this.broken = true;
       return this.run(op, a, b);
