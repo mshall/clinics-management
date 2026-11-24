@@ -109,3 +109,9 @@ credentials exist. No credentials are ever committed; keys live in Secrets Manag
 - Finance (H-25): `postToPayLedger` and what Kiorex Pay pays the clinic for the sponsored share; the Kiorex side of this wiring is not built (launch guide 11.78).
 - Numbers: high-value thresholds, maximum percentage, grace minutes, price-inflation window, which fraud rules enforce (`featureDefaults.sponsoredPromotions`, PROPOSED_DEFAULT); default funding mode.
 - Contracts: the `reverse` and `review-decision` marketplace commands and the additive `PROVIDER_PROMOTION_UPDATED` fields are not yet in the OpenAPI (1.12.1 request, launch guide 11.81).
+
+## Refer a company (GRW-P4-C)
+- Counsel and CEO: any fee share, reward or credit for a provider that refers a company is NOT built; today the referral is tracking only and says so in Arabic and English (`growth.b2b.noReward`).
+- Product: whether Kiorex should send the outcome of a lead back to the referring provider (needs a Kiorex-to-Clinic event in the contracts); the status page shows only "Sent to Kiorex".
+- Numbers: 90 day duplicate window and 20 referrals per organisation per day are `PROPOSED_DEFAULT` code constants (`b2b-logic.ts`).
+- Contracts: `CorporateLeadReferred` is in the unreleased contracts set (to be published with 1.13.0 and 1.14.0 by one owner).
