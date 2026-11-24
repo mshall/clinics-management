@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { ApiError, apiGet, apiPost, apiPut } from "@/lib/http";
 import { KiorexConnectPassportCard } from "./kiorex-connect-passport-card";
+import { EnrolmentCodeField } from "./kx-enrolment-code";
 import "./kiorex-connect-i18n";
 import type { ConnectDto, ConnectStepDto, ConnectStepStatus } from "./kiorex-connect-types";
 import { useSyncOnChange } from "@/lib/use-sync-on-change";
@@ -66,10 +67,10 @@ export function KiorexConnectPage() {
   const { t, i18n } = useTranslation(); const qc = useQueryClient();
   const clinics = useClinicsQuery(); const [clinicId, setClinicId] = useState("");
   useSyncOnChange([clinicId, clinics.data?.[0]?.id], () => { if (!clinicId && clinics.data?.length) setClinicId(clinics.data[0]!.id); });
-  const q = useKiorexConnect(clinicId);
+  const q = useKiorexConnect(clinicId); const [code, setCode] = useState("");
   const request = useMutation({
-    mutationFn: () => apiPost<ConnectDto>("/api/v1/kiorex/connect/request", { clinicId }),
-    onSuccess: (d) => { qc.setQueryData(connectKey(clinicId), d); toast.success(t("kiorexConnect.requested")); },
+    mutationFn: () => apiPost<ConnectDto>("/api/v1/kiorex/connect/request", { clinicId, ...(code.trim() ? { enrolmentCode: code.trim() } : {}) }),
+    onSuccess: (d) => { setCode(""); qc.setQueryData(connectKey(clinicId), d); toast.success(t("kiorexConnect.requested")); },
     onError: (e) => toast.error(e instanceof ApiError ? t(`kiorexConnect.err.${(e as ApiError & { code?: string }).code ?? ""}`, { defaultValue: e.message }) : String(e)),
   });
   const refresh = useMutation({ mutationFn: () => apiPost<ConnectDto>("/api/v1/kiorex/connect/refresh", { clinicId }), onSuccess: (d) => qc.setQueryData(connectKey(clinicId), d) });
@@ -111,7 +112,8 @@ export function KiorexConnectPage() {
                     {missing.length && s.status !== "done" ? <p className="mt-1 text-xs">{t("kiorexConnect.missingLabel")}: {missing.map((m) => t(`kiorexConnect.missing.${m}`)).join(", ")}</p> : null}
                   </div>
                   {href && s.status !== "done" && s.status !== "waiting_kiorex" && s.key !== "request" ? <Button asChild size="sm" variant="outline"><Link to={href}>{t("kiorexConnect.fix")}</Link></Button> : null}
-                  {s.key === "request" && (s.status === "action_needed" || s.status === "waiting_kiorex") ? <Button size="sm" disabled={!d.canRequest || request.isPending} onClick={() => request.mutate()} data-testid="connect-request">{t("kiorexConnect.request")}</Button> : null}
+                  {s.key === "request" && (s.status === "action_needed" || s.status === "waiting_kiorex") ? <Button size="sm" disabled={!d.canRequest || request.isPending || (!!d.enrolmentCodeRequired && !code.trim())} onClick={() => request.mutate()} data-testid="connect-request">{t("kiorexConnect.request")}</Button> : null}
+                  {s.key === "request" && d.enrolmentCodeRequired && d.canRequest ? <EnrolmentCodeField value={code} onChange={setCode} /> : null}
                 </li>
               );
             })}
