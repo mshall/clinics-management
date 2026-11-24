@@ -47,7 +47,7 @@ export function MobileBottomNav() {
     { to: "/", label: t("nav.mobileToday", t("nav.dashboard")), icon: CalendarDays, show: showTab("dashboard"), end: true },
     { to: "/patients", label: t("nav.patients"), icon: UserRound, show: showTab("patients") },
     { to: "/encounters", label: t("nav.encounters"), icon: Stethoscope, show: showTab("encounters") },
-    { to: "/kiorex", label: t("nav.kiorex", "Kiorex"), icon: Sparkles, show: showTab("clinics") },
+    { to: "/kiorex", label: t("nav.kiorex", "Kiorex"), icon: Sparkles, show: showTab("clinics") || showTab("admin") },
     { to: "/profile", label: t("nav.mobileMore", t("nav.profile")), icon: MoreHorizontal, show: true },
   ];
 

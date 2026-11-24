@@ -38,4 +38,16 @@ describe("Connect to Kiorex wizard (web)", () => {
   it("never states a price: the fee comes from the published market config", () => {
     assert.doesNotMatch(JSON.stringify(en) + JSON.stringify(ar), /EGP\s*\d|\d+\s*جنيه/);
   });
+  it("browser-walk regressions: AA status colours, decision banner, readable doctor states, Lite owners can reach the pages", () => {
+    const page = readFileSync(join(here, "kiorex-connect-page.tsx"), "utf8");
+    assert.match(page, /text-emerald-700 dark:text-emerald-400/); assert.match(page, /text-amber-700 dark:text-amber-400/); assert.match(page, /text-sky-700 dark:text-sky-400/);
+    assert.doesNotMatch(page, /text-(emerald|amber|sky)-600/);
+    for (const s of ["CHANGES_REQUESTED", "REJECTED", "PAUSED"]) { assert.ok((en as Record<string, any>).decision[s] && (ar as Record<string, any>).decision[s], s); }
+    assert.match(page, /connect-decision/);
+    for (const k of ["NONE", "VERIFIED"]) assert.ok((en as any).doctor.verif[k] && (ar as any).doctor.verif[k]);
+    for (const k of ["DRAFT", "PENDING_VERIFICATION", "LIVE", "PAUSED"]) assert.ok((en as any).doctor.listing[k] && (ar as any).doctor.listing[k]);
+    assert.doesNotMatch(page, /: \{x\.verification\} ·|: \{x\.status\}/); // raw enum values are never printed
+    const router = readFileSync(join(here, "../../app/router.tsx"), "utf8"); // Lite plans have Admin but no Clinics tab: the Kiorex pages must stay reachable
+    for (const c of ["KiorexPage", "KiorexConnectPage", "ClinicDetailPage", "MarketplaceListingProfilePage"]) assert.match(router, new RegExp(`<NavGate tab="clinics" orTab="admin">\\{defer\\(${c}\\)`));
+  });
 });

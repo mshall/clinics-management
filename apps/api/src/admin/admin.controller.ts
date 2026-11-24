@@ -279,7 +279,7 @@ export class AdminController {
   @ApiOperation({ summary: "Organisation default sign-in method (Passport or password preselected on the login page); group admin only" })
   @ApiOkResponse()
   getSignInMethod(@CurrentUser() user: JwtUser) {
-    if (user.role !== "GROUP_ADMIN") throw new ForbiddenException("Only group administrators can read the sign-in default");
+    if (!hasRole(user, UserRole.GROUP_ADMIN)) throw new ForbiddenException("Only group administrators can read the sign-in default");
     return this.admin.getSignInDefault(requireTenantId(user));
   }
 
@@ -287,7 +287,7 @@ export class AdminController {
   @ApiOperation({ summary: "Set the organisation default sign-in method (PASSWORD | PASSPORT | null = automatic); both methods stay available" })
   @ApiOkResponse()
   putSignInMethod(@CurrentUser() user: JwtUser, @Body() body: { defaultSignInMethod?: unknown }) {
-    if (user.role !== "GROUP_ADMIN") throw new ForbiddenException("Only group administrators can change the sign-in default");
+    if (!hasRole(user, UserRole.GROUP_ADMIN)) throw new ForbiddenException("Only group administrators can change the sign-in default");
     return this.admin.setSignInDefault(requireTenantId(user), user, body?.defaultSignInMethod);
   }
 

@@ -201,7 +201,7 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           {t("nav.clinics")}
         </NavLink>
       ) : null}
-      {showTab("clinics") ? (
+      {showTab("clinics") || showTab("admin") ? (
         <NavLink to="/kiorex" className={navClass} onClick={() => onNavigate?.()}>
           <Sparkles className="size-4 shrink-0" />
           {t("nav.kiorex", "Kiorex")}

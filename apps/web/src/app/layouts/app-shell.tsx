@@ -138,7 +138,7 @@ export function AppShell() {
                 data-testid="header-org-plan"
                 title={t("app.orgPlanHint", "Your organization's current Kiorly plan")}
               >
-                <span className="hidden text-[10px] font-medium uppercase tracking-wide text-sky-700/70 dark:text-sky-300/70 sm:inline">
+                <span className="hidden text-[10px] font-medium uppercase tracking-wide text-sky-800 dark:text-sky-200 sm:inline">
                   {t("app.orgPlan", "Plan")}
                 </span>
                 <span className="truncate">{orgPlanLabel(orgPlanKey, t)}</span>

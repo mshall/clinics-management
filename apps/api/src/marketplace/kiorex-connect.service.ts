@@ -165,7 +165,7 @@ export class KiorexConnectService {
     if (!state.canRequest) throw new ConflictException({ code: "CONNECT_NOT_READY", message: "Finish every step before requesting to go live", open: state.steps.filter((s) => !s.optional && !["request", "live"].includes(s.key) && s.status !== "done").map((s) => s.key) });
     const clinic = await this.loadClinic(user, clinicId);
     const doc = this.doc(clinic.tenant.providerSettings)!;
-    const sent = await this.send(clinic, state, doc, enrolmentCode);
+    const sent = await this.send(clinic, state, doc, enrolmentCode, user.email);
     await this.saveDoc(clinic.tenantId, { ...doc, status: "REQUESTED", request: { id: sent.id, token: sent.statusToken ?? doc.request?.token ?? "", submittedAt: new Date().toISOString() }, ...(sent.intakeKey ? { intakeKeyEnc: sealField(sent.intakeKey) } : {}) });
     await this.listings.recomputeTenantListings(clinic.tenantId);
     await this.audit.recordEvent({ tenantId: clinic.tenantId, actorId: user.userId, clinicId, action: "kiorex.connect.requested", resource: "Tenant", resourceId: clinic.tenantId, metadata: { requestId: sent.id } });
@@ -175,19 +175,19 @@ export class KiorexConnectService {
   private async resend(user: JwtUser, clinicId: string, state: Awaited<ReturnType<KiorexConnectService["get"]>>, enrolmentCode?: string) {
     const clinic = await this.loadClinic(user, clinicId);
     const doc = this.doc(clinic.tenant.providerSettings)!;
-    const sent = await this.send(clinic, state, doc, enrolmentCode);
+    const sent = await this.send(clinic, state, doc, enrolmentCode, user.email);
     if (sent.intakeKey) await this.saveDoc(clinic.tenantId, { ...doc, intakeKeyEnc: sealField(sent.intakeKey) });
     return state;
   }
 
-  private async send(clinic: Awaited<ReturnType<KiorexConnectService["loadClinic"]>>, state: Awaited<ReturnType<KiorexConnectService["get"]>>, doc: ConnectDoc, enrolmentCode?: string): Promise<{ id: string; statusToken?: string; intakeKey?: string }> {
+  private async send(clinic: Awaited<ReturnType<KiorexConnectService["loadClinic"]>>, state: Awaited<ReturnType<KiorexConnectService["get"]>>, doc: ConnectDoc, enrolmentCode?: string, contactEmail?: string): Promise<{ id: string; statusToken?: string; intakeKey?: string }> {
     const base = kiorexApiBase(); const code = enrolmentCode?.trim() || undefined; const intakeKey = doc.intakeKeyEnc ? openField(doc.intakeKeyEnc) ?? undefined : undefined;
     if (!base) throw new ConflictException({ code: "KIOREX_NOT_CONFIGURED", message: "Kiorex connection is not configured for this deployment" });
     if (code && !enrolmentIdOf(code)) throw new BadRequestException({ code: "ENROLMENT_CODE_INVALID", message: "That enrolment code is not valid. Copy it exactly as Kiorex gave it to you" });
     if (!code && !intakeKey) throw new ConflictException({ code: "ENROLMENT_CODE_REQUIRED", message: "Enter the enrolment code Kiorex gave you" });
     const ready = state.doctors.filter((d) => d.ready).length;
     const body = JSON.stringify({
-      nonce: newIntakeNonce(), kind: clinic.tenant.edition === "NURSE" ? "NURSE" : "CLINIC", orgRef: clinic.tenantId, name: clinic.tenant.name, nameAr: clinic.tenant.nameAr ?? undefined, market: state.market,
+      nonce: newIntakeNonce(), kind: clinic.tenant.edition === "NURSE" ? "NURSE" : "CLINIC", orgRef: clinic.tenantId, name: clinic.tenant.name, nameAr: clinic.tenant.nameAr ?? undefined, market: state.market, ...(contactEmail && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contactEmail) ? { contactEmail } : {}),
       locale: "en",
       readiness: { counts: { doctors: state.doctors.length, ready, verified: state.doctors.filter((d) => d.verification === "VERIFIED").length }, documents: { doctorCredentials: state.doctors.some((d) => d.verification === "VERIFIED") }, termsAcceptedAt: doc.consent?.at, termsVersion: doc.consent?.termsVersion, steps: state.steps.map((s) => ({ key: s.key, status: s.status })) },
     });

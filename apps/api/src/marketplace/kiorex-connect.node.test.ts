@@ -83,4 +83,12 @@ describe("signed request to Kiorex", () => {
     assert.equal(enrolmentIdOf("kxe_short"), undefined);
     assert.match(newIntakeNonce(), /^[A-Za-z0-9_-]{16,64}$/);
   });
+  it("browser-walk regressions: a self-serve owner (PHYSICIAN + GROUP_ADMIN) can read the Passport default, and the partner contact e-mail is sent so Kiorex can notify", async () => {
+    const { readFileSync } = await import("node:fs");
+    const admin = readFileSync(new URL("../admin/admin.controller.ts", import.meta.url), "utf8");
+    assert.doesNotMatch(admin, /user\.role !== "GROUP_ADMIN"\) throw new ForbiddenException\("Only group administrators can (read|change) the sign-in default"/);
+    assert.match(admin, /hasRole\(user, UserRole\.GROUP_ADMIN\)\) throw new ForbiddenException\("Only group administrators can read the sign-in default"/);
+    const svc = readFileSync(new URL("./kiorex-connect.service.ts", import.meta.url), "utf8");
+    assert.match(svc, /send\(clinic, state, doc, enrolmentCode, user\.email\)/); assert.match(svc, /\.\.\.\(contactEmail &&/);
+  });
 });
