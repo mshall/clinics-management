@@ -55,6 +55,15 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
         res.status(exception.getStatus()).json(exception.getResponse());
         return;
       }
+      // ~115 controller parameters are typed inline (`@Body() body: { code: string }`), which class-validator cannot validate, so a body that omits or mistypes a field reaches the service and
+      // dereferences undefined. On a mutating request that is the caller's error (400), not a server fault. The TypeError is still logged at error level so a genuine bug stays visible;
+      // the lasting fix is a DTO class per endpoint (EDGE-49 residual risk).
+      const rq = req as unknown as { method?: string };
+      if (exception instanceof TypeError && /Cannot read properties of (undefined|null)|is not iterable|undefined is not/.test(exception.message) && ["POST", "PUT", "PATCH"].includes(rq.method ?? "")) {
+        this.logger.error(exception);
+        res.status(HttpStatus.BAD_REQUEST).json({ statusCode: 400, error: "Bad Request", message: "The request body is missing a required field or has the wrong shape" });
+        return;
+      }
       this.logger.error(exception);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
