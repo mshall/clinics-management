@@ -15,12 +15,12 @@ type DayDraft = { on: boolean; start: string; end: string };
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 /** HVCFG02 — weekly availability for a nurse (one window per day keeps field entry short; the slot engine, travel buffers and daily cap do the rest). */
-export function AvailabilityEditor({ clinicianId, title }: { clinicianId: string; title?: string }) {
+export function AvailabilityEditor({ clinicianId, title, clinicId: clinicIdProp }: { clinicianId: string; title?: string; clinicId?: string }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const errText = useErrorText();
   const clinics = useClinics();
-  const clinicId = clinics.data?.[0]?.id;
+  const clinicId = clinicIdProp ?? clinics.data?.[0]?.id;
   const q = useQuery({
     queryKey: ["nurse", "availability", clinicianId, clinicId],
     queryFn: () => apiGet<{ weekJson: Week } | null>(`/api/v1/scheduling/availability?clinicId=${clinicId}&clinicianId=${clinicianId}`),
@@ -32,7 +32,8 @@ export function AvailabilityEditor({ clinicianId, title }: { clinicianId: string
     const week = q.data?.weekJson;
     setDays(WEEKDAYS.map((d) => {
       const slot = week?.days.find((x) => x.weekday === d)?.slots[0];
-      return slot ? { on: true, start: slot.start, end: slot.end } : { on: false, start: "09:00", end: "17:00" };
+      // templates seeded before the midnight fix end at "00:00": show end of day instead of an invalid range
+      return slot ? { on: true, start: slot.start, end: slot.end === "00:00" ? "23:59" : slot.end } : { on: false, start: "09:00", end: "17:00" };
     }));
   });
   const save = useMutation({

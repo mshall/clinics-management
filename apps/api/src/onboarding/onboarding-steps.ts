@@ -12,6 +12,13 @@ export const ONBOARDING_STEP_KEYS = [
   "first_check_in",
   "kiorex_profile",
   "doctor_verification",
+  "connect_kiorex",
+  "nurse_verification",
+  "nurse_zones",
+  "nurse_services",
+  "nurse_prices",
+  "nurse_availability",
+  "nurse_safety_contact",
 ] as const;
 
 export type OnboardingStepKey = (typeof ONBOARDING_STEP_KEYS)[number];

@@ -67,6 +67,7 @@ export function OrgWhatsAppRemindersCard() {
           size="sm"
           variant={enabled ? "default" : "outline"}
           aria-pressed={enabled}
+          data-setup-target="whatsapp_reminders"
           onClick={() => setEnabled((v) => !v)}
         >
           {enabled ? t("platform.flagOn", "On") : t("platform.flagOff", "Off")}

@@ -157,6 +157,8 @@ export class ClinicsService {
   private async assertClinicVisible(tenantId: string, clinicId: string, user: JwtUser): Promise<void> {
     const row = await this.prisma.clinic.findFirst({ where: { id: clinicId, tenantId }, select: { id: true } });
     if (!row) throw new NotFoundException("Clinic not found");
+    // an organisation owner (physician + GROUP_ADMIN) sees every clinic of the organisation, not only the ones they practise in
+    if (hasRole(user, UserRole.GROUP_ADMIN)) return;
     if (hasRole(user, UserRole.PHYSICIAN)) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!net.includes(clinicId)) throw new NotFoundException("Clinic not found");
@@ -572,7 +574,7 @@ export class ClinicsService {
       },
     });
     if (!row) throw new NotFoundException("Clinic not found");
-    if (hasRole(user, UserRole.PHYSICIAN)) {
+    if (hasRole(user, UserRole.PHYSICIAN) && !hasRole(user, UserRole.GROUP_ADMIN)) {
       const net = await fetchPhysicianNetworkClinicIds(this.prisma, tenantId, user.userId);
       if (!net.includes(id)) throw new NotFoundException("Clinic not found");
     }
@@ -852,6 +854,13 @@ export class ClinicsService {
     }
     if (dto.openingTime !== undefined) data.openingTime = nextOpening;
     if (dto.closingTime !== undefined) data.closingTime = nextClosing;
+    if (dto.openingTime !== undefined || dto.closingTime !== undefined) {
+      // Quick setup: saving the hours is the explicit confirmation (even when the owner keeps the defaults).
+      data.providerSettings = {
+        ...(((existing as { providerSettings?: unknown }).providerSettings ?? {}) as Prisma.JsonObject),
+        setupHoursConfirmedAt: new Date().toISOString(),
+      };
+    }
     if (dto.frontDeskRoomLabels !== undefined) {
       try {
         data.frontDeskRoomLabels = normalizeFrontDeskRoomLabels(dto.frontDeskRoomLabels);

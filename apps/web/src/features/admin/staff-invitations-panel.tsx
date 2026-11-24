@@ -72,6 +72,7 @@ export function StaffInvitationsPanel() {
               <Label htmlFor="invite-contact">{t("invitations.contact")}</Label>
               <Input
                 id="invite-contact"
+                data-setup-target="invite_receptionist"
                 value={contact}
                 onChange={(e) => setContact(e.target.value)}
                 placeholder={t("invitations.contactPlaceholder")}

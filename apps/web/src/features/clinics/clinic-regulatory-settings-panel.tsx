@@ -52,7 +52,8 @@ export function ClinicRegulatorySettingsPanel({ clinicId, detail, canEdit }: Pro
       const vatN = Number.parseFloat(vatPercent);
       await apiPatch(`/api/v1/clinics/${clinicId}`, {
         licenseNumber: license.trim(),
-        taxRegistrationNumber: taxReg.trim() || null,
+        // only send the tax number when it changed: a markets that requires a TRN must not block saving the licence alone
+        ...(taxReg.trim() !== (detail.taxRegistrationNumber ?? "") ? { taxRegistrationNumber: taxReg.trim() || null } : {}),
       });
       await invoiceMut.mutateAsync(
         vatOverride
@@ -106,6 +107,7 @@ export function ClinicRegulatorySettingsPanel({ clinicId, detail, canEdit }: Pro
           <Label htmlFor="clinic-reg-license">{licenseLabel}</Label>
           <Input
             id="clinic-reg-license"
+            data-setup-target="clinic_profile"
             value={license}
             onChange={(e) => setLicense(e.target.value)}
             disabled={!canEdit}

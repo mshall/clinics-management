@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { ResponsiveTable } from "@/components/responsive-table";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiGet, apiPost } from "@/lib/http";
+import { useAuthStore } from "@/stores/auth-store";
 
 const INTEGRATION_SCOPES = [
   "APPOINTMENTS_READ",
@@ -48,7 +49,13 @@ type RotateResponse = {
   clientKey: string;
 };
 
+/** Plans without the integrations module do not mount the panel at all: its list call answers 402 and used to pop the upgrade paywall over the whole Admin page. */
 export function AdminIntegrationClientsPanel() {
+  const entitled = useAuthStore((s) => Boolean(s.user?.entitlements?.mod_integrations));
+  return entitled ? <AdminIntegrationClientsPanelInner /> : null;
+}
+
+function AdminIntegrationClientsPanelInner() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const [name, setName] = useState("");

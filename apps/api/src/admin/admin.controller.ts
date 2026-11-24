@@ -269,8 +269,9 @@ export class AdminController {
   @ApiOperation({ summary: "Update tenant-level settings (group admin only)" })
   @ApiOkResponse()
   patchTenantSettings(@CurrentUser() user: JwtUser, @Body() body: PatchTenantSettingsDto) {
-    if (user.role !== "GROUP_ADMIN") {
-      throw new ForbiddenException("Only group administrators can update tenant settings");
+    // The self-serve owner is a physician with isTenantOwner: the organisation owner may change tenant settings (quick setup: WhatsApp reminders).
+    if (user.role !== "GROUP_ADMIN" && !user.isTenantOwner) {
+      throw new ForbiddenException("Only group administrators or the organisation owner can update tenant settings");
     }
     return this.admin.patchTenantSettings(requireTenantId(user), user, body);
   }

@@ -160,6 +160,10 @@ export const useAuthStore = create<AuthState>()(
             email: me.email,
             displayName: me.displayName,
             role: mapApiRole(me.role),
+            // keep the extra roles and the owner flag: dropping them made the owner (physician + GROUP_ADMIN) look like a plain doctor after every refresh
+            roles: ((me as { roles?: string[] }).roles ?? [me.role]).map((r) => mapApiRole(r)),
+            additionalRoles: ((me as { additionalRoles?: string[] }).additionalRoles ?? []).map((r) => mapApiRole(r)),
+            isTenantOwner: Boolean((me as { isTenantOwner?: boolean }).isTenantOwner),
             navTabKeys: me.navTabKeys ?? null,
             roleNavTabKeys: me.roleNavTabKeys ?? null,
             navTabAccessModes: me.navTabAccessModes ?? null,

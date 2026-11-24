@@ -15,6 +15,7 @@ import { TeamPage } from "@/features/admin/team-page";
 import { AcceptInvitationPage } from "@/features/auth/accept-invitation-page";
 import { RepConsolePage } from "@/features/rep/rep-console-page";
 import { OnboardingPage } from "@/features/onboarding/onboarding-page";
+import { AvailabilitySetupPage } from "@/features/onboarding/availability-setup-page";
 import { OfflineTodayPage } from "@/features/pwa/offline-today-page";
 import { PatientJoinPage } from "@/features/telehealth/patient-join-page";
 import { TelehealthCallPage } from "@/features/telehealth/telehealth-call-page";
@@ -201,6 +202,7 @@ export const router = createBrowserRouter([
       { path: "clinic-revenue", element: <Navigate to="/revenue" replace /> },
       { path: "doctor-revenue", element: <DoctorRevenueGate /> },
       { path: "profile", element: <ProfileGate /> },
+      { path: "profile/availability", element: <AvailabilitySetupPage /> },
       { path: "home-visits/today", element: <TodayRoutePage /> },
       // Kiorly Nurse edition screens (KNCP / KNREC / KNMAR / KNSVC / KNAG / HVSAF / KNFAM / KNRPT). The API enforces scope of practice and flags; nothing here gates safety.
       { path: "nurse/care-plans", element: defer(CarePlansPage) },

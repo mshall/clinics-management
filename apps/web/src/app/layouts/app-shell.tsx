@@ -20,6 +20,7 @@ import { DeployVersionBanner } from "@/components/deploy-version-banner";
 import { LegalAcceptanceBanner } from "@/components/legal-acceptance-banner";
 import { TrialBanner } from "@/components/trial-banner";
 import { DunningBanner } from "@/components/dunning-banner";
+import { SetupContextBar } from "@/features/onboarding/setup-context-bar";
 import { UpgradePaywallModal } from "@/components/upgrade-paywall-modal";
 import { FirstRunTour } from "@/features/help/first-run-tour";
 import { HelpDrawer } from "@/features/help/help-drawer";
@@ -193,6 +194,7 @@ export function AppShell() {
         <LegalAcceptanceBanner />
         {showReportingPeriodBar(pathname) ? <DateRangeBar /> : null}
         <main className="mx-auto w-full min-w-0 max-w-[min(96rem,calc(100vw-1rem))] flex-1 p-3 pb-20 sm:p-4 md:p-6 md:pb-6">
+          <SetupContextBar />
           <Outlet />
         </main>
         <KeyboardShortcuts />

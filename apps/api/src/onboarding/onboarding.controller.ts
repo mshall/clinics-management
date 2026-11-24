@@ -5,7 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
 import { PatchOnboardingStepDto } from "./dto/patch-onboarding-step.dto";
-import { OnboardingService } from "./onboarding.service";
+import { OnboardingService, viewerFromUser } from "./onboarding.service";
 import { SampleDataService } from "./sample-data.service";
 
 @ApiTags("onboarding")
@@ -37,16 +37,22 @@ export class OnboardingController {
   }
 
   @Get()
-  @ApiOperation({ summary: "Tenant activation checklist (ON-04)" })
+  @ApiOperation({ summary: "Quick-setup checklist: per-step and per-clinic state computed from real data (ON-04)" })
   getProgress(@CurrentUser() user: JwtUser) {
     const tenantId = requireTenantId(user);
-    return this.onboarding.getOrCreate(tenantId);
+    return this.onboarding.getOrCreate(tenantId, viewerFromUser(user), user.userId);
   }
 
   @Patch("steps/:key")
-  @ApiOperation({ summary: "Mark step complete or skip (optional steps only)" })
+  @ApiOperation({ summary: "Skip an optional step (optionally for one clinic). Steps are never ticked by hand." })
   patchStep(@CurrentUser() user: JwtUser, @Param("key") key: string, @Body() body: PatchOnboardingStepDto) {
     const tenantId = requireTenantId(user);
-    return this.onboarding.patchStep(tenantId, user.userId, key, body.action);
+    return this.onboarding.patchStep(tenantId, user.userId, key, body.action, body.entityId, viewerFromUser(user));
+  }
+
+  @Post("dismiss")
+  @ApiOperation({ summary: "Dismiss the finished checklist for the organisation" })
+  dismiss(@CurrentUser() user: JwtUser) {
+    return this.onboarding.dismiss(requireTenantId(user), user.userId, viewerFromUser(user));
   }
 }

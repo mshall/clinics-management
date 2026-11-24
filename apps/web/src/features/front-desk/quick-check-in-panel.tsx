@@ -246,6 +246,7 @@ export function QuickCheckInPanel({ appointment, currency = "AED", examRoomOptio
             disabled={checkIn.isPending}
             onClick={submit}
             data-testid="quick-check-in-submit"
+            data-setup-target="first_check_in"
           >
             {t("frontDesk.checkInButton", "Check in & print ticket")}
           </Button>

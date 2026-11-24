@@ -84,6 +84,7 @@ export function ImportWizardPage() {
                   key={e}
                   type="button"
                   role="radio"
+                  data-setup-target={e === IMPORT_ENTITIES[0] ? "import_patients" : undefined}
                   aria-checked={entity === e}
                   variant={entity === e ? "default" : "outline"}
                   size="sm"

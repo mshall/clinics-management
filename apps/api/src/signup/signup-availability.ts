@@ -12,7 +12,8 @@ export function availabilityWeekFromClinicHours(
   const weekend = new Set(weekendDays);
   for (let weekday = 0; weekday <= 6; weekday += 1) {
     if (weekend.has(weekday)) continue;
-    week.days[weekday]?.slots.push({ start: openingTime, end: closingTime });
+    // A clinic that closes at midnight ("00:00") works until the end of the day; the week validator needs end > start, so seed 23:59.
+    week.days[weekday]?.slots.push({ start: openingTime, end: closingTime === "00:00" ? "23:59" : closingTime });
   }
   return week as unknown as Prisma.InputJsonValue;
 }
