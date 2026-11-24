@@ -110,6 +110,8 @@ export type PublishedProviderDto = {
     longitude: number | null;
     phone: string;
     logoUrl: string | null;
+    /** GRW-P1-G: the clinic booking slug (also the widget embed slug). Additive: the contract's `clinic` object is open. */
+    bookingSlug?: string | null;
     clinicalSpecialty: string;
     parking: boolean;
     wheelchairAccess: boolean;
@@ -318,6 +320,7 @@ export class MarketplaceProviderProfileService {
           logoUrl: true,
           clinicalSpecialty: true,
           defaultCurrency: true,
+          bookingSlug: true,
         },
       }),
       this.prisma.appointmentType.findMany({
@@ -368,6 +371,7 @@ export class MarketplaceProviderProfileService {
         longitude: clinic.longitude != null ? Number(clinic.longitude) : null,
         phone: clinic.phone,
         logoUrl: clinic.logoUrl,
+        bookingSlug: clinic.bookingSlug, // GRW-P1-G: lets Kiorex resolve the widget embed slug to this clinic
         clinicalSpecialty: clinic.clinicalSpecialty,
         parking: Boolean(profile.parking),
         wheelchairAccess: Boolean(profile.wheelchairAccess),
