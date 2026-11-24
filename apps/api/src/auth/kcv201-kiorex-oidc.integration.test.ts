@@ -74,6 +74,7 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
 
   before(async () => {
     await prisma.$connect();
+    await prisma.kiorexLogoutTokenSeen.deleteMany({});
     process.env.KIOREX_OIDC_ISSUER = ISSUER;
     const u = await prisma.user.findFirstOrThrow({ where: { email: "dr.ahmed@drahmedshall.com", deletedAt: null } });
     const o = await prisma.user.findFirstOrThrow({ where: { email: "admin@drahmedshall.com", deletedAt: null } });
@@ -94,6 +95,7 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
   after(async () => {
     await prisma.kiorexIdentityLink.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.kiorexOidcTransaction.deleteMany({});
+    await prisma.kiorexLogoutTokenSeen.deleteMany({}); // the replay cache is shared and the test counts it: a second run on the same database must start empty
     if (savedIssuer === undefined) delete process.env.KIOREX_OIDC_ISSUER;
     else process.env.KIOREX_OIDC_ISSUER = savedIssuer;
     await prisma.$disconnect();
