@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
 import { useClinicsQuery } from "@/lib/api-hooks";
 import { apiGet } from "@/lib/http";
-import { useKiorexConnect } from "./kiorex-connect-page";
+import { useKiorexConnect } from "./kiorex-connect-hooks";
 import { useFrontDoor } from "./kiorex-door-hooks";
-import { isHomeCardDismissed, setHomeCardDismissed } from "./kiorex-door-hooks";
+import { useHomeCardDismissed } from "./dismissed-cards";
 import { KiorexLanding } from "./kiorex-landing";
 import { KiorexLiveDashboard } from "./kiorex-live-dashboard";
 import { KiorexProgressPanel } from "./kiorex-progress-panel";
@@ -34,7 +34,7 @@ export function KiorexPage() {
   const door = useFrontDoor(clinicId);
   const connect = useKiorexConnect(clinicId);
   const userId = useAuthStore((s) => s.user?.id ?? "");
-  const [cardShown, setCardShown] = useState(0);
+  const { dismissed: cardDismissed, setDismissed: setCardDismissed } = useHomeCardDismissed(userId || undefined);
   const state = door.data?.state;
   // the day-to-day cards (booking settings, policy, ...) are for connected organisations; before that the front door is the whole page
   const connected = state === "LIVE" || state === "ATTENTION";
@@ -80,7 +80,7 @@ export function KiorexPage() {
       {state === "NOT_CONNECTED" && door.data ? (
         <>
           <KiorexLanding clinicId={clinicId} door={door.data} connect={connect.data} />
-          {userId && isHomeCardDismissed(userId) ? <Button variant="ghost" size="sm" data-testid="home-card-show" onClick={() => { setHomeCardDismissed(userId, false); setCardShown((x) => x + 1); toast.success(t("kiorexMarketing.homeCard.shown")); }}>{t("kiorexMarketing.homeCard.show")}</Button> : <span hidden data-n={cardShown} />}
+          {userId && cardDismissed ? <Button variant="ghost" size="sm" data-testid="home-card-show" onClick={() => { setCardDismissed(false); toast.success(t("kiorexMarketing.homeCard.shown")); }}>{t("kiorexMarketing.homeCard.show")}</Button> : null}
         </>
       ) : null}
       {(state === "IN_PROGRESS" || state === "WAITING" || state === "ATTENTION") && connect.data && !connect.data.legacy ? <KiorexProgressPanel state={state} connect={connect.data} clinicId={clinicId} /> : null}

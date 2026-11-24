@@ -166,6 +166,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "user-nav-tabs/tenant-role-nav-tabs.controller.ts": { kind: "open" },
   "user-nav-tabs/user-nav-tabs.controller.ts": { kind: "open" },
   "users/users.controller.ts": { kind: "open" },
+  "users/user-preferences.controller.ts": { kind: "open" },
   "usage/usage.controller.ts": { kind: "open" },
 };
 

@@ -1,26 +1,26 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { toast } from "sonner";
 import { AlertCircle, CheckCircle2, Clock, Lock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useClinicsQuery } from "@/lib/api-hooks";
-import { ApiError, apiGet, apiPost, apiPut } from "@/lib/http";
+import { ApiError, apiPost, apiPut } from "@/lib/http";
 import { KiorexConnectPassportCard } from "./kiorex-connect-passport-card";
 import { EnrolmentCodeField } from "./kx-enrolment-code";
 import "./kiorex-connect-i18n";
 import type { ConnectDto, ConnectStepDto, ConnectStepStatus } from "./kiorex-connect-types";
+import { connectKey, useKiorexConnect } from "./kiorex-connect-hooks";
 import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
 const ICON: Record<ConnectStepStatus, typeof CheckCircle2> = { done: CheckCircle2, action_needed: AlertCircle, waiting_kiorex: Clock, blocked: Lock };
 const TONE: Record<ConnectStepStatus, string> = { done: "text-emerald-700 dark:text-emerald-400", action_needed: "text-amber-700 dark:text-amber-400", waiting_kiorex: "text-sky-700 dark:text-sky-400", blocked: "text-muted-foreground" };
 
-export const connectKey = (clinicId: string) => ["kiorex", "connect", clinicId] as const;
-export const useKiorexConnect = (clinicId: string) => useQuery({ queryKey: connectKey(clinicId), queryFn: () => apiGet<ConnectDto>(`/api/v1/kiorex/connect?clinicId=${encodeURIComponent(clinicId)}`), enabled: Boolean(clinicId), refetchInterval: (q) => (q.state.data?.status === "REQUESTED" ? 15_000 : false) });
 
-function detailText(t: (k: string, o?: Record<string, unknown>) => string, s: ConnectStepDto): string {
+function detailText(t: TFunction, s: ConnectStepDto): string {
   const d = (s.detail ?? {}) as Record<string, number | string[]>;
   if (s.key === "credentials") return [t("kiorexConnect.detail.verified", d), Number(d.pending) > 0 ? t("kiorexConnect.detail.pending", d) : ""].filter(Boolean).join(" · ");
   if (s.key === "appointment_types") return t("kiorexConnect.detail.bookable", { withFee: d.withFee });
@@ -29,7 +29,7 @@ function detailText(t: (k: string, o?: Record<string, unknown>) => string, s: Co
   return "";
 }
 function feeText(feeCard: ConnectDto["feeCard"], locale: string): string | null {
-  const rows = (feeCard?.rates ?? feeCard?.items ?? (feeCard?.defaultRate ? [feeCard.defaultRate] : [])) as ConnectDto["feeCard"] extends infer _ ? Array<{ specialty: string | null; feeType: string; amount: string | null; percent: string | null }> : never;
+  const rows = (feeCard?.rates ?? feeCard?.items ?? (feeCard?.defaultRate ? [feeCard.defaultRate] : [])) as Array<{ specialty: string | null; feeType: string; amount: string | null; percent: string | null }>;
   const r = rows.find((x) => x.specialty == null) ?? rows[0];
   if (!r) return null;
   const cur = feeCard?.currency ?? "EGP";

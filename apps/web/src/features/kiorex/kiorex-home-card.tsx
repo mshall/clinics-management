@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -9,14 +8,14 @@ import { apiGet } from "@/lib/http";
 import { showNavItem } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
 import "./kiorex-door-i18n";
-import { isHomeCardDismissed, setHomeCardDismissed } from "./kiorex-door-hooks";
+import { useHomeCardDismissed } from "./dismissed-cards";
 import type { FrontDoorDto } from "./kiorex-door-types";
 
 /** One dismissible card on the home dashboard for standalone owners/admins. Quiet: no pop-up; dismissal is remembered per user and the card returns only when asked from the Kiorex tab. */
 export function KiorexHomeCard() {
   const { t } = useTranslation(); const user = useAuthStore((s) => s.user);
   const allowed = !!user && (showNavItem(user.role, "clinics", user.navTabKeys, user.roleNavTabKeys, user.employeePrivilegeGrants, user.roles, user.entitlements, user.plan?.key ?? null) || showNavItem(user.role, "admin", user.navTabKeys, user.roleNavTabKeys, user.employeePrivilegeGrants, user.roles, user.entitlements, user.plan?.key ?? null));
-  const [hidden, setHidden] = useState(() => (user ? isHomeCardDismissed(user.id) : true));
+  const { dismissed: hidden, setDismissed } = useHomeCardDismissed(user?.id);
   const clinics = useClinicsQuery(); const clinicId = clinics.data?.[0]?.id ?? "";
   const q = useQuery({ queryKey: ["kiorex", "front-door", clinicId], queryFn: () => apiGet<FrontDoorDto>(`/api/v1/kiorex/front-door?clinicId=${encodeURIComponent(clinicId)}`), enabled: allowed && !hidden && Boolean(clinicId), retry: false });
   if (!allowed || hidden || !user || !q.data || !["NOT_CONNECTED", "IN_PROGRESS"].includes(q.data.state)) return null;
@@ -27,7 +26,7 @@ export function KiorexHomeCard() {
         <div className="min-w-0 flex-1"><h2 id="kx-home-h" className="font-semibold">{t("kiorexMarketing.homeCard.title")}</h2><p className="text-sm text-muted-foreground">{t("kiorexMarketing.homeCard.body")}</p></div>
         <Button asChild size="sm"><Link to="/kiorex" data-testid="home-card-open">{t("kiorexMarketing.homeCard.open")}</Link></Button>
       </div>
-      <button type="button" className="absolute end-2 top-2 inline-flex size-9 items-center justify-center rounded-md hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring" aria-label={t("kiorexMarketing.homeCard.dismiss")} data-testid="home-card-dismiss" onClick={() => { setHomeCardDismissed(user.id, true); setHidden(true); }}><X className="size-4" aria-hidden="true" /></button>
+      <button type="button" className="absolute end-2 top-2 inline-flex size-9 items-center justify-center rounded-md hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring" aria-label={t("kiorexMarketing.homeCard.dismiss")} data-testid="home-card-dismiss" onClick={() => setDismissed(true)}><X className="size-4" aria-hidden="true" /></button>
     </section>
   );
 }

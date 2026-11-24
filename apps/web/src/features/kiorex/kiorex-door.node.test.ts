@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- dotted-path walkers over the i18n bundles */
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -38,5 +39,16 @@ describe("Kiorex front door (ADR-040): wording and bundles", () => {
     const src = readFileSync(join(here, "kiorex-marketing-strings.ts"), "utf8");
     assert.match(src, /NEEDS_HUMAN/);
     for (const f of readdirSync(here).filter((x) => /\.tsx$/.test(x))) assert.equal(readFileSync(join(here, f), "utf8").includes("Reach more patients"), false, f);
+  });
+});
+
+describe("per-user card dismissal (server first, browser fallback, one-time migration)", () => {
+  it("keeps keys unique and sorted, and migrates a browser-only dismissal exactly once", async () => {
+    const { withKey, needsMigration, HOME_CARD_KEY } = await import("./dismissed-cards-logic");
+    assert.deepEqual(withKey(["b", HOME_CARD_KEY], HOME_CARD_KEY, true), ["b", HOME_CARD_KEY]);
+    assert.deepEqual(withKey(["b", HOME_CARD_KEY], HOME_CARD_KEY, false), ["b"]);
+    assert.equal(needsMigration([], true), true);
+    assert.equal(needsMigration([HOME_CARD_KEY], true), false);
+    assert.equal(needsMigration([], false), false);
   });
 });

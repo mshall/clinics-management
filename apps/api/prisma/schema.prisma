@@ -1509,6 +1509,8 @@ model User {
   mfaRecoveryHashes               Json?
   avatarRelativePath              String?
   avatarMimeType                  String?
+  /// Small per-user UI preferences (server-side card dismissals), additive, null until first use.
+  uiPrefs                         Json?
   employee                        Employee?
   encounters                      Encounter[]                        @relation("EncounterClinician")
   appointments                    Appointment[]                      @relation("AppointmentClinician")

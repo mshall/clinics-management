@@ -7,11 +7,6 @@ export const doorKey = (clinicId: string) => ["kiorex", "front-door", clinicId] 
 export const useFrontDoor = (clinicId: string) =>
   useQuery({ queryKey: doorKey(clinicId), queryFn: () => apiGet<FrontDoorDto>(`/api/v1/kiorex/front-door?clinicId=${encodeURIComponent(clinicId)}`), enabled: Boolean(clinicId), retry: false, refetchInterval: (q) => (q.state.data?.state === "WAITING" ? 15_000 : false) });
 
-/** The dismissal of the home card is remembered per signed-in user on this browser (never an error if storage is blocked). */
-const dismissKey = (userId: string) => `kiorex.homeCard.dismissed.${userId}`;
-export const isHomeCardDismissed = (userId: string): boolean => { try { return window.localStorage.getItem(dismissKey(userId)) === "1"; } catch { return false; } };
-export const setHomeCardDismissed = (userId: string, on: boolean): void => { try { if (on) window.localStorage.setItem(dismissKey(userId), "1"); else window.localStorage.removeItem(dismissKey(userId)); } catch { /* storage blocked: the card simply shows again */ } };
-
 /** "12 000" style number in the page language. */
 export const fmtNumber = (n: number, lang: string): string => new Intl.NumberFormat(lang.startsWith("ar") ? "ar-EG" : "en").format(n);
 
