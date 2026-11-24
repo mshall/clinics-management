@@ -25291,6 +25291,62 @@
         ]
       }
     },
+    "/marketplace/v1/growth/staff-phone-match": {
+      "get": {
+        "operationId": "MarketplaceStaffPhoneMatchController_get",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Nonce",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Does any of these keyed phone hashes belong to staff of the clinic's organisation? (one boolean, never the person)",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
     "/marketplace/v1/provider-verification/requests/{requestRef}": {
       "get": {
         "operationId": "MarketplaceProviderVerificationController_read",
