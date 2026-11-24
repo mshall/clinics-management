@@ -30,6 +30,8 @@ export const OUTBOX_EVENT = {
   WAITLIST_OFFER_EXPIRED: "WAITLIST_OFFER_EXPIRED",
   /** GRW-P2-C (contracts 1.12.0): provider asks Kiorex ops to update a verified listing field. */
   PROVIDER_VERIFICATION_UPDATE_REQUESTED: "ProviderVerificationUpdateRequested",
+  /** GRW-P4-C (unreleased contracts 1.14.0 set): a provider referred a company to Kiorex as an enterprise lead. Company data only; no reward or fee share. */
+  CORPORATE_LEAD_REFERRED: "CorporateLeadReferred",
 } as const;
 
 export type OutboxEventType = (typeof OUTBOX_EVENT)[keyof typeof OUTBOX_EVENT];

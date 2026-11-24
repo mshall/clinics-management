@@ -1342,6 +1342,7 @@ model Tenant {
   socialShareLogs                    SocialShareLog[]
   providerRecommendationStates       ProviderRecommendationState[]
   providerVerificationUpdateRequests ProviderVerificationUpdateRequest[]
+  providerB2BReferrals               ProviderB2BReferral[]
   commissionStatementExports         CommissionStatementExport[]
   bookingWidgetConfigs               BookingWidgetConfig[]
   commissionDisputes                 CommissionDispute[]
@@ -1839,6 +1840,7 @@ model Clinic {
   socialShareLogs                    SocialShareLog[]
   providerRecommendationStates       ProviderRecommendationState[]
   providerVerificationUpdateRequests ProviderVerificationUpdateRequest[]
+  providerB2BReferrals               ProviderB2BReferral[]
   bookingWidgetConfig                BookingWidgetConfig?
   marketplaceListings                MarketplaceListing[]
   slotHolds                          SlotHold[]
@@ -6002,4 +6004,27 @@ model PromotionReservation {
   @@index([appointmentId])
   @@index([state, expiresAt])
   @@index([promotionId, patientRef])
+}
+
+/// GRW-P4-C: a provider refers a COMPANY to Kiorex as an enterprise lead (Kiorex ops follow up). Company data only: `contactRef` is the provider's own opaque reference to the contact (never a name, phone or e-mail).
+/// No reward, credit, fee share or wallet entry exists for this referral (any fee share is counsel and CEO gated). Delivered once through the outbox as `CorporateLeadReferred`.
+model ProviderB2BReferral {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clinicId    String
+  clinic      Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  companyName String
+  /// Normalised company name (lower case, letters and digits): duplicates inside one organisation are refused for 90 days.
+  companyKey  String
+  /// 1_49 50_199 200_999 1000_PLUS UNKNOWN
+  sizeBucket  String   @default("UNKNOWN")
+  contactRef  String?
+  /// SUBMITTED (Kiorex has the lead; Kiorex's own pipeline is internal and is not mirrored back in this phase)
+  status      String   @default("SUBMITTED")
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, companyKey])
 }
