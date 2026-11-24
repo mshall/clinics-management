@@ -21,8 +21,9 @@ export const MONEY_AUDIT_COVERAGE: MoneyAuditCoverageEntry[] = [
     action: "subscription.trial_extended",
     delegatedAudit: true,
   },
-  { file: "credits/credit-wallet.service.ts", method: "grantInTransaction", action: "credit.grant" },
-  { file: "credits/credit-wallet.service.ts", method: "consume", action: "credit.consume" },
+  // Public wrappers retry/transaction-wrap; audit writes live in the InTx helpers.
+  { file: "credits/credit-wallet.service.ts", method: "grantInTx", action: "credit.grant" },
+  { file: "credits/credit-wallet.service.ts", method: "consumeInTx", action: "credit.consume" },
   { file: "billing-platform/kiorly-invoices.service.ts", method: "issue", action: "kiorly_invoice.issued" },
   { file: "billing-platform/kiorly-invoices.service.ts", method: "voidViaCreditInvoice", action: "kiorly_invoice.voided" },
   { file: "billing-platform/kiorly-payment.service.ts", method: "verifyManualPayment", action: "kiorly_payment.verified" },
