@@ -74,6 +74,7 @@
     "clinicRevenue": "Clinic revenue",
     "governance": "Governance & audit",
     "frontDeskBoard": "Front desk board",
+    "quickTour": "Quick tour",
     "guideBook": "Guide book",
     "kiorex": "Kiorex",
     "growth": "Growth & Marketing",
@@ -358,8 +359,22 @@
   "onboarding": {
     "title": "Welcome — quick setup",
     "subtitle": "Finish these steps to go live with patients. Each one opens the exact screen and ticks itself when done.",
+    "backToDashboard": "Back to dashboard",
     "goToDashboard": "Open dashboard",
     "viewAll": "Full checklist",
+    "wizard": {
+      "title": "Quick setup",
+      "subtitle": "Finish one step at a time. Progress is saved automatically.",
+      "doThis": "Do this step",
+      "next": "Next step",
+      "finish": "Finish",
+      "excludeKiorex": "Exclude from Kiorex",
+      "excludeTitle": "Exclude this branch from Kiorex?",
+      "excludeBody": "“{{name}}” will not be listed on Kiorex for online booking. You can turn marketplace listing back on later in clinic settings — the clinics directory will show a reminder until you do.",
+      "excludeConfirm": "Exclude from Kiorex",
+      "excludeSaved": "This branch will not be listed on Kiorex.",
+      "continue": "Continue setup"
+    },
     "dismiss": "Dismiss",
     "skip": "Skip",
     "optional": "optional",
@@ -1444,6 +1459,8 @@
     "activeTab": "Active clinics",
     "disabledTab": "Disabled clinics",
     "disabledBadge": "Disabled",
+    "kiorexExcludedBadge": "Enable Kiorex booking",
+    "kiorexExcludedHint": "Not listed on Kiorex for online booking. Open clinic settings to enable marketplace listing.",
     "createdAt": "Created",
     "disabledAt": "Disabled",
     "notApplicable": "—",
@@ -4059,6 +4076,7 @@
     "tour": {
       "progress": "Quick tour · {{current}} of {{total}}",
       "skip": "Skip tour",
+      "close": "Close",
       "back": "Back",
       "next": "Next",
       "done": "Done",
@@ -4066,7 +4084,7 @@
       "physician": {
         "welcome": {
           "title": "Welcome to Kiorly",
-          "body": "Five quick stops to get you seeing patients. You can reopen this tour any time from Help."
+          "body": "A short walk around your workspace. You can reopen this tour any time from Quick tour in the side menu or from Help."
         },
         "schedule": {
           "title": "Your schedule",
@@ -4088,7 +4106,7 @@
       "frontDesk": {
         "welcome": {
           "title": "Welcome to Kiorly",
-          "body": "Five quick stops for the front desk. You can reopen this tour any time from Help."
+          "body": "A short walk around the front desk. Reopen anytime from Quick tour in the side menu or from Help."
         },
         "book": {
           "title": "Book appointments",
@@ -4110,11 +4128,11 @@
       "admin": {
         "welcome": {
           "title": "Welcome to Kiorly",
-          "body": "Five quick stops to set up your clinic. You can reopen this tour any time from Help."
+          "body": "A short walk around admin setup. Reopen anytime from Quick tour in the side menu or from Help."
         },
         "checklist": {
           "title": "Setup checklist",
-          "body": "Finish clinic profile, hours, visit types and doctor availability — each step links to the right screen."
+          "body": "Finish clinic profile, hours, visit types and doctor availability — each step opens a guided wizard and saves progress."
         },
         "team": {
           "title": "Invite your team",
@@ -4123,6 +4141,10 @@
         "import": {
           "title": "Bring your data",
           "body": "Import patients, appointments, prices and staff from Excel or CSV with Arabic or English headers."
+        },
+        "dashboard": {
+          "title": "Dashboard home",
+          "body": "Your home base for quick setup, booking, and day-to-day shortcuts after onboarding."
         },
         "sample": {
           "title": "Practise on a sample patient",

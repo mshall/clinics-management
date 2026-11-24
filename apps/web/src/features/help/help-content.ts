@@ -3,34 +3,37 @@ import type { DemoRole } from "@/lib/roles";
 export type TourGroup = "physician" | "frontDesk" | "admin";
 
 export type TourStep = {
-  /** i18n key under `help.tour.<group>.steps.<id>` (title + body). */
+  /** i18n key under `help.tour.<group>.<id>` (title + body). */
   id: string;
   path?: string;
+  /** Demo screenshot under `/tour/<group>-<id>.svg` unless overridden. */
+  screenshot?: string;
   /** Last step offers the sample patient instead of a link. */
   samplePatient?: boolean;
 };
 
 export const TOUR_STEPS: Record<TourGroup, TourStep[]> = {
   physician: [
-    { id: "welcome" },
-    { id: "schedule", path: "/appointments" },
-    { id: "chart", path: "/patients" },
-    { id: "visit", path: "/encounters" },
-    { id: "sample", samplePatient: true },
+    { id: "welcome", screenshot: "/tour/physician-welcome.svg" },
+    { id: "schedule", path: "/appointments", screenshot: "/tour/physician-schedule.svg" },
+    { id: "chart", path: "/patients", screenshot: "/tour/physician-chart.svg" },
+    { id: "visit", path: "/encounters", screenshot: "/tour/physician-visit.svg" },
+    { id: "sample", samplePatient: true, screenshot: "/tour/physician-sample.svg" },
   ],
   frontDesk: [
-    { id: "welcome" },
-    { id: "book", path: "/appointments" },
-    { id: "checkIn", path: "/front-desk/waiting-room" },
-    { id: "payment", path: "/front-desk/board" },
-    { id: "sample", samplePatient: true },
+    { id: "welcome", screenshot: "/tour/frontDesk-welcome.svg" },
+    { id: "book", path: "/appointments", screenshot: "/tour/frontDesk-book.svg" },
+    { id: "checkIn", path: "/front-desk/waiting-room", screenshot: "/tour/frontDesk-checkIn.svg" },
+    { id: "payment", path: "/front-desk/board", screenshot: "/tour/frontDesk-payment.svg" },
+    { id: "sample", samplePatient: true, screenshot: "/tour/frontDesk-sample.svg" },
   ],
   admin: [
-    { id: "welcome" },
-    { id: "checklist", path: "/onboarding" },
-    { id: "team", path: "/team" },
-    { id: "import", path: "/onboarding/import" },
-    { id: "sample", samplePatient: true },
+    { id: "welcome", screenshot: "/tour/admin-welcome.svg" },
+    { id: "checklist", path: "/onboarding", screenshot: "/tour/admin-checklist.svg" },
+    { id: "team", path: "/team", screenshot: "/tour/admin-team.svg" },
+    { id: "import", path: "/onboarding/import", screenshot: "/tour/admin-import.svg" },
+    { id: "dashboard", path: "/", screenshot: "/tour/admin-dashboard.svg" },
+    { id: "sample", samplePatient: true, screenshot: "/tour/admin-sample.svg" },
   ],
 };
 

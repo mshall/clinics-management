@@ -16,6 +16,7 @@ import {
 } from "@/lib/onboarding-api";
 import { useAuthStore } from "@/stores/auth-store";
 import { SetupCheck } from "./setup-check";
+import { SetupWizardDialog } from "./setup-wizard-dialog";
 import {
   clearSkippedForNow,
   getSkippedForNow,
@@ -45,9 +46,16 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
   const [justDone, setJustDone] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [collapsed, setCollapsed] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardKey, setWizardKey] = useState<OnboardingStepKey | null>(null);
   const prev = useRef<Map<string, string> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const [skippedNow, setSkippedNow] = useState<OnboardingStepKey | null>(() => getSkippedForNow());
+
+  const openWizard = (key?: OnboardingStepKey) => {
+    setWizardKey(key ?? null);
+    setWizardOpen(true);
+  };
 
   const data = q.data;
 
@@ -176,7 +184,8 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
             {visible.map((step, idx) => {
               const isNext = step.key === nextKey;
               const multi = (step.entities?.length ?? 0) > 1;
-              const expanded = multi && (open[step.key] ?? (isNext || step.status === "pending" && step.doneCount > 0));
+              // Expandable branch lists stay collapsed by default (open only when the user expands).
+              const expanded = multi && Boolean(open[step.key]);
               const label = t(`onboarding.checklist.${step.key}`);
               const jd = justDone.has(step.key);
               return (
@@ -196,7 +205,15 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
                     <StatusBadge status={step.status} index={idx + 1} />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                        <p className={`text-sm ${step.status === "pending" ? "font-semibold" : "text-muted-foreground"}`} id={`setup-step-${step.key}`}>{label}</p>
+                        <button
+                          type="button"
+                          className={`text-start text-sm ${step.status === "pending" ? "font-semibold" : "text-muted-foreground"} hover:underline`}
+                          id={`setup-step-${step.key}`}
+                          onClick={() => openWizard(step.key)}
+                          data-testid="setup-step-open"
+                        >
+                          {label}
+                        </button>
                         {!step.required ? <span className="rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-foreground">{t("onboarding.optional")}</span> : null}
                         {!step.available ? <span className="rounded-full border border-primary/40 bg-card px-2 py-0.5 text-[11px] font-medium text-primary" data-testid="setup-upgrade">{t("onboarding.upgrade")}</span> : null}
                         {step.scope === "clinic" && (step.entities?.length ?? 0) > 1 ? (
@@ -223,9 +240,18 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
                             <ChevronDown className={`size-4 transition-transform ${expanded ? "" : "-rotate-90 rtl:rotate-90"}`} aria-hidden />
                             {expanded ? t("onboarding.hideClinics") : t("onboarding.showClinics", { count: step.totalCount })}
                           </Button>
-                        ) : step.canPerform ? (
-                          <Button asChild size="sm" variant={isNext ? "default" : "outline"} className="kx-setup-cta">
-                            <Link to={step.href} onClick={remember} aria-describedby={`setup-step-${step.key}`} data-testid="setup-cta">{isNext ? t("onboarding.start") : t("onboarding.open")}</Link>
+                        ) : null}
+                        {step.canPerform ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={isNext ? "default" : "outline"}
+                            className="kx-setup-cta"
+                            aria-describedby={`setup-step-${step.key}`}
+                            data-testid="setup-cta"
+                            onClick={() => openWizard(step.key)}
+                          >
+                            {isNext ? t("onboarding.start") : t("onboarding.open")}
                           </Button>
                         ) : (
                           <Button type="button" size="sm" variant="outline" disabled aria-describedby={`setup-step-${step.key}`} data-testid="setup-cta-disabled">{t("onboarding.open")}</Button>
@@ -270,13 +296,17 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
             })}
           </ol>
           <p className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground"><Sparkles className="size-3.5" aria-hidden />{t("onboarding.autoDetect", { count: total })}</p>
-          {variant === "card" ? (
-            <div className="pt-1">
-              <Button asChild variant="ghost" size="sm"><Link to="/onboarding"><Rocket className="size-4" aria-hidden />{t("onboarding.viewAll")}</Link></Button>
-            </div>
-          ) : (
-            <Button asChild className="mt-3 w-full"><Link to="/">{t("onboarding.goToDashboard")}</Link></Button>
-          )}
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button type="button" size="sm" onClick={() => openWizard()} data-testid="setup-continue-wizard">
+              <Rocket className="size-4" aria-hidden />
+              {t("onboarding.wizard.continue", "Continue setup")}
+            </Button>
+            {variant === "card" ? (
+              <Button asChild variant="ghost" size="sm"><Link to="/onboarding">{t("onboarding.viewAll")}</Link></Button>
+            ) : (
+              <Button asChild variant="outline" size="sm"><Link to="/">{t("onboarding.goToDashboard")}</Link></Button>
+            )}
+          </div>
         </CardContent>
       )}
       {user?.isTenantOwner && !user.mfaEnabled && variant === "page" ? (
@@ -288,6 +318,12 @@ export function OnboardingChecklist({ variant = "card", onDismiss }: Props) {
           </div>
         </CardContent>
       ) : null}
+      <SetupWizardDialog
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        data={data}
+        initialKey={wizardKey}
+      />
     </Card>
   );
 }

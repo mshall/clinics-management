@@ -58,6 +58,8 @@ export interface ClinicDto {
   recordStatus: ClinicRecordStatus;
   disabledAt: string | null;
   createdAt: string;
+  /** Opted out of Kiorex marketplace listing for this branch. */
+  kiorexExcludedFromMarketplace?: boolean;
 }
 
 @Injectable()
@@ -132,9 +134,11 @@ export class ClinicsService {
     recordStatus: ClinicRecordStatus;
     disabledAt: Date | null;
     createdAt: Date;
+    providerSettings?: unknown;
     parent?: { nameEn: string } | null;
     _count?: { branches: number };
   }): ClinicDto {
+    const ps = (c.providerSettings ?? {}) as { kiorexExcludedFromMarketplace?: boolean };
     return {
       id: c.id,
       parentClinicId: c.parentClinicId,
@@ -151,6 +155,7 @@ export class ClinicsService {
       recordStatus: c.recordStatus,
       disabledAt: c.disabledAt?.toISOString() ?? null,
       createdAt: c.createdAt.toISOString(),
+      kiorexExcludedFromMarketplace: Boolean(ps.kiorexExcludedFromMarketplace),
     };
   }
 
@@ -859,6 +864,17 @@ export class ClinicsService {
       data.providerSettings = {
         ...(((existing as { providerSettings?: unknown }).providerSettings ?? {}) as Prisma.JsonObject),
         setupHoursConfirmedAt: new Date().toISOString(),
+      };
+    }
+    if (dto.kiorexExcludedFromMarketplace !== undefined) {
+      const prev = ((data.providerSettings as Prisma.JsonObject | undefined) ??
+        (((existing as { providerSettings?: unknown }).providerSettings ?? {}) as Prisma.JsonObject)) as Prisma.JsonObject;
+      data.providerSettings = {
+        ...prev,
+        kiorexExcludedFromMarketplace: Boolean(dto.kiorexExcludedFromMarketplace),
+        ...(dto.kiorexExcludedFromMarketplace
+          ? { kiorexExcludedFromMarketplaceAt: new Date().toISOString() }
+          : { kiorexExcludedFromMarketplaceAt: null }),
       };
     }
     if (dto.frontDeskRoomLabels !== undefined) {

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { Allow, IsArray, IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { Allow, IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
 import { BASE_CURRENCIES } from "../../common/base-currencies";
 import { DEFAULT_CLINIC_CLOSING_TIME, DEFAULT_CLINIC_OPENING_TIME } from "../../common/clinic-hours";
 
@@ -128,4 +128,12 @@ export class PatchClinicDto {
   @IsArray()
   @IsString({ each: true })
   frontDeskRoomLabels?: string[];
+
+  @ApiPropertyOptional({
+    description:
+      "When true, this branch is excluded from the Kiorex marketplace listing (online booking). Stored in clinic providerSettings; can be reversed later in clinic settings.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  kiorexExcludedFromMarketplace?: boolean;
 }

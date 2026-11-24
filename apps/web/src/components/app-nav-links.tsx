@@ -16,6 +16,7 @@ import {
   Sparkles,
   Stethoscope,
   BookOpen,
+  Compass,
   Megaphone,
   Monitor,
   User,
@@ -33,8 +34,10 @@ import { apiGet } from "@/lib/http";
 import { showNavItem } from "@/lib/nav-policy";
 import { canViewRevenue } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
+import { tourGroupForRole } from "@/features/help/help-content";
 import { NurseNavLinks } from "@/features/nurse/nurse-nav";
 import { useAuthStore } from "@/stores/auth-store";
+import { useHelpStore } from "@/stores/help-store";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -231,6 +234,8 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   const go = () => onNavigate?.();
   const showNetwork = showTab("clinics") || showTab("admin");
+  const setTourOpen = useHelpStore((s) => s.setTourOpen);
+  const canTour = Boolean(tourGroupForRole(role));
   const visibleAdminLinks = adminSectionLinks.filter((l) => l.visible);
   const hasAdminChildren = visibleAdminLinks.length > 0;
   const defaultAdminSection = clinicScopedAdmin ? "staff" : "clinics";
@@ -512,7 +517,21 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {signedIn ? (
-        <div className="mt-auto shrink-0 border-t border-border pt-3">
+        <div className="mt-auto shrink-0 space-y-1.5 border-t border-border pt-3">
+          {canTour ? (
+            <button
+              type="button"
+              className={cn(navClass({ isActive: false }), "w-full border border-border/80 bg-muted/30 hover:bg-muted/60")}
+              data-testid="nav-quick-tour"
+              onClick={() => {
+                setTourOpen(true);
+                go();
+              }}
+            >
+              <Compass className="size-4 shrink-0" />
+              {t("nav.quickTour", "Quick tour")}
+            </button>
+          ) : null}
           <NavLink
             to="/guide"
             className={({ isActive }) =>

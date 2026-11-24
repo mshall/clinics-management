@@ -188,6 +188,19 @@ export function ClinicsPage() {
                             {c.recordStatus === "INACTIVE" ? (
                               <Badge variant="outline">{t("clinics.disabledBadge", "Disabled")}</Badge>
                             ) : null}
+                            {c.kiorexExcludedFromMarketplace ? (
+                              <Badge
+                                variant="outline"
+                                className="border-amber-500/50 text-amber-800 dark:text-amber-200"
+                                title={t(
+                                  "clinics.kiorexExcludedHint",
+                                  "Not listed on Kiorex for online booking. Open clinic settings to enable marketplace listing.",
+                                )}
+                                data-testid="clinic-kiorex-excluded"
+                              >
+                                {t("clinics.kiorexExcludedBadge", "Enable Kiorex booking")}
+                              </Badge>
+                            ) : null}
                           </div>
                         </td>
                         <td className="px-3 py-2 text-muted-foreground">
