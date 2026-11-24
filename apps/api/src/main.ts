@@ -11,6 +11,7 @@ import { ClinicDto } from "./common/dto/clinic.dto";
 import { GroupOverviewKpisDto } from "./common/dto/dashboard.dto";
 import { PatientDto } from "./common/dto/patient.dto";
 import { orderedGlobalFilters } from "./common/global-filters";
+import { RejectNulBytesPipe } from "./common/reject-nul-bytes.pipe";
 import { IntegrationFailureExceptionFilter } from "./integrations/integration-failure.filter";
 import { webBuildIdMiddleware } from "./common/web-build-id.middleware";
 import compressionMiddleware from "compression";
@@ -65,6 +66,7 @@ async function bootstrap() {
     exclude: [{ path: "marketplace/v1/(.*)", method: RequestMethod.ALL }],
   });
   app.useGlobalPipes(
+    new RejectNulBytesPipe(),
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
