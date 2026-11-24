@@ -48,7 +48,9 @@ export type KiorexTypeSettings = {
 };
 
 export type KiorexOverviewDto = {
-  clinicId: string;
+  /** Null when scope is the whole organization. */
+  clinicId: string | null;
+  scope?: "clinic" | "organization";
   periodKey: string;
   currency: string;
   profileViews: number;

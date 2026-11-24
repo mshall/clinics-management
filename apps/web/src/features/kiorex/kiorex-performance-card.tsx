@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { FilterSelect } from "@/components/filter-select";
 import { apiGet } from "@/lib/http";
 import { localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
@@ -29,26 +30,38 @@ function Tile({ label, value, hint, testId }: { label: string; value: string; hi
   );
 }
 
-export function KiorexPerformanceCard({ clinicId }: { clinicId: string }) {
+export function KiorexPerformanceCard({ clinicId, orgScope = false }: { clinicId: string; orgScope?: boolean }) {
   const { t, i18n } = useTranslation();
   const locale = localeForLanguage(i18n.language);
   const isAr = i18n.language.startsWith("ar");
   const months = useMemo(() => lastMonths(6), []);
   const [period, setPeriod] = useState(months[0]!);
+  const monthOptions = useMemo(
+    () =>
+      months.map((m) => ({
+        value: m,
+        label: new Date(`${m}-01T00:00:00Z`).toLocaleDateString(locale, {
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC",
+        }),
+      })),
+    [months, locale],
+  );
 
   const q = useQuery({
-    queryKey: ["kiorex", "overview", clinicId, period],
-    queryFn: () =>
-      apiGet<KiorexOverviewDto>(
-        `/api/v1/kiorex/overview?clinicId=${encodeURIComponent(clinicId)}&period=${encodeURIComponent(period)}`,
-      ),
-    enabled: Boolean(clinicId),
+    queryKey: ["kiorex", "overview", orgScope ? "organization" : clinicId, period],
+    queryFn: () => {
+      const params = new URLSearchParams({ period });
+      if (orgScope || !clinicId) params.set("clinicId", "all");
+      else params.set("clinicId", clinicId);
+      return apiGet<KiorexOverviewDto>(`/api/v1/kiorex/overview?${params}`);
+    },
+    enabled: orgScope || Boolean(clinicId),
   });
   const o = q.data;
   const n = (v: number) => v.toLocaleString(locale);
   const money = (v: number) => formatMoneyAmount(v, o?.currency ?? "", locale);
-  const monthLabel = (key: string) =>
-    new Date(`${key}-01T00:00:00Z`).toLocaleDateString(locale, { month: "long", year: "numeric", timeZone: "UTC" });
 
   const chartData = useMemo(
     () => (o?.daily ?? []).map((d) => ({ ...d, label: String(Number(d.date.slice(8, 10))) })),
@@ -56,28 +69,30 @@ export function KiorexPerformanceCard({ clinicId }: { clinicId: string }) {
   );
 
   return (
-    <Card data-testid="kiorex-performance-card">
+    <Card data-testid="kiorex-performance-card" data-scope={orgScope ? "organization" : "clinic"}>
       <CardHeader className="flex flex-row flex-wrap items-end justify-between gap-3">
         <div>
           <CardTitle className="text-base">{t("kiorexTab.performance.title", "Performance")}</CardTitle>
           <CardDescription>
-            {t("kiorexTab.performance.hint", "What Kiorex brought this branch in the selected month.")}
+            {orgScope
+              ? t(
+                  "kiorexTab.performance.hintOrg",
+                  "What Kiorex brought across all branches in the selected month.",
+                )
+              : t("kiorexTab.performance.hint", "What Kiorex brought this branch in the selected month.")}
           </CardDescription>
         </div>
-        <div className="space-y-1">
+        <div className="w-full max-w-[14rem] space-y-1.5 sm:w-auto">
           <Label htmlFor="kiorex-period">{t("kiorexTab.performance.period", "Month")}</Label>
-          <select
+          <FilterSelect
             id="kiorex-period"
-            className="native-select h-10 min-h-10"
+            label={t("kiorexTab.performance.period", "Month")}
             value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-          >
-            {months.map((m) => (
-              <option key={m} value={m}>
-                {monthLabel(m)}
-              </option>
-            ))}
-          </select>
+            onChange={setPeriod}
+            options={monthOptions}
+            data-testid="kiorex-period"
+            triggerClassName="min-w-[12rem]"
+          />
         </div>
       </CardHeader>
       <CardContent className="space-y-5">

@@ -77,6 +77,14 @@
     "guideBook": "Guide book",
     "kiorex": "Kiorex",
     "growth": "Growth & Marketing",
+    "groupPlatform": "Platform",
+    "groupOverview": "Overview",
+    "groupClinical": "Clinical care",
+    "groupNetwork": "Network",
+    "groupFinance": "Finance",
+    "groupWorkforce": "Workforce & insights",
+    "groupAdministration": "Administration",
+    "groupAccount": "Account",
     "mobileToday": "Today",
     "mobileMore": "More",
     "mobileBottom": "Primary navigation"
@@ -4127,6 +4135,8 @@
     "title": "Kiorex",
     "subtitle": "Control how patients find and book you on Kiorex, and see what it brings in.",
     "clinic": "Branch",
+    "scopeOrganization": "All organization",
+    "scopeOrganizationHint": "Combined Kiorex performance across every branch",
     "loadError": "Kiorex settings are available to clinic owners and managers.",
     "policy": {
       "title": "Reschedule & cancellation policy",
@@ -4180,6 +4190,7 @@
     "performance": {
       "title": "Performance",
       "hint": "What Kiorex brought this branch in the selected month.",
+      "hintOrg": "What Kiorex brought across all branches in the selected month.",
       "period": "Month",
       "loadError": "Could not load Kiorex performance.",
       "views": "Profile views",
