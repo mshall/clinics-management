@@ -31,7 +31,7 @@ function printLetter(letter: ClinicalLetter, bilingual: boolean) {
   const en = letter.bodyEn.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br/>");
   const ar = letter.bodyAr.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br/>");
   const arBlock = bilingual
-    ? `<div dir="rtl" lang="ar" style="margin-top:2rem;font-family:system-ui;line-height:1.5"><h2>${letter.titleAr}</h2><p>${ar}</p></div>`
+    ? `<div dir="rtl" lang="ar" style="margin-top:2rem;font-family:system-ui;line-height:1.5"><h2>${letter.titleAr.replace(/[<>&"]/g, "")}</h2><p>${ar}</p></div>`
     : "";
   win.document.write(`<!DOCTYPE html><html><head><title>${title}</title>
 <style>@page{margin:14mm}body{font-family:system-ui;line-height:1.5;max-width:720px;margin:0 auto;padding:12px}

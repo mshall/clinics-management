@@ -119,3 +119,12 @@ describe("production JWT secret", () => {
     assert.doesNotThrow(() => assertProductionSecrets({ NODE_ENV: "production", ALLOW_INSECURE_DEFAULT_SECRETS: "true" }));
   });
 });
+
+import { PublicAuthRateLimitGuard } from "./rate-limit.guard";
+describe("rate-limit guard tolerates hostile bodies (no 500 before validation)", () => {
+  it("array / object / numeric e-mail and phone fields", () => {
+    const guard = new PublicAuthRateLimitGuard();
+    const ctx = (body: unknown) => ({ switchToHttp: () => ({ getRequest: () => ({ originalUrl: "/api/v1/auth/login", method: "POST", headers: {}, socket: { remoteAddress: "198.51.100.1" }, body }) }) }) as never;
+    for (const body of [{ email: ["a"], password: { $ne: 1 } }, { email: { a: 1 }, phone: 12345 }, { email: 5 }, null, undefined, "x"]) assert.doesNotThrow(() => guard.canActivate(ctx(body)));
+  });
+});

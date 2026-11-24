@@ -20,7 +20,9 @@ export class PublicAuthRateLimitGuard implements CanActivate {
     const path = (req.originalUrl ?? req.url ?? req.path ?? "").split("?")[0] ?? "";
     const ip = clientIp(req);
     const policy = authRatePolicy(path, req.method);
-    const key = rateLimitKey(["auth", path, ip, req.body?.email, req.body?.phone]);
+    // pre-validation: a body field may be an array / object (pentest 2026-11: `{"email":["a"]}` used to crash the guard with a 500)
+    const str = (v: unknown) => (typeof v === "string" ? v.slice(0, 254) : undefined);
+    const key = rateLimitKey(["auth", path, ip, str(req.body?.email), str(req.body?.phone)]);
     let result = consumeRateLimit(key, policy.limit, policy.windowMs);
     const account = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
     if (result.ok && account && isLoginPath(path)) result = consumeRateLimit(rateLimitKey(["acct", account]), LOGIN_ACCOUNT_RATE.limit, LOGIN_ACCOUNT_RATE.windowMs);
