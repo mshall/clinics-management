@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { describe, it } from "node:test";
-import { clientIpOf, devAuthHelpersEnabled, secretsEqual, securityHeaderMap, swaggerEnabled, trustedProxyHops } from "./http-hardening";
+import { assertProductionSecrets, clientIpOf, devAuthHelpersEnabled, secretsEqual, securityHeaderMap, swaggerEnabled, trustedProxyHops } from "./http-hardening";
 import { consumeRateLimit, LOGIN_ACCOUNT_RATE } from "./rate-limit";
 import { assertPublicWebhookUrl, isNonPublicAddress, parseWebhookTarget, safeRequest, UnsafeUrlError } from "./safe-outbound";
 
@@ -105,5 +105,17 @@ describe("per-account login throttle", () => {
     for (let i = 0; i < LOGIN_ACCOUNT_RATE.limit; i++) assert.equal(consumeRateLimit("acct|victim@example.com", LOGIN_ACCOUNT_RATE.limit, LOGIN_ACCOUNT_RATE.windowMs, now + i, store).ok, true);
     assert.equal(consumeRateLimit("acct|victim@example.com", LOGIN_ACCOUNT_RATE.limit, LOGIN_ACCOUNT_RATE.windowMs, now + 30, store).ok, false);
     assert.equal(consumeRateLimit("acct|other@example.com", LOGIN_ACCOUNT_RATE.limit, LOGIN_ACCOUNT_RATE.windowMs, now + 30, store).ok, true);
+  });
+});
+
+describe("production JWT secret", () => {
+  it("refuses a short or published JWT_SECRET in production, accepts a strong one, ignores development", () => {
+    assert.throws(() => assertProductionSecrets({ NODE_ENV: "production" }), /JWT_SECRET/);
+    assert.throws(() => assertProductionSecrets({ NODE_ENV: "production", JWT_SECRET: "short" }), /JWT_SECRET/);
+    assert.throws(() => assertProductionSecrets({ NODE_ENV: "production", JWT_SECRET: "dev-only-secret-change-me-dev-only-secret-change-me" }), /JWT_SECRET/);
+    assert.doesNotThrow(() => assertProductionSecrets({ NODE_ENV: "production", JWT_SECRET: "a".repeat(8) + "Zx9".repeat(20) }));
+    assert.doesNotThrow(() => assertProductionSecrets({ NODE_ENV: "production", JWT_SECRET: JSON.stringify({ jwt: "Zx9".repeat(20) }) }));
+    assert.doesNotThrow(() => assertProductionSecrets({ NODE_ENV: "development" }));
+    assert.doesNotThrow(() => assertProductionSecrets({ NODE_ENV: "production", ALLOW_INSECURE_DEFAULT_SECRETS: "true" }));
   });
 });

@@ -17,11 +17,12 @@ import compressionMiddleware from "compression";
 import { json, type NextFunction, type Request, type Response } from "express";
 import { assertProviderEnv } from "./common/provider-env";
 import { warnIfLeadSigningMissing } from "./common/lead-signing-status";
-import { applyHttpHardening, swaggerEnabled } from "./common/http-hardening";
+import { applyHttpHardening, assertProductionSecrets, swaggerEnabled } from "./common/http-hardening";
 
 async function bootstrap() {
   bootstrapTelemetry();
   applyStagingEnvDefaults();
+  assertProductionSecrets(); // fail fast: production never signs sessions with a weak or published key (names only)
   assertProviderEnv(); // fail fast: MODE=real but URL/credentials missing
   warnIfLeadSigningMissing(); // production without KIOREX_LEAD_SIGNING_SECRET: a notice only (names, never values)
   const app = await NestFactory.create(AppModule, { rawBody: true });

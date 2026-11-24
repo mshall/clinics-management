@@ -69,3 +69,20 @@ export function secretsEqual(a: string | undefined, b: string | undefined): bool
   const x = Buffer.from(a), y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
 }
+
+/**
+ * Production must not sign staff sessions with a weak or published key. Returns the offending variable NAMES (never values).
+ * ALLOW_INSECURE_DEFAULT_SECRETS=true is for staging bring-up only.
+ */
+export function insecureProductionSecrets(env: Env = process.env): string[] {
+  if (env.NODE_ENV !== "production" || env.ALLOW_INSECURE_DEFAULT_SECRETS === "true") return [];
+  const bad: string[] = [];
+  let jwt = env.JWT_SECRET?.trim() ?? "";
+  if (jwt.startsWith("{")) { try { jwt = String((JSON.parse(jwt) as { jwt?: string }).jwt ?? ""); } catch { /* raw */ } }
+  if (jwt.length < 32 || /change[-_ ]?me|dev[-_ ]?(only|secret)|^secret$|password/i.test(jwt)) bad.push("JWT_SECRET");
+  return bad;
+}
+export function assertProductionSecrets(env: Env = process.env): void {
+  const bad = insecureProductionSecrets(env);
+  if (bad.length) throw new Error(`Refusing to start in production with missing, short or published dev secrets: ${bad.join(", ")} (>= 32 random characters from Secrets Manager; ALLOW_INSECURE_DEFAULT_SECRETS=true is for staging bring-up only)`);
+}
