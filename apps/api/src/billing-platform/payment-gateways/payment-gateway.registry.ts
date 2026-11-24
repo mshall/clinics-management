@@ -6,6 +6,8 @@ import { InstaPayGateway } from "./instapay.gateway";
 import { PaymobGateway } from "./paymob.gateway";
 import { HttpPspGateway } from "./http-psp.gateway";
 import { isMock } from "../../common/provider-mode";
+import { enabledPsps, pspVendor } from "../../common/provider-env";
+import { FawryVendorGateway, PaymobVendorGateway } from "./vendor-psp.gateways";
 
 @Injectable()
 export class PaymentGatewayRegistry {
@@ -13,9 +15,12 @@ export class PaymentGatewayRegistry {
 
   constructor() {
     // PSP mode real: the card/link providers speak the neutral HTTP contract (PSP_* env). Manual flows stay manual.
+    // PAYMENT_PROVIDER=vendor: the native Paymob / FawryPay clients (PAYMENT_ENABLED_PSPS limits which exist; a disabled one answers "not available").
     const card: PaymentGateway[] = isMock("psp")
       ? [new PaymobGateway(), new FawryGateway()]
-      : [new HttpPspGateway("paymob"), new HttpPspGateway("fawry")];
+      : pspVendor() === "vendor"
+        ? enabledPsps().map((p) => (p === "paymob" ? new PaymobVendorGateway() : new FawryVendorGateway()))
+        : [new HttpPspGateway("paymob"), new HttpPspGateway("fawry")];
     for (const gateway of [...card, new InstaPayGateway(), new BankTransferGateway()]) {
       this.map.set(gateway.key, gateway);
     }

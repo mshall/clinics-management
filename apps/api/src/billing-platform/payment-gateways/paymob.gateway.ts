@@ -26,8 +26,10 @@ function hostedBase(): string {
 export class PaymobGateway implements PaymentGateway {
   readonly key = "paymob" as const;
 
-  async createPaymentLink(_req: PaymentLinkRequest): Promise<PaymentLinkResult> {
-    throw new Error("Paymob card flow uses createCardSession");
+  async createPaymentLink(req: PaymentLinkRequest): Promise<PaymentLinkResult> {
+    const providerRef = `paymob_${req.idempotencyKey}`;
+    const iframeId = process.env.KIORLY_PAYMOB_IFRAME_ID ?? "dev";
+    return { providerRef, paymentUrl: `${hostedBase()}/${iframeId}?order=${encodeURIComponent(providerRef)}&tenant=${encodeURIComponent(req.tenantId)}` };
   }
 
   async createCardSession(req: CardSessionRequest): Promise<CardSessionResult> {
