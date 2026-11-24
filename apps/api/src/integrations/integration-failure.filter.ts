@@ -55,15 +55,8 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
         res.status(exception.getStatus()).json(exception.getResponse());
         return;
       }
-      // The inline-typed `@Body() b: { ... }` parameters are DTO classes now (src/common/inline-dto-coverage.node.test.ts keeps it that way), so a missing or mistyped field is a 400 from the
-      // ValidationPipe. What is left are the free-form `Record<string, unknown>` bodies, which services parse themselves: a body that omits a field there can still dereference undefined.
-      // On a mutating request that is the caller's error (400), not a server fault, so this net stays for them. The TypeError is still logged at error level so a genuine bug stays visible.
-      const rq = req as unknown as { method?: string };
-      if (exception instanceof TypeError && /Cannot read properties of (undefined|null)|is not iterable|undefined is not/.test(exception.message) && ["POST", "PUT", "PATCH"].includes(rq.method ?? "")) {
-        this.logger.error(exception);
-        res.status(HttpStatus.BAD_REQUEST).json({ statusCode: 400, error: "Bad Request", message: "The request body is missing a required field or has the wrong shape" });
-        return;
-      }
+      // Every body is a validated DTO or a BoundedObjectPipe now (src/common/inline-dto-coverage.node.test.ts keeps it that way), so a client's missing or mistyped field is a 400 from
+      // the pipe. A TypeError that reaches this point is a genuine server bug and answers 500 (logged below), no longer disguised as a client error.
       this.logger.error(exception);
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,

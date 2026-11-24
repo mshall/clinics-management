@@ -8,6 +8,7 @@ import { SchedulingService } from "./scheduling.service";
 import { SlotService } from "./slot.service";
 import { SLOT_CHANNEL } from "./slot-channel";
 import { SchedulingPutTypeOverridesBodyDto } from "./scheduling.controller.dto";
+import { SchedulingAddWaitlistBodyDto, SchedulingPatchTypeBodyDto, SchedulingPutAvailabilityBodyDto, SchedulingSaveTypeBodyDto, SchedulingSeriesBodyDto } from "./scheduling.free-form.dto";
 
 @ApiTags("scheduling")
 @ApiBearerAuth("bearer")
@@ -25,13 +26,13 @@ export class SchedulingController {
   }
 
   @Post("appointment-types")
-  saveType(@CurrentUser() user: JwtUser, @Body() body: Record<string, unknown>) {
-    return this.scheduling.upsertAppointmentType(requireTenantId(user), body);
+  saveType(@CurrentUser() user: JwtUser, @Body() body: SchedulingSaveTypeBodyDto) {
+    return this.scheduling.upsertAppointmentType(requireTenantId(user), body as unknown as Record<string, unknown>);
   }
 
   @Patch("appointment-types/:id")
-  patchType(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
-    return this.scheduling.patchAppointmentType(requireTenantId(user), id, body);
+  patchType(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: SchedulingPatchTypeBodyDto) {
+    return this.scheduling.patchAppointmentType(requireTenantId(user), id, body as unknown as Record<string, unknown>);
   }
 
   @Get("clinicians/:clinicianId/type-overrides")
@@ -80,8 +81,8 @@ export class SchedulingController {
   }
 
   @Put("availability")
-  putAvail(@CurrentUser() user: JwtUser, @Body() body: Record<string, unknown>) {
-    return this.scheduling.upsertAvailability(requireTenantId(user), body as never);
+  putAvail(@CurrentUser() user: JwtUser, @Body() body: SchedulingPutAvailabilityBodyDto) {
+    return this.scheduling.upsertAvailability(requireTenantId(user), body);
   }
 
   @Get("clinicians/:clinicianId/leave-blocks")
@@ -115,13 +116,13 @@ export class SchedulingController {
   }
 
   @Post("waitlist")
-  addWaitlist(@CurrentUser() user: JwtUser, @Body() body: Record<string, unknown>) {
-    return this.scheduling.createWaitlist(requireTenantId(user), body as never);
+  addWaitlist(@CurrentUser() user: JwtUser, @Body() body: SchedulingAddWaitlistBodyDto) {
+    return this.scheduling.createWaitlist(requireTenantId(user), body);
   }
 
   @Post("series")
-  series(@CurrentUser() user: JwtUser, @Body() body: Record<string, unknown>) {
-    return this.scheduling.createSeries(requireTenantId(user), body as never);
+  series(@CurrentUser() user: JwtUser, @Body() body: SchedulingSeriesBodyDto) {
+    return this.scheduling.createSeries(requireTenantId(user), body);
   }
 
   @Post("appointments/:id/no-show")

@@ -25,6 +25,7 @@ import { ClinicalOrdersService } from "./clinical-orders.service";
 import { SpecialtyPacksService } from "./specialty-packs.service";
 import { RequiresScope, ScopeGuard, ScopeOfPracticeService } from "../scope-of-practice/scope-of-practice-public";
 import { ClinicalCreateShortcutBodyDto, ClinicalFavIcdBodyDto, ClinicalLetterBodyDto, ClinicalRxCheckBodyDto, ClinicalSafetyCheckBodyDto, ClinicalCreateOrderBodyDto, ClinicalPatchOrderBodyDto, ClinicalUpsertDentalToothBodyDto, ClinicalPhysioPlanBodyDto } from "./clinical.controller.dto";
+import { ClinicalUpsertTemplateBodyDto } from "./clinical.free-form.dto";
 
 @ApiTags("clinical")
 @ApiBearerAuth("bearer")
@@ -66,8 +67,8 @@ export class ClinicalController {
   }
 
   @Post("form-templates")
-  upsertTemplate(@CurrentUser() user: JwtUser, @Body() body: Record<string, unknown>) {
-    return this.clinical.upsertTemplate(requireTenantId(user), user, body as never);
+  upsertTemplate(@CurrentUser() user: JwtUser, @Body() body: ClinicalUpsertTemplateBodyDto) {
+    return this.clinical.upsertTemplate(requireTenantId(user), user, body);
   }
 
   @Delete("form-templates/:id")

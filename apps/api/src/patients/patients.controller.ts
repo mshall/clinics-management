@@ -45,6 +45,7 @@ import { MessagingConsentService } from "./messaging-consent.service";
 import { MessagingConsentItemDto, PutMessagingConsentDto } from "./dto/messaging-consent.dto";
 import { ConsentPolicyService } from "../compliance/consent-policy.service";
 import { PatientsMergePatientsBodyDto } from "./patients.controller.dto";
+import { PatientActiveProblemBodyDto, PatientFamilyLinkBodyDto } from "./patients.free-form.dto";
 
 const PATIENT_DOC_UPLOAD_LIMIT = 25 * 1024 * 1024;
 
@@ -416,8 +417,8 @@ export class PatientsController {
   }
 
   @Post(":id/active-problems")
-  saveActiveProblem(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
-    return this.patient360.upsertActiveProblem(requireTenantId(user), id, body as never);
+  saveActiveProblem(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatientActiveProblemBodyDto) {
+    return this.patient360.upsertActiveProblem(requireTenantId(user), id, body);
   }
 
   @Get(":id/family-links")
@@ -426,8 +427,8 @@ export class PatientsController {
   }
 
   @Post(":id/family-links")
-  addFamilyLink(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: Record<string, unknown>) {
-    return this.patient360.addFamilyLink(requireTenantId(user), id, body as never);
+  addFamilyLink(@CurrentUser() user: JwtUser, @Param("id") id: string, @Body() body: PatientFamilyLinkBodyDto) {
+    return this.patient360.addFamilyLink(requireTenantId(user), id, body);
   }
 
   @Delete(":id/family-links/:linkId")

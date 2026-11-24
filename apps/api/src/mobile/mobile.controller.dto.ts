@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Allow, IsOptional, IsString } from "class-validator";
+import { Allow, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from "class-validator";
 import { Lenient } from "../common/lenient-dto";
 
 /** Query of `inbox` (was an inline type, which class-validator cannot check). Unknown fields are ignored, as before. */
@@ -60,4 +60,36 @@ export class MobileApproveBodyDto {
   @IsOptional()
   @IsString()
   note?: string;
+}
+
+/** Body of `POST mobile/devices` (was `Record<string, unknown>` plus hand checks). */
+@Lenient()
+export class MobileRegisterDeviceBodyDto {
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(80) deviceId!: string;
+  @ApiProperty({ enum: ["ios", "android", "web"] }) @IsIn(["ios", "android", "web"]) platform!: string;
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(120) name!: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() appVersion?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() pushToken?: string;
+}
+
+/** Body of `PUT mobile/devices/:id/push-token`. */
+@Lenient()
+export class MobilePushTokenBodyDto {
+  @ApiProperty({ enum: ["expo", "mock"] }) @IsIn(["expo", "mock"]) provider!: "expo" | "mock";
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(300) token!: string;
+}
+
+/** Body of `POST mobile/vitals`: a patient and any subset of the numeric readings (range checks live in `validateVitalsInput`, which also handles nulls). */
+@Lenient()
+export class MobileRecordVitalsBodyDto {
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(100) patientId!: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) appointmentId?: string;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) systolic?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) diastolic?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) pulse?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) temperatureC?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) spo2?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) respiratoryRate?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) glucoseMgDl?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) painScore?: number | null;
 }

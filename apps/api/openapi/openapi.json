@@ -1316,6 +1316,16 @@
       "post": {
         "operationId": "SchedulingController_saveType",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulingSaveTypeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -1344,6 +1354,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulingPatchTypeBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -1529,6 +1549,16 @@
       "put": {
         "operationId": "SchedulingController_putAvail",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulingPutAvailabilityBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -1618,6 +1648,16 @@
       "post": {
         "operationId": "SchedulingController_addWaitlist",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulingAddWaitlistBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -1693,6 +1733,16 @@
       "post": {
         "operationId": "SchedulingController_series",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulingSeriesBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -3103,6 +3153,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientActiveProblemBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -3157,6 +3217,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientFamilyLinkBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -5627,6 +5697,16 @@
       "post": {
         "operationId": "ClinicalController_upsertTemplate",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicalUpsertTemplateBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -26509,6 +26589,16 @@
       "post": {
         "operationId": "MobileController_register",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileRegisterDeviceBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -26582,6 +26672,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobilePushTokenBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -27012,6 +27112,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileRecordVitalsBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -27668,6 +27778,114 @@
           }
         }
       },
+      "SchedulingSaveTypeBodyDto": {
+        "type": "object",
+        "properties": {
+          "nameAr": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "object"
+          },
+          "feeAmount": {
+            "type": "object"
+          },
+          "colorHex": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "bufferBeforeMin": {
+            "type": "object"
+          },
+          "bufferAfterMin": {
+            "type": "object"
+          },
+          "requiresRoom": {
+            "type": "boolean"
+          },
+          "marketplaceBookable": {
+            "type": "boolean"
+          },
+          "minNoticeMinutes": {
+            "type": "object"
+          },
+          "maxDaysAhead": {
+            "type": "object"
+          },
+          "newPatientOnly": {
+            "type": "boolean"
+          },
+          "depositAmount": {
+            "type": "object",
+            "nullable": true,
+            "description": "number, numeric string, null or empty string (= no deposit)"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "clinicId": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "nameEn"
+        ]
+      },
+      "SchedulingPatchTypeBodyDto": {
+        "type": "object",
+        "properties": {
+          "nameAr": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "object"
+          },
+          "feeAmount": {
+            "type": "object"
+          },
+          "colorHex": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "bufferBeforeMin": {
+            "type": "object"
+          },
+          "bufferAfterMin": {
+            "type": "object"
+          },
+          "requiresRoom": {
+            "type": "boolean"
+          },
+          "marketplaceBookable": {
+            "type": "boolean"
+          },
+          "minNoticeMinutes": {
+            "type": "object"
+          },
+          "maxDaysAhead": {
+            "type": "object"
+          },
+          "newPatientOnly": {
+            "type": "boolean"
+          },
+          "depositAmount": {
+            "type": "object",
+            "nullable": true,
+            "description": "number, numeric string, null or empty string (= no deposit)"
+          },
+          "nameEn": {
+            "type": "string"
+          }
+        }
+      },
       "SchedulingPutTypeOverridesBodyDto": {
         "type": "object",
         "properties": {
@@ -27680,6 +27898,100 @@
         },
         "required": [
           "overrides"
+        ]
+      },
+      "SchedulingPutAvailabilityBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "clinicianId": {
+            "type": "string"
+          },
+          "weekJson": {
+            "type": "object"
+          },
+          "blockedJson": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "clinicId",
+          "clinicianId",
+          "weekJson"
+        ]
+      },
+      "SchedulingAddWaitlistBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "patientId": {
+            "type": "string"
+          },
+          "clinicianId": {
+            "type": "string"
+          },
+          "appointmentTypeId": {
+            "type": "string"
+          },
+          "preferredFrom": {
+            "type": "string"
+          },
+          "preferredTo": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicId",
+          "patientId"
+        ]
+      },
+      "SchedulingSeriesBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "patientId": {
+            "type": "string"
+          },
+          "clinicianId": {
+            "type": "string"
+          },
+          "appointmentTypeId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "totalSessions": {
+            "type": "number",
+            "description": "clamped to 1..52 by the service"
+          },
+          "packagePaidAmount": {
+            "type": "number"
+          },
+          "cadenceDays": {
+            "type": "number"
+          },
+          "startsOn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clinicId",
+          "patientId",
+          "clinicianId",
+          "label",
+          "totalSessions",
+          "startsOn"
         ]
       },
       "SubmitClinicianVerificationDto": {
@@ -28152,6 +28464,59 @@
             "description": "Mark a provisional booking chart as a finished patient profile after required demographics are saved"
           }
         }
+      },
+      "PatientActiveProblemBodyDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "icd10Code": {
+            "type": "string"
+          },
+          "labelEn": {
+            "type": "string"
+          },
+          "labelAr": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "RESOLVED"
+            ]
+          },
+          "onsetDate": {
+            "type": "string",
+            "description": "ISO 8601 date"
+          }
+        },
+        "required": [
+          "labelEn"
+        ]
+      },
+      "PatientFamilyLinkBodyDto": {
+        "type": "object",
+        "properties": {
+          "toPatientId": {
+            "type": "string"
+          },
+          "relation": {
+            "type": "string",
+            "enum": [
+              "PARENT",
+              "CHILD",
+              "SPOUSE",
+              "GUARDIAN",
+              "OTHER"
+            ]
+          }
+        },
+        "required": [
+          "toPatientId",
+          "relation"
+        ]
       },
       "PatientsMergePatientsBodyDto": {
         "type": "object",
@@ -29825,6 +30190,66 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "ClinicalUpsertTemplateBodyDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "clinicId": {
+            "type": "string"
+          },
+          "specialty": {
+            "type": "string",
+            "enum": [
+              "POLYCLINIC",
+              "GENERAL_MEDICINE",
+              "PAIN_MANAGEMENT",
+              "ORTHOPEDICS",
+              "PEDIATRICS",
+              "DERMATOLOGY",
+              "DENTISTRY",
+              "PHYSIO_THERAPY",
+              "AESTHETICS",
+              "CARDIOLOGY",
+              "OBSTETRICS_GYNECOLOGY",
+              "ENT",
+              "OPHTHALMOLOGY",
+              "PSYCHIATRY",
+              "RADIOLOGY",
+              "LABORATORY",
+              "INTERNAL_MEDICINE",
+              "FAMILY_MEDICINE",
+              "UROLOGY",
+              "CUSTOM"
+            ]
+          },
+          "customSpecialtyLabelEn": {
+            "type": "string"
+          },
+          "customSpecialtyLabelAr": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "sectionsJson": {
+            "type": "object"
+          },
+          "isPublished": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "clinicId",
+          "specialty",
+          "name",
+          "sectionsJson"
         ]
       },
       "ClinicalCreateShortcutBodyDto": {
@@ -35686,6 +36111,55 @@
           "keys"
         ]
       },
+      "MobileRegisterDeviceBodyDto": {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android",
+              "web"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "appVersion": {
+            "type": "string"
+          },
+          "pushToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deviceId",
+          "platform",
+          "name"
+        ]
+      },
+      "MobilePushTokenBodyDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "expo",
+              "mock"
+            ]
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "token"
+        ]
+      },
       "MobileAckBodyDto": {
         "type": "object",
         "properties": {
@@ -35712,6 +36186,52 @@
             "type": "string"
           }
         }
+      },
+      "MobileRecordVitalsBodyDto": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "appointmentId": {
+            "type": "string"
+          },
+          "systolic": {
+            "type": "object",
+            "nullable": true
+          },
+          "diastolic": {
+            "type": "object",
+            "nullable": true
+          },
+          "pulse": {
+            "type": "object",
+            "nullable": true
+          },
+          "temperatureC": {
+            "type": "object",
+            "nullable": true
+          },
+          "spo2": {
+            "type": "object",
+            "nullable": true
+          },
+          "respiratoryRate": {
+            "type": "object",
+            "nullable": true
+          },
+          "glucoseMgDl": {
+            "type": "object",
+            "nullable": true
+          },
+          "painScore": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "patientId"
+        ]
       }
     }
   }
