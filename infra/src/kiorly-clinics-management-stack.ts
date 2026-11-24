@@ -558,7 +558,7 @@ function handler(event) {
 
     new cdk.CfnOutput(this, "WebBucketName", {
       value: webBucket.bucketName,
-      description: "SPA static hosting bucket (not ApiUploadsBucket - safe for web-only sync)",
+      description: "SPA static hosting bucket (not ApiUploadsBucket — safe for web-only sync)",
     });
 
     new cdk.CfnOutput(this, "DistributionId", {

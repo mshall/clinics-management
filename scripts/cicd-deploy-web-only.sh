@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Fast web-only deploy: build SPA → S3 sync → CloudFront invalidate.
-# Does NOT rebuild the API Docker image or update App Runner.
-# SPA version truth is /build-id.json (the web client ignores a stale App Runner WEB_BUILD_ID).
+# Does NOT rebuild the API Docker image or update App Runner (SPA versioning uses /build-id.json).
 # Uploads bucket (patient/encounter/operation PHI) is never touched.
 set -euo pipefail
 
