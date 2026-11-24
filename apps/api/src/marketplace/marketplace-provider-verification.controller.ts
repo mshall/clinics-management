@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { VerificationRequestsService } from "../growth/provider-marketing/verification-requests.service";
+import { VerificationDecisionBodyDto } from "../growth/provider-marketing/provider-marketing.dto";
 import { MarketplaceAuthGuard } from "./marketplace-auth.guard";
 
 /**
@@ -27,7 +28,7 @@ export class MarketplaceProviderVerificationController {
   @Post("decisions")
   @HttpCode(200)
   @ApiOperation({ summary: "Kiorex ops decision (APPROVED, REJECTED, NEEDS_INFO) for a verification update request; idempotent" })
-  decide(@Body() body: Record<string, unknown>) {
-    return this.requests.applyDecision(body as never);
+  decide(@Body() body: VerificationDecisionBodyDto) {
+    return this.requests.applyDecision(body);
   }
 }

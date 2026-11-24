@@ -5,9 +5,10 @@ import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
 import type { JwtUser } from "../../auth/jwt-user";
 import { FeatureGuard, RequiresFeature } from "../../feature-flags/feature-flags-public";
 import { GrowthInsightsService } from "../provider-links/growth-insights.service";
+import { RecommendationStateBodyDto, SlotCardBodyDto, SocialRenderBodyDto, SocialShareBodyDto, VerificationCreateBodyDto, VerificationEvidenceBodyDto } from "./provider-marketing.dto";
 import { PosterPdfService } from "./poster-pdf.service";
 import { ShareableSlotsService } from "./shareable-slots.service";
-import { SocialTemplatesService, type RenderBody } from "./social-templates.service";
+import { SocialTemplatesService } from "./social-templates.service";
 import { StatementsService } from "./statements.service";
 import { VerificationRequestsService } from "./verification-requests.service";
 
@@ -38,14 +39,14 @@ export class ProviderMarketingController {
   @RequiresFeature("growth.provider_marketing_v2")
   @Post("growth/social/render")
   @ApiOperation({ summary: "Render a share card (SVG, optional PNG) and caption from an approved template; content guard applies to the optional custom line; the footer is protected" })
-  render(@CurrentUser() u: JwtUser, @Body() body: RenderBody) {
+  render(@CurrentUser() u: JwtUser, @Body() body: SocialRenderBodyDto) {
     return this.social.render(u, body ?? {});
   }
 
   @RequiresFeature("growth.provider_marketing_v2")
   @Post("growth/social/share")
   @ApiOperation({ summary: "Count one share (template, channel); no content, recipient or slot time is stored" })
-  share(@CurrentUser() u: JwtUser, @Body() body: { templateId?: string; clinicId?: string; channel?: string }) {
+  share(@CurrentUser() u: JwtUser, @Body() body: SocialShareBodyDto) {
     return this.social.recordShare(u, body ?? {});
   }
 
@@ -58,14 +59,14 @@ export class ProviderMarketingController {
   @RequiresFeature("growth.provider_marketing_v2")
   @Post("growth/shareable-slots/card")
   @ApiOperation({ summary: "Render a card for 1 to 5 chosen slots; each is re-checked at render time (409 SLOT_NO_LONGER_AVAILABLE when one is gone); the link is the provider's own so the booking is provider-led" })
-  slotCard(@CurrentUser() u: JwtUser, @Body() body: { clinicId?: string; clinicianId?: string; startsAt?: unknown; linkId?: string; locale?: string; png?: boolean }) {
+  slotCard(@CurrentUser() u: JwtUser, @Body() body: SlotCardBodyDto) {
     return this.slots.card(u, body ?? {});
   }
 
   @RequiresFeature("growth.provider_marketing_v2")
   @Post("growth/recommendations/:id/state")
   @ApiOperation({ summary: "Dismiss, snooze (1 to 90 days), mark done or reopen one recommendation of a clinic" })
-  recommendationState(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { clinicId?: string; status?: string; snoozeDays?: number }) {
+  recommendationState(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: RecommendationStateBodyDto) {
     return this.insights.setRecommendationState(u, id, body ?? {});
   }
 
@@ -78,7 +79,7 @@ export class ProviderMarketingController {
   @RequiresFeature("growth.provider_marketing_v2")
   @Post("growth/verification-requests")
   @ApiOperation({ summary: "Ask Kiorex ops to update a verified profile field (licence number, specialty, address, display name, photo, document); the value is encrypted at rest" })
-  verificationCreate(@CurrentUser() u: JwtUser, @Body() body: { clinicId?: string; field?: string; newValue?: string; oldRef?: string; evidenceFileRefs?: unknown }) {
+  verificationCreate(@CurrentUser() u: JwtUser, @Body() body: VerificationCreateBodyDto) {
     return this.verification.create(u, body ?? {});
   }
 
@@ -92,7 +93,7 @@ export class ProviderMarketingController {
   @RequiresFeature("growth.provider_marketing_v2")
   @Post("growth/verification-requests/:id/evidence")
   @ApiOperation({ summary: "Answer a NEEDS_INFO decision with more evidence files" })
-  verificationEvidence(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: { evidenceFileRefs?: unknown }) {
+  verificationEvidence(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() body: VerificationEvidenceBodyDto) {
     return this.verification.addEvidence(u, id, body ?? {});
   }
 

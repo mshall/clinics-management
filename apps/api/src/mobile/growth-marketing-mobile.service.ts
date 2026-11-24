@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { SlotCardBodyDto, SocialRenderBodyDto, SocialShareBodyDto, VerificationCreateBodyDto } from "../growth/provider-marketing/provider-marketing.dto";
 import { ShareableSlotsService } from "../growth/provider-marketing/shareable-slots.service";
 import { SocialTemplatesService } from "../growth/provider-marketing/social-templates.service";
 import { StatementsService } from "../growth/provider-marketing/statements.service";
@@ -39,7 +40,7 @@ export class GrowthMarketingMobileService {
     return this.social.list(this.actor(u, level), q);
   }
 
-  async render(u: JwtUser, b: Record<string, unknown>) {
+  async render(u: JwtUser, b: SocialRenderBodyDto) {
     const level = await this.base.level(u);
     if (level === "read") this.deny("Your role cannot create share cards");
     const body = { ...b } as Record<string, unknown>;
@@ -50,7 +51,7 @@ export class GrowthMarketingMobileService {
     return this.social.render(this.actor(u, level), body as never);
   }
 
-  async count(u: JwtUser, b: Record<string, unknown>) {
+  async count(u: JwtUser, b: SocialShareBodyDto) {
     const level = await this.base.level(u);
     if (level === "read") this.deny("Your role cannot share");
     return this.social.recordShare(this.actor(u, level), b as never);
@@ -62,7 +63,7 @@ export class GrowthMarketingMobileService {
     return this.slotSvc.list(this.actor(u, level), { ...q, selfOnly: level === "doctor", clinicianId: level === "doctor" ? u.userId : q.clinicianId });
   }
 
-  async slotCard(u: JwtUser, b: Record<string, unknown>) {
+  async slotCard(u: JwtUser, b: SlotCardBodyDto) {
     const level = await this.base.level(u);
     if (level === "read") this.deny("Your role cannot share slots");
     return this.slotSvc.card(this.actor(u, level), { ...(b as object), selfOnly: level === "doctor", noLinkCreate: level === "doctor", clinicianId: level === "doctor" ? u.userId : (b.clinicianId as string | undefined) } as never);
@@ -81,5 +82,5 @@ export class GrowthMarketingMobileService {
     return { ...s, webUrl: `${(process.env.APP_WEB_URL?.trim() || "http://localhost:5173").replace(/\/+$/, "")}/kiorex/growth?tab=statement` };
   }
   async verificationList(u: JwtUser, clinicId?: string) { await this.adminOnly(u); return this.verificationSvc.list(u, { clinicId }); }
-  async verificationCreate(u: JwtUser, b: Record<string, unknown>) { await this.adminOnly(u); return this.verificationSvc.create(u, b as never); }
+  async verificationCreate(u: JwtUser, b: VerificationCreateBodyDto) { await this.adminOnly(u); return this.verificationSvc.create(u, b as never); }
 }
