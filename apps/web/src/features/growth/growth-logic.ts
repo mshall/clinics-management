@@ -47,7 +47,7 @@ export function createLinkError(f: { label: string; scope: LinkScope; branchRef:
 }
 
 /** Recommendations may only come from this closed list (mirrors the API catalogue); anything else is dropped, never rendered. */
-export const RECOMMENDATION_IDS = ["AVAILABILITY_MISSING", "AVAILABILITY_NO_BOOKABLE_TYPES", "PROFILE_INCOMPLETE", "RESPONSE_OVERDUE", "CANCELLATIONS_HIGH", "NO_SHOW_HIGH", "CREATE_FIRST_LINK", "PRINT_RECEPTION_QR", "ENABLE_WIDGET", "PAGE_NOT_READY"] as const;
+export const RECOMMENDATION_IDS = ["AVAILABILITY_MISSING", "AVAILABILITY_NO_BOOKABLE_TYPES", "PROFILE_INCOMPLETE", "RESPONSE_OVERDUE", "CANCELLATIONS_HIGH", "NO_SHOW_HIGH", "CREATE_FIRST_LINK", "PRINT_RECEPTION_QR", "ENABLE_WIDGET", "PAGE_NOT_READY", "PROFILE_PHOTO_MISSING", "PROFILE_BIO_INCOMPLETE", "PUBLISH_MORE_SLOTS", "RESPOND_TO_REVIEW", "ADD_LANGUAGE", "VERIFICATION_PENDING", "LINK_CONVERSION_LOW", "LINK_PAUSED_IDLE", "SOCIAL_TEMPLATE_UNUSED", "STATEMENT_DISPUTE_CLOSING", "PLAN_LIMIT_NEAR"] as const;
 export const isKnownRecommendation = (id: string): id is (typeof RECOMMENDATION_IDS)[number] => (RECOMMENDATION_IDS as readonly string[]).includes(id);
 
 export function lastMonths(n: number, now = new Date()): string[] {

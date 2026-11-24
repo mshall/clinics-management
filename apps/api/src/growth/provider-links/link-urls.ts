@@ -112,3 +112,21 @@ export function assertAllowedRedirect(url: string, env: Env = process.env): stri
   if (!allowedRedirectHosts(env).has(u.host.toLowerCase())) throw new Error("REDIRECT_NOT_ALLOWED");
   return u.toString();
 }
+
+
+/**
+ * GRW-P2-C shareable slot: the optional `slot=<ISO start>` a share card appends to the public page link. Only a real, future instant within 90 days is
+ * kept (canonical `toISOString()`); anything else is dropped so the parameter can never carry free text onward to Kiorex.
+ */
+export function normalizeSlotParam(raw: unknown, now: Date = new Date()): string | null {
+  if (typeof raw !== "string" || raw.length > 40) return null;
+  const t = Date.parse(raw);
+  if (!Number.isFinite(t)) return null;
+  if (t <= now.getTime() || t > now.getTime() + 90 * 86_400_000) return null;
+  return new Date(t).toISOString();
+}
+
+/** `kiorly.link/<slug>?s=<code>&slot=<ISO>`: the tracked page link of a provider link that points at one free slot. */
+export function trackedSlotUrl(slug: string, code: string, startsAtIso: string, env: Env = process.env): string {
+  return `${trackedPageUrl(slug, code, env)}&slot=${encodeURIComponent(startsAtIso)}`;
+}

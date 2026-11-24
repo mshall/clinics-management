@@ -25040,6 +25040,126 @@
         ]
       }
     },
+    "/marketplace/v1/provider-verification/requests/{requestRef}": {
+      "get": {
+        "operationId": "MarketplaceProviderVerificationController_read",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Nonce",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requestRef",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Kiorex reads one verification update request: field, requested value and evidence file references",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
+    "/marketplace/v1/provider-verification/decisions": {
+      "post": {
+        "operationId": "MarketplaceProviderVerificationController_decide",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Nonce",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Kiorex ops decision (APPROVED, REJECTED, NEEDS_INFO) for a verification update request; idempotent",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
     "/marketplace/listings": {
       "get": {
         "operationId": "MarketplaceOrgController_list",
@@ -26552,6 +26672,696 @@
           }
         ],
         "summary": "Pause or resume a link",
+        "tags": [
+          "mobile"
+        ]
+      }
+    },
+    "/growth/social/templates": {
+      "get": {
+        "operationId": "ProviderMarketingController_templates",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinicId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approved social content templates (AR and EN), with 30-day share counts",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/social/render": {
+      "post": {
+        "operationId": "ProviderMarketingController_render",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Render a share card (SVG, optional PNG) and caption from an approved template; content guard applies to the optional custom line; the footer is protected",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/social/share": {
+      "post": {
+        "operationId": "ProviderMarketingController_share",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Count one share (template, channel); no content, recipient or slot time is stored",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/shareable-slots": {
+      "get": {
+        "operationId": "ProviderMarketingController_shareableSlots",
+        "parameters": [
+          {
+            "name": "clinicId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinicianId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Up to 5 next free slots of a doctor from the canonical slot engine (no hold is created)",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/shareable-slots/card": {
+      "post": {
+        "operationId": "ProviderMarketingController_slotCard",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Render a card for 1 to 5 chosen slots; each is re-checked at render time (409 SLOT_NO_LONGER_AVAILABLE when one is gone); the link is the provider's own so the booking is provider-led",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/recommendations/{id}/state": {
+      "post": {
+        "operationId": "ProviderMarketingController_recommendationState",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Dismiss, snooze (1 to 90 days), mark done or reopen one recommendation of a clinic",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/verification-requests": {
+      "get": {
+        "operationId": "ProviderMarketingController_verificationList",
+        "parameters": [
+          {
+            "name": "clinicId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verification update requests of the organisation, with the badge state (VERIFIED or UPDATE_UNDER_REVIEW)",
+        "tags": [
+          "growth"
+        ]
+      },
+      "post": {
+        "operationId": "ProviderMarketingController_verificationCreate",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ask Kiorex ops to update a verified profile field (licence number, specialty, address, display name, photo, document); the value is encrypted at rest",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/verification-requests/{id}/withdraw": {
+      "post": {
+        "operationId": "ProviderMarketingController_verificationWithdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Withdraw an open verification update request",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/verification-requests/{id}/evidence": {
+      "post": {
+        "operationId": "ProviderMarketingController_verificationEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Answer a NEEDS_INFO decision with more evidence files",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/links/{id}/poster.pdf": {
+      "post": {
+        "operationId": "ProviderMarketingController_posterPdf",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "QR poster as a server PDF (Arabic or English)",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/billing/kiorex/statements/exports": {
+      "get": {
+        "operationId": "ProviderMarketingController_exports",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "History of statement exports (month, kind, checksum)",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/billing/kiorex/statements/months": {
+      "get": {
+        "operationId": "ProviderMarketingController_months",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Months that have Kiorex charges",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/billing/kiorex/statements": {
+      "get": {
+        "operationId": "ProviderMarketingController_statement",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinicId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Commission statement of a month (YYYY-MM): one line per appointment, totals equal the decision log and charge ledger",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/billing/kiorex/statements/{file}": {
+      "get": {
+        "operationId": "ProviderMarketingController_file",
+        "parameters": [
+          {
+            "name": "file",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinicId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Statement export: `<YYYY-MM>.csv` or `<YYYY-MM>.pdf` (AR and EN, RTL)",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/mobile/growth/templates": {
+      "get": {
+        "operationId": "GrowthMarketingMobileController_templates",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinicId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approved share templates (AR and EN)",
+        "tags": [
+          "mobile"
+        ]
+      }
+    },
+    "/mobile/growth/share/render": {
+      "post": {
+        "operationId": "GrowthMarketingMobileController_render",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Render a share card and caption from an approved template",
+        "tags": [
+          "mobile"
+        ]
+      }
+    },
+    "/mobile/growth/share/count": {
+      "post": {
+        "operationId": "GrowthMarketingMobileController_count",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Count one share (template and channel only)",
+        "tags": [
+          "mobile"
+        ]
+      }
+    },
+    "/mobile/growth/slots": {
+      "get": {
+        "operationId": "GrowthMarketingMobileController_slots",
+        "parameters": [
+          {
+            "name": "clinicId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinicianId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Next free slots to share (a doctor sees only their own)",
+        "tags": [
+          "mobile"
+        ]
+      }
+    },
+    "/mobile/growth/slots/card": {
+      "post": {
+        "operationId": "GrowthMarketingMobileController_slotCard",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Render a slot card (409 SLOT_NO_LONGER_AVAILABLE when a chosen time is gone)",
+        "tags": [
+          "mobile"
+        ]
+      }
+    },
+    "/mobile/growth/statements": {
+      "get": {
+        "operationId": "GrowthMarketingMobileController_months",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Months with Kiorex charges (admin only)",
+        "tags": [
+          "mobile"
+        ]
+      }
+    },
+    "/mobile/growth/statements/{month}": {
+      "get": {
+        "operationId": "GrowthMarketingMobileController_statement",
+        "parameters": [
+          {
+            "name": "month",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clinicId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One month statement (admin only; never for a doctor)",
+        "tags": [
+          "mobile"
+        ]
+      }
+    },
+    "/mobile/growth/verification": {
+      "get": {
+        "operationId": "GrowthMarketingMobileController_verification",
+        "parameters": [
+          {
+            "name": "clinicId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verification update requests (admin)",
+        "tags": [
+          "mobile"
+        ]
+      },
+      "post": {
+        "operationId": "GrowthMarketingMobileController_verificationCreate",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ask Kiorex to update a verified profile field (admin)",
         "tags": [
           "mobile"
         ]

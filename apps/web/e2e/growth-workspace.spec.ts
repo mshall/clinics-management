@@ -39,6 +39,45 @@ async function mockInsights(page: Page, reconciled = true) {
   await page.route(/\/api\/v1\/growth\/performance\?/, (r) => r.fulfill({ json: PERF }));
   await page.route(/\/api\/v1\/kiorex\/commission-statement\?/, (r) => r.fulfill({ json: STATEMENT(reconciled) }));
 }
+
+// ------------------------------------------------------------------ GRW-P2-C: provider marketing portal v2 (API mocked so the cards, slots and numbers are exact; the real services are covered by the integration tests)
+const SVG_CARD = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#0d9488"/></svg>';
+const PNG_1PX = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+const TEMPLATES = (locale: "en" | "ar") => ({
+  items: [
+    { id: "t-open", slug: "booking-open", kind: "POST", locale, title: locale === "ar" ? "الحجز أونلاين متاح" : "Online booking is open", body: locale === "ar" ? "الحجز أونلاين متاح الآن في {clinic}: {link}" : "Online booking is open at {clinic}: {link}", layoutKey: "post", protectedFooter: locale === "ar" ? "المواعيد حسب التوافر وتؤكدها العيادة." : "Appointments depend on availability and are confirmed by the clinic.", version: 1, shares30d: 3, needsDoctor: false },
+    { id: "t-doc", slug: "doctor-intro", kind: "POST", locale, title: locale === "ar" ? "تعرّف على الطبيب" : "Meet the doctor", body: "{doctor} at {clinic}: {link}", layoutKey: "post", protectedFooter: "Appointments depend on availability.", version: 1, shares30d: 0, needsDoctor: true },
+  ],
+  guardrail: "x",
+});
+const SLOTS = {
+  clinicId: "c1", clinicianId: "d1", timezone: "Africa/Cairo", days: 3, typeId: "ty",
+  items: [
+    { startsAt: "2030-01-10T08:00:00.000Z", endsAt: "2030-01-10T08:30:00.000Z", labelEn: "Thu 10 Jan, 10:00", labelAr: "الخميس ١٠ يناير، ١٠:٠٠ ص" },
+    { startsAt: "2030-01-10T08:30:00.000Z", endsAt: "2030-01-10T09:00:00.000Z", labelEn: "Thu 10 Jan, 10:30", labelAr: "الخميس ١٠ يناير، ١٠:٣٠ ص" },
+    { startsAt: "2030-01-10T09:00:00.000Z", endsAt: "2030-01-10T09:30:00.000Z", labelEn: "Thu 10 Jan, 11:00", labelAr: "الخميس ١٠ يناير، ١١:٠٠ ص" },
+  ],
+};
+const STATEMENT_V2 = {
+  month: "2026-11", zone: "Africa/Cairo", currency: "EGP", statement: "x",
+  lines: [
+    { appointmentId: "a1", date: "2026-11-05", isNewPatient: true, origin: "MARKETPLACE", bookingSource: "KIOREX_MARKETPLACE", decision: "CHARGE", reasonCodes: [], rate: "40.00", amount: "40.00", chargeStatus: "CONFIRMED", dispute: null },
+    { appointmentId: "a2", date: "2026-11-06", isNewPatient: true, origin: "PROVIDER_LED", bookingSource: "CLINIC_LINK", decision: "NO_CHARGE", reasonCodes: ["PROVIDER_LED"], rate: null, amount: null, chargeStatus: null, dispute: null },
+  ],
+  totals: { active: "40.00", activeCount: 1, reversed: "0.00", waived: "0.00", providerLed: 1, disputesOpen: 0, decisions: { CHARGE: 1, NO_CHARGE: 1, WAIVED: 0 } },
+};
+const VERIFICATION = (badge: "VERIFIED" | "UPDATE_UNDER_REVIEW") => ({
+  badge, policy: { reVerifyOnLicenseChange: true },
+  items: [{ id: "vr1", clinicId: "c1", field: "LICENSE_NUMBER", oldRef: null, status: badge === "UPDATE_UNDER_REVIEW" ? "NEEDS_INFO" : "APPROVED", evidenceCount: 1, evidenceFileRefs: ["uploads/lic.pdf"], kiorexRef: "kx1", decisionNote: "Please add a utility bill", decidedAt: null, createdAt: "2026-11-24T10:00:00Z", updatedAt: "2026-11-24T10:00:00Z" }],
+});
+async function mockV2(page: Page, lang: "en" | "ar" = "en", badge: "VERIFIED" | "UPDATE_UNDER_REVIEW" = "UPDATE_UNDER_REVIEW") {
+  await page.route(/\/api\/v1\/growth\/social\/templates/, (r) => r.fulfill({ json: TEMPLATES(new URL(r.request().url()).searchParams.get("locale") === "ar" ? "ar" : lang) }));
+  await page.route(/\/api\/v1\/growth\/shareable-slots\?/, (r) => r.fulfill({ json: SLOTS }));
+  await page.route(/\/api\/v1\/growth\/verification-requests(\?|$)/, (r) => (r.request().method() === "GET" ? r.fulfill({ json: VERIFICATION(badge) }) : r.fulfill({ status: 201, json: VERIFICATION(badge).items[0] })));
+  await page.route(/\/api\/v1\/billing\/kiorex\/statements\/exports/, (r) => r.fulfill({ json: { items: [{ id: "e1", month: "2026-11", kind: "CSV", checksum: "a".repeat(64), createdAt: "2026-11-24T10:00:00Z" }] } }));
+  await page.route(/\/api\/v1\/billing\/kiorex\/statements\?/, (r) => r.fulfill({ json: STATEMENT_V2 }));
+}
+
 async function open(page: Page, tab = "links") {
   await page.goto(`/kiorex/growth?tab=${tab}`);
   await expect(page.getByTestId("growth-page")).toBeVisible({ timeout: 60_000 });
@@ -226,15 +265,159 @@ test.describe("Growth & Marketing workspace", () => {
   });
 });
 
+
+test.describe("GRW-P2-C provider marketing portal v2", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/login");
+    await login(page, "admin@kiorly.com");
+    await mockInsights(page, true);
+    await mockV2(page);
+  });
+
+  test("share: pick an approved template, create the card, see the protected caption, copy and download; a refused wording is explained", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    let sent: Record<string, unknown> | null = null;
+    let counted = 0;
+    await page.route(/\/api\/v1\/growth\/social\/render/, (r) => {
+      sent = r.request().postDataJSON() as Record<string, unknown>;
+      if (String(sent.customLine ?? "").includes("guarantee")) return r.fulfill({ status: 422, json: { code: "CONTENT_NOT_ALLOWED", message: "x", findings: [{ id: "guarantee", category: "GUARANTEE" }] } });
+      return r.fulfill({ json: { templateId: "t-open", locale: "en", caption: "Online booking is open at Nile Clinic: https://kiorly.link/b/nile?s=ABCD2345\n\nAppointments depend on availability and are confirmed by the clinic.", link: "https://kiorly.link/b/nile?s=ABCD2345", linkCode: "ABCD2345", layout: "post", svg: SVG_CARD, pngBase64: PNG_1PX } });
+    });
+    await page.route(/\/api\/v1\/growth\/social\/share/, (r) => { counted += 1; return r.fulfill({ json: { id: "s1", ok: true } }); });
+    await open(page, "share");
+    await expect(page.getByTestId("social-templates")).toBeVisible();
+    await expect(page.getByTestId("template-booking-open")).toContainText("Shared 3 times");
+    await page.getByTestId("template-booking-open").click();
+    await page.getByTestId("share-custom").fill("We guarantee results");
+    await page.getByTestId("share-render").click();
+    await expect(page.getByTestId("share-error")).toContainText("cannot be published");
+    await expect(page.getByTestId("share-error")).toContainText("a guarantee");
+    await page.getByTestId("share-custom").fill("Open on Saturdays");
+    await page.getByTestId("share-render").click();
+    await expect(page.getByTestId("share-result")).toBeVisible();
+    expect(sent).toMatchObject({ templateId: "t-open", customLine: "Open on Saturdays" });
+    await expect(page.getByTestId("share-caption")).toHaveValue(/Appointments depend on availability/);
+    await expect(page.getByTestId("share-image")).toBeVisible();
+    await page.getByTestId("share-copy").click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toContain("https://kiorly.link/b/nile?s=ABCD2345");
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.getByTestId("share-download").click()]);
+    expect(dl.suggestedFilename()).toMatch(/\.png$/);
+    await expect(page.getByTestId("share-whatsapp")).toHaveAttribute("href", /^https:\/\/wa\.me\/\?text=/);
+    await expect.poll(() => counted).toBeGreaterThanOrEqual(2);
+    await axe(page, "[data-testid=social-templates]");
+  });
+
+  test("share: a doctor template needs a doctor; a missing link and a switched-off feature are explained", async ({ page }) => {
+    let mode: "link" | "off" = "link";
+    await page.route(/\/api\/v1\/growth\/social\/render/, (r) => (mode === "link" ? r.fulfill({ status: 409, json: { code: "SHARE_LINK_REQUIRED", message: "x" } }) : r.fulfill({ status: 403, json: { error: "FEATURE_DISABLED", key: "growth.provider_marketing_v2", scope: "org" } })));
+    await open(page, "share");
+    await page.getByTestId("template-doctor-intro").click();
+    await expect(page.getByTestId("share-render")).toBeDisabled();
+    await page.getByTestId("template-booking-open").click();
+    await page.getByTestId("share-render").click();
+    await expect(page.getByTestId("share-error")).toContainText("Create a link first");
+    mode = "off";
+    await page.getByTestId("share-render").click();
+    await expect(page.getByTestId("share-error")).toContainText("switched off");
+  });
+
+  test("free times: choose up to 5, create the slot card with the provider link; a taken time clears the choice and says so", async ({ page }) => {
+    let cardCalls = 0;
+    await page.route(/\/api\/v1\/growth\/shareable-slots\/card/, (r) => {
+      cardCalls += 1;
+      if (cardCalls === 1) return r.fulfill({ status: 409, json: { code: "SLOT_NO_LONGER_AVAILABLE", message: "x", gone: [], remaining: [] } });
+      return r.fulfill({ json: { clinicId: "c1", clinicianId: "d1", locale: "en", link: "https://kiorly.link/b/nile?s=ABCD2345&slot=2030-01-10T08%3A00%3A00.000Z", linkCode: "ABCD2345", slots: [], caption: "Next available times at Nile Clinic\n- Thu 10 Jan, 10:00", svg: SVG_CARD, pngBase64: PNG_1PX } });
+    });
+    await page.route(/\/api\/v1\/growth\/profile-preview/, (r) => r.fulfill({ json: { clinicId: "c1", nameEn: "Nile", nameAr: "نيل", slug: "nile", pageUrl: "https://kiorly.link/b/nile", bookableVisitTypes: 2, ready: true, doctors: [{ clinicianId: "d1", slug: "dr-a", nameEn: "Dr A", nameAr: "د. أ", titleEn: null, titleAr: null }] } }));
+    await open(page, "slots");
+    const options = page.getByTestId("slot-option");
+    await expect(options).toHaveCount(3);
+    await expect(page.getByTestId("slots-create")).toBeDisabled();
+    await options.nth(0).check();
+    await options.nth(1).check();
+    await page.getByTestId("slots-create").click();
+    await expect(page.getByTestId("slots-gone")).toBeVisible();
+    await options.nth(0).check();
+    await page.getByTestId("slots-create").click();
+    await expect(page.getByTestId("slots-result")).toContainText("slot=2030-01-10");
+    await axe(page, "[data-testid=shareable-slots]");
+  });
+
+  test("verified profile: the badge reads update under review, the request form needs evidence for a photo, a request is sent and a note from Kiorex is shown", async ({ page }) => {
+    let posted: Record<string, unknown> | null = null;
+    await page.route(/\/api\/v1\/growth\/verification-requests$/, (r) => { if (r.request().method() === "POST") { posted = r.request().postDataJSON() as Record<string, unknown>; return r.fulfill({ status: 201, json: VERIFICATION("UPDATE_UNDER_REVIEW").items[0] }); } return r.fulfill({ json: VERIFICATION("UPDATE_UNDER_REVIEW") }); });
+    await open(page, "verification");
+    await expect(page.getByTestId("verification-badge")).toHaveAttribute("data-badge", "UPDATE_UNDER_REVIEW");
+    await expect(page.getByTestId("verification-badge")).toContainText("Update under review");
+    await expect(page.getByTestId("vr-vr1")).toContainText("Please add a utility bill");
+    await page.getByTestId("vr-field").selectOption("PHOTO");
+    await page.getByTestId("vr-value").fill("new portrait");
+    await page.getByTestId("vr-submit").click();
+    await expect(page.getByTestId("vr-error")).toContainText("Check the value");
+    await page.getByTestId("vr-evidence").fill("uploads/portrait.png\n../bad");
+    await page.getByTestId("vr-submit").click();
+    await expect(page.getByTestId("vr-error")).toBeVisible();
+    await page.getByTestId("vr-evidence").fill("uploads/portrait.png");
+    await page.getByTestId("vr-submit").click();
+    await expect.poll(() => posted).toMatchObject({ field: "PHOTO", newValue: "new portrait", evidenceFileRefs: ["uploads/portrait.png"] });
+    await axe(page, "[data-testid=verification-requests]");
+  });
+
+  test("statements v2: lines, totals, CSV and PDF downloads, export history; a provider-led visit shows no fee", async ({ page }) => {
+    await page.route(/\/api\/v1\/billing\/kiorex\/statements\/2026-\d\d\.csv/, (r) => r.fulfill({ status: 200, headers: { "content-type": "text/csv", "content-disposition": 'attachment; filename="kiorex-statement.csv"' }, body: "date,appointment\r\n" }));
+    await open(page, "statement");
+    const box = page.getByTestId("statements-v2");
+    await expect(box).toBeVisible();
+    await page.getByTestId("stv2-month").selectOption({ index: 0 });
+    await expect(box.getByTestId("stv2-line")).toHaveCount(2);
+    await expect(box.getByTestId("stv2-active")).toContainText("40");
+    await expect(box.getByTestId("stv2-provider-led")).toHaveText("1");
+    await expect(box.getByTestId("stv2-line").nth(1)).toContainText("No fee");
+    await expect(box.getByTestId("stv2-exports")).toContainText("CSV");
+    const [csv] = await Promise.all([page.waitForEvent("download"), box.getByTestId("stv2-csv").click()]);
+    expect(csv.suggestedFilename()).toMatch(/\.csv$/);
+    await axe(page, "[data-testid=statements-v2]");
+  });
+
+  test("recommendations: the new rules show their data window and can be dismissed or snoozed (persisted through the API)", async ({ page }) => {
+    const states: Array<Record<string, unknown>> = [];
+    await page.route(/\/api\/v1\/growth\/recommendations\/[A-Z_]+\/state/, (r) => { states.push({ id: r.request().url().split("/").slice(-2)[0], ...(r.request().postDataJSON() as object) }); return r.fulfill({ json: { id: "x", status: "DISMISSED" } }); });
+    await page.route(/\/api\/v1\/growth\/recommendations\?/, (r) => r.fulfill({ json: { items: [{ id: "STATEMENT_DISPUTE_CLOSING", severity: "high", params: { count: 2, days: 3 }, action: "statements", window: "3d" }, { id: "RESPOND_TO_REVIEW", severity: "medium", params: { count: 1 }, action: "reviews", window: "30d" }], hidden: 0, catalogue: 21, guardrail: "x" } }));
+    await open(page);
+    const box = page.getByTestId("recommendations");
+    await expect(box.getByTestId("rec-STATEMENT_DISPUTE_CLOSING")).toContainText("2 charge(s) can be disputed for only 3 more days");
+    await expect(box.getByTestId("rec-window-STATEMENT_DISPUTE_CLOSING")).toContainText("the next 3 days");
+    await expect(box.getByTestId("rec-RESPOND_TO_REVIEW")).toContainText("never mention medical details");
+    await box.getByTestId("rec-snooze-RESPOND_TO_REVIEW").click();
+    await box.getByTestId("rec-dismiss-STATEMENT_DISPUTE_CLOSING").click();
+    await expect.poll(() => states.length).toBe(2);
+    expect(states[0]).toMatchObject({ id: "RESPOND_TO_REVIEW", status: "SNOOZED", snoozeDays: 7 });
+    expect(states[1]).toMatchObject({ id: "STATEMENT_DISPUTE_CLOSING", status: "DISMISSED" });
+  });
+
+  test("public page: a shared slot link passes `slot` to the API (the Book links come back with it)", async ({ page }) => {
+    let seen = "";
+    await page.route(/\/api\/v1\/public\/booking-pages\/pw-clinic/, (r) => {
+      seen = r.request().url();
+      return r.fulfill({ json: { slug: "pw-clinic", channel: "CLINIC_LINK", commissionFree: true, tracked: true, lt: "T.S", clinic: { id: "c1", nameEn: "PW Clinic", nameAr: "عيادة", logoUrl: null, brandColor: "white", city: "Cairo", addressEn: "St", addressAr: "ش", locationUrl: "https://maps.example/x", phone: "201000000000", currency: "EGP" }, doctors: [], appointmentTypes: [], widgetUrl: "https://kiorex.example/ar/eg/clinic/pw-clinic?lt=T.S&slot=2030-01-10T08%3A00%3A00.000Z" } });
+    });
+    await page.goto("/b/pw-clinic?s=ABCD2345&slot=2030-01-10T08%3A00%3A00.000Z");
+    await expect(page.getByTestId("public-booking-page")).toBeVisible();
+    expect(seen).toContain("s=ABCD2345");
+    expect(decodeURIComponent(seen)).toContain("slot=2030-01-10T08:00:00.000Z");
+  });
+});
+
 for (const lang of ["en", "ar"] as const) for (const theme of ["light", "dark"] as const) {
   test(`${lang} ${theme}: every tab renders, RTL follows the language, no horizontal overflow at 360 and 1440, axe clean`, async ({ page }) => {
     await pinLocaleAndTheme(page, lang, theme);
     await page.goto("/login");
     await login(page, "admin@kiorly.com");
     await mockInsights(page, true);
+    await mockV2(page, lang);
     for (const w of [1440, 360]) {
       await page.setViewportSize({ width: w, height: 900 });
-      for (const tab of ["links", "widget", "performance", "statement"]) {
+      for (const tab of ["links", "share", "slots", "widget", "performance", "statement", "verification"]) {
         await open(page, tab);
         await expect(page.locator("html")).toHaveAttribute("dir", lang === "ar" ? "rtl" : "ltr");
         await expect(page.getByRole("heading", { level: 1 })).toHaveText(lang === "ar" ? "النمو والتسويق" : "Growth & Marketing");

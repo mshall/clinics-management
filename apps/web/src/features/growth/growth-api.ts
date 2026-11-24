@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiDownload, apiFetchBlob, apiGet, apiPatch, apiPost, apiPut } from "@/lib/http";
 import "./growth-i18n";
+import "./provider-marketing-i18n";
 import type { LinkScope } from "./growth-logic";
 
 export type GrowthLevel = "admin" | "marketing" | "read" | "none";
@@ -63,7 +64,7 @@ export type PerformanceDto = {
   trend: Array<{ week: string; provider: number; marketplace: number }>;
   commission: { currency: string; total: number; byMonth: Array<{ month: string; amount: number; charges: number }>; decisions: Record<string, number>; incrementalRevenueNet: number };
 };
-export type RecommendationDto = { id: string; severity: "high" | "medium" | "low"; params: Record<string, number>; action: "availability" | "profile" | "bookings" | "links" | "widget" | "page" | "visit_types" };
+export type RecommendationDto = { id: string; severity: "high" | "medium" | "low"; params: Record<string, number>; action: "availability" | "profile" | "bookings" | "links" | "widget" | "page" | "visit_types" | "reviews" | "verification" | "share" | "statements"; window?: string };
 export type StatementDto = {
   period: string;
   currency: string;

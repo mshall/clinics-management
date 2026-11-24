@@ -63,6 +63,7 @@ import { UsageModule } from "./usage/usage.module";
 import { CohortsModule } from "./cohorts/cohorts.module";
 import { GrowthModule } from "./growth/growth.module";
 import { ProviderLinksModule } from "./growth/provider-links/provider-links.module";
+import { ProviderMarketingModule } from "./growth/provider-marketing/provider-marketing.module";
 import { PushModule } from "./push/push.module";
 
 @Module({
@@ -127,6 +128,7 @@ import { PushModule } from "./push/push.module";
     CohortsModule,
     GrowthModule,
     ProviderLinksModule,
+    ProviderMarketingModule,
     PushModule,
     MobilePushModule,
     MobileModule,

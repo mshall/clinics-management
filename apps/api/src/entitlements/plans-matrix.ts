@@ -61,6 +61,9 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "admin/platform-admin.controller.ts": { kind: "platform" },
   /** Kiorly: gated by MobileInterceptor (`mobile_staff_app`), with the ADR-025 safety-alert routes open on every plan. */
   "mobile/mobile.controller.ts": { kind: "open" },
+  "mobile/growth-marketing-mobile.controller.ts": { kind: "open" }, // GRW-P2-C: same /mobile/* plan gate; Growth module scoping and doctor-own-profile rule in the service
+  "growth/provider-marketing/provider-marketing.controller.ts": { kind: "open" }, // GRW-P2-C: growth.provider_marketing_v2 on the new actions; Growth role matrix in the services
+  "marketplace/marketplace-provider-verification.controller.ts": { kind: "webhook" }, // GRW-P2-C: HMAC marketplace client (Kiorex ops reads a request and delivers the decision)
   "mobile/growth-mobile.controller.ts": { kind: "open" }, // /mobile/* is plan-gated by MobilePlanGuard (mobile_staff_app); the module key clinic.growth scopes roles
   "admin/admin.controller.ts": { kind: "open" },
   "admin/data-explorer/admin-data-explorer.controller.ts": { kind: "gated", entitlement: "mod_data_explorer" },

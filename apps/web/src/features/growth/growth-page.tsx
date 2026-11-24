@@ -10,10 +10,15 @@ import { useClinicsQuery } from "@/lib/api-hooks";
 import { useSyncOnChange } from "@/lib/use-sync-on-change";
 import { useGrowthAccess, useProfilePreview } from "./growth-api";
 import { PerformanceSection, ProfilePreviewCard, Recommendations, StatementSection } from "./growth-insights";
+import { CommissionStatements } from "./commission-statements";
 import { LinksSection } from "./links-table";
+import { ShareableSlots } from "./shareable-slots";
+import { SocialTemplates } from "./social-templates";
+import { VerificationRequests } from "./verification-requests";
+import "./provider-marketing-i18n";
 import { WidgetSettings } from "./widget-settings";
 
-const TABS = ["links", "widget", "performance", "statement"] as const;
+const TABS = ["links", "share", "slots", "widget", "performance", "statement", "verification"] as const;
 type Tab = (typeof TABS)[number];
 
 /** Kiorly "Growth & Marketing" workspace (GRW-P1-D1): public profile preview, links and QR codes, widget configurator, acquisition performance, recommendations and the fee statement. Works without a Kiorex connection. */
@@ -72,12 +77,15 @@ export function GrowthPage() {
           </div>
           <Tabs value={tab} onValueChange={(v) => setParams((p) => { const n = new URLSearchParams(p); n.set("tab", v); return n; }, { replace: true })}>
             <TabsList aria-label={t("growth.title")}>
-              {TABS.map((k) => <TabsTrigger key={k} value={k} data-testid={`growth-tab-${k}`}>{t(`growth.tabs.${k}`)}</TabsTrigger>)}
+              {TABS.map((k) => <TabsTrigger key={k} value={k} data-testid={`growth-tab-${k}`}>{t(k === "share" || k === "slots" || k === "verification" ? `growth.pm.tabs.${k}` : `growth.tabs.${k}`)}</TabsTrigger>)}
             </TabsList>
             <TabsContent value="links" className="mt-4"><LinksSection clinicId={clinicId} branches={branches} profile={profile.data} access={a} /></TabsContent>
+            <TabsContent value="share" className="mt-4"><SocialTemplates clinicId={clinicId} access={a} profile={profile.data} /></TabsContent>
+            <TabsContent value="slots" className="mt-4"><ShareableSlots clinicId={clinicId} access={a} profile={profile.data} /></TabsContent>
             <TabsContent value="widget" className="mt-4"><WidgetSettings clinicId={clinicId} access={a} profile={profile.data} /></TabsContent>
             <TabsContent value="performance" className="mt-4"><PerformanceSection clinicId={clinicId} access={a} /></TabsContent>
-            <TabsContent value="statement" className="mt-4"><StatementSection clinicId={clinicId} /></TabsContent>
+            <TabsContent value="statement" className="mt-4 space-y-4"><StatementSection clinicId={clinicId} /><CommissionStatements clinicId={clinicId} access={a} /></TabsContent>
+            <TabsContent value="verification" className="mt-4"><VerificationRequests clinicId={clinicId} access={a} /></TabsContent>
           </Tabs>
         </>
       ) : null}

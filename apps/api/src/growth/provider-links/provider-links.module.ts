@@ -15,6 +15,6 @@ import { PublicLinkController } from "./public-link.controller";
   imports: [FeatureFlagsModule, MarketplaceModule, ProviderLinkCoreModule, KiorexModule],
   controllers: [ProviderLinksController, PublicLinkController, GrowthMobileController],
   providers: [ProviderLinksService, GrowthInsightsService, GrowthMobileService],
-  exports: [ProviderLinksService],
+  exports: [ProviderLinksService, GrowthInsightsService, GrowthMobileService],
 })
 export class ProviderLinksModule {}

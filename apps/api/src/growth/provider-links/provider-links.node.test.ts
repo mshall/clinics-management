@@ -268,7 +268,8 @@ describe("GRW-P1-D1 recommendations", () => {
   });
   it("small samples never produce a cancellation rate recommendation", () => assert.deepEqual(buildRecommendations({ ...calm, kiorexBookings30d: 5, cancelled30d: 5 }), []));
   it("guardrail: the catalogue is closed and contains no over-treatment, price-pressure or testimonial tactic", () => {
-    assert.deepEqual([...RECOMMENDATION_IDS].sort(), ["AVAILABILITY_MISSING", "AVAILABILITY_NO_BOOKABLE_TYPES", "CANCELLATIONS_HIGH", "CREATE_FIRST_LINK", "ENABLE_WIDGET", "NO_SHOW_HIGH", "PAGE_NOT_READY", "PRINT_RECEPTION_QR", "PROFILE_INCOMPLETE", "RESPONSE_OVERDUE"]);
-    for (const id of RECOMMENDATION_IDS) assert.ok(!/UPSELL|PROCEDURE|TESTIMONIAL|REVIEW|DISCOUNT|PROMO|TREATMENT|PRICE/i.test(id), id);
+    assert.deepEqual([...RECOMMENDATION_IDS].sort(), ["AVAILABILITY_MISSING", "AVAILABILITY_NO_BOOKABLE_TYPES", "CANCELLATIONS_HIGH", "CREATE_FIRST_LINK", "ENABLE_WIDGET", "NO_SHOW_HIGH", "PAGE_NOT_READY", "PRINT_RECEPTION_QR", "PROFILE_INCOMPLETE", "RESPONSE_OVERDUE", "PROFILE_PHOTO_MISSING", "PROFILE_BIO_INCOMPLETE", "PUBLISH_MORE_SLOTS", "RESPOND_TO_REVIEW", "ADD_LANGUAGE", "VERIFICATION_PENDING", "LINK_CONVERSION_LOW", "LINK_PAUSED_IDLE", "SOCIAL_TEMPLATE_UNUSED", "STATEMENT_DISPUTE_CLOSING", "PLAN_LIMIT_NEAR"].sort());
+    // RESPOND_TO_REVIEW answers a verified patient review; no id may solicit, buy or steer reviews, or push treatment, price or promotion
+    for (const id of RECOMMENDATION_IDS) assert.ok(!/UPSELL|PROCEDURE|TESTIMONIAL|REQUEST_REVIEW|ASK_REVIEW|INCENTIV|DISCOUNT|PROMO|TREATMENT|PRICE/i.test(id), id);
   });
 });
