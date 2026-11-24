@@ -68,16 +68,22 @@ function resolveBySpecialty(active: RateRow[], specialty: ClinicalSpecialty | nu
   return marketDefault[0] ?? null;
 }
 
+/**
+ * Percent commission in whole piastres with half-up rounding on EXACT integers (visit fee and percent are scaled to 1/100 and 1/100 of a percent first).
+ * The previous `Math.round(fee * 100) / 100` on floats rounded 1.005 down to 1.00 and 0.285 to 0.28 (binary representation), a cent off per charge.
+ */
 export function applyPercentCommission(
   visitFee: number,
   percent: number,
   minAmount: number | null | undefined,
   maxAmount: number | null | undefined,
 ): number {
-  let fee = (visitFee * percent) / 100;
-  if (minAmount != null) fee = Math.max(fee, Number(minAmount));
-  if (maxAmount != null) fee = Math.min(fee, Number(maxAmount));
-  return Math.round(fee * 100) / 100;
+  const feeCents = Math.round(visitFee * 100);
+  const pctHundredths = Math.round(percent * 100);
+  let cents = Math.floor((feeCents * pctHundredths * 2 + 10_000) / 20_000); // round-half-up of feeCents * pct / 100 (pct in hundredths of a percent)
+  if (minAmount != null) cents = Math.max(cents, Math.round(Number(minAmount) * 100));
+  if (maxAmount != null) cents = Math.min(cents, Math.round(Number(maxAmount) * 100));
+  return cents / 100;
 }
 
 export function effectiveFlatFee(rate: RateRow, visitFeeForPercent = 500): number | null {

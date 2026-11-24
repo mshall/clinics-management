@@ -7,7 +7,7 @@ import { POLICY_ERROR, evaluatePatientCancel, evaluatePatientReschedule } from "
  * EDGE-41: the exact edges of the cancellation / reschedule / deposit-refund windows, with an injected clock (no wall time).
  * Convention under test: a window is open AT its minimum (hours until start == min is allowed) and the deposit is refundable AT its cutoff.
  */
-const now = new Date("2027-03-28T22:00:00.000Z"); // the evening before the Egypt DST switch (last Friday of April in 2027 is later; the instant maths must not care about zones)
+const now = new Date("2027-03-28T22:00:00.000Z"); // elapsed-time maths: zones and DST must not matter
 const policy = { patientCancelMinHours: 12, patientRescheduleMinHours: 6, depositRefundMinHours: 24, maxPatientReschedules: 2 };
 const startIn = (ms: number) => new Date(now.getTime() + ms);
 const H = 3_600_000;
