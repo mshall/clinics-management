@@ -3,7 +3,7 @@
   "info": {
     "title": "Kiorex Marketplace API",
     "version": "1.6.0",
-    "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers. v1.2.0 (KX-09 Rev 2.3, additive): provider sync profession/edition/home-visit fields, serviceLocation+district on slots, visitAddress on holds, 422 OUT_OF_COVERAGE, care-plan-requests (P3 draft). The same client serves both Kiorly editions (Clinic and Nurse). v1.4.0 (contracts 1.10.0, additive): optional signed `acquisition` block on POST /bookings (growth attribution evidence, ARCH section 6.7); a Clinic that does not know it ignores it and treats the booking as UNATTRIBUTED; booking GET and every response are unchanged. v1.5.0 (contracts 1.11.0, additive): optional Clinic link token `lt` on POST /bookings (GRW-P1-C/D1: a valid, unexpired token of an ACTIVE referral link of the booking organisation makes the booking provider-led; it can only remove a commission); signed link-registry lookup `GET /referral-links/{code}` and reconciliation list `GET /referral-links` (a code is known to Kiorex before its first token; revocations are visible). v1.6.0 (contracts 1.12.0, additive): booking `channel` accepts KIOREX_WHATSAPP; the Kiorex pay-link registration call is documented (`POST /pay/links`, hosted on Kiorex, called by Kiorly); provider listings may declare `modalities` including VIDEO; events WAITLIST_OFFER_CREATED/EXPIRED, optional Rx `items[]` and optional `followUp.intervalDays` on the visit summary; waitlist join/leave and slot capacity were already documented in 1.1.0 and are unchanged. Rewards never reach the clinic: no referral or reward field exists on any marketplace call."
+    "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers. v1.2.0 (KX-09 Rev 2.3, additive): provider sync profession/edition/home-visit fields, serviceLocation+district on slots, visitAddress on holds, 422 OUT_OF_COVERAGE, care-plan-requests (P3 draft). The same client serves both Kiorly editions (Clinic and Nurse). v1.4.0 (contracts 1.10.0, additive): optional signed `acquisition` block on POST /bookings (growth attribution evidence, ARCH section 6.7); a Clinic that does not know it ignores it and treats the booking as UNATTRIBUTED; booking GET and every response are unchanged. v1.5.0 (contracts 1.11.0, additive): optional Clinic link token `lt` on POST /bookings (GRW-P1-C/D1: a valid, unexpired token of an ACTIVE referral link of the booking organisation makes the booking provider-led; it can only remove a commission); signed link-registry lookup `GET /referral-links/{code}` and reconciliation list `GET /referral-links` (a code is known to Kiorex before its first token; revocations are visible). v1.6.0 (contracts 1.12.0, additive): booking `channel` accepts KIOREX_WHATSAPP; the Kiorex pay-link registration call is documented (`POST /pay/links`, hosted on Kiorex, called by Kiorly); provider listings may declare `modalities` including VIDEO; events WAITLIST_OFFER_CREATED/EXPIRED, optional Rx `items[]` and optional `followUp.intervalDays` on the visit summary; waitlist join/leave and slot capacity were already documented in 1.1.0 and are unchanged. Rewards never reach the clinic: no referral or reward field exists on any marketplace call. Rev 2.6 additions (still 1.6.0, additive): signed promotion commands `POST /promotions/{promotionId}/reserve` and `/release` (provider-sponsored promotions, P2-S: the clinic funds its own discount, it is never a Kiorex discount), optional `sponsoredDiscount` block on `POST /bookings`, optional `tender` on the two deposit-paid calls (gross and funding sources, never a patient identity)."
   },
   "servers": [
     {
@@ -52,6 +52,9 @@
                   "paidAt": {
                     "type": "string",
                     "format": "date-time"
+                  },
+                  "tender": {
+                    "$ref": "#/components/schemas/Tender"
                   }
                 }
               }
@@ -112,6 +115,9 @@
                   "paidAt": {
                     "type": "string",
                     "format": "date-time"
+                  },
+                  "tender": {
+                    "$ref": "#/components/schemas/Tender"
                   }
                 }
               }
@@ -540,6 +546,9 @@
                     "type": "string",
                     "maxLength": 600,
                     "description": "Signed link-touch token issued by the Clinic for a provider referral link, QR or widget (`<base64url claims>.<base64url hmac>`, claims {o: organisation, c: 8-character link code, t: issued-at ms, v: 1}, 72 h lifetime; domain-separated HMAC over `kx-lt1\\n` + payload). Kiorex forwards the token it verified at decision time and only when the signed `acquisition.origin` is PROVIDER_LED. The Clinic re-checks the link at booking time (ACTIVE, same organisation); an invalid, expired, other-organisation or revoked token is ignored (the booking is then not attributed to the link) and is never an error. Optional and additive: absent = today's rules. Never a patient or visitor identifier."
+                  },
+                  "sponsoredDiscount": {
+                    "$ref": "#/components/schemas/SponsoredDiscountBlock"
                   }
                 }
               }
@@ -1600,6 +1609,92 @@
           }
         }
       }
+    },
+    "/promotions/{promotionId}/reserve": {
+      "post": {
+        "operationId": "marketplaceReservePromotion",
+        "summary": "Kiorex asks the Clinic to hold budget of a provider-sponsored promotion for one booking (signed, idempotent)",
+        "description": "The Clinic re-checks status, window, eligibility, per-patient limit and writes a RESERVE entry against the budget cap; WALLET_ONLY also needs wallet cover. The reservation lives as long as the hold plus a grace and is released by a sweeper. The wallet is not touched until the visit completes.",
+        "parameters": [
+          {
+            "name": "promotionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromotionReserveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reserved (replay returns the same reservation)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromotionReserveResult"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused with a reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromotionReserveRefusal"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown promotion"
+          }
+        }
+      }
+    },
+    "/promotions/{promotionId}/release": {
+      "post": {
+        "operationId": "marketplaceReleasePromotion",
+        "summary": "Kiorex releases a reservation (hold expired, booking cancelled or not confirmed)",
+        "parameters": [
+          {
+            "name": "promotionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromotionReleaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Released (idempotent; an unknown or already released reservation answers 200)"
+          },
+          "404": {
+            "description": "Unknown promotion"
+          }
+        }
+      }
     }
   },
   "webhooks": {
@@ -2235,6 +2330,170 @@
           },
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "SponsoredDiscountBlock": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "promotionId",
+          "promotionVersion",
+          "reservationRef",
+          "amountMinor",
+          "currency"
+        ],
+        "description": "Optional block on POST /bookings (1.12.0). The Clinic re-checks the reservation it issued; a booking without a valid reservation is created without the discount, never refused.",
+        "properties": {
+          "promotionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "promotionVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reservationRef": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amountMinor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          }
+        }
+      },
+      "Tender": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "How a booking amount was funded (1.12.0). Minor units. No patient identity.",
+        "properties": {
+          "cardMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "patientCreditMinor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sponsoredDiscountMinor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "PromotionReserveRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "bookingRef",
+          "patientRef",
+          "careType",
+          "amountMinor",
+          "currency",
+          "idempotencyKey"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "bookingRef": {
+            "type": "string",
+            "minLength": 1
+          },
+          "patientRef": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque keyed hash. Never the Passport sub, a phone or a name."
+          },
+          "careType": {
+            "enum": [
+              "IN_CLINIC",
+              "VIDEO",
+              "HOME_VISIT"
+            ]
+          },
+          "amountMinor": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        }
+      },
+      "PromotionReserveResult": {
+        "type": "object",
+        "required": [
+          "reservationRef",
+          "expiresAt"
+        ],
+        "properties": {
+          "reservationRef": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PromotionReserveRefusal": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "enum": [
+              "BUDGET_EXHAUSTED",
+              "NOT_ELIGIBLE",
+              "PAUSED",
+              "WALLET_INSUFFICIENT",
+              "LIMIT_REACHED"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "PromotionReleaseRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reservationRef",
+          "idempotencyKey"
+        ],
+        "properties": {
+          "reservationRef": {
+            "type": "string",
+            "minLength": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "reason": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
           }
         }
       }
