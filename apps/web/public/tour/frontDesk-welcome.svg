@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400" role="img" aria-label="Welcome">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ecfdf5"/>
+      <stop offset="100%" stop-color="#e0f2fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#g)"/>
+  <rect x="16" y="16" width="608" height="368" rx="16" fill="#fff" stroke="#cbd5e1"/>
+  <rect x="16" y="16" width="608" height="48" rx="16" fill="#0f766e"/>
+  <rect x="16" y="40" width="608" height="24" fill="#0f766e"/>
+  <text x="36" y="46" fill="#ecfdf5" font-size="14" font-family="system-ui,sans-serif" font-weight="600">Kiorly · Front desk</text>
+  <circle cx="580" cy="40" r="6" fill="#99f6e4"/>
+  <text x="28" y="92" fill="#0f172a" font-size="22" font-family="system-ui,sans-serif" font-weight="700">Welcome</text>
+  <text x="28" y="118" fill="#475569" font-size="13" font-family="system-ui,sans-serif">Book, check in, and take payment</text>
+
+  <rect x="28" y="320" width="180" height="36" rx="8" fill="#0f766e"/>
+  <text x="118" y="343" text-anchor="middle" fill="#fff" font-size="13" font-family="system-ui,sans-serif" font-weight="600">Demo preview</text>
+</svg>

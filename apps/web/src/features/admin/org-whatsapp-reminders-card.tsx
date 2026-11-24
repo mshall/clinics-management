@@ -51,7 +51,7 @@ export function OrgWhatsAppRemindersCard() {
   });
 
   return (
-    <Card>
+    <Card id="whatsapp-reminders" data-setup-target="whatsapp_reminders" tabIndex={-1}>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
         <div className="space-y-1.5">
           <CardTitle className="text-base">{t("admin.whatsappReminders", "WhatsApp appointment reminders")}</CardTitle>
@@ -67,7 +67,6 @@ export function OrgWhatsAppRemindersCard() {
           size="sm"
           variant={enabled ? "default" : "outline"}
           aria-pressed={enabled}
-          data-setup-target="whatsapp_reminders"
           onClick={() => setEnabled((v) => !v)}
         >
           {enabled ? t("platform.flagOn", "On") : t("platform.flagOff", "Off")}

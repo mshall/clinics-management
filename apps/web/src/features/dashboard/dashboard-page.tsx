@@ -72,7 +72,7 @@ export function DashboardPage() {
         actions={
           <>
             <Button asChild variant="outline" size="sm"><Link to="/front-desk/board"><MonitorUp className="size-4" />{t("frontDesk.liveBoard", "Live clinic board")}</Link></Button>
-            <Button asChild size="sm"><Link to="/appointments"><CalendarPlus className="size-4" />{t("appointments.book", "Book an appointment")}</Link></Button>
+            <Button asChild size="sm"><Link to="/appointments?book=1"><CalendarPlus className="size-4" />{t("appointments.book", "Book an appointment")}</Link></Button>
           </>
         }
       />

@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { BaseCurrencySelect } from "@/components/base-currency-select";
 import type { PickListItem } from "@/components/searchable-pick-list";
 import { FilterTh, SortableTh } from "@/components/sortable-th";
@@ -86,6 +86,7 @@ export function AdminPage() {
   const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { hash } = useLocation();
   const authUser = useAuthStore((s) => s.user);
   const refreshSession = useAuthStore((s) => s.refreshSessionFromServer);
   const orgBaseCurrency = useOrgBaseCurrency();
@@ -279,6 +280,17 @@ export function AdminPage() {
     },
     [setSearchParams],
   );
+  // Quick-setup / wizard deep-link: scroll to the WhatsApp reminders card once the org section is painted.
+  useEffect(() => {
+    if (hash !== "#whatsapp-reminders") return;
+    if (adminSection !== "organization" && clinicAdminSection !== "organization") return;
+    const id = window.setTimeout(() => {
+      const el = document.getElementById("whatsapp-reminders");
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      el?.focus?.({ preventScroll: true });
+    }, 80);
+    return () => window.clearTimeout(id);
+  }, [hash, adminSection, clinicAdminSection]);
   const [feeDraft, setFeeDraft] = useState("");
   const [currencyDraft, setCurrencyDraft] = useState<string>(orgBaseCurrency);
   const [trnDraft, setTrnDraft] = useState("");
