@@ -3,6 +3,12 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { mkdirSync } from "node:fs";
 import { login } from "./helpers";
 
+/** The language control is ONE menu button (globe + code): open it, then pick the language from the menu. */
+async function pickLanguage(page: import("@playwright/test").Page, code: "ar" | "en") {
+  await page.locator('[data-kx-control="language"]').first().click();
+  await page.locator(`[role="menuitemradio"][data-kx-lang="${code}"]`).click();
+}
+
 /**
  * Founder, 24 Nov 2026 (ADR-038 amendment): Kiorly Clinic by Kiorex sign-in = Kiorly Home design language for ONE product, and the preselected method is decided
  * per organisation. Runs against the dev stack (web http://localhost:5174, API http://localhost:3010) through `playwright.signin.config.ts`; nothing is deployed.
@@ -80,7 +86,7 @@ test.describe("layout and accessibility", () => {
       await mockConfig(page);
       await page.setViewportSize({ width: w, height: w < 768 ? 740 : 900 });
       await page.goto(`${LOGIN}?org=pp-org`);
-      if ((await page.locator("html").getAttribute("dir")) === "rtl") await page.locator('[data-kx-control="language"]').first().click(); // the screenshots for this case are English
+      if ((await page.locator("html").getAttribute("dir")) === "rtl") await pickLanguage(page, "en"); // the screenshots for this case are English
       await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
       await expect(page.getByTestId("signin-method")).toBeVisible();
       const panel = page.getByTestId("login-brand-panel");
@@ -99,8 +105,8 @@ test.describe("layout and accessibility", () => {
       for (const w of [1440, 360]) {
         await page.setViewportSize({ width: w, height: w < 768 ? 740 : 900 });
         await page.goto(`${LOGIN}?org=pp-org`);
-        if (lang === "ar" && (await page.locator("html").getAttribute("dir")) !== "rtl") await page.locator('[data-kx-control="language"]').first().click();
-        if (lang === "en" && (await page.locator("html").getAttribute("dir")) === "rtl") await page.locator('[data-kx-control="language"]').first().click();
+        if (lang === "ar" && (await page.locator("html").getAttribute("dir")) !== "rtl") await pickLanguage(page, "ar");
+        if (lang === "en" && (await page.locator("html").getAttribute("dir")) === "rtl") await pickLanguage(page, "en");
         await expect(page.locator("html")).toHaveAttribute("dir", lang === "ar" ? "rtl" : "ltr");
         const themeBtn = page.locator('[data-kx-control="theme"]').first();
         if (theme === "dark" && (await themeBtn.getAttribute("data-theme-mode")) !== "dark") await themeBtn.click();

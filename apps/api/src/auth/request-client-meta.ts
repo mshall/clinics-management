@@ -1,13 +1,10 @@
 import type { Request } from "express";
 import { createHash } from "crypto";
 import type { LoginSessionMeta } from "./auth.service";
+import { clientIpOf } from "../common/http-hardening";
 
 export function clientIpFromRequest(req: Request): string | undefined {
-  return (
-    (typeof req.headers["x-forwarded-for"] === "string"
-      ? req.headers["x-forwarded-for"].split(",")[0]?.trim()
-      : undefined) || req.socket.remoteAddress
-  );
+  return clientIpOf(req); // TRUSTED_PROXY_HOPS-aware: a client-supplied X-Forwarded-For can no longer pick its own rate-limit bucket
 }
 
 export function loginMetaFromRequest(req: Request): LoginSessionMeta {

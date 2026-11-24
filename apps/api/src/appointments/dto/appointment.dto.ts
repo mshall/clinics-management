@@ -136,6 +136,9 @@ export class AppointmentDto {
 
   @ApiPropertyOptional({ description: "Whether this booking may incur Kiorex commission (CR-02)" })
   commissionChargeableAtBooking?: boolean;
+  @ApiPropertyOptional({ nullable: true, enum: ["PROVIDER_LED", "MARKETPLACE", "UNATTRIBUTED"], description: "GRW-P1-D2: Kiorex attribution origin frozen at booking" })
+  /** GRW-P1-D2: Kiorex attribution origin frozen at booking (PROVIDER_LED never carries a fee). Null = legacy / not from Kiorex. */
+  acquisitionOrigin?: "PROVIDER_LED" | "MARKETPLACE" | "UNATTRIBUTED" | null;
 
   @ApiPropertyOptional({
     nullable: true,

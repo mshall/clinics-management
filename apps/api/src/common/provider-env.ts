@@ -69,6 +69,36 @@ export const pspConfig = (env: Env = process.env): PspConfig => ({
   callbackUrl: get(env, "PSP_CALLBACK_URL"),
 });
 
+/**
+ * PAYMENT_PROVIDER=vendor (PSP_PROVIDER also read) selects the NATIVE Paymob Accept + FawryPay clients (wire format copied from the Kiorex platform) for the card/link
+ * providers when the psp mode is real; anything else keeps the neutral JSON gateway (PSP_* env). PAYMENT_ENABLED_PSPS (default "paymob,fawry") limits which are registered.
+ */
+export const pspVendor = (env: Env = process.env): "vendor" | "gateway" => ((get(env, "PAYMENT_PROVIDER") || get(env, "PSP_PROVIDER")).toLowerCase() === "vendor" ? "vendor" : "gateway");
+export const enabledPsps = (env: Env = process.env): Array<"paymob" | "fawry"> => (get(env, "PAYMENT_ENABLED_PSPS") || "paymob,fawry").split(",").map((s) => s.trim().toLowerCase()).filter((s): s is "paymob" | "fawry" => s === "paymob" || s === "fawry");
+export type VendorPspConfig = {
+  timeoutMs: number; maxRetries: number; backoffMs: number;
+  /** Public origin of THIS API (webhook URLs handed to the PSP) and of the web app (return URL). */
+  publicApiUrl: string; webUrl: string;
+  paymob: { apiUrl: string; secretKey: string; publicKey: string; hmacSecret: string; integrationIds: number[] };
+  fawry: { apiUrl: string; merchantCode: string; secureKey: string };
+};
+export const vendorPspConfig = (env: Env = process.env): VendorPspConfig => ({
+  timeoutMs: int(env, "PAYMENT_TIMEOUT_MS", 8_000), maxRetries: int(env, "PAYMENT_MAX_RETRIES", 2), backoffMs: int(env, "PAYMENT_RETRY_BACKOFF_MS", 300),
+  publicApiUrl: (get(env, "PAYMENT_PUBLIC_API_URL") || get(env, "PUBLIC_API_URL")).replace(/\/+$/, ""), webUrl: (get(env, "APP_WEB_URL") || get(env, "PUBLIC_WEB_URL")).replace(/\/+$/, ""),
+  paymob: { apiUrl: (get(env, "PAYMOB_API_URL") || "https://accept.paymob.com").replace(/\/+$/, ""), secretKey: get(env, "PAYMOB_SECRET_KEY"), publicKey: get(env, "PAYMOB_PUBLIC_KEY"), hmacSecret: get(env, "PAYMOB_HMAC_SECRET"),
+    integrationIds: get(env, "PAYMOB_INTEGRATION_IDS").split(",").map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0) },
+  fawry: { apiUrl: (get(env, "FAWRY_API_URL") || "https://www.atfawry.com").replace(/\/+$/, ""), merchantCode: get(env, "FAWRY_MERCHANT_CODE"), secureKey: get(env, "FAWRY_SECURE_KEY") },
+});
+
+export type MapsConfig = HttpProviderConfig & { accessKeyId: string; secretAccessKey: string; travelMode: string; country: string; centroidsJson: string; centroidsFile: string };
+/** MAPS_MODE=real: Amazon Location Routes v2 (route matrix) over HTTPS. MAPS_API_URL=https://routes.geo.<region>.amazonaws.com; MAPS_API_KEY (Amazon Location API key) or MAPS_ACCESS_KEY_ID + MAPS_SECRET_ACCESS_KEY (SigV4). */
+export const mapsConfig = (env: Env = process.env): MapsConfig => ({
+  ...httpConfig(env, "MAPS", "MAPS_API_KEY"),
+  accessKeyId: get(env, "MAPS_ACCESS_KEY_ID"), secretAccessKey: get(env, "MAPS_SECRET_ACCESS_KEY"),
+  travelMode: get(env, "MAPS_TRAVEL_MODE") || "Car", country: get(env, "MAPS_COUNTRY") || "EGY",
+  centroidsJson: get(env, "MAPS_DISTRICT_CENTROIDS_JSON"), centroidsFile: get(env, "MAPS_DISTRICT_CENTROIDS_FILE"),
+});
+
 function badUrl(url: string, env: Env): boolean {
   try {
     const u = new URL(url);
@@ -116,9 +146,21 @@ export function providerEnvProblems(env: Env = process.env): string[] {
     }
   }
   if ((get(env, "MOBILE_PUSH_MODE") ? get(env, "MOBILE_PUSH_MODE") === "real" : modeOf("push") === "real")) problems.push(...pushProblems(env).map((p) => `PUSH: ${p}`));
-  if (modeOf("psp") === "real") {
+  if (modeOf("psp") === "real" && pspVendor(env) === "vendor") {
+    const c = vendorPspConfig(env);
+    const on = enabledPsps(env);
+    if (!on.length) problems.push("PSP: PAYMENT_ENABLED_PSPS must list paymob and/or fawry");
+    need("PSP", [["PAYMENT_PUBLIC_API_URL", c.publicApiUrl], ["APP_WEB_URL", c.webUrl]], c.publicApiUrl || undefined);
+    if (on.includes("paymob")) need("PSP", [["PAYMOB_SECRET_KEY", c.paymob.secretKey], ["PAYMOB_PUBLIC_KEY", c.paymob.publicKey], ["PAYMOB_HMAC_SECRET", c.paymob.hmacSecret], ["PAYMOB_INTEGRATION_IDS", c.paymob.integrationIds.length ? "ok" : ""]], c.paymob.apiUrl);
+    if (on.includes("fawry")) need("PSP", [["FAWRY_MERCHANT_CODE", c.fawry.merchantCode], ["FAWRY_SECURE_KEY", c.fawry.secureKey]], c.fawry.apiUrl);
+  } else if (modeOf("psp") === "real") {
     const c = pspConfig(env);
     need("PSP", [["PSP_API_URL", c.apiUrl], ["PSP_API_KEY", c.apiKey], ["PSP_WEBHOOK_SECRET", c.webhookSecret]], c.apiUrl || undefined);
+  }
+  if (modeOf("maps") === "real") {
+    const c = mapsConfig(env);
+    need("MAPS", [["MAPS_API_URL", c.apiUrl], ["MAPS_API_KEY or MAPS_ACCESS_KEY_ID + MAPS_SECRET_ACCESS_KEY", c.apiKey || (c.accessKeyId && c.secretAccessKey ? "ok" : "")],
+      ["MAPS_DISTRICT_CENTROIDS_JSON or MAPS_DISTRICT_CENTROIDS_FILE", c.centroidsJson || c.centroidsFile]], c.apiUrl || undefined);
   }
   return problems;
 }
@@ -157,7 +199,8 @@ export function providerStatus(env: Env = process.env): ProviderStatusRow[] {
     if (kind === "email") return emailTransport(env) === "http" ? "http" : "ses";
     if (kind === "whatsapp") return whatsAppBackend(env) === "http" ? "http" : "meta_cloud";
     if (kind === "push") return "fcm+expo";
-    if (kind === "psp") return "gateway";
+    if (kind === "psp") return pspVendor(env) === "vendor" ? `native:${enabledPsps(env).join("+")}` : "gateway";
+    if (kind === "maps") return "amazon-location";
     return kind;
   };
   return (["email", "whatsapp", "sms", "push", "psp", "maps"] as ProviderKind[]).map((kind) => {

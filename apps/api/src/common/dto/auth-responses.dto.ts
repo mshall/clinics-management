@@ -26,6 +26,14 @@ export class EmployeePrivilegeGrantSummaryDto {
   hrProvisionLogin!: boolean;
 }
 
+export class AuthUserPlanDto {
+  @ApiProperty({ enum: PlanKey })
+  key!: PlanKey;
+
+  @ApiProperty({ enum: SubscriptionStatus })
+  status!: SubscriptionStatus;
+}
+
 export class AuthUserDto {
   @ApiProperty()
   id!: string;
@@ -134,11 +142,7 @@ export class AuthUserDto {
   })
   moneyVisibilityOverrides?: MoneyVisibilityOverridesDto;
 
-  @ApiPropertyOptional({
-    description: "Resolved SaaS plan for the organization",
-    type: "object",
-    properties: { key: { enum: Object.values(PlanKey) }, status: { enum: Object.values(SubscriptionStatus) } },
-  })
+  @ApiPropertyOptional({ description: "Resolved SaaS plan for the organization", type: () => AuthUserPlanDto })
   plan?: { key: PlanKey; status: SubscriptionStatus };
 
   @ApiPropertyOptional({

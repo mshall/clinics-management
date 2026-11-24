@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ClinicLogoCard } from "@/features/clinics/clinic-logo-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClinicDeactivateConfirmDialog } from "@/features/clinics/clinic-deactivate-confirm-dialog";
 import { ClinicDoctorsPanel } from "@/features/clinics/clinic-doctors-panel";
@@ -36,7 +37,8 @@ export function ClinicDetailPage() {
   const qc = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const orgBaseCurrency = useOrgBaseCurrency();
-  const canManageClinic = authUser?.role ? MANAGE_CLINIC_ROLES.has(authUser.role) : false;
+  // The self-serve owner is a physician with GROUP_ADMIN as an additional role (the API already honours it).
+  const canManageClinic = [authUser?.role, ...(authUser?.additionalRoles ?? [])].some((r) => (r ? MANAGE_CLINIC_ROLES.has(r) : false));
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") ?? "overview";
@@ -272,6 +274,7 @@ export function ClinicDetailPage() {
 
         <TabsContent value="settings" className="space-y-4">
           <ClinicRegulatorySettingsPanel clinicId={c.id} detail={c} canEdit={canManageClinic} />
+          <ClinicLogoCard clinicId={c.id} hasLogo={Boolean((c as { hasInvoiceLogo?: boolean }).hasInvoiceLogo)} canEdit={canManageClinic} />
           <ClinicContactSettingsPanel
             clinicId={c.id}
             phone={c.phone}

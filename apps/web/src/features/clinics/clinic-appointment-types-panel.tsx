@@ -105,7 +105,7 @@ export function ClinicAppointmentTypesPanel({ clinicId, canEdit }: Props) {
   };
 
   return (
-    <Card>
+    <Card data-setup-target="appointment_types" tabIndex={-1}>
       <CardHeader>
         <CardTitle className="text-base">{t("scheduling.appointmentTypesTitle", "Appointment types")}</CardTitle>
         <CardDescription className="flex flex-wrap items-center gap-2">

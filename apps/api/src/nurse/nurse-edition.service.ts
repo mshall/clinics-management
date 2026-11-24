@@ -75,7 +75,7 @@ export class NurseEditionService {
       this.prisma.clinicianVerification.findUnique({ where: { userId: user.userId }, select: { status: true } }),
       this.prisma.clinicianHomeSettings.findUnique({ where: { tenantId_clinicianId: { tenantId, clinicianId: user.userId } } }),
       this.prisma.appointmentType.findMany({ where: { tenantId, isActive: true, serviceLocation: "HOME" }, select: { feeAmount: true } }),
-      this.prisma.clinicianAvailabilityTemplate.count({ where: { tenantId, clinicianId: user.userId } }),
+      this.prisma.clinicianAvailabilityTemplate.findMany({ where: { tenantId, clinicianId: user.userId }, select: { createdAt: true, updatedAt: true } }),
       this.prisma.user.findUnique({ where: { id: user.userId }, select: { profession: true, role: true, additionalRoles: true } }),
     ]);
     const solo = tenant?.nurseTenantKind !== "AGENCY";
@@ -85,7 +85,8 @@ export class NurseEditionService {
       { key: "coverage_zones", done: (settings?.coverageDistrictIds.length ?? 0) > 0, applies: solo },
       { key: "services_offered", done: types.length > 0, applies: true },
       { key: "prices", done: types.length > 0 && types.every((t) => Number(t.feeAmount) > 0), applies: true },
-      { key: "availability", done: availability > 0, applies: solo },
+      // the sign-up seeds a template, so only a saved (edited) one counts as the nurse having set their availability
+      { key: "availability", done: availability.some((a) => a.updatedAt.getTime() > a.createdAt.getTime() + 2000), applies: solo },
       { key: "safety_contact", done: Boolean(tenant?.safetyContactPhone), applies: true },
     ].filter((s) => s.applies);
     return { kind: tenant?.nurseTenantKind ?? null, steps, complete: steps.every((s) => s.done) };

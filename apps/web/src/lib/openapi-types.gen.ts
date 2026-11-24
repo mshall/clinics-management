@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/v1/auth/login": {
+    "/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -21,7 +21,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/me": {
+    "/auth/handoff/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorly Home: verify credentials, return a single-use handoff code */
+        post: operations["AuthController_handoffLogin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/handoff/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorly Home: redeem a handoff code for the normal session (single use) */
+        post: operations["AuthController_handoffExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate refresh token and issue a new access token */
+        post: operations["AuthController_refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password/forgot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request password reset via email link or WhatsApp OTP */
+        post: operations["AuthController_forgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete password reset with token or phone OTP */
+        post: operations["AuthController_resetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request login OTP (physicians) */
+        post: operations["AuthController_otpRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/otp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify login OTP and receive session */
+        post: operations["AuthController_otpVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active sessions for the current user */
+        get: operations["AuthController_listSessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a single session */
+        delete: operations["AuthController_revokeSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sessions/revoke-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign out all devices (including this one) */
+        post: operations["AuthController_revokeAllSessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start TOTP MFA setup (returns secret + otpauth URL) */
+        post: operations["AuthController_beginMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm MFA with a valid TOTP code */
+        post: operations["AuthController_confirmMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable MFA (password + current TOTP code) */
+        post: operations["AuthController_disableMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/whatsapp/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** SC-04 — enable WhatsApp OTP as MFA for physicians */
+        post: operations["AuthController_enableWhatsAppMfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/whatsapp/challenge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** SC-04 — send WhatsApp MFA OTP (login second factor) */
+        post: operations["AuthController_whatsappMfaChallenge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa/recovery/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AuthController_regenerateMfaRecovery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -38,7 +309,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/me/avatar": {
+    "/auth/me/avatar": {
         parameters: {
             query?: never;
             header?: never;
@@ -57,7 +328,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/me/password": {
+    "/auth/me/password": {
         parameters: {
             query?: never;
             header?: never;
@@ -74,17 +345,16 @@ export interface paths {
         patch: operations["AuthController_changePassword"];
         trace?: never;
     };
-    "/api/v1/user-nav-tabs/{userId}": {
+    "/auth/kiorex/config": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get saved navigation tab grant for a user (null = role defaults) */
-        get: operations["UserNavTabsController_getOne"];
-        /** Set which sidebar tabs a user may see (profile always included; org admins may extend beyond role defaults) */
-        put: operations["UserNavTabsController_putOne"];
+        /** Login page config: is Passport offered, which method is preselected (per ?org=<organisation id> or the deployment/edition default), uniform for unknown orgs */
+        get: operations["KiorexOidcController_config"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -92,17 +362,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/role-nav-tabs/{role}": {
+    "/auth/kiorex/start": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get organization role sidebar permissions (null = platform defaults) */
-        get: operations["TenantRoleNavTabsController_getOne"];
-        /** Set organization role sidebar permissions (subset of platform role max) */
-        put: operations["TenantRoleNavTabsController_putOne"];
+        get?: never;
+        put?: never;
+        /** Start Kiorex Passport sign-in (auth code + PKCE); returns the authorization URL */
+        post: operations["KiorexOidcController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/kiorex/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exchange the authorization code; signs in a linked user or completes an account link */
+        post: operations["KiorexOidcController_callback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/kiorex/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish a Kiorex Passport sign-in that needs the MFA step-up code */
+        post: operations["KiorexOidcController_complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/kiorex/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["KiorexOidcController_linkStatus"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -110,17 +429,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/user-clinic-hr-assignments": {
+    "/auth/kiorex/link/start": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List clinics where a user is assigned as HR */
-        get: operations["UserClinicPrivilegeGrantsController_list"];
-        /** Assign a user as HR for a specific clinic */
-        put: operations["UserClinicPrivilegeGrantsController_assign"];
+        get?: never;
+        put?: never;
+        /** Start linking this Kiorly user to a Kiorex Passport (requires password re-authentication) */
+        post: operations["KiorexOidcController_linkStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/kiorex/link/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["KiorexOidcController_unlink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/kiorex/backchannel-logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** OIDC Back-Channel Logout receiver (logout_token, form-encoded) */
+        post: operations["KiorexOidcController_backchannelLogout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messaging/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MessagingController_templates"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -128,7 +495,159 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/user-clinic-hr-assignments/{id}": {
+    "/messaging/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MessagingController_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messaging/outbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MessagingController_outbound"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messaging/failures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MessagingController_failures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messaging/recall-campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MessagingController_recall"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Meta WhatsApp webhook verification challenge */
+        get: operations["WhatsAppWebhookController_verify"];
+        put?: never;
+        /** Meta WhatsApp delivery status updates */
+        post: operations["WhatsAppWebhookController_event"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/appointments/reschedule/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KX-09 — public reschedule slot picker context */
+        get: operations["PublicAppointmentRescheduleController_summary"];
+        put?: never;
+        /** Apply a new startsAt from the public reschedule page */
+        post: operations["PublicAppointmentRescheduleController_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installment-reminders/{installmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send the patient a WhatsApp reminder for an unpaid installment */
+        post: operations["InstallmentRemindersController_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/digests/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff digest / CR-07 nudge preferences (quiet hours + opt-out) */
+        get: operations["DigestsController_getPrefs"];
+        /** Update digest preferences */
+        put: operations["DigestsController_putPrefs"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/digests/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** In-app digests and Kiorly-free progress notices */
+        get: operations["DigestsController_notices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/digests/notices/{id}/read": {
         parameters: {
             query?: never;
             header?: never;
@@ -138,14 +657,470 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove a clinic HR assignment */
-        delete: operations["UserClinicPrivilegeGrantsController_remove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Mark an in-app notice as read */
+        patch: operations["DigestsController_markRead"];
+        trace?: never;
+    };
+    "/messaging/ai-receptionist/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** WhatsApp AI receptionist conversation turns */
+        get: operations["WhatsAppAiReceptionistController_inbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients": {
+    "/webhooks/providers/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delivery receipts from the SMS / WhatsApp / Email provider (HMAC verified) */
+        post: operations["ProviderWebhooksController_receive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/appointment-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SchedulingController_listTypes"];
+        put?: never;
+        post: operations["SchedulingController_saveType"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/appointment-types/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SchedulingController_patchType"];
+        trace?: never;
+    };
+    "/scheduling/clinicians/{clinicianId}/type-overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SchedulingController_listTypeOverrides"];
+        put: operations["SchedulingController_putTypeOverrides"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SchedulingController_listSlots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SchedulingController_getAvail"];
+        put: operations["SchedulingController_putAvail"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/clinicians/{clinicianId}/leave-blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SchedulingController_leaveBlocks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SchedulingController_waitlist"];
+        put?: never;
+        post: operations["SchedulingController_addWaitlist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/waitlist/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SchedulingController_waitlistOffers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/waitlist/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SchedulingController_cancelWaitlist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SchedulingController_series"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/appointments/{id}/no-show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SchedulingController_noShow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinicians/me/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicianVerificationController_getMine"];
+        put?: never;
+        post: operations["ClinicianVerificationController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinicians/me/verification/documents/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicianVerificationController_uploadDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinicians/me/verification/documents/{kind}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicianVerificationController_downloadOwn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/verifications/review-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformVerificationsController_reviewConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/verifications/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformVerificationsController_metrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/verifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformVerificationsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/verifications/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PlatformVerificationsController_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/verifications/{id}/national-id": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformVerificationsController_revealNationalId"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/verifications/{id}/documents/{kind}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformVerificationsController_downloadForReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinicians/{userId}/profession": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** PRSOP01/03: set a clinician's profession (forces re-verification; ASSISTANT needs a named supervisor) */
+        patch: operations["ProfessionController_setProfession"];
+        trace?: never;
+    };
+    "/feature-flags/effective": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Effective feature flags (value + deciding source) for the current organization */
+        get: operations["FeatureFlagsController_effective"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SC-03 — consent status by purpose (AI, marketplace, messaging, data) */
+        get: operations["PatientsController_listConsents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/duplicates/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Count patient charts that share a phone number with another chart */
+        get: operations["PatientsController_duplicateSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List phone-number duplicate patient clusters for review and merge */
+        get: operations["PatientsController_listDuplicates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/duplicates/merge-safe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Merge all safe phone duplicate clusters (same phone + compatible names). Keeps the richer chart; moves documents/visits. */
+        post: operations["PatientsController_mergeSafePhoneDuplicates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients": {
         parameters: {
             query?: never;
             header?: never;
@@ -163,7 +1138,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients/bulk-delete": {
+    "/patients/bulk-delete": {
         parameters: {
             query?: never;
             header?: never;
@@ -180,7 +1155,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients/phone-conflict": {
+    "/patients/phone-conflict": {
         parameters: {
             query?: never;
             header?: never;
@@ -197,7 +1172,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients/{id}/national-id-document": {
+    "/patients/{id}/allergies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List patient allergies (paginated, max 5 per page) */
+        get: operations["PatientsController_listAllergies"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/national-id-document": {
         parameters: {
             query?: never;
             header?: never;
@@ -207,7 +1199,7 @@ export interface paths {
         /** Download optional national ID / SSN scan (if uploaded) */
         get: operations["PatientsController_getNationalIdDocument"];
         put?: never;
-        /** Upload optional national ID / SSN scan (PDF or image, max 15MB) */
+        /** Upload optional national ID / SSN scan (PDF or image, max 25MB) */
         post: operations["PatientsController_uploadNationalIdDocument"];
         delete?: never;
         options?: never;
@@ -215,7 +1207,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients/{id}/documents": {
+    "/patients/{id}/documents": {
         parameters: {
             query?: never;
             header?: never;
@@ -232,7 +1224,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients/{id}/documents/{documentId}": {
+    "/patients/{id}/documents/{documentId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -250,7 +1242,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients/{id}/encounter-documents/{encounterId}/{documentId}": {
+    "/patients/{id}/encounter-documents/{encounterId}/{documentId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -267,7 +1259,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients/{id}/documents/{documentId}/crop": {
+    "/patients/{id}/documents/{documentId}/crop": {
         parameters: {
             query?: never;
             header?: never;
@@ -284,7 +1276,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients/{id}/encounter-documents/{encounterId}/{documentId}/crop": {
+    "/patients/{id}/encounter-documents/{encounterId}/{documentId}/crop": {
         parameters: {
             query?: never;
             header?: never;
@@ -301,7 +1293,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/patients/{id}": {
+    "/patients/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -320,7 +1312,7 @@ export interface paths {
         patch: operations["PatientsController_update"];
         trace?: never;
     };
-    "/api/v1/patients/{id}/clinical-documents": {
+    "/patients/{id}/clinical-documents": {
         parameters: {
             query?: never;
             header?: never;
@@ -337,7 +1329,467 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinics": {
+    "/patients/{id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Patient 360 one-page summary */
+        get: operations["PatientsController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unified patient timeline */
+        get: operations["PatientsController_timeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/active-problems": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PatientsController_activeProblems"];
+        put?: never;
+        post: operations["PatientsController_saveActiveProblem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/family-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PatientsController_familyLinks"];
+        put?: never;
+        post: operations["PatientsController_addFamilyLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/family-links/{linkId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["PatientsController_removeFamilyLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PatientsController_mergePatients"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/clinical-photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PatientsController_clinicalPhotos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/clinical-photos/{photoId}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a clinical comparison photo */
+        get: operations["PatientsController_getClinicalPhotoFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/messaging-consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** MS-03 — messaging consent by channel and purpose */
+        get: operations["PatientsController_getMessagingConsent"];
+        /** MS-03 — update messaging consent toggles */
+        put: operations["PatientsController_putMessagingConsent"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/compliance/patients/{patientId}/data-protection-consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ComplianceController_latestConsent"];
+        put?: never;
+        post: operations["ComplianceController_recordConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/user-nav-tabs/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get saved navigation tab grant for a user (null = role defaults) */
+        get: operations["UserNavTabsController_getOne"];
+        /** Set which sidebar tabs a user may see (profile always included; org admins may extend beyond role defaults) */
+        put: operations["UserNavTabsController_putOne"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/role-nav-tabs/{role}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get organization role sidebar permissions (null = platform defaults) */
+        get: operations["TenantRoleNavTabsController_getOne"];
+        /** Set organization role sidebar permissions (subset of platform role max) */
+        put: operations["TenantRoleNavTabsController_putOne"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/user-clinic-hr-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List clinics where a user is assigned as HR */
+        get: operations["UserClinicPrivilegeGrantsController_list"];
+        /** Assign a user as HR for a specific clinic */
+        put: operations["UserClinicPrivilegeGrantsController_assign"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/user-clinic-hr-assignments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a clinic HR assignment */
+        delete: operations["UserClinicPrivilegeGrantsController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List customer support tickets */
+        get: operations["SupportController_listTickets"];
+        put?: never;
+        /** Create support ticket */
+        post: operations["SupportController_createTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get support ticket detail */
+        get: operations["SupportController_getTicket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update ticket status, priority, assignee */
+        patch: operations["SupportController_patchTicket"];
+        trace?: never;
+    };
+    "/support/tickets/{id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add comment or timeline event */
+        post: operations["SupportController_addEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/macros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GT-04 — canned support reply macros */
+        get: operations["SupportController_listMacros"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{id}/macros/{macroId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GT-04 — apply a reply macro (counts as first response) */
+        post: operations["SupportController_applyMacro"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tickets/{id}/escalate-engineering": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GT-04 — escalate ticket to engineering */
+        post: operations["SupportController_escalateEngineering"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tracking/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detailed audit trail with resolution hints */
+        get: operations["SupportController_trackingLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/tracking/logs/{auditLogId}/ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open ticket from audit log */
+        post: operations["SupportController_ticketFromAudit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/access-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PA-04 — owner lists pending/prior support access requests */
+        get: operations["SupportController_listTenantAccessRequests"];
+        put?: never;
+        /** PA-04 — platform support requests time-boxed tenant access */
+        post: operations["SupportController_requestAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/access-requests/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PA-04 — list my platform support access requests */
+        get: operations["SupportController_listMyAccessRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/access-requests/{id}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** PA-04 — owner approves or denies support access */
+        post: operations["SupportController_decideAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/access-requests/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** PA-04 — revoke a support access session */
+        post: operations["SupportController_revokeAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/support/access-sessions/patients/{patientId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PA-04 — open patient chart under an active approved support session (PHI masked by default) */
+        get: operations["SupportController_openPatientChart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinics": {
         parameters: {
             query?: never;
             header?: never;
@@ -355,7 +1807,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinics/physicians/scheduling": {
+    "/clinics/physicians/scheduling": {
         parameters: {
             query?: never;
             header?: never;
@@ -372,7 +1824,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinics/{id}/physicians/available": {
+    "/clinics/{id}/physicians/available": {
         parameters: {
             query?: never;
             header?: never;
@@ -389,7 +1841,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinics/{id}/physicians": {
+    "/clinics/{id}/physicians": {
         parameters: {
             query?: never;
             header?: never;
@@ -407,7 +1859,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinics/{id}/physicians/{userId}": {
+    "/clinics/{id}/physicians/{userId}/exam-room": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set this physician's default exam room at the clinic */
+        patch: operations["ClinicsController_patchPhysicianExamRoom"];
+        trace?: never;
+    };
+    "/clinics/{id}/physicians/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -424,7 +1893,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinics/{id}": {
+    "/clinics/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -442,7 +1911,7 @@ export interface paths {
         patch: operations["ClinicsController_patch"];
         trace?: never;
     };
-    "/api/v1/clinics/{id}/deactivate": {
+    "/clinics/{id}/deactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -459,7 +1928,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinics/{id}/reactivate": {
+    "/clinics/{id}/reactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -476,7 +1945,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/dashboards/group-overview": {
+    "/dashboards/group-overview": {
         parameters: {
             query?: never;
             header?: never;
@@ -493,7 +1962,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/health/live": {
+    "/dashboards/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live clinic day snapshot (appointments, waiting, collections) */
+        get: operations["DashboardController_today"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/live": {
         parameters: {
             query?: never;
             header?: never;
@@ -510,7 +1996,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/health/ready": {
+    "/health/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active mode (mock|real), vendor and readiness of every external provider (no secrets) */
+        get: operations["HealthController_providers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/health/ready": {
         parameters: {
             query?: never;
             header?: never;
@@ -527,7 +2030,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters": {
+    "/encounters": {
         parameters: {
             query?: never;
             header?: never;
@@ -545,7 +2048,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters/{id}/documents/{docId}/file": {
+    "/encounters/{id}/documents/{docId}/file": {
         parameters: {
             query?: never;
             header?: never;
@@ -562,7 +2065,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters/{id}": {
+    "/encounters/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -581,7 +2084,7 @@ export interface paths {
         patch: operations["EncountersController_patch"];
         trace?: never;
     };
-    "/api/v1/encounters/{id}/documents": {
+    "/encounters/{id}/documents": {
         parameters: {
             query?: never;
             header?: never;
@@ -590,7 +2093,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload lab, radiology, or prescription document (multipart field: file, kind=LAB|RADIOLOGY|PRESCRIPTION) */
+        /** Upload lab, radiology, or prescription document (multipart: file, kind=LAB|RADIOLOGY|PRESCRIPTION; optional replaceDocumentId for single-file replace) */
         post: operations["EncountersController_uploadDocument"];
         delete?: never;
         options?: never;
@@ -598,7 +2101,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters/{id}/documents/{docId}": {
+    "/encounters/{id}/documents/{docId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -615,7 +2118,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters/{id}/medications": {
+    "/encounters/{id}/medications": {
         parameters: {
             query?: never;
             header?: never;
@@ -632,7 +2135,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters/{id}/medications/{medicationId}": {
+    "/encounters/{id}/medications/{medicationId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -649,7 +2152,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters/{id}/diagnoses": {
+    "/encounters/{id}/diagnoses": {
         parameters: {
             query?: never;
             header?: never;
@@ -666,7 +2169,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters/{id}/diagnoses/{diagnosisId}": {
+    "/encounters/{id}/diagnoses/{diagnosisId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -683,7 +2186,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters/{id}/finalize": {
+    "/encounters/{id}/amend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reopen a finalized locked encounter for correction (AMENDED status + reason) */
+        post: operations["EncountersController_amend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/encounters/{id}/finalize": {
         parameters: {
             query?: never;
             header?: never;
@@ -700,7 +2220,694 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/expenses": {
+    "/clinical/form-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_listTemplates"];
+        put?: never;
+        post: operations["ClinicalController_upsertTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/form-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["ClinicalController_deleteTemplate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/shortcuts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_shortcuts"];
+        put?: never;
+        post: operations["ClinicalController_createShortcut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/shortcuts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["ClinicalController_deleteShortcut"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/icd10/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_searchIcd"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/icd10/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicalController_favIcd"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/patients/{patientId}/vitals-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_vitalsSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/patients/{patientId}/last-visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_lastVisit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/letters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicalController_letter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/drugs/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_searchDrugs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/rx/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicalController_rxCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/medications/safety-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicalController_safetyCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_listOrders"];
+        put?: never;
+        post: operations["ClinicalController_createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["ClinicalController_patchOrder"];
+        trace?: never;
+    };
+    "/clinical/orders/{id}/results-pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_downloadOrderResultsPdf"];
+        put?: never;
+        post: operations["ClinicalController_attachOrderResultsPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/orders/{id}/handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicalController_handoffOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/specialty-packs/addons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_listSpecialtyAddons"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/patients/{patientId}/dental-chart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_dentalChart"];
+        put: operations["ClinicalController_upsertDentalTooth"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/patients/{patientId}/before-after": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicalController_beforeAfter"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicalController_physioPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio/referrals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PhysioController_referral"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio/assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PhysioController_assessment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PhysioController_plan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio/plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PhysioController_getPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio/plans/{id}/progress-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PhysioController_note"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio/plans/{id}/discharge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PhysioController_discharge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio/plans/{id}/home-programme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["PhysioController_programme"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio/plans/{id}/home-programme/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PhysioController_share"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinical/physio/patients/{patientId}/outcome-trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PhysioController_trend"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/physio/hep/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PhysioPublicController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/record-share-consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KX-11 — record-share consent scopes for the patient app */
+        get: operations["RecordShareClinicController_getRecordShareConsent"];
+        /** KX-11 — update record-share consent scopes */
+        put: operations["RecordShareClinicController_putRecordShareConsent"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/kiorex-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Kiorex commission rates (platform super admin) */
+        get: operations["PlatformKiorexRatesController_list"];
+        put?: never;
+        /** Create a Kiorex commission rate row */
+        post: operations["PlatformKiorexRatesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/kiorex-rates/market/{marketId}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Kiorex market settings (target ratio, Lite monthly cap) */
+        patch: operations["PlatformKiorexRatesController_patchMarketSettings"];
+        trace?: never;
+    };
+    "/admin/platform/kiorex-rates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a Kiorex commission rate */
+        delete: operations["PlatformKiorexRatesController_remove"];
+        options?: never;
+        head?: never;
+        /** Update a Kiorex commission rate */
+        patch: operations["PlatformKiorexRatesController_patch"];
+        trace?: never;
+    };
+    "/admin/platform/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kiorex commission dispute ops queue (platform super admin) */
+        get: operations["PlatformCommissionDisputesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/disputes/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve or reject an open commission dispute */
+        post: operations["PlatformCommissionDisputesController_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/kiorex-fees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public Kiorex fee card per market (no auth) */
+        get: operations["PublicKiorexFeesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex/charges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Kiorex commission charges for the organization */
+        get: operations["KiorexBillingChargesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex/charges/{id}/dispute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open a dispute on a Kiorex commission charge before the deadline */
+        post: operations["KiorexBillingChargesController_dispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/commission-decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Decision log for one appointment (append-only; why a fee was or was not applied) */
+        get: operations["CommissionDecisionsController_explain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/commission-statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Provider statement for a month: decisions reconciled against charges */
+        get: operations["CommissionDecisionsController_statement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/kiorex/commission-decisions/override": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Platform super admin only: waive an active charge (GOODWILL_WAIVER or POLICY_CORRECTION); removal only, note required, audited, emits CommissionAdjusted */
+        post: operations["CommissionDecisionsController_override"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/expenses": {
         parameters: {
             query?: never;
             header?: never;
@@ -718,7 +2925,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/expenses/{id}/proof": {
+    "/expenses/{id}/proof": {
         parameters: {
             query?: never;
             header?: never;
@@ -735,7 +2942,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/expenses/{id}/status": {
+    "/expenses/{id}/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -752,7 +2959,7 @@ export interface paths {
         patch: operations["ExpensesController_patchStatus"];
         trace?: never;
     };
-    "/api/v1/expenses/{id}": {
+    "/expenses/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -769,7 +2976,24 @@ export interface paths {
         patch: operations["ExpensesController_update"];
         trace?: never;
     };
-    "/api/v1/revenue/totals": {
+    "/revenue/receivables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Outstanding receivable balances (excluded from posted revenue totals) */
+        get: operations["RevenueController_listReceivables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/revenue/totals": {
         parameters: {
             query?: never;
             header?: never;
@@ -786,7 +3010,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/revenue/clinic-breakdown": {
+    "/revenue/clinic-breakdown": {
         parameters: {
             query?: never;
             header?: never;
@@ -803,7 +3027,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/revenue": {
+    "/revenue": {
         parameters: {
             query?: never;
             header?: never;
@@ -821,7 +3045,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/summary": {
+    "/revenue-share/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Doctor statements for a period (YYYY-MM); a doctor sees only their own */
+        get: operations["RevenueShareController_statements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/revenue-share/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Collected revenue for the period = doctor statements + unattributed rows */
+        get: operations["RevenueShareController_reconciliation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/revenue-share/statements/{id}/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RevenueShareController_addAdjustment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/revenue-share/statements/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Owner approves and locks a statement */
+        post: operations["RevenueShareController_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/revenue-share/statements/{id}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record the payout to the doctor (approved statements only) */
+        post: operations["RevenueShareController_markPaid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/revenue-share/statements/{id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bilingual (EN + AR) statement PDF */
+        get: operations["RevenueShareController_pdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/revenue-share/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RevenueShareController_listRules"];
+        put?: never;
+        post: operations["RevenueShareController_createRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/revenue-share/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["RevenueShareController_deactivateRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hr/summary": {
         parameters: {
             query?: never;
             header?: never;
@@ -838,7 +3195,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/employees": {
+    "/hr/employees": {
         parameters: {
             query?: never;
             header?: never;
@@ -856,7 +3213,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/manage-context": {
+    "/hr/manage-context": {
         parameters: {
             query?: never;
             header?: never;
@@ -873,7 +3230,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/unlinked-users": {
+    "/hr/unlinked-users": {
         parameters: {
             query?: never;
             header?: never;
@@ -890,7 +3247,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/employees/{id}/avatar": {
+    "/hr/employees/{id}/avatar": {
         parameters: {
             query?: never;
             header?: never;
@@ -907,7 +3264,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/employees/{id}/id-document": {
+    "/hr/employees/{id}/id-document": {
         parameters: {
             query?: never;
             header?: never;
@@ -925,7 +3282,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/employees/{id}": {
+    "/hr/employees/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -944,7 +3301,7 @@ export interface paths {
         patch: operations["HrController_updateEmployee"];
         trace?: never;
     };
-    "/api/v1/hr/employees/{id}/restore": {
+    "/hr/employees/{id}/restore": {
         parameters: {
             query?: never;
             header?: never;
@@ -961,7 +3318,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/employees/{id}/deactivate": {
+    "/hr/employees/{id}/deactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -978,7 +3335,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/employees/{id}/reactivate": {
+    "/hr/employees/{id}/reactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -995,7 +3352,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/attendance": {
+    "/hr/attendance": {
         parameters: {
             query?: never;
             header?: never;
@@ -1013,7 +3370,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/leave-requests": {
+    "/hr/leave-requests": {
         parameters: {
             query?: never;
             header?: never;
@@ -1031,7 +3388,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/hr/leave-requests/{id}/status": {
+    "/hr/leave-requests/{id}/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -1048,7 +3405,7 @@ export interface paths {
         patch: operations["HrController_patchLeaveStatus"];
         trace?: never;
     };
-    "/api/v1/appointments": {
+    "/appointments": {
         parameters: {
             query?: never;
             header?: never;
@@ -1066,7 +3423,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/appointments/scheduling-conflicts": {
+    "/appointments/scheduling-conflicts": {
         parameters: {
             query?: never;
             header?: never;
@@ -1083,7 +3440,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/appointments/{id}": {
+    "/appointments/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1102,7 +3459,7 @@ export interface paths {
         patch: operations["AppointmentsController_update"];
         trace?: never;
     };
-    "/api/v1/appointments/{id}/status": {
+    "/appointments/{id}/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -1119,7 +3476,871 @@ export interface paths {
         patch: operations["AppointmentsController_patchStatus"];
         trace?: never;
     };
-    "/api/v1/operations": {
+    "/appointments/{id}/deposit-requirement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether this booking needs a deposit (patient flag, no-shows, risk score, appointment type) and how much */
+        get: operations["DepositLinksController_requirement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/appointments/{id}/deposit-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a deposit payment link (clinic page or Kiorex Pay) and send it on WhatsApp */
+        post: operations["DepositLinksController_createLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinics/{clinicId}/deposit-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["DepositLinksController_getPolicy"];
+        /** Override the market deposit policy for a clinic (null resets) */
+        put: operations["DepositLinksController_updatePolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/deposit-links/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** FS-04 — pay-page context for a clinic deposit link (amount, clinic, how to pay) */
+        get: operations["PublicDepositLinkController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/legal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GT-02 — list legal document ids and versions */
+        get: operations["PublicLegalController_catalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/legal/{doc}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GT-02 — legal document text (EN/AR) */
+        get: operations["PublicLegalController_document"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pending legal acceptances for current pack version */
+        get: operations["LegalController_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record versioned legal acceptance */
+        post: operations["LegalController_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/paywall-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_recordPaywallEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_getSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/access-state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_getAccessState"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/trial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_getTrial"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_getCreditWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/guarantee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_getNoShowGuarantee"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/addons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_listSpecialtyAddons"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/addons/purchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_purchaseSpecialtyAddon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/preview-change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_previewChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/change-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_changePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/seats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_changeSeats"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/preview-seats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_previewSeats"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_cancelSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_listCatalog"];
+        put?: never;
+        post: operations["BillingController_createCatalog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_recordPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/cash-close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_cashClose"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PatientMoneyController_listRefunds"];
+        put?: never;
+        /** Refund collected revenue or a payment (approval above the market threshold) */
+        post: operations["PatientMoneyController_createRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/refunds/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PatientMoneyController_approveRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/refunds/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PatientMoneyController_rejectRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sell a prepaid package of N sessions (liability until consumed) */
+        post: operations["PatientMoneyController_sellPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/packages/{id}/consume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PatientMoneyController_consumePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/packages/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PatientMoneyController_cancelPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/deposits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Take a deposit (held as a liability until applied or released) */
+        post: operations["PatientMoneyController_takeDeposit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/deposits/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PatientMoneyController_applyDeposit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/deposits/{id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PatientMoneyController_releaseDeposit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/deposits/{id}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Desk confirms a payment-link deposit was paid (transfer reference required unless cash) (FS-04) */
+        post: operations["PatientMoneyController_markDepositPaid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Deposits collected by Kiorex vs payouts received by the clinic (KX-07) */
+        get: operations["PatientMoneyController_kiorexPayouts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/patients/{id}/balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Deposits held, package balances, refunds and credit notes for a patient */
+        get: operations["PatientMoneyController_balances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/shifts/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Open shift for a clinic (blind — no expected amounts) and the last closed one */
+        get: operations["CashierShiftsController_current"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/shifts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Closed shifts; needsReview=true lists variances waiting for the owner */
+        get: operations["CashierShiftsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/shifts/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open the clinic drawer with a float */
+        post: operations["CashierShiftsController_open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/shifts/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Blind count; any variance needs a note; above the market threshold flags review */
+        post: operations["CashierShiftsController_close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/shifts/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Owner / finance acknowledges a flagged variance */
+        post: operations["CashierShiftsController_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/shifts/{id}/z-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bilingual Z-report PDF (format=a4|thermal) */
+        get: operations["CashierShiftsController_zReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/split-payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pay a visit balance, an operation (installments) or a service across several methods; one revenue row per method */
+        post: operations["SplitPaymentsController_record"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/installments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Installment schedule (status=OPEN|OVERDUE|DUE_SOON) */
+        get: operations["SplitPaymentsController_installments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/operations/{operationId}/installments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the unpaid installments of an operation */
+        put: operations["SplitPaymentsController_setSchedule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/payers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active payer companies for the tenant */
+        get: operations["ClaimsController_listPayers"];
+        put?: never;
+        /** Create or update a payer company */
+        post: operations["ClaimsController_upsertPayer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Claim batches */
+        get: operations["ClaimsController_listBatches"];
+        put?: never;
+        /** Create a draft claim batch from payer invoices in a period */
+        post: operations["ClaimsController_createBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/batches/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Claim batch detail with lines and remittances */
+        get: operations["ClaimsController_getBatch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/batches/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit batch + queue the payer claim invoice outbox (no tax-authority reporting) */
+        post: operations["ClaimsController_submitBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/lines/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a claim line with a reason */
+        post: operations["ClaimsController_rejectLine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/lines/{id}/resubmit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resubmit a rejected claim line */
+        post: operations["ClaimsController_resubmitLine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/remittances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import a remittance and auto-match claim lines */
+        post: operations["ClaimsController_importRemittance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations": {
         parameters: {
             query?: never;
             header?: never;
@@ -1137,7 +4358,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/operations/payable": {
+    "/operations/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aggregate operation counts and revenue for the reporting window */
+        get: operations["OperationsController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/payable": {
         parameters: {
             query?: never;
             header?: never;
@@ -1154,7 +4392,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/operations/{id}": {
+    "/operations/same-day-duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List existing non-cancelled operations for the same patient, doctor, and calendar day (duplicate booking guard) */
+        get: operations["OperationsController_sameDayDuplicates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1172,7 +4427,7 @@ export interface paths {
         patch: operations["OperationsController_update"];
         trace?: never;
     };
-    "/api/v1/operations/{id}/documents/{docId}/file": {
+    "/operations/{id}/documents/{docId}/file": {
         parameters: {
             query?: never;
             header?: never;
@@ -1189,7 +4444,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/operations/{id}/documents": {
+    "/operations/{id}/documents": {
         parameters: {
             query?: never;
             header?: never;
@@ -1198,7 +4453,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload attachment or prescription document (multipart: file, kind, optional description) */
+        /** Upload operation document (multipart: file, kind ATTACHMENT|PRESCRIPTION|CONSENT|OPERATION_NOTE|POST_SURGERY, description required except prescription; optional replaceDocumentId for single-file replace) */
         post: operations["OperationsController_uploadDocument"];
         delete?: never;
         options?: never;
@@ -1206,7 +4461,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/operations/{id}/medications": {
+    "/operations/{id}/documents/{docId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an operation document (editable / allowed status for that kind) */
+        delete: operations["OperationsController_removeDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/{id}/medications": {
         parameters: {
             query?: never;
             header?: never;
@@ -1223,7 +4495,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/operations/{id}/reset-clinical": {
+    "/operations/{id}/reset-clinical": {
         parameters: {
             query?: never;
             header?: never;
@@ -1240,7 +4512,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/operations/{id}/status": {
+    "/operations/{id}/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -1257,7 +4529,87 @@ export interface paths {
         patch: operations["OperationsController_patchStatus"];
         trace?: never;
     };
-    "/api/v1/invoices": {
+    "/operations/{id}/pre-op-checklist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["OperationsController_preOpList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/{id}/pre-op-checklist/{itemId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OperationsController_preOpComplete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/{id}/supplies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OperationsController_addSupply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/{id}/installments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["OperationsController_setInstallments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/{id}/operation-note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["OperationsController_saveNote"];
+        trace?: never;
+    };
+    "/invoices": {
         parameters: {
             query?: never;
             header?: never;
@@ -1275,7 +4627,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/invoices/{id}": {
+    "/invoices/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1292,7 +4644,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinics/{clinicId}/invoice-settings": {
+    "/clinics/{clinicId}/invoice-settings": {
         parameters: {
             query?: never;
             header?: never;
@@ -1309,7 +4661,7 @@ export interface paths {
         patch: operations["InvoicesController_patchClinicSettings"];
         trace?: never;
     };
-    "/api/v1/clinics/{clinicId}/invoice-logo": {
+    "/clinics/{clinicId}/invoice-logo": {
         parameters: {
             query?: never;
             header?: never;
@@ -1327,7 +4679,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinics/{clinicId}/prescription-settings": {
+    "/clinics/{clinicId}/prescription-settings": {
         parameters: {
             query?: never;
             header?: never;
@@ -1344,7 +4696,7 @@ export interface paths {
         patch: operations["InvoicesController_patchClinicPrescriptionSettings"];
         trace?: never;
     };
-    "/api/v1/clinics/{clinicId}/prescription-logo": {
+    "/clinics/{clinicId}/prescription-logo": {
         parameters: {
             query?: never;
             header?: never;
@@ -1362,7 +4714,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/overview": {
+    "/admin/overview": {
         parameters: {
             query?: never;
             header?: never;
@@ -1379,7 +4731,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/audit-logs": {
+    "/admin/audit-logs": {
         parameters: {
             query?: never;
             header?: never;
@@ -1396,7 +4748,178 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/insights/overview-360": {
+    "/admin/integration-failures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Failed integration / webhook operations with request tracing and resolution hints (governance) */
+        get: operations["AdminController_integrationFailures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integration-failures/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Integration failure metrics for governance dashboard */
+        get: operations["AdminController_integrationFailuresSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integration-failures/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Grouped integration failures by fingerprint */
+        get: operations["AdminController_integrationFailureGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integration-failures/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export integration failures as CSV */
+        get: operations["AdminController_integrationFailuresExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integration-failures/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Full trace for one integration failure record */
+        get: operations["AdminController_integrationFailureById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Acknowledge or resolve an integration failure */
+        patch: operations["AdminController_patchIntegrationFailure"];
+        trace?: never;
+    };
+    "/admin/integration-failures/{id}/retry-webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-attempt webhook delivery for a logged failure */
+        post: operations["AdminController_retryIntegrationFailureWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/outbox-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Transactional outbox events (governance) */
+        get: operations["AdminController_outboxEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/outbox-events/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Outbox lag and counts */
+        get: operations["AdminController_outboxEventsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/outbox-events/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-dispatch one outbox event */
+        post: operations["AdminController_retryOutboxEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integration-failures/purge-retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply retention policy now (group admin) */
+        post: operations["AdminController_purgeIntegrationFailureRetention"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/insights/overview-360": {
         parameters: {
             query?: never;
             header?: never;
@@ -1413,7 +4936,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/insights/staff-performance": {
+    "/admin/insights/staff-performance": {
         parameters: {
             query?: never;
             header?: never;
@@ -1430,7 +4953,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/tenants": {
+    "/admin/tenants": {
         parameters: {
             query?: never;
             header?: never;
@@ -1447,7 +4970,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/tenant-settings": {
+    "/admin/tenant-settings": {
         parameters: {
             query?: never;
             header?: never;
@@ -1464,7 +4987,60 @@ export interface paths {
         patch: operations["AdminController_patchTenantSettings"];
         trace?: never;
     };
-    "/api/v1/admin/users": {
+    "/admin/sign-in-method": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organisation default sign-in method (Passport or password preselected on the login page); group admin only */
+        get: operations["AdminController_getSignInMethod"];
+        /** Set the organisation default sign-in method (PASSWORD | PASSPORT | null = automatic); both methods stay available */
+        put: operations["AdminController_putSignInMethod"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payment-channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List organization payment channels (group admin) */
+        get: operations["AdminController_listPaymentChannels"];
+        put?: never;
+        /** Add organization payment channel (group admin) */
+        post: operations["AdminController_createPaymentChannel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/payment-channels/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove organization payment channel (group admin) */
+        delete: operations["AdminController_deletePaymentChannel"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users": {
         parameters: {
             query?: never;
             header?: never;
@@ -1482,7 +5058,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/users/{userId}": {
+    "/admin/users/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1501,7 +5077,7 @@ export interface paths {
         patch: operations["AdminController_patchUser"];
         trace?: never;
     };
-    "/api/v1/admin/users/bulk-delete": {
+    "/admin/users/bulk-delete": {
         parameters: {
             query?: never;
             header?: never;
@@ -1518,7 +5094,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/users/{userId}/deactivate": {
+    "/admin/users/{userId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set additional roles for an organization user */
+        patch: operations["AdminController_patchUserRoles"];
+        trace?: never;
+    };
+    "/admin/tenant/transfer-ownership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Transfer tenant ownership to another user (owner, MFA re-check) */
+        post: operations["AdminController_transferOwnership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}/deactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1535,7 +5145,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/users/{userId}/reactivate": {
+    "/admin/users/{userId}/reactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1552,7 +5162,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/users/{userId}/restore": {
+    "/admin/users/{userId}/restore": {
         parameters: {
             query?: never;
             header?: never;
@@ -1569,7 +5179,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/feature-flags/{key}": {
+    "/admin/tenant-feature-flags/{key}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1582,11 +5192,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Toggle feature flag */
-        patch: operations["AdminController_patchFlag"];
+        /** Set organization feature flag override */
+        patch: operations["AdminController_patchTenantFeatureFlag"];
         trace?: never;
     };
-    "/api/v1/admin/org-hierarchy": {
+    "/admin/org-hierarchy": {
         parameters: {
             query?: never;
             header?: never;
@@ -1603,7 +5213,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/data-explorer/tables": {
+    "/admin/data-explorer/tables": {
         parameters: {
             query?: never;
             header?: never;
@@ -1620,14 +5230,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/data-explorer/export/sql": {
+    "/admin/data-explorer/double-linked-patients": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Download selected organization entities as a single SQL file */
+        /** Find likely duplicate patient charts (same phone, national ID, or name+DOB) */
+        get: operations["AdminDataExplorerController_doubleLinkedPatients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/data-explorer/merge-safe-duplicate-patients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Merge safe duplicate patient charts (same phone+compatible name, national ID, or name+DOB). Keeps the richer chart; moves documents/visits; fills empty demographics. */
+        post: operations["AdminDataExplorerController_mergeSafeDuplicatePatients"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/data-explorer/export/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List recent organization export/import jobs */
+        get: operations["AdminDataExplorerController_listExportJobs"];
+        put?: never;
+        /** Start async organization export (SQL, documents ZIP, or full backup ZIP) */
+        post: operations["AdminDataExplorerController_startExportJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/data-explorer/export/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Poll organization export/import job progress */
+        get: operations["AdminDataExplorerController_getExportJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/data-explorer/export/jobs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a PENDING/RUNNING organization export or import job */
+        post: operations["AdminDataExplorerController_cancelExportJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/data-explorer/export/jobs/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream a READY organization export artifact (authenticated) */
+        get: operations["AdminDataExplorerController_downloadExportJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/data-explorer/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import organization backup (.sql or full/documents .zip with files) */
+        post: operations["AdminDataExplorerController_importBackup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/data-explorer/export/sql": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download selected organization entities as a single SQL file (sync) */
         get: operations["AdminDataExplorerController_exportSql"];
         put?: never;
         post?: never;
@@ -1637,14 +5367,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/data-explorer/export/documents": {
+    "/admin/data-explorer/export/documents": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Download uploaded files linked to selected organization entities as a ZIP archive */
+        /** Download uploaded files linked to selected organization entities as a ZIP archive (sync) */
         get: operations["AdminDataExplorerController_exportDocuments"];
         put?: never;
         post?: never;
@@ -1654,7 +5384,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/data-explorer/{table}": {
+    "/admin/data-explorer/{table}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1672,7 +5402,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/data-explorer/{table}/{id}": {
+    "/admin/data-explorer/{table}/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1691,7 +5421,41 @@ export interface paths {
         patch: operations["AdminDataExplorerController_patch"];
         trace?: never;
     };
-    "/api/v1/admin/platform/overview": {
+    "/admin/org-backup/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download READY organization export via expiring token (no JWT) */
+        get: operations["OrgBackupDownloadController_downloadByToken"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Billing, credits, and plan change audit trail (platform super admin) */
+        get: operations["PlatformAdminController_listBillingAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/overview": {
         parameters: {
             query?: never;
             header?: never;
@@ -1708,7 +5472,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/hierarchy": {
+    "/admin/platform/insights/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 360° directory of all organizations (platform super admin) */
+        get: operations["PlatformAdminController_insightsOrganizations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/insights/platform": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform-wide insights and market operability */
+        get: operations["PlatformAdminController_insightsPlatform"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/growth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PA-05 — activation funnel, cohorts, MRR/ARR, Kiorex attach (platform super admin) */
+        get: operations["PlatformAdminController_growth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/hierarchy": {
         parameters: {
             query?: never;
             header?: never;
@@ -1725,7 +5540,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/feature-flags": {
+    "/admin/platform/feature-flags": {
         parameters: {
             query?: never;
             header?: never;
@@ -1742,7 +5557,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/feature-flags/{key}": {
+    "/admin/platform/feature-flags-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether flags are managed by the Kiorex control plane + snapshot freshness (FF05) */
+        get: operations["PlatformAdminController_featureFlagStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/feature-flags/{key}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1759,7 +5591,7 @@ export interface paths {
         patch: operations["PlatformAdminController_patchFeatureFlag"];
         trace?: never;
     };
-    "/api/v1/admin/platform/users": {
+    "/admin/platform/users": {
         parameters: {
             query?: never;
             header?: never;
@@ -1776,7 +5608,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/clinics": {
+    "/admin/platform/clinics": {
         parameters: {
             query?: never;
             header?: never;
@@ -1793,7 +5625,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/tenants": {
+    "/admin/platform/tenants": {
         parameters: {
             query?: never;
             header?: never;
@@ -1811,7 +5643,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/tenants/{tenantId}": {
+    "/admin/platform/tenants/{tenantId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1829,7 +5661,7 @@ export interface paths {
         patch: operations["PlatformAdminController_patchTenant"];
         trace?: never;
     };
-    "/api/v1/admin/platform/tenants/{tenantId}/users": {
+    "/admin/platform/tenants/{tenantId}/users": {
         parameters: {
             query?: never;
             header?: never;
@@ -1847,7 +5679,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/tenants/{tenantId}/clinics": {
+    "/admin/platform/tenants/{tenantId}/clinics": {
         parameters: {
             query?: never;
             header?: never;
@@ -1865,7 +5697,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/tenants/{tenantId}/clinics/{clinicId}": {
+    "/admin/platform/tenants/{tenantId}/clinics/{clinicId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1883,7 +5715,7 @@ export interface paths {
         patch: operations["PlatformAdminController_patchClinic"];
         trace?: never;
     };
-    "/api/v1/admin/platform/tenants/{tenantId}/users/{userId}": {
+    "/admin/platform/tenants/{tenantId}/users/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1902,7 +5734,7 @@ export interface paths {
         patch: operations["PlatformAdminController_patchUser"];
         trace?: never;
     };
-    "/api/v1/admin/platform/tenants/{tenantId}/users/{userId}/deactivate": {
+    "/admin/platform/tenants/{tenantId}/users/{userId}/deactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1919,7 +5751,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/tenants/{tenantId}/users/{userId}/reactivate": {
+    "/admin/platform/tenants/{tenantId}/users/{userId}/reactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1936,7 +5768,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/platform/tenants/{tenantId}/users/{userId}/restore": {
+    "/admin/platform/tenants/{tenantId}/users/{userId}/restore": {
         parameters: {
             query?: never;
             header?: never;
@@ -1953,162 +5785,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/reports/profit-loss": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Revenue, expenses, and net profit for a period (multi-currency) */
-        get: operations["ReportsController_profitLoss"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reports/performance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Organization or clinic performance KPIs for a period */
-        get: operations["ReportsController_performance"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reports/clinic-breakdown": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Per-clinic revenue, expenses, and operational metrics */
-        get: operations["ReportsController_clinicBreakdown"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reports/monthly-series": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Per-month visits, posted revenue, expenses, and new patients (multi-currency) */
-        get: operations["ReportsController_monthlySeries"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reports/patient-acquisition/patients": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Paginated patients for one acquisition channel in a date range */
-        get: operations["ReportsController_patientAcquisitionPatients"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/reports/patient-acquisition": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** New patient registrations grouped by acquisition channel (how they found us) */
-        get: operations["ReportsController_patientAcquisition"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List users in tenant (for scheduling, assignments) */
-        get: operations["UsersController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/support/tickets": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List customer support tickets */
-        get: operations["SupportController_listTickets"];
-        put?: never;
-        /** Create support ticket */
-        post: operations["SupportController_createTicket"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/support/tickets/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get support ticket detail */
-        get: operations["SupportController_getTicket"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update ticket status, priority, assignee */
-        patch: operations["SupportController_patchTicket"];
-        trace?: never;
-    };
-    "/api/v1/support/tickets/{id}/events": {
+    "/admin/platform/payments/{id}/verify": {
         parameters: {
             query?: never;
             header?: never;
@@ -2117,32 +5794,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add comment or timeline event */
-        post: operations["SupportController_addEvent"];
+        /** Verify manual Kiorly payment (InstaPay / bank proof) */
+        post: operations["PlatformAdminController_verifyKiorlyPayment"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/support/tracking/logs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Detailed audit trail with resolution hints */
-        get: operations["SupportController_trackingLogs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/support/tracking/logs/{auditLogId}/ticket": {
+    "/admin/platform/tenants/{tenantId}/credits": {
         parameters: {
             query?: never;
             header?: never;
@@ -2151,15 +5811,135 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Open ticket from audit log */
-        post: operations["SupportController_ticketFromAudit"];
+        /** Grant SaaS billing credits to an organization (platform super admin) */
+        post: operations["PlatformAdminController_grantCredits"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/integrations/auth/verify": {
+    "/admin/platform/settlement/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run monthly Kiorly settlement for one or all tenants (platform super admin) */
+        post: operations["PlatformAdminController_runSettlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/tenants/{tenantId}/extend-trial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Extend an organization SaaS trial (platform super admin) */
+        post: operations["PlatformAdminController_extendTrial"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/tenants/{tenantId}/set-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Force-assign a catalog plan on an organization (platform super admin ops) */
+        post: operations["PlatformAdminController_setPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/tenants/{tenantId}/entitlement-overrides/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set an ops entitlement override for an organization (platform super admin) */
+        put: operations["PlatformAdminController_putEntitlementOverride"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/drug-datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List drug dataset versions (platform super admin) */
+        get: operations["PlatformAdminController_listDrugDatasets"];
+        put?: never;
+        /** Import a versioned market drug dataset (platform super admin) */
+        post: operations["PlatformAdminController_importDrugDataset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GT-05 — reset sales demo pilot tenants (Lite/Pro/Clinic) in under 60s */
+        post: operations["PlatformAdminController_resetSalesDemo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/sales/roi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GT-05 — sales ROI calculator (no-shows, admin time, Kiorex patients) */
+        post: operations["PlatformAdminController_salesRoi"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/auth/verify": {
         parameters: {
             query?: never;
             header?: never;
@@ -2176,7 +5956,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/integrations/clinics": {
+    "/integrations/clinics": {
         parameters: {
             query?: never;
             header?: never;
@@ -2193,7 +5973,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/integrations/physicians": {
+    "/integrations/physicians": {
         parameters: {
             query?: never;
             header?: never;
@@ -2210,14 +5990,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/integrations/appointments/availability": {
+    "/integrations/appointments/availability": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Busy intervals for a clinician (plan external slot picker) */
+        /** Bookable slots for a clinician and appointment type (KX-03) */
         get: operations["IntegrationsAppointmentsController_availability"];
         put?: never;
         post?: never;
@@ -2227,7 +6007,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/integrations/appointments": {
+    "/integrations/appointments": {
         parameters: {
             query?: never;
             header?: never;
@@ -2244,7 +6024,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/integrations/appointments/{id}": {
+    "/integrations/appointments/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2261,7 +6041,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/integrations/appointments/{id}/cancel": {
+    "/integrations/appointments/{id}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -2278,7 +6058,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/integration-clients": {
+    "/integrations/operations/physicians": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List surgeons/physicians for operation booking at a clinic */
+        get: operations["IntegrationsOperationsController_listPhysicians"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/operations/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scheduled operations for a clinician (plan external slot picker) */
+        get: operations["IntegrationsOperationsController_availability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Schedule an operation from an external patient platform */
+        post: operations["IntegrationsOperationsController_book"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/operations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get operation created by this integration client */
+        get: operations["IntegrationsOperationsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/operations/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an integration-scheduled operation */
+        post: operations["IntegrationsOperationsController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integration-clients": {
         parameters: {
             query?: never;
             header?: never;
@@ -2296,7 +6161,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/integration-clients/{id}/rotate-secret": {
+    "/admin/integration-clients/{id}/rotate-secret": {
         parameters: {
             query?: never;
             header?: never;
@@ -2313,7 +6178,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/integration-clients/{id}/deactivate": {
+    "/admin/integration-clients/{id}/deactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -2330,7 +6195,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/encounters/{id}/amend": {
+    "/admin/integration-clients/{clientId}/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List outbound webhooks for an integration client */
+        get: operations["IntegrationWebhooksAdminController_list"];
+        put?: never;
+        /** Register webhook endpoint (signing secret shown once) */
+        post: operations["IntegrationWebhooksAdminController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/integration-clients/{clientId}/webhooks/{webhookId}/deactivate": {
         parameters: {
             query?: never;
             header?: never;
@@ -2339,47 +6222,191 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reopen a finalized locked encounter for correction (AMENDED status + reason) */
-        post: operations["EncountersController_amend"];
+        /** Deactivate webhook endpoint */
+        post: operations["IntegrationWebhooksAdminController_deactivate"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinical/form-templates": {
+    "/admin/platform/markets": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["ClinicalController_listTemplates"];
+        get: operations["MarketsController_list"];
         put?: never;
-        post: operations["ClinicalController_upsertTemplate"];
+        post: operations["MarketsController_create"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinical/shortcuts": {
+    "/admin/platform/markets/operable": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["ClinicalController_shortcuts"];
+        get: operations["MarketsController_listOperable"];
         put?: never;
-        post: operations["ClinicalController_createShortcut"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinical/shortcuts/{id}": {
+    "/admin/platform/markets/{id}/commercial-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MarketsController_getCommercialConfig"];
+        put: operations["MarketsController_putCommercialConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/markets/{id}/commercial-config/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarketsController_previewCommercialConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/markets/{id}/legal-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MarketsController_getLegalConfig"];
+        put: operations["MarketsController_putLegalConfig"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/markets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MarketsController_get"];
+        put?: never;
+        post?: never;
+        delete: operations["MarketsController_remove"];
+        options?: never;
+        head?: never;
+        patch: operations["MarketsController_patch"];
+        trace?: never;
+    };
+    "/admin/platform/markets/{id}/launch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarketsController_launch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/markets/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarketsController_pause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/markets/{id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarketsController_disable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/markets/{id}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarketsController_enable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/markets/{id}/feature-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MarketsController_featureFlags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/markets/{id}/feature-flags/{key}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2389,20 +6416,21 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["ClinicalController_deleteShortcut"];
+        delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["MarketsController_patchFeatureFlag"];
         trace?: never;
     };
-    "/api/v1/clinical/icd10/search": {
+    "/markets/current": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["ClinicalController_searchIcd"];
+        /** Resolved market pack for the signed-in organization */
+        get: operations["TenantMarketController_current"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2411,30 +6439,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinical/icd10/favorites": {
+    "/billing/invoices": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        post: operations["ClinicalController_favIcd"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/clinical/patients/{patientId}/vitals-series": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ClinicalController_vitalsSeries"];
+        /** List Kiorly SaaS invoices for the organization */
+        get: operations["KiorlyInvoicesController_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2443,14 +6456,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinical/patients/{patientId}/last-visit": {
+    "/billing/invoices/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["ClinicalController_lastVisit"];
+        /** Get one Kiorly invoice (optional PDF via ?format=pdf) */
+        get: operations["KiorlyInvoicesController_getOne"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2459,7 +6473,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinical/letters": {
+    "/billing/payment-methods/card-session": {
         parameters: {
             query?: never;
             header?: never;
@@ -2468,14 +6482,32 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["ClinicalController_letter"];
+        /** Start hosted card tokenization session (Paymob iframe — no PAN on Kiorly API) */
+        post: operations["KiorlyBillingPaymentsController_cardSession"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/clinical/medications/safety-check": {
+    "/billing/payment-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List saved Kiorly billing payment methods (token refs only) */
+        get: operations["KiorlyBillingPaymentsController_listMethods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/payments/proof": {
         parameters: {
             query?: never;
             header?: never;
@@ -2484,7 +6516,4561 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["ClinicalController_safetyCheck"];
+        /** Upload InstaPay/bank transfer proof (returns proofUploadKey) */
+        post: operations["KiorlyBillingPaymentsController_uploadProof"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/invoices/{id}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pay a Kiorly invoice (card token, Fawry, InstaPay, bank) */
+        post: operations["KiorlyBillingPaymentsController_pay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/payments/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Poll Kiorly payment status */
+        get: operations["KiorlyBillingPaymentsController_paymentStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/payments/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Payment provider webhook (HMAC verified, idempotent) */
+        post: operations["KiorlyPaymentsWebhookController_handle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/settlement/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dry-run monthly settlement for a period (YYYY-MM) */
+        get: operations["SettlementController_preview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/lite-fees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SB-05 Lite plan: Kiorex fees this month, carry-forward and minimum invoice */
+        get: operations["KiorexProgressController_liteKiorexFees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** CR-07 Kiorex progress toward Kiorly free this month */
+        get: operations["KiorexProgressController_kiorexProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List monthly Kiorly statements (one per invoiced period) */
+        get: operations["MonthlyStatementController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/statements/{period}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Monthly statement for a period (YYYY-MM); bilingual PDF via ?format=pdf */
+        get: operations["MonthlyStatementController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/referral": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** CR-09 referral code, link, and reward history */
+        get: operations["GrowthReferralController_referral"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/profit-loss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Revenue, expenses, and net profit for a period (multi-currency) */
+        get: operations["ReportsController_profitLoss"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organization or clinic performance KPIs for a period */
+        get: operations["ReportsController_performance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/clinic-breakdown": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-clinic revenue, expenses, and operational metrics */
+        get: operations["ReportsController_clinicBreakdown"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/monthly-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-month visits, posted revenue, expenses, and new patients (multi-currency) */
+        get: operations["ReportsController_monthlySeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/patient-acquisition/patients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paginated patients for one acquisition channel in a date range */
+        get: operations["ReportsController_patientAcquisitionPatients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/patient-acquisition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** New patient registrations grouped by acquisition channel (how they found us) */
+        get: operations["ReportsController_patientAcquisition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/operation-acquisition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operations grouped by acquisition channel with money totals; optional isContract=true|false|contract|standard */
+        get: operations["ReportsController_operationAcquisition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/encounter-acquisition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Finalized encounters grouped by patient acquisition channel with visit fee paid/total */
+        get: operations["ReportsController_encounterAcquisition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/kiorex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** RP-03 Kiorex impact report for a billing period (all tiers with revenue) */
+        get: operations["ReportsController_kiorex"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** RP-01 operational KPIs: no-show, utilisation, revenue/hour, sources */
+        get: operations["ReportsController_operations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/ar-aging": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** RP-04 AR aging buckets per payer (open claim lines) */
+        get: operations["ReportsController_arAging"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** RP-04 Kiorex + doctor payout tracking */
+        get: operations["ReportsController_payouts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/branch-pl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** RP-04 branch P&L reconciled to revenue and expense tables */
+        get: operations["ReportsController_branchPl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** RP-02 weekly report schedule for the tenant */
+        get: operations["ReportsController_getSchedule"];
+        /** Update weekly report schedule (owners / finance) */
+        put: operations["ReportsController_putSchedule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{key}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** RP-02 export a report as xlsx or PDF */
+        get: operations["ReportsController_exportReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List users in tenant (for scheduling, assignments) */
+        get: operations["UsersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/preferences/dismissed-cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cards this user dismissed (server-side, follows the user across browsers) */
+        get: operations["UserPreferencesController_get"];
+        /** Replace the list of dismissed card keys */
+        put: operations["UserPreferencesController_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff invitations for the team screen (ON-06) */
+        get: operations["InvitationsController_list"];
+        put?: never;
+        /** Invite staff by WhatsApp or email (402 when over seat limit) */
+        post: operations["InvitationsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["InvitationsController_resend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a pending invitation */
+        delete: operations["InvitationsController_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/invitations/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Invitation details for the accept page */
+        get: operations["PublicInvitationsController_view"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/invitations/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept invitation and set password */
+        post: operations["PublicInvitationsController_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/user-money-visibility/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-user override for seeing money on operations, encounters, and appointments */
+        get: operations["UserMoneyVisibilityController_getOne"];
+        /** Set money visibility overrides (ROLE_DEFAULT removes custom row) */
+        put: operations["UserMoneyVisibilityController_putOne"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** AI assistant greeting and prompts for the current user */
+        get: operations["AssistantController_getContext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/assistant/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a message to the role-aware AI assistant */
+        post: operations["AssistantController_chat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/encounters/{id}/prescription/print": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** CL-03: printable signed Rx (brand + ingredient + Arabic sig) with a fresh verification QR link */
+        post: operations["RxShareController_print"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/encounters/{id}/prescription/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** CL-03: send the signed Rx PDF to the patient on WhatsApp (approved template, consent-checked) */
+        post: operations["RxShareController_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/encounters/{id}/prescription/handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** KCV203: hand the signed e-prescription to Kiorly Pharmacy via Kiorex (PrescriptionIssued; patient consent token required) */
+        post: operations["RxShareController_handoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rx/verify/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** CL-03: pharmacy verification of a signed prescription (no auth; no more PHI than the printed Rx) */
+        get: operations["PublicRxVerifyController_verify"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/rx/verify/{token}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** CL-03: signed prescription PDF behind the WhatsApp document link */
+        get: operations["PublicRxVerifyController_pdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/inbox/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Provider modes (mock | real) per integration */
+        get: operations["DevInboxController_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rendered mock messages (email / WhatsApp / SMS / push) and simulated replies */
+        get: operations["DevInboxController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/inbox/messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One rendered message */
+        get: operations["DevInboxController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/inbox/messages/{id}/delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Simulate a delivery receipt: delivered | read | failed | bounced */
+        post: operations["DevInboxController_delivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/inbox/inbound/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Simulate a patient WhatsApp reply (text or quick-reply button payload) */
+        post: operations["DevInboxController_inbound"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/inbox/psp/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Simulate a Paymob / Fawry payment callback for a Kiorly invoice */
+        post: operations["DevInboxController_psp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/inbox/psp/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refund a succeeded Kiorly payment (mock settles via the signed refund webhook) */
+        post: operations["DevInboxController_pspRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dev/inbox/send-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Smoke-test sms | email | whatsapp through the live provider port (mock => inbox, real => provider) */
+        post: operations["DevInboxController_sendTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/patients/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FrontDeskController_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/appointments/{id}/start-visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FrontDeskController_startVisit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/appointments/{id}/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FrontDeskController_checkIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FrontDeskController_board"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/call-ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FrontDeskController_callTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/patients/{patientId}/header-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FrontDeskController_headerAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/encounters/{encounterId}/collect-visit-balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FrontDeskController_collectVisitBalance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/encounters/{encounterId}/collect-visit-balance-with-receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FrontDeskController_collectVisitBalanceWithReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/print-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** UX-04 thermal printer profile for a clinic */
+        get: operations["FrontDeskController_printSettings"];
+        /** UX-04 save thermal printer profile */
+        put: operations["FrontDeskController_putPrintSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/print/queue-ticket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** UX-04 80 mm queue ticket PDF */
+        get: operations["FrontDeskController_printQueueTicket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/front-desk/print/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** UX-04 80 mm payment receipt PDF */
+        post: operations["FrontDeskController_printReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/tenant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** SC-05 — request full tenant data export (works while SUSPENDED) */
+        post: operations["ExportsController_requestTenant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/patient": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** SC-05 — patient-level data subject export */
+        post: operations["ExportsController_requestPatient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/offboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ExportsController_getOffboarding"];
+        put?: never;
+        post: operations["ExportsController_startOffboarding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/offboarding/legal-hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["ExportsController_legalHold"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SC-05 — download export via expiring token */
+        get: operations["ExportsController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SC-05 — export job status */
+        get: operations["ExportsController_getJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinic-ai/patients/{patientId}/pre-visit-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicAiController_preVisit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinic-ai/appointments/refresh-no-show-risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicAiController_refreshRisk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinic-ai/encounters/{encounterId}/scribe/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicAiController_startScribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinic-ai/scribe/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ClinicAiController_getScribe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinic-ai/scribe/{sessionId}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicAiController_uploadAudio"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinic-ai/scribe/{sessionId}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicAiController_stopScribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clinic-ai/scribe/{sessionId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ClinicAiController_approveScribe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PL-05 — monthly usage meters vs plan limits */
+        get: operations["UsageController_getUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scope-of-practice/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PRSOP: my profession and the capabilities its scope allows (the web hides what is not allowed; the server enforces) */
+        get: operations["ScopeOfPracticeController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/settings/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HomeVisitsController_mySettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/settings/{clinicianId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HomeVisitsController_settings"];
+        put: operations["HomeVisitsController_putSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/appointment-types/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["HomeVisitsController_configureType"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/safety-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HomeVisitsController_safetyContact"];
+        put: operations["HomeVisitsController_putSafetyContact"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_book"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HomeVisitsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HomeVisitsController_route"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HomeVisitsController_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/safety-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HomeVisitsController_alerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/safety-alerts/{alertId}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_ack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/safety-alerts/{alertId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HomeVisitsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/{id}/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HomeVisitsController_suggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/{id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_assign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/{id}/depart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_depart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/{id}/arrive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_arrive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/{id}/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_finish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/{id}/abort-unsafe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_abort"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/{id}/sos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_sos"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/home-visits/{id}/safety/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["HomeVisitsController_answer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/appointments/{appointmentId}/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TelehealthController_byAppointment"];
+        put?: never;
+        /** Create (idempotent) the telehealth session of a VIDEO appointment */
+        post: operations["TelehealthController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/offer/{clinicianId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TelehealthController_offer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/settings/{clinicianId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TelehealthController_settings"];
+        put: operations["TelehealthController_putSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/appointment-types/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["TelehealthController_configureType"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TelehealthController_review"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TelehealthController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/sessions/{id}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TelehealthController_join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/sessions/{id}/signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TelehealthController_getSignals"];
+        put?: never;
+        post: operations["TelehealthController_postSignal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/sessions/{id}/mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TelehealthController_mode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/sessions/{id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TelehealthController_end"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/telehealth/sessions/{id}/regenerate-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TelehealthController_regenerate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v/{token}/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public link state: first name, doctor, clinic, time, or a clear state (cancelled, moved, in-person, too early, expired) */
+        get: operations["TelehealthPublicController_info"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v/{token}/calendar.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Optional .ics for the visit (device calendar) */
+        get: operations["TelehealthPublicController_ics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v/{token}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TelehealthPublicController_join"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v/{token}/signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TelehealthPublicController_get"];
+        put?: never;
+        post: operations["TelehealthPublicController_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v/{token}/mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TelehealthPublicController_mode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v/{token}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TelehealthPublicController_end"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/nurse/edition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NursePublicController_editionByHost"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/nurse/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NursePublicController_plans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/nurse/signup/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NursePublicController_complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/nurse/family/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NursePublicController_familySummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseEditionController_context"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseEditionController_onboarding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/platform/tenants/{tenantId}/edition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["NurseEditionController_changeEdition"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseClinicalController_listPlans"];
+        put?: never;
+        post: operations["NurseClinicalController_createPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseClinicalController_getPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plans/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_pausePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plans/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_resumePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plans/{id}/extend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_extendPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plans/{id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_endPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plans/{id}/share-discharge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_shareDischarge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plan-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseClinicalController_listPlanRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plan-requests/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_acceptPlanRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/care-plan-requests/{id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_declinePlanRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/visits/{appointmentId}/record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseClinicalController_record"];
+        put: operations["NurseClinicalController_updateRecord"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/visits/{appointmentId}/record/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_sign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/patients/{patientId}/vitals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_vitals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/patients/{patientId}/vitals/trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseClinicalController_trend"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/vitals/{id}/escalation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_escalation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/shifts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseClinicalController_listShifts"];
+        put?: never;
+        post: operations["NurseClinicalController_bookShift"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/shifts/{id}/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_checkIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/shifts/{id}/check-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_checkOut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/patients/{patientId}/handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseClinicalController_handover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/patients/{patientId}/family-contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseClinicalController_familyContacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/patients/{patientId}/family-contacts/{contactId}/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["NurseClinicalController_setFamilyConsent"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/visits/{appointmentId}/family-update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseClinicalController_familyUpdate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/reports/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseClinicalController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/mar/orders/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseMarController_photoOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/mar/orders/shared": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseMarController_sharedOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/mar/orders/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseMarController_revoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/mar/patients/{patientId}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseMarController_orderList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/mar/administrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseMarController_administer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/mar/patients/{patientId}/administrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseMarController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/agency/roster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseAgencyController_roster"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/agency/roster/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["NurseAgencyController_upsert"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/agency/pay/{nurseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseAgencyController_pay"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/lab-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseLabController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/visits/{appointmentId}/lab-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseLabController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/lab-orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseLabController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/lab-orders/{orderId}/collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["NurseLabController_collect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/nurse/lab-orders/{orderId}/custody": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["NurseLabController_custody"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/signup/markets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live markets available for self-serve signup */
+        get: operations["PublicSignupController_listMarkets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/signup/otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send phone OTP for signup */
+        post: operations["PublicSignupController_requestOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/signup/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify OTP and receive signup token */
+        post: operations["PublicSignupController_verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/signup/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete signup and receive session */
+        post: operations["PublicSignupController_complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/cohorts/{key}/remaining": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** PL-09 — founding cohort seats remaining */
+        get: operations["PublicCohortsController_remaining"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public plan catalog and active market prices (no auth) */
+        get: operations["PublicPlansController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all plans, entitlements, and price history (platform super admin) */
+        get: operations["PlatformPlansController_list"];
+        put?: never;
+        /** Create a plan definition (platform super admin) */
+        post: operations["PlatformPlansController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/plans/price-migrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SB-06 report: which subscriptions move to which price version, and when */
+        get: operations["PlatformPlansController_priceMigrations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/plans/{planId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update plan metadata (platform super admin) */
+        patch: operations["PlatformPlansController_patch"];
+        trace?: never;
+    };
+    "/admin/platform/plans/{planId}/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List prices for a plan (platform super admin) */
+        get: operations["PlatformPlansController_listPrices"];
+        put?: never;
+        /** Create a price row or new price version (platform super admin). `preview: true` returns impact (tenants affected, MRR delta) without publishing. */
+        post: operations["PlatformPlansController_createPrice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/onboarding/sample-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Current sample patient, if any (ON-08) */
+        get: operations["OnboardingController_getSampleData"];
+        put?: never;
+        /** Create a clearly marked sample patient + appointment (ON-08) */
+        post: operations["OnboardingController_createSampleData"];
+        /** Remove all sample data (ON-08) */
+        delete: operations["OnboardingController_removeSampleData"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quick-setup checklist: per-step and per-clinic state computed from real data (ON-04) */
+        get: operations["OnboardingController_getProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/onboarding/steps/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Skip an optional step (optionally for one clinic). Steps are never ticked by hand. */
+        patch: operations["OnboardingController_patchStep"];
+        trace?: never;
+    };
+    "/onboarding/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss the finished checklist for the organisation */
+        post: operations["OnboardingController_dismiss"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/templates/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a CSV template with English or Arabic headers (ON-05) */
+        get: operations["ImportsController_template"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent import jobs */
+        get: operations["ImportsController_list"];
+        put?: never;
+        /** Upload xlsx/csv → validate → preview job (ON-05) */
+        post: operations["ImportsController_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ImportsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}/error-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download row errors as CSV */
+        get: operations["ImportsController_errorReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit valid rows in the background */
+        post: operations["ImportsController_commit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/imports/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Undo within 24h (deletes untouched rows created by the job) */
+        post: operations["ImportsController_undo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rep/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SalesRepsController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rep/roi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GT-05 — sales ROI calculator for field reps */
+        post: operations["SalesRepsController_roi"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rep/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a clinic on behalf of its owner; stays PENDING_OWNER until owner OTP (ON-07) */
+        post: operations["SalesRepsController_createTenant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rep/tenants/{id}/resend-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SalesRepsController_resendOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rep/tenants/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Owner confirms creation with the OTP sent to their phone (ON-07) */
+        post: operations["SalesRepsController_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rep/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SalesRepsController_portfolio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rep/commission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SalesRepsController_commission"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rep/tenants/{id}/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SalesRepsController_listImports"];
+        put?: never;
+        post: operations["SalesRepsController_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/rep/tenants/{id}/imports/{jobId}/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SalesRepsController_commit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/sales-reps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformSalesRepsController_list"];
+        put?: never;
+        post: operations["PlatformSalesRepsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/care-plan-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** DRAFT (P3, Nurse edition): request a multi-visit care plan; idempotent on requestRef; 403 FEATURE_DISABLED until nurse.care_plans (gate GKN1) is effective */
+        post: operations["MarketplaceController_createCarePlanRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/lab-orders/{orderId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorex relays the lab status/custody of a nurse-collected hand-off (no results, no PHI) */
+        post: operations["MarketplaceController_labOrderStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/auth/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify marketplace client credentials */
+        get: operations["MarketplaceController_verify"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/clinics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List clinics with LIVE marketplace listings */
+        get: operations["MarketplaceController_listClinics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Paged provider profiles for Kiorex resync (KX-02) */
+        get: operations["MarketplaceController_listProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/physicians": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List physicians with marketplace listing at clinic */
+        get: operations["MarketplaceController_listPhysicians"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/clinics/{clinicId}/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bookable slots for marketplace (KX-03) */
+        get: operations["MarketplaceController_listSlots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/appointments/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bookable slots (alias; requires typeId) */
+        get: operations["MarketplaceController_availability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reserve a slot for 5 minutes (KX-04) */
+        post: operations["MarketplaceController_createHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/holds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Release a slot hold */
+        delete: operations["MarketplaceController_releaseHold"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Kiorex booking with idempotency (KX-04) */
+        post: operations["MarketplaceController_createBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/bookings/{externalRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get booking by Kiorex idempotency / external reference */
+        get: operations["MarketplaceController_getBooking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/bookings/{externalRef}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Patient cancels a Kiorex booking, enforced against the clinic policy (KX-06) */
+        post: operations["MarketplaceController_cancelBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/bookings/{externalRef}/reschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Patient reschedules a Kiorex booking, enforced against the clinic policy (KX-06) */
+        post: operations["MarketplaceController_rescheduleBooking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/bookings/{externalRef}/deposit-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Patient paid a deposit on Kiorex Pay; held for the clinic until check-in (KX-07) */
+        post: operations["MarketplaceController_depositPaid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/deposit-links/{token}/paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Patient paid a clinic deposit link through Kiorex Pay (FS-04); idempotent on paymentRef */
+        post: operations["MarketplaceController_depositLinkPaid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorex paid the clinic out for collected deposits (KX-07); idempotent on payoutRef */
+        post: operations["MarketplaceController_recordPayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/analytics/profile-views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorex pushes daily profile views per doctor (KX-10); re-sending a day replaces it */
+        post: operations["MarketplaceController_syncProfileViews"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/reviews/aggregate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorex pushes a doctor's rating aggregate and verified reviews (KX-08) */
+        post: operations["MarketplaceController_syncReviews"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/analytics/slot-capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Open marketplace slots per clinician per clinic-local day, for Kiorex liquidity (slots/day) */
+        get: operations["MarketplaceController_slotCapacityCounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/waitlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorex patient joins a clinic/doctor waitlist; idempotent on externalRef */
+        post: operations["MarketplaceController_joinWaitlist"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/waitlist/{externalRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a Kiorex waitlist entry */
+        get: operations["MarketplaceController_getWaitlist"];
+        put?: never;
+        post?: never;
+        /** Kiorex patient leaves the waitlist; idempotent, withdraws any pending offer */
+        delete: operations["MarketplaceController_leaveWaitlist"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/waitlist/offers/{offerId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Patient accepts a WAITLIST_OFFER: books the slot as a Kiorex booking (outcome BOOKED | UNAVAILABLE) */
+        post: operations["MarketplaceController_acceptWaitlistOffer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/waitlist/offers/{offerId}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Patient declines a WAITLIST_OFFER; the slot goes to the next person */
+        post: operations["MarketplaceController_declineWaitlistOffer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Book appointment via Kiorex marketplace */
+        post: operations["MarketplaceController_book"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/appointments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get marketplace-booked appointment */
+        get: operations["MarketplaceController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/appointments/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel marketplace-booked appointment */
+        post: operations["MarketplaceController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/patients/{id}/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upsert record-share consents from the Kiorex patient app */
+        post: operations["MarketplaceController_upsertRecordShareConsents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/referral-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Link registry reconciliation feed: links changed since a timestamp, oldest first (cursor pagination) */
+        get: operations["MarketplaceReferralLinksController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/referral-links/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Signed lookup of one referral link: organisation, scope, channel and status (ACTIVE, PAUSED, REVOKED) */
+        get: operations["MarketplaceReferralLinksController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-doctor Kiorex listing status at a clinic */
+        get: operations["MarketplaceOrgController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/listings/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Owner pause or resume marketplace listing */
+        post: operations["MarketplaceOrgController_pause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace-listings/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kiorex provider profile editor payload */
+        get: operations["MarketplaceListingsProfileController_getProfile"];
+        /** Update Kiorex provider profile */
+        put: operations["MarketplaceListingsProfileController_putProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace-listings/{id}/profile/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarketplaceListingsProfileController_uploadPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kiorex performance for a clinic and month: views, bookings, attendance, commission, free progress, rating (KX-10) */
+        get: operations["KiorexSettingsController_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kiorex tab settings for a clinic (KX-06 / KX-10) */
+        get: operations["KiorexSettingsController_get"];
+        /** Update Kiorex tab settings for a clinic (KX-06 / KX-10) */
+        put: operations["KiorexSettingsController_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/ratings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kiorex ratings per doctor and recent verified reviews (KX-08) */
+        get: operations["KiorexSettingsController_ratings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/reviews/{id}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reply to a Kiorex review; Kiorex publishes and moderates it (KX-08) */
+        post: operations["KiorexSettingsController_reply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/booking-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Clinic and per-doctor booking page links (KX-09, commission-free) */
+        get: operations["KiorexSettingsController_bookingLink"];
+        /** Change the clinic or a doctor's booking page slug (KX-09) */
+        put: operations["KiorexSettingsController_updateBookingLink"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/booking-pages/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Clinic-branded booking page (KX-09, commission-free CLINIC_LINK channel; no auth). `?s=<code>` attributes the visit to a provider link (counted without cookies) and returns a signed `lt`. */
+        get: operations["PublicBookingPageController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/imports/{batchId}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** DRAFT: idempotent, chunk-atomic import of one entity into the organization provisioned for orgId */
+        post: operations["KiorexImportController_records"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/imports/{batchId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** DRAFT: remove everything a batch created (rows and stored files) */
+        post: operations["KiorexImportController_rollback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Connect to Kiorex checklist: per-step status (done / action_needed / waiting_kiorex / blocked) with deep links, per-doctor progress */
+        get: operations["KiorexConnectController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/connect/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Accept the marketplace terms and the fee acknowledgement (group admin / clinic admin) */
+        put: operations["KiorexConnectController_consent"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/connect/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request to go live: listings DRAFT -> PENDING_VERIFICATION, then LIVE once Kiorex ops approves */
+        post: operations["KiorexConnectController_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/connect/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh the Kiorex decision now */
+        post: operations["KiorexConnectController_refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/front-door": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Front-door state (NOT_CONNECTED, IN_PROGRESS, WAITING, LIVE, ATTENTION) with recent Kiorex bookings for the live dashboard */
+        get: operations["KiorexFrontDoorController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/front-door/interest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Privacy-safe funnel marker: the standalone organisation viewed the Kiorex tab (once) */
+        post: operations["KiorexFrontDoorController_interest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/front-door/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start connecting: remember it and mark the funnel */
+        post: operations["KiorexFrontDoorController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kiorex/front-door/talk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Talk to us: send a signed lead (name, role, phone/e-mail, preferred time, note, consent) to Kiorex */
+        post: operations["KiorexFrontDoorController_talk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/connection/{orgRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Signed ping: does this deployment know the organisation, and how many of its listings are ready (counts only) */
+        get: operations["KiorexConnectionController_ping"];
+        /** Ops decision: IN_REVIEW | CHANGES_REQUESTED | REJECTED | APPROVED | PAUSED. Idempotent; APPROVED recomputes the listings (LIVE when every gate is green) */
+        put: operations["KiorexConnectionController_decide"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/push/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List this user's web push subscriptions (UX-01) */
+        get: operations["PushController_list"];
+        put?: never;
+        /** Register or refresh a web push subscription (UX-01) */
+        post: operations["PushController_upsert"];
+        /** Remove a web push subscription by endpoint */
+        delete: operations["PushController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the signed-in user can do in Growth & Marketing, plus plan limits */
+        get: operations["ProviderLinksController_access"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List provider referral links with last-30-day counters (counts only) */
+        get: operations["ProviderLinksController_list"];
+        put?: never;
+        /** Create a referral link (ORG, CLINIC, BRANCH, DOCTOR or DESK scope); 8-character code, audited */
+        post: operations["ProviderLinksController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Rename, retag, pause, resume or revoke a link (revoke is permanent) */
+        patch: operations["ProviderLinksController_update"];
+        trace?: never;
+    };
+    "/growth/links/{id}/qr.svg": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** QR code (SVG, error correction M, 4-module quiet zone) for the short link */
+        get: operations["ProviderLinksController_qrSvg"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/links/{id}/qr.png": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** QR code (PNG) */
+        get: operations["ProviderLinksController_qrPng"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/links/{id}/poster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Printable HTML: poster A4/A5, reception desk card or doctor card sheet, Arabic or English (print or Save as PDF) */
+        get: operations["ProviderLinksController_poster"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/links/{id}/vcard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Digital business card (vCard 3.0) for a doctor link */
+        get: operations["ProviderLinksController_vcard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Visits, bookings and attended through your links (counts only, no patient data) */
+        get: operations["ProviderLinksController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Acquisition performance: provider-originated vs marketplace-originated bookings, conversion, commission and incremental revenue, weekly trend */
+        get: operations["ProviderLinksController_performance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Actionable recommendations from a closed catalogue (availability, profile, response time, cancellations) */
+        get: operations["ProviderLinksController_recommendations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/profile-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public profile preview: the booking page as patients see it */
+        get: operations["ProviderLinksController_profilePreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/widget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Widget settings, allowed origins and embed snippets for a clinic */
+        get: operations["ProviderLinksController_getWidget"];
+        /** Save widget settings: https exact origins only, no wildcard, at most 10; audited as growth.widget.updated and projected to Kiorex as PROVIDER_PROFILE_UPDATED.widgetOrigins */
+        put: operations["ProviderLinksController_putWidget"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/links/q/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** QR short link: resolve a link code to its public page (302, or JSON for the web app) */
+        get: operations["PublicLinkController_qr"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/links/go/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Book from a public page: 302 to the Kiorex canonical provider URL with the signed touch parameters */
+        get: operations["PublicLinkController_go"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Growth tab payload: profile link, links with 30-day counts, performance, recommendations, commission summary */
+        get: operations["GrowthMobileController_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My provider links with last-30-day counts */
+        get: operations["GrowthMobileController_links"];
+        put?: never;
+        /** Create a link (plan link limits apply) */
+        post: operations["GrowthMobileController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/qr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** QR (SVG) for a link, or for the public Kiorex profile when linkId is omitted */
+        get: operations["GrowthMobileController_qr"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Pause or resume a link */
+        patch: operations["GrowthMobileController_update"];
+        trace?: never;
+    };
+    "/mobile/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_bootstrap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_devices"];
+        put?: never;
+        post: operations["MobileController_register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/devices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["MobileController_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/devices/{id}/push-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["MobileController_pushToken"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_inbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/inbox/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MobileController_readAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/inbox/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MobileController_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/push/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MobileController_pushTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_listAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/alerts/{id}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MobileController_ack"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/upgrade-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MobileController_upgradeRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_schedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/prescriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_prescriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/prescriptions/{encounterId}/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MobileController_sign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/lab-results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_labResults"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/lab-results/{orderId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MobileController_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/vitals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MobileController_recordVitals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/revenue/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["MobileController_revenue"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2500,12 +11086,28 @@ export interface components {
             email: string;
             /** @example demo */
             password: string;
+            /** @description Six-digit TOTP code when MFA is enabled */
+            mfaCode?: string;
         };
         EmployeePrivilegeGrantSummaryDto: {
             clinicId: string;
             canManageEmployees: boolean;
             canArchiveEmployees: boolean;
             hrProvisionLogin: boolean;
+        };
+        MoneyVisibilityOverridesDto: {
+            /** @enum {string} */
+            operations: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
+            /** @enum {string} */
+            encounters: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
+            /** @enum {string} */
+            appointments: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
+        };
+        AuthUserPlanDto: {
+            /** @enum {string} */
+            key: "LITE" | "PRO" | "CLINIC" | "ENTERPRISE" | "NURSE_LITE" | "NURSE_PRO" | "NURSE_AGENCY";
+            /** @enum {string} */
+            status: "TRIALING" | "ACTIVE" | "PAST_DUE" | "GRACE" | "READ_ONLY" | "SUSPENDED" | "CANCELLED";
         };
         AuthUserDto: {
             id: string;
@@ -2514,23 +11116,72 @@ export interface components {
             email: string;
             displayName: string;
             /** @enum {string} */
-            role: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            role: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT" | "SALES_REP";
+            /** @description Primary + additional roles */
+            roles: ("PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT" | "SALES_REP")[];
+            additionalRoles: ("PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT" | "SALES_REP")[];
+            /** @description Single tenant owner (billing / ownership transfer) */
+            isTenantOwner: boolean;
             /** @description Subset of sidebar tabs allowed for this user; omit or null = role defaults */
             navTabKeys?: string[] | null;
             /** @description Organization override for this user's role sidebar tabs; omit or null = platform role defaults */
             roleNavTabKeys?: string[] | null;
+            /** @description Per-tab read or write access from user nav grant */
+            navTabAccessModes?: {
+                [key: string]: "read" | "write";
+            };
+            /** @description Organization display name (English) */
+            tenantName?: string | null;
+            /** @description Organization display name (Arabic) */
+            tenantNameAr?: string | null;
+            /** @description Organization clinical specialty for top-bar identity (from clinics) */
+            clinicalSpecialty?: string | null;
             /** @description Organization base currency (tenant default for clinics that inherit org settings) */
             tenantBaseCurrency?: string | null;
+            /** @description When true, creating an operation requires How did they find us? Default false (optional). */
+            operationAcquisitionRequired?: boolean;
             /** @description True for PLATFORM_SUPER_ADMIN role or when email is listed in PLATFORM_SUPER_ADMIN_EMAILS */
             platformSuperAdmin?: boolean;
             /** @description Whether the user uploaded a profile picture */
             hasAvatar?: boolean;
+            /** @description Whether TOTP MFA is enabled for this account */
+            mfaEnabled?: boolean;
+            /** @description Privileged role must complete MFA setup before using the app (token allows /auth/mfa/* only) */
+            mfaEnrollmentRequired?: boolean;
             /** @description Clinics where the user is assigned as HR (full clinic-scoped HR permissions) */
             employeePrivilegeGrants?: components["schemas"]["EmployeePrivilegeGrantSummaryDto"][];
+            /** @description Per-user override for showing money on operations, encounters, and appointments */
+            moneyVisibilityOverrides?: components["schemas"]["MoneyVisibilityOverridesDto"];
+            /** @description Resolved SaaS plan for the organization */
+            plan?: components["schemas"]["AuthUserPlanDto"];
+            /** @description Merged plan entitlements and ops overrides for the tenant */
+            entitlements?: {
+                [key: string]: unknown;
+            };
         };
         LoginResponseDto: {
             accessToken: string;
+            /** @description Rotating refresh token (ON-02) */
+            refreshToken?: string;
+            sessionId?: string;
             user: components["schemas"]["AuthUserDto"];
+        };
+        HandoffLoginDto: {
+            /** @example owner.na@demo.kiorex.test */
+            email: string;
+            /** @example Demo@12345 */
+            password: string;
+            /**
+             * @description The Kiorly Nurse tile (an edition of Clinic): the code is bound to it
+             * @enum {string}
+             */
+            edition?: "NURSE";
+        };
+        HandoffExchangeDto: {
+            /** @description Single-use code from POST /auth/handoff/login */
+            code: string;
+            /** @enum {string} */
+            edition?: "NURSE";
         };
         ChangePasswordDto: {
             /** @description Your current password */
@@ -2538,42 +11189,26 @@ export interface components {
             /** @description New password (min 8 characters) */
             newPassword: string;
         };
-        UserNavTabGrantResponseDto: {
-            /** @description Saved tab keys, or null when the user follows role defaults */
-            tabKeys?: string[] | null;
-        };
-        SetUserNavTabsDto: {
-            /**
-             * @description Allowed tab keys for this user (intersected with role on save). Empty = clear override.
-             * @example [
-             *       "dashboard",
-             *       "revenue",
-             *       "reports",
-             *       "profile"
-             *     ]
-             */
-            tabKeys: string[];
-            /** @description When granting the HR tab, the clinic where this user will act as HR (required if they have no clinic HR assignment yet) */
-            hrClinicId?: string;
-        };
-        UserClinicHrAssignmentDto: {
-            id: string;
-            userId: string;
-            clinicId: string;
-            clinicNameEn: string;
-        };
-        SetUserClinicHrAssignmentDto: {
-            userId: string;
-            /** @description Clinic where the user will act as HR (full clinic HR permissions) */
-            clinicId: string;
+        KiorexCallbackDto: Record<string, never>;
+        KiorexCompleteDto: Record<string, never>;
+        KiorexPasswordDto: Record<string, never>;
+        KiorexBackchannelDto: Record<string, never>;
+        SubmitClinicianVerificationDto: Record<string, never>;
+        PlatformVerificationDecisionDto: Record<string, never>;
+        SetProfessionDto: Record<string, never>;
+        PatientAllergyInputDto: {
+            /** @enum {string} */
+            code: "PENICILLIN" | "AMOXICILLIN" | "SULFA" | "ASPIRIN" | "NSAIDS" | "LATEX" | "PEANUTS" | "TREE_NUTS" | "SHELLFISH" | "EGGS" | "MILK" | "SOY" | "WHEAT" | "BEE_STING" | "CONTRAST_IODINE" | "CODEINE" | "MORPHINE" | "OTHER";
+            /** @description Required when code is OTHER */
+            otherComment?: string;
         };
         CreatePatientDto: {
             /**
              * @description How the patient found the clinic
              * @enum {string}
              */
-            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "OTHER";
-            /** @description Referring doctor name when acquisitionChannel is DOCTOR_REFERRAL */
+            acquisitionChannel: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "ANOTHER_PATIENT" | "KIOREX" | "OTHER" | "IMPORT";
+            /** @description Referring doctor or patient name when acquisitionChannel is DOCTOR_REFERRAL or ANOTHER_PATIENT */
             acquisitionReferralName?: string;
             /** @description Free-text channel when acquisitionChannel is OTHER */
             acquisitionOtherDetail?: string;
@@ -2593,6 +11228,9 @@ export interface components {
             nationalId?: string;
             /** @description Home branch clinic id */
             homeBranchId?: string;
+            isVip?: boolean;
+            needsChaperone?: boolean;
+            allergies?: components["schemas"]["PatientAllergyInputDto"][];
         };
         PatientDocumentDto: {
             id: string;
@@ -2601,6 +11239,12 @@ export interface components {
             mimeType: string;
             sizeBytes: number;
             createdAt: string;
+            /** @description ORIGINAL_KEPT | LOSSLESS | REDUCED | FLOOR_REACHED */
+            qualityNote?: Record<string, never>;
+            originalSizeBytes?: Record<string, never>;
+            qualityUsed?: Record<string, never>;
+            /** @description True when an untouched original was retained under …/orig/ */
+            originalAvailable?: boolean;
         };
         PatientDto: {
             id: string;
@@ -2619,6 +11263,12 @@ export interface components {
             nationalId?: string | null;
             homeBranch?: string | null;
             homeBranchId?: string | null;
+            isVip?: boolean;
+            needsChaperone?: boolean;
+            /** @description ON-08 demo patient (excluded from reports, revenue, commissions and messages) */
+            isSample?: boolean;
+            /** @description False for provisional first-visit charts created at booking; must be completed before check-in/encounter */
+            profileComplete?: boolean;
             /** @description Whether a national ID / SSN scan is on file */
             hasNationalIdDoc?: boolean;
             /** @enum {string|null} */
@@ -2638,10 +11288,15 @@ export interface components {
         PatientPhoneConflictPatientDto: {
             id: string;
             mrn: string;
+            phone: string;
             firstNameEn: string;
             lastNameEn: string;
             firstNameAr?: Record<string, never>;
             lastNameAr?: Record<string, never>;
+            dob?: Record<string, never>;
+            gender: string;
+            profileComplete: boolean;
+            createdAt?: Record<string, never>;
         };
         PatientPhoneConflictDto: {
             conflict: boolean;
@@ -2652,8 +11307,8 @@ export interface components {
              * @description How the patient found the clinic
              * @enum {string}
              */
-            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "OTHER";
-            /** @description Referring doctor name when acquisitionChannel is DOCTOR_REFERRAL */
+            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "ANOTHER_PATIENT" | "KIOREX" | "OTHER" | "IMPORT";
+            /** @description Referring doctor or patient name when acquisitionChannel is DOCTOR_REFERRAL or ANOTHER_PATIENT */
             acquisitionReferralName?: string;
             /** @description Free-text channel when acquisitionChannel is OTHER */
             acquisitionOtherDetail?: string;
@@ -2673,6 +11328,92 @@ export interface components {
             nationalId?: string;
             /** @description Home branch clinic id */
             homeBranchId?: string;
+            isVip?: boolean;
+            needsChaperone?: boolean;
+            allergies?: components["schemas"]["PatientAllergyInputDto"][];
+            /** @description Mark a provisional booking chart as a finished patient profile after required demographics are saved */
+            completeProfile?: boolean;
+        };
+        MessagingConsentItemDto: {
+            /** @enum {string} */
+            channel: "SMS" | "WHATSAPP" | "EMAIL";
+            /** @enum {string} */
+            purpose: "TRANSACTIONAL" | "MARKETING";
+            granted: boolean;
+            source: Record<string, never> | null;
+            updatedAt: Record<string, never> | null;
+        };
+        PutMessagingConsentDto: {
+            consents: components["schemas"]["MessagingConsentItemDto"][];
+        };
+        UserNavTabGrantResponseDto: {
+            /** @description Saved tab keys, or null when the user follows role defaults */
+            tabKeys?: string[] | null;
+            /** @description Per-tab read/write when saved on the user grant */
+            tabAccessModes?: {
+                [key: string]: "read" | "write";
+            } | null;
+            /** @description Effective role tab baseline for this user's primary role (for admin UI) */
+            roleTabKeys?: string[];
+        };
+        SetUserNavTabsDto: {
+            /**
+             * @description Allowed tab keys for this user (intersected with role on save). Empty = clear override.
+             * @example [
+             *       "dashboard",
+             *       "revenue",
+             *       "reports",
+             *       "profile"
+             *     ]
+             */
+            tabKeys: string[];
+            /** @description When granting the HR tab, the clinic where this user will act as HR (required if they have no clinic HR assignment yet) */
+            hrClinicId?: string;
+            /**
+             * @description Per-tab access: read (view only) or write (full CRUD). Omitted tabs default to write.
+             * @example {
+             *       "operations": "read",
+             *       "expenses": "write"
+             *     }
+             */
+            tabAccessModes?: Record<string, never>;
+        };
+        UserClinicHrAssignmentDto: {
+            id: string;
+            userId: string;
+            clinicId: string;
+            clinicNameEn: string;
+        };
+        SetUserClinicHrAssignmentDto: {
+            userId: string;
+            /** @description Clinic where the user will act as HR (full clinic HR permissions) */
+            clinicId: string;
+        };
+        CreateSupportTicketDto: {
+            title: string;
+            description: string;
+            /** @enum {string} */
+            module: "PATIENTS" | "ENCOUNTERS" | "APPOINTMENTS" | "OPERATIONS" | "EXPENSES" | "REVENUE" | "HR" | "REPORTS" | "ADMIN" | "AUTH" | "CLINICS" | "BILLING" | "OTHER";
+            /** @enum {string} */
+            priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+            clinicId?: string;
+            patientId?: string;
+            assigneeUserId?: string;
+            resourceType?: string;
+            resourceId?: string;
+            linkedAuditLogId?: string;
+        };
+        PatchSupportTicketDto: {
+            /** @enum {string} */
+            status?: "OPEN" | "IN_PROGRESS" | "WAITING_ON_USER" | "RESOLVED" | "CLOSED";
+            /** @enum {string} */
+            priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+            assigneeUserId?: Record<string, never>;
+            resolutionNotes?: string;
+        };
+        CreateSupportTicketEventDto: {
+            eventType: string;
+            message?: string;
         };
         ClinicDto: {
             id: string;
@@ -2714,6 +11455,8 @@ export interface components {
             lastNameEn?: Record<string, never> | null;
             firstNameAr?: Record<string, never> | null;
             lastNameAr?: Record<string, never> | null;
+            /** @description Default exam room for auto-assignment when this physician's encounter starts */
+            defaultExamRoomLabel?: Record<string, never> | null;
         };
         CreateClinicDto: {
             /** @description Parent clinic id; omit for a top-level (parent) clinic (Prisma cuid) */
@@ -2738,6 +11481,11 @@ export interface components {
              */
             defaultCurrency: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
             /**
+             * @default POLYCLINIC
+             * @enum {string}
+             */
+            clinicalSpecialty: "POLYCLINIC" | "GENERAL_MEDICINE" | "PAIN_MANAGEMENT" | "ORTHOPEDICS" | "PEDIATRICS" | "DERMATOLOGY" | "DENTISTRY" | "PHYSIO_THERAPY" | "AESTHETICS" | "CARDIOLOGY" | "OBSTETRICS_GYNECOLOGY" | "ENT" | "OPHTHALMOLOGY" | "PSYCHIATRY" | "RADIOLOGY" | "LABORATORY" | "INTERNAL_MEDICINE" | "FAMILY_MEDICINE" | "UROLOGY" | "CUSTOM";
+            /**
              * @description Daily opening time (HH:mm)
              * @default 09:00
              */
@@ -2751,6 +11499,17 @@ export interface components {
         AssignClinicPhysicianDto: {
             /** @description Physician user id to assign to this clinic */
             userId: string;
+        };
+        PatchClinicPhysicianExamRoomDto: {
+            defaultExamRoomLabel?: Record<string, never> | null;
+        };
+        ClinicMarketTaxLabelsDto: {
+            taxAuthorityNameEn: string;
+            taxAuthorityNameAr: string;
+            taxRegistrationLabelEn: string;
+            taxRegistrationLabelAr: string;
+            licenseLabelEn: string;
+            licenseLabelAr: string;
         };
         ClinicOperatingPeriodDto: {
             id: string;
@@ -2797,6 +11556,12 @@ export interface components {
             invoiceSections: ("clinicHeader" | "patientDetails" | "invoiceMeta" | "lineItems" | "totals" | "footer")[];
             /** @description Whether an invoice logo has been uploaded */
             hasInvoiceLogo: boolean;
+            /** @description Tax authority registration number for this branch (printed on invoices and payment records) */
+            taxRegistrationNumber?: Record<string, never> | null;
+            /** @description Country-pack labels for license and tax registration fields */
+            marketTaxLabels: components["schemas"]["ClinicMarketTaxLabelsDto"];
+            /** @description VAT percent applied on generated tax invoices (default 5) */
+            invoiceVatPercent: number;
             /** @description Whether a prescription header logo has been uploaded */
             hasPrescriptionLogo: boolean;
             /** @description Optional header description on generated prescriptions (English) */
@@ -2809,6 +11574,15 @@ export interface components {
             /** @description When the clinic record was created (ISO timestamp) */
             createdAt: string;
             operatingPeriods: components["schemas"]["ClinicOperatingPeriodDto"][];
+            /**
+             * @description Front-desk room labels (live board free/busy)
+             * @example [
+             *       "Room 1",
+             *       "Room 2",
+             *       "Room 3"
+             *     ]
+             */
+            frontDeskRoomLabels: string[];
         };
         PatchClinicDto: {
             /** @description Parent clinic id; set null to make a root-level clinic, or a root clinic id to attach as branch */
@@ -2823,16 +11597,32 @@ export interface components {
             phone?: string;
             email?: string;
             licenseNumber?: string;
+            /** @description Tax authority registration number for this clinic (market-specific label in UI) */
+            taxRegistrationNumber?: Record<string, never>;
             logoUrl?: string;
             /**
              * @description Default currency for fees at this clinic
              * @enum {string}
              */
             defaultCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+            /**
+             * @description Default locale for this clinic
+             * @enum {string}
+             */
+            defaultLanguage?: "en" | "ar";
             /** @description Daily opening time (HH:mm) */
             openingTime?: string;
             /** @description Daily closing time (HH:mm). Use 00:00 for midnight (end of day). */
             closingTime?: string;
+            /**
+             * @description Exam/consultation room labels for the front-desk live board
+             * @example [
+             *       "Room 1",
+             *       "Room 2",
+             *       "Room 3"
+             *     ]
+             */
+            frontDeskRoomLabels?: string[];
         };
         DeactivateClinicDto: {
             /** @description Last operating day (YYYY-MM-DD). Defaults to today. */
@@ -2879,13 +11669,20 @@ export interface components {
             /** @description HR employee records */
             employeeCount: number;
         };
+        VisitCollectionDto: {
+            /** @enum {string} */
+            mode: "CASH_ON_VISIT" | "MONEY_TRANSFER";
+            /** @description Market-defined transfer channel id (e.g. INSTAPAY, FAWRY) when mode is MONEY_TRANSFER */
+            transferChannel?: string;
+            transferReference?: string;
+        };
         CreateEncounterDto: {
             /**
              * @description How the patient found the clinic
              * @enum {string}
              */
-            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "OTHER";
-            /** @description Referring doctor name when acquisitionChannel is DOCTOR_REFERRAL */
+            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "ANOTHER_PATIENT" | "KIOREX" | "OTHER" | "IMPORT";
+            /** @description Referring doctor or patient name when acquisitionChannel is DOCTOR_REFERRAL or ANOTHER_PATIENT */
             acquisitionReferralName?: string;
             /** @description Free-text channel when acquisitionChannel is OTHER */
             acquisitionOtherDetail?: string;
@@ -2902,6 +11699,19 @@ export interface components {
             visitFeeCurrency?: string;
             /** @description Optional booked appointment for this patient; visit moves to in progress until encounter is finalized */
             appointmentId?: string;
+            /** @description New allergies to merge onto the patient chart */
+            patientAllergies?: components["schemas"]["PatientAllergyInputDto"][];
+            /** @description How the visit fee was collected (required when visitFeeAmount > 0) */
+            visitCollection?: components["schemas"]["VisitCollectionDto"];
+        };
+        EncounterAmendmentDto: {
+            id: string;
+            reason: string;
+            amendedByName: string;
+            amendedAt: string;
+            wasLocked: boolean;
+            resignedByName?: string | null;
+            resignedAt?: string | null;
         };
         DiagnosisDto: {
             id: string;
@@ -2913,6 +11723,10 @@ export interface components {
         EncounterMedicationDto: {
             id: string;
             drugName: string;
+            drugProductId?: Record<string, never> | null;
+            drugUnverified: boolean;
+            /** @description CL-02 override reason when high-severity alerts were acknowledged */
+            safetyOverrideReason?: Record<string, never> | null;
             dosage?: Record<string, never> | null;
             route?: Record<string, never> | null;
             frequency?: Record<string, never> | null;
@@ -2957,24 +11771,38 @@ export interface components {
             weightKg?: Record<string, never> | null;
             heightCm?: Record<string, never> | null;
             noMedications: boolean;
+            /** @description Whether visit fees and balances are visible for this viewer */
+            financialsVisible?: boolean;
             /** @description Visit fee captured when the encounter was created */
             visitFeeAmount: number;
             /** @description Currency for the visit fee and linked revenue */
             visitFeeCurrency: string;
+            /** @description Uncollected visit fee (RECEIVABLE ledger row; collectible until collected) */
+            visitBalanceDueAmount?: Record<string, never> | null;
+            visitBalanceDueCurrency?: Record<string, never> | null;
+            visitBalanceRevenueId?: Record<string, never> | null;
             /** @description Linked booked appointment, if any */
             appointmentId?: Record<string, never> | null;
             finalizedAt?: Record<string, never> | null;
-            diagnoses: components["schemas"]["DiagnosisDto"][];
-            medications: components["schemas"]["EncounterMedicationDto"][];
-            documents: components["schemas"]["EncounterDocumentDto"][];
-            createdAt: string;
-            updatedAt: string;
             clinicalTemplateId?: string | null;
             specialtyFormResponses?: Record<string, never> | null;
             noteLockedAt?: string | null;
             signedAt?: string | null;
             amendReason?: string | null;
             amendedAt?: string | null;
+            signedByName?: string | null;
+            /** @description When the signed note locks (or locked) */
+            noteLocksAt?: string | null;
+            amendments: components["schemas"]["EncounterAmendmentDto"][];
+            followUpDueAt?: Record<string, never> | null;
+            followUpWeeks?: Record<string, never> | null;
+            followUpNote?: Record<string, never> | null;
+            followUpStatus?: string;
+            diagnoses: components["schemas"]["DiagnosisDto"][];
+            medications: components["schemas"]["EncounterMedicationDto"][];
+            documents: components["schemas"]["EncounterDocumentDto"][];
+            createdAt: string;
+            updatedAt: string;
         };
         UpdateEncounterDto: {
             visitType?: string;
@@ -3000,15 +11828,24 @@ export interface components {
             visitFeeCurrency?: string;
             clinicalTemplateId?: string;
             specialtyFormResponses?: Record<string, never>;
+            /** @description Schedule follow-up N weeks after finalize (e.g. 2) */
+            followUpWeeks?: number;
+            followUpNote?: string;
+            /** @description How the visit fee was collected (when updating fee or payment method) */
+            visitCollection?: components["schemas"]["VisitCollectionDto"];
         };
         AddEncounterMedicationDto: {
-            /** @example Metformin 500mg */
+            /** @example Augmentin 1g tablets */
             drugName: string;
+            /** @description Linked Egyptian drug catalog product (CL-01) */
+            drugProductId?: string;
             dosage?: string;
             route?: string;
             frequency?: string;
             duration?: string;
             instructions?: string;
+            /** @description Required when CL-02 alerts are major or contraindicated */
+            safetyOverrideReason?: string;
         };
         AddDiagnosisDto: {
             /** @example I10 */
@@ -3018,6 +11855,8 @@ export interface components {
             /** @default false */
             isPrimary: boolean;
         };
+        ResolveCommissionDisputeDto: Record<string, never>;
+        OpenCommissionDisputeDto: Record<string, never>;
         ExpenseDto: {
             id: string;
             clinicId: string;
@@ -3061,9 +11900,17 @@ export interface components {
             currency: string;
             postedAt: string;
             /** @enum {string} */
-            status?: "POSTED" | "VOID";
+            status?: "POSTED" | "RECEIVABLE" | "VOID";
             /** @description When set, records a payment against this operation and updates paid amount */
             operationId?: string;
+            /** @description Legacy flag kept for API compatibility (no tax-authority queue exists); requires reason */
+            skipEtaEReceipt?: boolean;
+            /** @description Required when skipEtaEReceipt is true */
+            skipEtaEReceiptReason?: string;
+            /** @description B2B counterparty legal name (required with skipEtaEReceipt) */
+            counterpartyName?: string;
+            /** @description B2B counterparty tax registration (required with skipEtaEReceipt) */
+            counterpartyTaxNumber?: string;
         };
         RevenueEntryDto: {
             id: string;
@@ -3080,6 +11927,10 @@ export interface components {
             currency: string;
             postedAt: string;
             status: string;
+            /** @description B2B counterparty legal name for B2B revenue */
+            counterpartyName?: Record<string, never> | null;
+            /** @description B2B counterparty tax registration for B2B revenue */
+            counterpartyTaxNumber?: Record<string, never> | null;
         };
         HrManageContextDto: {
             /** @description Primary clinic for clinic-scoped HR officers */
@@ -3091,7 +11942,7 @@ export interface components {
             assignableClinicIds: string[];
             /** @description When true, new employees are created with a fresh login (email + password) */
             provisionLogin: boolean;
-            assignableRoles?: ("PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT")[] | null;
+            assignableRoles?: ("PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT" | "SALES_REP")[] | null;
             /** @description When true, assignableClinicIds is limited to the viewer's HR assignment; when false, all org clinics are assignable */
             clinicScopeRestricted: boolean;
         };
@@ -3124,11 +11975,15 @@ export interface components {
             jobTitle: string;
             /** @enum {string} */
             employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "LOCUM";
+            /** @enum {string|null} */
+            clinicalSpecialty?: "POLYCLINIC" | "GENERAL_MEDICINE" | "PAIN_MANAGEMENT" | "ORTHOPEDICS" | "PEDIATRICS" | "DERMATOLOGY" | "DENTISTRY" | "PHYSIO_THERAPY" | "AESTHETICS" | "CARDIOLOGY" | "OBSTETRICS_GYNECOLOGY" | "ENT" | "OPHTHALMOLOGY" | "PSYCHIATRY" | "RADIOLOGY" | "LABORATORY" | "INTERNAL_MEDICINE" | "FAMILY_MEDICINE" | "UROLOGY" | "CUSTOM" | null;
+            /** @description Commission percent of revenue attributed to this employee (0–100) */
+            commissionPercent?: Record<string, never> | null;
             hireDate: string;
             salaryBase: number;
-            /** @description Salary currency override; null means the employee clinic default currency */
+            /** @description Salary currency override; null means the organization base currency */
             salaryCurrency?: Record<string, never> | null;
-            /** @description Effective salary currency (override or clinic default) */
+            /** @description Effective salary currency (override or organization base currency) */
             salaryCurrencyEffective: string;
             userId?: Record<string, never> | null;
             /** @description Whether an ID / passport document was uploaded */
@@ -3156,7 +12011,8 @@ export interface components {
             linkedUserDeletedAt?: Record<string, never> | null;
         };
         CreateEmployeeDto: {
-            clinicId: string;
+            /** @description Primary clinic for the employee record. Omit only when provisioning a group physician (network is derived server-side). */
+            clinicId?: string;
             /** @description Additional clinics for physicians (primary is clinicId) */
             clinicIds?: string[];
             /** @description Link to an existing unmapped organization login account */
@@ -3169,7 +12025,7 @@ export interface components {
              * @description Create a new login — organization role
              * @enum {string}
              */
-            loginRole?: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            loginRole?: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT" | "SALES_REP";
             /**
              * @description For physicians: assign to this clinic only or as a group physician across the clinic network
              * @enum {string}
@@ -3187,8 +12043,15 @@ export interface components {
             employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "LOCUM";
             hireDate: string;
             salaryBase: number;
-            /** @description Salary currency override; omit or match clinic default to follow clinic defaultCurrency */
+            /** @description Salary currency override; omit or match organization base currency to follow tenant baseCurrency */
             salaryCurrency?: Record<string, never>;
+            /**
+             * @description Clinical specialty for physicians and nurses
+             * @enum {string}
+             */
+            clinicalSpecialty?: "POLYCLINIC" | "GENERAL_MEDICINE" | "PAIN_MANAGEMENT" | "ORTHOPEDICS" | "PEDIATRICS" | "DERMATOLOGY" | "DENTISTRY" | "PHYSIO_THERAPY" | "AESTHETICS" | "CARDIOLOGY" | "OBSTETRICS_GYNECOLOGY" | "ENT" | "OPHTHALMOLOGY" | "PSYCHIATRY" | "RADIOLOGY" | "LABORATORY" | "INTERNAL_MEDICINE" | "FAMILY_MEDICINE" | "UROLOGY" | "CUSTOM";
+            /** @description Revenue commission percent (0–100) paid to the employee from clinic or group revenue */
+            commissionPercent?: Record<string, never>;
         };
         CreateEmployeeResultDto: {
             id: string;
@@ -3206,11 +12069,15 @@ export interface components {
             jobTitle: string;
             /** @enum {string} */
             employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "LOCUM";
+            /** @enum {string|null} */
+            clinicalSpecialty?: "POLYCLINIC" | "GENERAL_MEDICINE" | "PAIN_MANAGEMENT" | "ORTHOPEDICS" | "PEDIATRICS" | "DERMATOLOGY" | "DENTISTRY" | "PHYSIO_THERAPY" | "AESTHETICS" | "CARDIOLOGY" | "OBSTETRICS_GYNECOLOGY" | "ENT" | "OPHTHALMOLOGY" | "PSYCHIATRY" | "RADIOLOGY" | "LABORATORY" | "INTERNAL_MEDICINE" | "FAMILY_MEDICINE" | "UROLOGY" | "CUSTOM" | null;
+            /** @description Commission percent of revenue attributed to this employee (0–100) */
+            commissionPercent?: Record<string, never> | null;
             hireDate: string;
             salaryBase: number;
-            /** @description Salary currency override; null means the employee clinic default currency */
+            /** @description Salary currency override; null means the organization base currency */
             salaryCurrency?: Record<string, never> | null;
-            /** @description Effective salary currency (override or clinic default) */
+            /** @description Effective salary currency (override or organization base currency) */
             salaryCurrencyEffective: string;
             userId?: Record<string, never> | null;
             /** @description Whether an ID / passport document was uploaded */
@@ -3257,7 +12124,7 @@ export interface components {
             employmentType?: "FULL_TIME" | "PART_TIME" | "CONTRACTOR" | "LOCUM";
             hireDate?: string;
             salaryBase?: number;
-            /** @description Salary currency override; omit or match clinic default to follow clinic defaultCurrency */
+            /** @description Salary currency override; omit or match organization base currency to follow tenant baseCurrency */
             salaryCurrency?: Record<string, never>;
         };
         ReactivateEmployeeDto: {
@@ -3320,6 +12187,15 @@ export interface components {
             status: "PENDING" | "APPROVED" | "REJECTED";
         };
         AppointmentDto: {
+            /** @enum {string} */
+            serviceLocation?: "IN_CLINIC" | "HOME" | "VIDEO";
+            /**
+             * @description Derived from serviceLocation (ADR-039)
+             * @enum {string}
+             */
+            visitType?: "IN_PERSON" | "HOME" | "TELEHEALTH";
+            /** @description ADR-039 telehealth session summary; joinUrl only for clinic staff who may share it */
+            telehealth?: Record<string, never> | null;
             id: string;
             clinicId: string;
             /** @description Clinic display name (English) */
@@ -3327,6 +12203,8 @@ export interface components {
             /** @description Clinic display name (Arabic) */
             clinicNameAr?: Record<string, never> | null;
             patientId: string;
+            /** @description False when the linked patient is a provisional first-visit chart; complete registration before check-in/encounter/complete */
+            patientProfileComplete?: boolean;
             clinicianId: string;
             /** @description Clinician name: linked employee first/last (EN) when present, else user displayName */
             clinicianName?: Record<string, never> | null;
@@ -3338,16 +12216,80 @@ export interface components {
             endsAt?: Record<string, never> | null;
             /** @description Scheduled visit fee for this appointment */
             feeAmount: number;
+            /** @description Whether scheduled fee and balances are visible for this viewer */
+            financialsVisible?: boolean;
+            /** @enum {string|null} */
+            scheduledCollectionMode?: "CASH_ON_VISIT" | "MONEY_TRANSFER" | null;
+            /** @description Planned transfer channel when scheduled fee uses money transfer */
+            scheduledTransferChannel?: Record<string, never> | null;
             /** @enum {string} */
-            status: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED";
+            status: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
             notes?: Record<string, never> | null;
             /** @description Present on list responses when patient is included */
             patientMrn?: Record<string, never> | null;
             patientName?: Record<string, never> | null;
+            roomLabel?: Record<string, never> | null;
+            /** @enum {string|null} */
+            queueStage?: "WAITING" | "CALLED" | "IN_EXAM" | null;
+            /** @description Hint for auto room assignment when the encounter starts */
+            preferredRoomLabel?: Record<string, never> | null;
+            roomAssignedAt?: Record<string, never> | null;
+            checkedInAt?: Record<string, never> | null;
+            queueTicketNumber?: Record<string, never> | null;
+            /** @description Open draft or amended encounter created at check-in (when status is CHECKED_IN) */
+            openEncounterId?: Record<string, never> | null;
+            /** @description Uncollected visit fee while encounter is open */
+            visitBalanceDueAmount?: Record<string, never> | null;
+            visitBalanceDueCurrency?: Record<string, never> | null;
+            visitBalanceRevenueId?: Record<string, never> | null;
+            /** @description Set when the patient confirmed via WhatsApp quick reply (MS-02) */
+            whatsappConfirmedAt?: Record<string, never> | null;
+            /** @enum {string} */
+            bookingSource: "FRONT_DESK" | "PHONE" | "WALK_IN" | "CLINIC_LINK" | "KIOREX_MARKETPLACE" | "KIOREX_WHATSAPP" | "INTEGRATION" | "IMPORT";
+            attributionJson?: Record<string, never> | null;
+            /** @description Frozen at booking time for commission attribution */
+            isNewPatientAtBooking?: Record<string, never> | null;
+            newPatientCheckedAt?: Record<string, never> | null;
+            /** @description Whether this booking may incur Kiorex commission (CR-02) */
+            commissionChargeableAtBooking?: boolean;
+            /**
+             * @description GRW-P1-D2: Kiorex attribution origin frozen at booking
+             * @enum {string|null}
+             */
+            acquisitionOrigin?: "PROVIDER_LED" | "MARKETPLACE" | "UNATTRIBUTED" | null;
+            /** @description FS-05 no-show risk (Pro+, upcoming SCHEDULED/CONFIRMED only): rule-based score, band, factors and a suggestion. method stays RULE_BASED until a trained model ships. */
+            noShowRisk?: Record<string, never> | null;
+            /** @description KX-07 / FS-04 deposit on this booking: status PENDING | HELD | APPLIED | RELEASED | FORFEITED, source CLINIC | KIOREX_PAY | PAYMENT_LINK. Amount is 0 when money is hidden from the viewer. */
+            deposit?: Record<string, never> | null;
+            /** @description PATIENT | CLINIC | SYSTEM (KX-06) */
+            cancelledBy?: Record<string, never> | null;
+            cancellationReason?: Record<string, never> | null;
+        };
+        ProvisionalPatientDto: {
+            firstNameEn: string;
+            lastNameEn: string;
+            /** @example +201001234567 */
+            phone: string;
+            firstNameAr?: string;
+            lastNameAr?: string;
+        };
+        ScheduledFeeCollectionDto: {
+            /** @enum {string} */
+            mode: "CASH_ON_VISIT" | "MONEY_TRANSFER";
+            /** @description Organization or market transfer channel when mode is MONEY_TRANSFER */
+            transferChannel?: Record<string, never>;
         };
         CreateAppointmentDto: {
+            /**
+             * @description ADR-039: TELEHEALTH creates the linked video session (flag telehealth.video + doctor offers telehealth)
+             * @enum {string}
+             */
+            visitMode?: "IN_CLINIC" | "TELEHEALTH";
             clinicId: string;
-            patientId: string;
+            /** @description Existing patient id. Omit when provisionalPatient is provided for a first-time booking. */
+            patientId?: string;
+            /** @description Quick intake for a first-time visit without a finished patient profile */
+            provisionalPatient?: components["schemas"]["ProvisionalPatientDto"];
             clinicianId: string;
             startsAt: string;
             /** @description Optional custom end; defaults to a 15-minute slot from startsAt when omitted */
@@ -3357,14 +12299,34 @@ export interface components {
             /** @description Scheduled visit fee; defaults to the organization default visit fee */
             feeAmount?: number;
             /** @enum {string} */
-            status?: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED";
+            status?: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
             notes?: string;
+            appointmentTypeId?: string;
+            seriesId?: string;
+            roomLabel?: string;
+            allowDoubleBook?: boolean;
+            /** @description How the scheduled fee will be paid (cash on visit vs organization payment channel) */
+            scheduledFeeCollection?: components["schemas"]["ScheduledFeeCollectionDto"];
+            /**
+             * @description Defaults to FRONT_DESK for staff-created bookings
+             * @enum {string}
+             */
+            bookingSource?: "FRONT_DESK" | "PHONE" | "WALK_IN" | "CLINIC_LINK" | "KIOREX_MARKETPLACE" | "KIOREX_WHATSAPP" | "INTEGRATION" | "IMPORT";
+            /** @description Kiorex / campaign attribution (search id, campaign, landing page) */
+            attributionJson?: Record<string, never>;
         };
         PatchAppointmentStatusDto: {
             /** @enum {string} */
-            status: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED";
+            status: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+            /** @description Required when cancelling a Kiorex booking (shown to the patient) */
+            cancellationReason?: string;
         };
         UpdateAppointmentDto: {
+            /**
+             * @description ADR-039: convert between in-person and telehealth (the link then says 'changed to in-person')
+             * @enum {string}
+             */
+            visitMode?: "IN_CLINIC" | "TELEHEALTH";
             clinicId?: string;
             patientId?: string;
             clinicianId?: string;
@@ -3373,8 +12335,12 @@ export interface components {
             /** @description Scheduled visit fee; syncs to a linked open encounter when changed */
             feeAmount?: number;
             /** @enum {string} */
-            status?: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED";
+            status?: "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
             notes?: Record<string, never> | null;
+            /** @description Required when cancelling a Kiorex booking (shown to the patient) */
+            cancellationReason?: Record<string, never>;
+            /** @description Scheduled fee payment plan (cash vs transfer channel) */
+            scheduledFeeCollection?: Record<string, never>;
         };
         OperationDto: {
             id: string;
@@ -3397,19 +12363,40 @@ export interface components {
             balanceDue: number;
             /** @description Currency amounts are recorded in (may differ from clinic default) */
             feeCurrency: string;
+            /** @description Contract / تعاقد — allows zero total cost */
+            isContract: boolean;
+            /** @description How the patient found us (snapshot at booking) */
+            acquisitionChannel?: Record<string, never>;
             comments?: Record<string, never>;
             /** @enum {string} */
             status: "SCHEDULED" | "CANCELLED" | "COMPLETED";
             createdAt: string;
+            /** @description When false, fee amounts are withheld for this viewer (e.g. call center) */
+            financialsVisible?: boolean;
         };
         CreateOperationDto: {
+            /**
+             * @description How the patient found the clinic
+             * @enum {string}
+             */
+            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "ANOTHER_PATIENT" | "KIOREX" | "OTHER" | "IMPORT";
+            /** @description Referring doctor or patient name when acquisitionChannel is DOCTOR_REFERRAL or ANOTHER_PATIENT */
+            acquisitionReferralName?: string;
+            /** @description Free-text channel when acquisitionChannel is OTHER */
+            acquisitionOtherDetail?: string;
             patientId: string;
             clinicianId: string;
             /** @description Scheduled operation date/time (ISO 8601) */
             operationDate: string;
+            /**
+             * @description Optional at booking; required before discharge
+             * @default 0
+             */
             totalCost: number;
             /** @default 0 */
             downPayment: number;
+            /** @description When true, marks this as a contract operation (تعاقد). Required if totalCost is 0 for fee editors. */
+            isContract?: boolean;
             comments?: string;
             /** @description Defaults to patient home branch or first tenant clinic */
             clinicId?: string;
@@ -3433,7 +12420,7 @@ export interface components {
         OperationDocumentDto: {
             id: string;
             /** @enum {string} */
-            kind: "ATTACHMENT" | "PRESCRIPTION";
+            kind: "ATTACHMENT" | "PRESCRIPTION" | "CONSENT" | "OPERATION_NOTE" | "POST_SURGERY";
             description?: Record<string, never>;
             originalFileName: string;
             mimeType: string;
@@ -3461,10 +12448,16 @@ export interface components {
             balanceDue: number;
             /** @description Currency amounts are recorded in (may differ from clinic default) */
             feeCurrency: string;
+            /** @description Contract / تعاقد — allows zero total cost */
+            isContract: boolean;
+            /** @description How the patient found us (snapshot at booking) */
+            acquisitionChannel?: Record<string, never>;
             comments?: Record<string, never>;
             /** @enum {string} */
             status: "SCHEDULED" | "CANCELLED" | "COMPLETED";
             createdAt: string;
+            /** @description When false, fee amounts are withheld for this viewer (e.g. call center) */
+            financialsVisible?: boolean;
             noMedications: boolean;
             medications: components["schemas"]["OperationMedicationDto"][];
             documents: components["schemas"]["OperationDocumentDto"][];
@@ -3484,6 +12477,8 @@ export interface components {
             operationDate?: string;
             totalCost?: number;
             downPayment?: number;
+            /** @description Contract operation (تعاقد). Required when setting totalCost to 0. */
+            isContract?: boolean;
             comments?: string;
             clinicId?: string;
             noMedications?: boolean;
@@ -3495,9 +12490,11 @@ export interface components {
         };
         PatchOperationStatusDto: {
             /** @enum {string} */
-            status: "SCHEDULED" | "CANCELLED" | "COMPLETED";
+            status: "SCHEDULED" | "BOOKED" | "PRE_OP" | "IN_PROGRESS" | "RECOVERY" | "DISCHARGED" | "COMPLETED" | "CANCELLED";
             /** @description Amount collected now; required when completing with an outstanding balance */
             collectionAmount?: number;
+            /** @description When true, allows advancing multiple pipeline stages in one update (client must confirm with the user) */
+            allowPipelineSkip?: boolean;
         };
         CreateInvoiceLineDto: {
             /** @description Purpose / service description */
@@ -3540,6 +12537,22 @@ export interface components {
             clinicPhone: string;
             clinicEmail: string;
             clinicLicenseNumber: string;
+            /** @description Tax registration number (TRN) at time of issue */
+            clinicTaxRegistrationNumber?: Record<string, never> | null;
+            /** @description Market label for tax registration line (English) */
+            clinicTaxRegistrationLabelEn?: string;
+            /** @description Market label for tax registration line (Arabic) */
+            clinicTaxRegistrationLabelAr?: string;
+            /** @description Market label for facility license line (English) */
+            clinicLicenseLabelEn?: string;
+            /** @description Market label for facility license line (Arabic) */
+            clinicLicenseLabelAr?: string;
+            /** @description VAT percent snapshot at issue time */
+            vatPercent: number;
+            /** @description Taxable amount excluding VAT */
+            subtotalExVat: number;
+            /** @description VAT amount */
+            vatAmount: number;
             totalAmount: number;
             lines: components["schemas"]["InvoiceLineDto"][];
             createdAt: string;
@@ -3559,12 +12572,23 @@ export interface components {
             invoiceBackgroundColor?: string;
             /** @description Sections to include on generated invoices */
             invoiceSections?: ("clinicHeader" | "patientDetails" | "invoiceMeta" | "lineItems" | "totals" | "footer")[];
+            /** @description UAE TRN or other tax registration number on invoices */
+            taxRegistrationNumber?: Record<string, never>;
+            /** @description VAT percent on medical service invoices */
+            invoiceVatPercent?: number;
+            /** @description Clear clinic VAT override and use organization/market default */
+            invoiceVatPercentUseMarketDefault?: boolean;
         };
         PatchClinicPrescriptionSettingsDto: {
             /** @description Header description shown on generated prescriptions (English) */
             prescriptionHeaderDescriptionEn?: string;
             /** @description Header description shown on generated prescriptions (Arabic) */
             prescriptionHeaderDescriptionAr?: string;
+        };
+        PatchIntegrationFailureDto: {
+            /** @enum {string} */
+            status: "OPEN" | "ACKNOWLEDGED" | "RESOLVED";
+            resolutionNote?: string;
         };
         PatchTenantSettingsDto: {
             /**
@@ -3574,15 +12598,60 @@ export interface components {
             baseCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
             /** @description Default visit/consultation fee for new encounters (same currency as tenant base) */
             defaultVisitFee?: number;
+            /** @description Days to retain integration failure logs before automatic deletion (default 30) */
+            integrationFailureRetentionDays?: number;
+            /** @description Tax registration (TRN) applied to all clinics in the organization */
+            defaultTaxRegistrationNumber?: string;
+            /** @description Clear org TRN override and use the market pack default */
+            defaultTaxRegistrationNumberUseMarketDefault?: boolean;
+            /** @description VAT percent on tax invoices for all clinics */
+            defaultInvoiceVatPercent?: number;
+            /** @description Clear org VAT override and use the market pack default */
+            defaultInvoiceVatPercentUseMarketDefault?: boolean;
+            /** @description Clear org visit fee override and use the market pack default */
+            defaultVisitFeeUseMarketDefault?: boolean;
+            /** @description Enable WhatsApp appointment reminders (async outbound queue) */
+            whatsAppRemindersEnabled?: boolean;
+            /**
+             * @description Hours before appointment to send WhatsApp reminder
+             * @default 24
+             */
+            appointmentReminderHoursBefore: number;
+            /** @description When true, creating an operation requires How did they find us? (acquisition channel). Default false (optional). */
+            operationAcquisitionRequired?: boolean;
+        };
+        CreateTenantPaymentChannelDto: {
+            /** @description Display name for staff (e.g. Clinic InstaPay) */
+            name: string;
+            /** @description Bank or wallet account number patients should pay to */
+            accountNumber?: string;
+            /** @description Mobile number for wallet / transfer collection */
+            mobileNumber?: string;
+            /**
+             * @description ECMAScript regex for transfer reference validation on this channel
+             * @example ^[A-Za-z0-9][A-Za-z0-9\-_.]{5,31}$
+             */
+            referencePattern: string;
+            /**
+             * @description Payment method code printed on payment records (C cash, V card, O other/transfer)
+             * @default O
+             * @enum {string}
+             */
+            fiscalPaymentCode: "C" | "V" | "O";
         };
         CreateTenantUserDto: {
             email: string;
             password: string;
             displayName: string;
             /** @enum {string} */
-            role: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            role: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT" | "SALES_REP";
             /** @description Assign one or more clinics. Required for clinic administrator and branch manager; optional for other roles. */
             clinicIds?: string[];
+            /**
+             * @description PRSOP01 — clinician profession (defaults to PHYSICIAN for physician-role users, NURSE for nurse-role users).
+             * @enum {string}
+             */
+            profession?: "PHYSICIAN" | "DENTIST" | "PHYSIOTHERAPIST" | "NURSE" | "ASSISTANT";
         };
         BulkDeleteUsersDto: {
             /** @description User ids to delete */
@@ -3594,12 +12663,22 @@ export interface components {
             /** @description Same role filter as user list when all=true (UserRole enum) */
             role?: string;
         };
+        PatchUserRolesDto: {
+            /** @description Extra roles held alongside the user's primary role */
+            additionalRoles: ("PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT" | "SALES_REP")[];
+        };
+        TransferTenantOwnershipDto: {
+            /** @description User id of the next tenant owner */
+            toUserId: string;
+            /** @description TOTP or recovery code (required when caller has MFA enabled) */
+            mfaCode?: string;
+        };
         PlatformPatchTenantUserDto: {
             email?: string;
             password?: string;
             displayName?: string;
             /** @enum {string} */
-            role?: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT";
+            role?: "PLATFORM_SUPER_ADMIN" | "GROUP_ADMIN" | "GROUP_SUPERVISOR" | "BRANCH_MANAGER" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST" | "CALL_CENTER" | "HR_OFFICER" | "FINANCE_OFFICER" | "CLINIC_ADMIN" | "CLINIC_ASSISTANT" | "SALES_REP";
             /** @description Clinic scope for CLINIC_ADMIN / BRANCH_MANAGER */
             clinicIds?: string[];
             /**
@@ -3641,13 +12720,21 @@ export interface components {
              * @example مجموعة عيادات أكم
              */
             nameAr: string;
+            /** @description Market pack (country) — defaults to Egypt when omitted */
+            marketId?: string;
+            /** @description Deployment cell / host zone — defaults from market (Frankfurt for Egypt) */
+            deploymentCell?: string;
             /**
-             * @default AED
+             * @description Overrides market default currency when set
              * @enum {string}
              */
-            baseCurrency: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+            baseCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
             /** @default en */
             defaultLocale: string;
+            /** @description Default tax registration for new clinics (country-specific) */
+            defaultTaxRegistrationNumber?: string;
+            /** @description Default facility license applied when provisioning the first clinic */
+            defaultLicenseNumber?: string;
             /** @description Initial group administrator for this organization (email, password, display name) */
             groupAdmin?: components["schemas"]["CreateTenantGroupAdminDto"];
             /** @description Optional first parent clinic (HQ) — same fields as organization admin clinic onboarding */
@@ -3668,32 +12755,6 @@ export interface components {
             /** @description Default visit fee for new encounters in this organization */
             defaultVisitFee?: number;
         };
-        CreateSupportTicketDto: {
-            title: string;
-            description: string;
-            /** @enum {string} */
-            module: "PATIENTS" | "ENCOUNTERS" | "APPOINTMENTS" | "OPERATIONS" | "EXPENSES" | "REVENUE" | "HR" | "REPORTS" | "ADMIN" | "AUTH" | "CLINICS" | "BILLING" | "OTHER";
-            /** @enum {string} */
-            priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-            clinicId?: string;
-            patientId?: string;
-            assigneeUserId?: string;
-            resourceType?: string;
-            resourceId?: string;
-            linkedAuditLogId?: string;
-        };
-        PatchSupportTicketDto: {
-            /** @enum {string} */
-            status?: "OPEN" | "IN_PROGRESS" | "WAITING_ON_USER" | "RESOLVED" | "CLOSED";
-            /** @enum {string} */
-            priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-            assigneeUserId?: Record<string, never>;
-            resolutionNotes?: string;
-        };
-        CreateSupportTicketEventDto: {
-            eventType: string;
-            message?: string;
-        };
         IntegrationBookAppointmentDto: {
             /** @description Clinic branch where the visit is booked */
             clinicId: string;
@@ -3710,6 +12771,38 @@ export interface components {
             /** @description Set true to allow double-booking the same clinician */
             confirmOverlap?: boolean;
             notes?: string;
+            /** @description When true (Kiorex booking flow), records MARKETPLACE_SHARING consent for the patient */
+            marketplaceConsentGranted?: boolean;
+            /**
+             * @description Kiorex connector channel when not inferred from consent
+             * @enum {string}
+             */
+            kiorexChannel?: "marketplace" | "whatsapp";
+            /** @description Kiorex search / campaign attribution */
+            attribution?: Record<string, never>;
+        };
+        IntegrationBookOperationDto: {
+            /**
+             * @description How the patient found the clinic
+             * @enum {string}
+             */
+            acquisitionChannel?: "SOCIAL_FACEBOOK" | "SOCIAL_INSTAGRAM" | "SOCIAL_TIKTOK" | "WEBSITE_GOOGLE" | "DOCTOR_REFERRAL" | "ANOTHER_PATIENT" | "KIOREX" | "OTHER" | "IMPORT";
+            /** @description Referring doctor or patient name when acquisitionChannel is DOCTOR_REFERRAL or ANOTHER_PATIENT */
+            acquisitionReferralName?: string;
+            /** @description Free-text channel when acquisitionChannel is OTHER */
+            acquisitionOtherDetail?: string;
+            clinicId: string;
+            patientId?: string;
+            patientMrn?: string;
+            clinicianId: string;
+            operationDate: string;
+            totalCost: number;
+            downPayment?: number;
+            comments?: string;
+            externalReference?: string;
+            noMedications?: boolean;
+            /** @enum {string} */
+            feeCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
         };
         CreateIntegrationClientDto: {
             /** @example Patient portal — production */
@@ -3720,9 +12813,126 @@ export interface components {
              *       "APPOINTMENTS_WRITE"
              *     ]
              */
-            scopes: ("APPOINTMENTS_READ" | "APPOINTMENTS_WRITE")[];
+            scopes: ("APPOINTMENTS_READ" | "APPOINTMENTS_WRITE" | "OPERATIONS_READ" | "OPERATIONS_WRITE")[];
             /** @description Restrict bookings to these clinic ids; empty = all active clinics in the organization */
             allowedClinicIds?: string[];
+        };
+        CreateIntegrationWebhookDto: {
+            /** @example https://patient-portal.example.com/webhooks/kiorly */
+            url: string;
+            eventTypes: ("APPOINTMENT_BOOKED" | "APPOINTMENT_CANCELLED" | "OPERATION_BOOKED" | "OPERATION_CANCELLED")[];
+        };
+        PatchMarketDto: {
+            nameEn?: string;
+            nameAr?: string;
+            dataRegion?: string;
+            hostCell?: string;
+            /** @enum {string} */
+            defaultCurrency?: "AED" | "SAR" | "QAR" | "KWD" | "BHD" | "OMR" | "USD" | "EUR" | "GBP" | "EGP" | "JOD" | "LBP" | "TRY" | "INR";
+            defaultTimezone?: string;
+            defaultPhoneRegion?: string;
+        };
+        PauseMarketDto: {
+            /**
+             * @description Pause length in days (1–365)
+             * @default 7
+             */
+            days: number;
+        };
+        UserMoneyVisibilityResponseDto: {
+            /** @enum {string} */
+            operations: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
+            /** @enum {string} */
+            encounters: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
+            /** @enum {string} */
+            appointments: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
+        };
+        UserMoneyVisibilityDto: {
+            /** @enum {string} */
+            operations: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
+            /** @enum {string} */
+            encounters: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
+            /** @enum {string} */
+            appointments: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
+        };
+        AssistantContextDto: {
+            /** @enum {string} */
+            persona: "platform_super_admin" | "group_admin" | "group_supervisor" | "branch_manager" | "finance_officer" | "hr_officer" | "clinic_admin" | "clinic_assistant" | "physician" | "nurse" | "receptionist" | "call_center";
+            title: string;
+            greeting: string;
+            suggestedPrompts: string[];
+            /** @description Nav areas the user may access */
+            allowedNavKeys: string[];
+            /** @description Effective ai_assistant feature flag (platform ∧ market ∧ organization) */
+            assistantEnabled: boolean;
+        };
+        AssistantChatDto: {
+            /** @description User message to the assistant */
+            message: string;
+            /**
+             * @default en
+             * @enum {string}
+             */
+            locale: "en" | "ar";
+        };
+        AssistantChatActionDto: {
+            /** @enum {string} */
+            type: "open_patient" | "navigate";
+            /** @description Button label (localized) */
+            label: string;
+            /** @description Patient id when type is open_patient */
+            patientId?: string;
+            mrn?: string;
+            /** @description In-app route when type is navigate (e.g. /patients) */
+            href?: string;
+            /** @description Nav tab key for navigate actions */
+            navKey?: string;
+        };
+        AssistantChatResponseDto: {
+            reply: string;
+            /** @enum {string} */
+            persona: "platform_super_admin" | "group_admin" | "group_supervisor" | "branch_manager" | "finance_officer" | "hr_officer" | "clinic_admin" | "clinic_assistant" | "physician" | "nurse" | "receptionist" | "call_center";
+            suggestedPrompts: string[];
+            actions?: components["schemas"]["AssistantChatActionDto"][];
+        };
+        CheckInConsentCaptureDto: {
+            /** @description PDPL / data processing consent */
+            dataProcessing?: boolean;
+            /** @description Consent to send PHI to the AI assistant / LLM */
+            aiProcessing?: boolean;
+            /** @description Consent to share profile with Kiorex / marketplace */
+            marketplaceSharing?: boolean;
+            signerName?: string;
+            signedOnTablet?: boolean;
+        };
+        FrontDeskCheckInDto: {
+            paymentAmount?: number;
+            roomLabel?: string;
+            currency?: string;
+            visitCollection?: components["schemas"]["VisitCollectionDto"];
+            consentCapture?: components["schemas"]["CheckInConsentCaptureDto"];
+        };
+        CollectVisitBalanceDto: {
+            visitCollection: components["schemas"]["VisitCollectionDto"];
+        };
+        PatchOnboardingStepDto: {
+            /** @enum {string} */
+            action: "complete" | "skip";
+            entityId?: string;
+        };
+        PutProviderProfileDto: Record<string, never>;
+        UpsertPushSubscriptionDto: {
+            /** @description PushService endpoint URL */
+            endpoint: string;
+            /**
+             * @description Web Push keys from PushSubscription.toJSON()
+             * @example {
+             *       "p256dh": "...",
+             *       "auth": "..."
+             *     }
+             */
+            keys: Record<string, never>;
+            userAgent?: string;
         };
     };
     responses: never;
@@ -3753,6 +12963,292 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["LoginResponseDto"];
                 };
+            };
+        };
+    };
+    AuthController_handoffLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoffLoginDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_handoffExchange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoffExchangeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponseDto"];
+                };
+            };
+        };
+    };
+    AuthController_refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_forgotPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_otpRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_otpVerify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponseDto"];
+                };
+            };
+        };
+    };
+    AuthController_listSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_revokeSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_revokeAllSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_beginMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_confirmMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_disableMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_enableWhatsAppMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_whatsappMfaChallenge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_regenerateMfaRecovery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3873,102 +13369,210 @@ export interface operations {
             };
         };
     };
-    UserNavTabsController_getOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
-                };
-            };
-        };
-    };
-    UserNavTabsController_putOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetUserNavTabsDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
-                };
-            };
-        };
-    };
-    TenantRoleNavTabsController_getOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                role: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
-                };
-            };
-        };
-    };
-    TenantRoleNavTabsController_putOne: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                role: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetUserNavTabsDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
-                };
-            };
-        };
-    };
-    UserClinicPrivilegeGrantsController_list: {
+    KiorexOidcController_config: {
         parameters: {
             query: {
-                userId: string;
+                org: string;
+            };
+            header: {
+                "x-forwarded-host": string;
+                host: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexOidcController_start: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-forwarded-host": string;
+                host: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexOidcController_callback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexCallbackDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexOidcController_complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexCompleteDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexOidcController_linkStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexOidcController_linkStart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexPasswordDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexOidcController_unlink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexPasswordDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexOidcController_backchannelLogout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexBackchannelDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MessagingController_templates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MessagingController_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MessagingController_outbound: {
+        parameters: {
+            query: {
+                patientId: string;
+                appointmentId: string;
+                limit: string;
             };
             header?: never;
             path?: never;
@@ -3980,36 +13584,193 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["UserClinicHrAssignmentDto"][];
-                };
+                content?: never;
             };
         };
     };
-    UserClinicPrivilegeGrantsController_assign: {
+    MessagingController_failures: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetUserClinicHrAssignmentDto"];
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["UserClinicHrAssignmentDto"];
-                };
+                content?: never;
             };
         };
     };
-    UserClinicPrivilegeGrantsController_remove: {
+    MessagingController_recall: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WhatsAppWebhookController_verify: {
+        parameters: {
+            query: {
+                "hub.mode": string;
+                "hub.verify_token": string;
+                "hub.challenge": string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WhatsAppWebhookController_event: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicAppointmentRescheduleController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicAppointmentRescheduleController_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InstallmentRemindersController_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DigestsController_getPrefs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DigestsController_putPrefs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DigestsController_notices: {
+        parameters: {
+            query: {
+                unreadOnly: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DigestsController_markRead: {
         parameters: {
             query?: never;
             header?: never;
@@ -4028,10 +13789,644 @@ export interface operations {
             };
         };
     };
+    WhatsAppAiReceptionistController_inbox: {
+        parameters: {
+            query: {
+                handedOverOnly: string;
+                limit: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderWebhooksController_receive: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-twilio-signature": string;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_listTypes: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_saveType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_patchType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_listTypeOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_putTypeOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_listSlots: {
+        parameters: {
+            query: {
+                clinicId: string;
+                clinicianId: string;
+                typeId: string;
+                from: string;
+                to: string;
+                channel: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_getAvail: {
+        parameters: {
+            query: {
+                clinicId: string;
+                clinicianId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_putAvail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_leaveBlocks: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                clinicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_waitlist: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_addWaitlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_waitlistOffers: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_cancelWaitlist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_series: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SchedulingController_noShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicianVerificationController_getMine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicianVerificationController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitClinicianVerificationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicianVerificationController_uploadDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicianVerificationController_downloadOwn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformVerificationsController_reviewConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformVerificationsController_metrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformVerificationsController_list: {
+        parameters: {
+            query: {
+                status: string;
+                profession: string;
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformVerificationsController_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformVerificationDecisionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformVerificationsController_revealNationalId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformVerificationsController_downloadForReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProfessionController_setProfession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetProfessionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FeatureFlagsController_effective: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_listConsents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_duplicateSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_listDuplicates: {
+        parameters: {
+            query: {
+                reason: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_mergeSafePhoneDuplicates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     PatientsController_list: {
         parameters: {
             query: {
                 search: string;
+                id: string;
                 mrn: string;
                 phone: string;
                 gender: string;
@@ -4121,6 +14516,29 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PatientPhoneConflictDto"];
                 };
+            };
+        };
+    };
+    PatientsController_listAllergies: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated PatientAllergyDto */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -4420,6 +14838,762 @@ export interface operations {
             };
         };
     };
+    PatientsController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_timeline: {
+        parameters: {
+            query: {
+                types: string;
+                limit: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_activeProblems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_saveActiveProblem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_familyLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_addFamilyLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_removeFamilyLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                linkId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_mergePatients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_clinicalPhotos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_getClinicalPhotoFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                photoId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Binary image stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientsController_getMessagingConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagingConsentItemDto"][];
+                };
+            };
+        };
+    };
+    PatientsController_putMessagingConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutMessagingConsentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagingConsentItemDto"][];
+                };
+            };
+        };
+    };
+    ComplianceController_latestConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ComplianceController_recordConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserNavTabsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
+                };
+            };
+        };
+    };
+    UserNavTabsController_putOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUserNavTabsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
+                };
+            };
+        };
+    };
+    TenantRoleNavTabsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
+                };
+            };
+        };
+    };
+    TenantRoleNavTabsController_putOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                role: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUserNavTabsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserNavTabGrantResponseDto"];
+                };
+            };
+        };
+    };
+    UserClinicPrivilegeGrantsController_list: {
+        parameters: {
+            query: {
+                userId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserClinicHrAssignmentDto"][];
+                };
+            };
+        };
+    };
+    UserClinicPrivilegeGrantsController_assign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUserClinicHrAssignmentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserClinicHrAssignmentDto"];
+                };
+            };
+        };
+    };
+    UserClinicPrivilegeGrantsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_listTickets: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                status: string;
+                module: string;
+                q: string;
+                assigneeUserId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_createTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupportTicketDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_getTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_patchTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchSupportTicketDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_addEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupportTicketEventDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_listMacros: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_applyMacro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                macroId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_escalateEngineering: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_trackingLogs: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                q: string;
+                action: string;
+                resource: string;
+                actorId: string;
+                from: string;
+                to: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_ticketFromAudit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auditLogId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_listTenantAccessRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_requestAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_listMyAccessRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_decideAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_revokeAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SupportController_openPatientChart: {
+        parameters: {
+            query: {
+                tenantId: string;
+            };
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ClinicsController_list: {
         parameters: {
             query: {
@@ -4547,6 +15721,32 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicPhysicianDto"];
+                };
+            };
+        };
+    };
+    ClinicsController_patchPhysicianExamRoom: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchClinicPhysicianExamRoomDto"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4695,6 +15895,25 @@ export interface operations {
             };
         };
     };
+    DashboardController_today: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     HealthController_live: {
         parameters: {
             query?: never;
@@ -4714,6 +15933,23 @@ export interface operations {
                         status?: string;
                     };
                 };
+            };
+        };
+    };
+    HealthController_providers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -4894,6 +16130,8 @@ export interface operations {
                     file: string;
                     /** @enum {string} */
                     kind: "LAB" | "RADIOLOGY" | "PRESCRIPTION";
+                    /** @description When set, replace only this existing document of the same kind (others are kept) */
+                    replaceDocumentId?: string;
                 };
             };
         };
@@ -5021,6 +16259,27 @@ export interface operations {
             };
         };
     };
+    EncountersController_amend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EncounterDetailDto"];
+                };
+            };
+        };
+    };
     EncountersController_finalize: {
         parameters: {
             query?: never;
@@ -5039,6 +16298,948 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EncounterDetailDto"];
                 };
+            };
+        };
+    };
+    ClinicalController_listTemplates: {
+        parameters: {
+            query: {
+                specialty: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_upsertTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_deleteTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_shortcuts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_createShortcut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_deleteShortcut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_searchIcd: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_favIcd: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_vitalsSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_lastVisit: {
+        parameters: {
+            query: {
+                excludeEncounterId: string;
+            };
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_letter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_searchDrugs: {
+        parameters: {
+            query: {
+                q: string;
+                limit: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_rxCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_safetyCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_listOrders: {
+        parameters: {
+            query: {
+                encounterId: string;
+                patientId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_createOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_patchOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_downloadOrderResultsPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_attachOrderResultsPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_handoffOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_listSpecialtyAddons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_dentalChart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_upsertDentalTooth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_beforeAfter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicalController_physioPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioController_referral: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioController_assessment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioController_plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioController_getPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioController_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioController_discharge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioController_programme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioController_share: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioController_trend: {
+        parameters: {
+            query: {
+                kind: string;
+                label: string;
+            };
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PhysioPublicController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecordShareClinicController_getRecordShareConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RecordShareClinicController_putRecordShareConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformKiorexRatesController_list: {
+        parameters: {
+            query: {
+                marketId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformKiorexRatesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformKiorexRatesController_patchMarketSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                marketId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformKiorexRatesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformKiorexRatesController_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformCommissionDisputesController_list: {
+        parameters: {
+            query: {
+                status: string;
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformCommissionDisputesController_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveCommissionDisputeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicKiorexFeesController_list: {
+        parameters: {
+            query: {
+                market: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexBillingChargesController_list: {
+        parameters: {
+            query: {
+                period: string;
+                status: string;
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexBillingChargesController_dispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenCommissionDisputeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionDecisionsController_explain: {
+        parameters: {
+            query: {
+                appointmentId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionDecisionsController_statement: {
+        parameters: {
+            query: {
+                period: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionDecisionsController_override: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5189,6 +17390,28 @@ export interface operations {
             };
         };
     };
+    RevenueController_listReceivables: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { items, total, page, pageSize, totalPages } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RevenueController_totals: {
         parameters: {
             query: {
@@ -5280,6 +17503,173 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RevenueEntryDto"];
                 };
+            };
+        };
+    };
+    RevenueShareController_statements: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueShareController_reconciliation: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueShareController_addAdjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueShareController_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueShareController_markPaid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueShareController_pdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueShareController_listRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueShareController_createRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RevenueShareController_deactivateRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5744,6 +18134,7 @@ export interface operations {
                 sortBy: string;
                 sortOrder: string;
                 bookableOnly: string;
+                bookingSource: string;
             };
             header?: never;
             path?: never;
@@ -5897,6 +18288,1046 @@ export interface operations {
             };
         };
     };
+    DepositLinksController_requirement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DepositLinksController_createLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DepositLinksController_getPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DepositLinksController_updatePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicDepositLinkController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicLegalController_catalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicLegalController_document: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                doc: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LegalController_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LegalController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_recordPaywallEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_getSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_getAccessState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_getTrial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_getCreditWallet: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_getNoShowGuarantee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_listSpecialtyAddons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_purchaseSpecialtyAddon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_previewChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_changePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_changeSeats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_previewSeats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_cancelSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_listCatalog: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_createCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_recordPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_cashClose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_listRefunds: {
+        parameters: {
+            query: {
+                status: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_createRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_approveRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_rejectRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_sellPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_consumePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_cancelPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_takeDeposit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_applyDeposit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_releaseDeposit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_markDepositPaid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_kiorexPayouts: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PatientMoneyController_balances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CashierShiftsController_current: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CashierShiftsController_list: {
+        parameters: {
+            query: {
+                clinicId: string;
+                needsReview: string;
+                limit: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CashierShiftsController_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CashierShiftsController_close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CashierShiftsController_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CashierShiftsController_zReport: {
+        parameters: {
+            query: {
+                format: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SplitPaymentsController_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SplitPaymentsController_installments: {
+        parameters: {
+            query: {
+                clinicId: string;
+                operationId: string;
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SplitPaymentsController_setSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClaimsController_listPayers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClaimsController_upsertPayer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClaimsController_listBatches: {
+        parameters: {
+            query: {
+                payerCompanyId: string;
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClaimsController_createBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClaimsController_getBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClaimsController_submitBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClaimsController_rejectLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClaimsController_resubmitLine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClaimsController_importRemittance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     OperationsController_list: {
         parameters: {
             query: {
@@ -5908,6 +19339,8 @@ export interface operations {
                 sortOrder: string;
                 clinicId: string;
                 status: string;
+                patientId: string;
+                isContract: string;
             };
             header?: never;
             path?: never;
@@ -5947,10 +19380,55 @@ export interface operations {
             };
         };
     };
+    OperationsController_summary: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                clinicId: string;
+                isContract: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     OperationsController_listPayable: {
         parameters: {
             query: {
                 clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationDto"][];
+                };
+            };
+        };
+    };
+    OperationsController_sameDayDuplicates: {
+        parameters: {
+            query: {
+                patientId: string;
+                clinicianId: string;
+                operationDate: string;
             };
             header?: never;
             path?: never;
@@ -6050,8 +19528,10 @@ export interface operations {
                     /** Format: binary */
                     file: string;
                     /** @enum {string} */
-                    kind: "ATTACHMENT" | "PRESCRIPTION";
+                    kind: "ATTACHMENT" | "PRESCRIPTION" | "CONSENT" | "OPERATION_NOTE" | "POST_SURGERY";
                     description?: string;
+                    /** @description When set, deletes this existing document of the same kind before creating the new one */
+                    replaceDocumentId?: string;
                 };
             };
         };
@@ -6063,6 +19543,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["OperationDocumentDto"];
                 };
+            };
+        };
+    };
+    OperationsController_removeDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                docId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { ok: true } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -6107,11 +19608,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": {
-                        ok: true;
-                    };
-                };
+                content?: never;
             };
         };
     };
@@ -6137,6 +19634,102 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["OperationDto"];
                 };
+            };
+        };
+    };
+    OperationsController_preOpList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OperationsController_preOpComplete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OperationsController_addSupply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OperationsController_setInstallments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OperationsController_saveNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -6388,6 +19981,238 @@ export interface operations {
             };
         };
     };
+    AdminController_integrationFailures: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                q: string;
+                from: string;
+                to: string;
+                category: string;
+                integrationClientId: string;
+                clinicId: string;
+                status: string;
+                locale: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_integrationFailuresSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_integrationFailureGroups: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                from: string;
+                to: string;
+                category: string;
+                locale: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_integrationFailuresExport: {
+        parameters: {
+            query: {
+                q: string;
+                from: string;
+                to: string;
+                category: string;
+                integrationClientId: string;
+                clinicId: string;
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_integrationFailureById: {
+        parameters: {
+            query: {
+                locale: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_patchIntegrationFailure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchIntegrationFailureDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_retryIntegrationFailureWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_outboxEvents: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+                status: string;
+                type: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_outboxEventsSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_retryOutboxEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_purgeIntegrationFailureRetention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     AdminController_insightsOverview360: {
         parameters: {
             query: {
@@ -6435,6 +20260,7 @@ export interface operations {
                 pageSize: string;
                 sortBy: string;
                 sortOrder: string;
+                q: string;
             };
             header?: never;
             path?: never;
@@ -6462,6 +20288,97 @@ export interface operations {
                 "application/json": components["schemas"]["PatchTenantSettingsDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_getSignInMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_putSignInMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_listPaymentChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_createPaymentChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTenantPaymentChannelDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_deletePaymentChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -6598,6 +20515,50 @@ export interface operations {
             };
         };
     };
+    AdminController_patchUserRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchUserRolesDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminController_transferOwnership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferTenantOwnershipDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     AdminController_deactivateUser: {
         parameters: {
             query?: never;
@@ -6667,7 +20628,7 @@ export interface operations {
             };
         };
     };
-    AdminController_patchFlag: {
+    AdminController_patchTenantFeatureFlag: {
         parameters: {
             query?: never;
             header?: never;
@@ -6717,6 +20678,157 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_doubleLinkedPatients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_mergeSafeDuplicatePatients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_listExportJobs: {
+        parameters: {
+            query: {
+                limit: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_startExportJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_getExportJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_cancelExportJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_downloadExportJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminDataExplorerController_importBackup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6865,7 +20977,107 @@ export interface operations {
             };
         };
     };
+    OrgBackupDownloadController_downloadByToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Streams the export artifact */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_listBillingAudit: {
+        parameters: {
+            query: {
+                entity: string;
+                tenantId: string;
+                page: string;
+                pageSize: string;
+                q: string;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     PlatformAdminController_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_insightsOrganizations: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_insightsPlatform: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_growth: {
         parameters: {
             query?: never;
             header?: never;
@@ -6902,6 +21114,23 @@ export interface operations {
         };
     };
     PlatformAdminController_featureFlags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_featureFlagStatus: {
         parameters: {
             query?: never;
             header?: never;
@@ -6989,6 +21218,7 @@ export interface operations {
                 pageSize: string;
                 sortBy: string;
                 sortOrder: string;
+                q: string;
             };
             header?: never;
             path?: never;
@@ -7339,6 +21569,1175 @@ export interface operations {
             };
         };
     };
+    PlatformAdminController_verifyKiorlyPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_grantCredits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_runSettlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_extendTrial: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_setPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_putEntitlementOverride: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_listDrugDatasets: {
+        parameters: {
+            query: {
+                marketCode: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_importDrugDataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_resetSalesDemo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformAdminController_salesRoi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_listClinics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_listPhysicians: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_availability: {
+        parameters: {
+            query: {
+                clinicId: string;
+                clinicianId: string;
+                typeId: string;
+                from: string;
+                to: string;
+                channel: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_book: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntegrationBookAppointmentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsAppointmentsController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsOperationsController_listPhysicians: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsOperationsController_availability: {
+        parameters: {
+            query: {
+                clinicId: string;
+                clinicianId: string;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsOperationsController_book: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntegrationBookOperationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsOperationsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationsOperationsController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationAdminController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationAdminController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIntegrationClientDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationAdminController_rotate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationAdminController_deactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationWebhooksAdminController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationWebhooksAdminController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIntegrationWebhookDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    IntegrationWebhooksAdminController_deactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clientId: string;
+                webhookId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_listOperable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_getCommercialConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_putCommercialConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_previewCommercialConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_getLegalConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_putLegalConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchMarketDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_launch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_pause: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PauseMarketDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_enable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_featureFlags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketsController_patchFeatureFlag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchFeatureFlagDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TenantMarketController_current: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Market currency, timezone, and payment methods for the tenant */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorlyInvoicesController_list: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorlyInvoicesController_getOne: {
+        parameters: {
+            query: {
+                format: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorlyBillingPaymentsController_cardSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorlyBillingPaymentsController_listMethods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorlyBillingPaymentsController_uploadProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorlyBillingPaymentsController_pay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorlyBillingPaymentsController_paymentStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorlyPaymentsWebhookController_handle: {
+        parameters: {
+            query: {
+                hmac: string;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SettlementController_preview: {
+        parameters: {
+            query: {
+                period: string;
+                tenantId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexProgressController_liteKiorexFees: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexProgressController_kiorexProgress: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MonthlyStatementController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MonthlyStatementController_getOne: {
+        parameters: {
+            query: {
+                format: string;
+            };
+            header?: never;
+            path: {
+                period: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthReferralController_referral: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ReportsController_profitLoss: {
         parameters: {
             query: {
@@ -7473,6 +22872,207 @@ export interface operations {
             };
         };
     };
+    ReportsController_operationAcquisition: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                clinicId: string;
+                isContract: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_encounterAcquisition: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_kiorex: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_operations: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                period: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_arAging: {
+        parameters: {
+            query: {
+                asOf: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_payouts: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_branchPl: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_getSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_putSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportsController_exportReport: {
+        parameters: {
+            query: {
+                format: string;
+                from: string;
+                to: string;
+                clinicId: string;
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     UsersController_list: {
         parameters: {
             query: {
@@ -7494,15 +23094,359 @@ export interface operations {
             };
         };
     };
-    SupportController_listTickets: {
+    UserPreferencesController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserPreferencesController_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvitationsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvitationsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvitationsController_resend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InvitationsController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicInvitationsController_view: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicInvitationsController_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UserMoneyVisibilityController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserMoneyVisibilityResponseDto"];
+                };
+            };
+        };
+    };
+    UserMoneyVisibilityController_putOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserMoneyVisibilityDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserMoneyVisibilityResponseDto"];
+                };
+            };
+        };
+    };
+    AssistantController_getContext: {
         parameters: {
             query: {
-                page: string;
-                pageSize: string;
-                status: string;
-                module: string;
-                q: string;
-                assigneeUserId: string;
+                locale: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantContextDto"];
+                };
+            };
+        };
+    };
+    AssistantController_chat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantChatDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantChatResponseDto"];
+                };
+            };
+        };
+    };
+    RxShareController_print: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RxShareController_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RxShareController_handoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicRxVerifyController_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicRxVerifyController_pdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DevInboxController_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DevInboxController_list: {
+        parameters: {
+            query: {
+                channel: string;
+                to: string;
+                direction: string;
+                limit: string;
             };
             header?: never;
             path?: never;
@@ -7518,28 +23462,7 @@ export interface operations {
             };
         };
     };
-    SupportController_createTicket: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSupportTicketDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    SupportController_getTicket: {
+    DevInboxController_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -7558,7 +23481,7 @@ export interface operations {
             };
         };
     };
-    SupportController_patchTicket: {
+    DevInboxController_delivery: {
         parameters: {
             query?: never;
             header?: never;
@@ -7567,11 +23490,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PatchSupportTicketDto"];
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -7581,20 +23500,14 @@ export interface operations {
             };
         };
     };
-    SupportController_addEvent: {
+    DevInboxController_inbound: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSupportTicketEventDto"];
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -7604,15 +23517,761 @@ export interface operations {
             };
         };
     };
-    SupportController_trackingLogs: {
+    DevInboxController_psp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DevInboxController_pspRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DevInboxController_sendTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_search: {
         parameters: {
             query: {
-                page: string;
-                pageSize: string;
                 q: string;
-                action: string;
-                resource: string;
-                actorId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_startVisit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_checkIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FrontDeskCheckInDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_board: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_callTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_headerAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_collectVisitBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                encounterId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectVisitBalanceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_collectVisitBalanceWithReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                encounterId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    receipt: string;
+                    /** @description JSON VisitCollectionDto */
+                    visitCollection: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_printSettings: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_putPrintSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_printQueueTicket: {
+        parameters: {
+            query: {
+                clinicId: string;
+                ticketNumber: string;
+                patientName: string;
+                locale: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FrontDeskController_printReceipt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_requestTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_requestPatient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_getOffboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_startOffboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_legalHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_download: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExportsController_getJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicAiController_preVisit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicAiController_refreshRisk: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicAiController_startScribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                encounterId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicAiController_getScribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicAiController_uploadAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicAiController_stopScribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ClinicAiController_approveScribe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsageController_getUsage: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ScopeOfPracticeController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_mySettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_putSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_configureType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_safetyContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_putSafetyContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_book: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_list: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                state: string;
+                clinicianId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_route: {
+        parameters: {
+            query: {
+                date: string;
+                clinicianId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_report: {
+        parameters: {
+            query: {
                 from: string;
                 to: string;
                 clinicId: string;
@@ -7631,12 +24290,29 @@ export interface operations {
             };
         };
     };
-    SupportController_ticketFromAudit: {
+    HomeVisitsController_alerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_ack: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                auditLogId: string;
+                alertId: string;
             };
             cookie?: never;
         };
@@ -7650,7 +24326,311 @@ export interface operations {
             };
         };
     };
-    IntegrationsAppointmentsController_verify: {
+    HomeVisitsController_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alertId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_suggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_assign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_depart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_arrive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_finish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_abort: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_sos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HomeVisitsController_answer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_byAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appointmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appointmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_offer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_putSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                clinicianId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_configureType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_review: {
         parameters: {
             query?: never;
             header?: never;
@@ -7667,7 +24647,295 @@ export interface operations {
             };
         };
     };
-    IntegrationsAppointmentsController_listClinics: {
+    TelehealthController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_getSignals: {
+        parameters: {
+            query: {
+                afterSeq: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_postSignal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_mode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_end: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthController_regenerate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthPublicController_info: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthPublicController_ics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthPublicController_join: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthPublicController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthPublicController_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthPublicController_mode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TelehealthPublicController_end: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NursePublicController_editionByHost: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-forwarded-host": string;
+                host: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NursePublicController_plans: {
         parameters: {
             query?: never;
             header?: never;
@@ -7684,12 +24952,1672 @@ export interface operations {
             };
         };
     };
-    IntegrationsAppointmentsController_listPhysicians: {
+    NursePublicController_complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NursePublicController_familySummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseEditionController_context: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-forwarded-host": string;
+                host: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseEditionController_onboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseEditionController_changeEdition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_listPlans: {
+        parameters: {
+            query: {
+                patientId: string;
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_createPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_getPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_pausePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_resumePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_extendPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_endPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_shareDischarge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_listPlanRequests: {
+        parameters: {
+            query: {
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_acceptPlanRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_declinePlanRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appointmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_updateRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appointmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_sign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appointmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_vitals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_trend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_escalation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_listShifts: {
+        parameters: {
+            query: {
+                nurseId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_bookShift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_checkIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_checkOut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_handover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_familyContacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_setFamilyConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+                contactId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_familyUpdate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appointmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseClinicalController_summary: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                nurseId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseMarController_photoOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseMarController_sharedOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseMarController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseMarController_orderList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseMarController_administer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseMarController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                patientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseAgencyController_roster: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseAgencyController_upsert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseAgencyController_pay: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                nurseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseLabController_list: {
+        parameters: {
+            query: {
+                appointmentId: string;
+                patientId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseLabController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                appointmentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseLabController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseLabController_collect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    NurseLabController_custody: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicSignupController_listMarkets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicSignupController_requestOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicSignupController_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicSignupController_complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provisioned clinic session (same shape as auth login) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicCohortsController_remaining: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicPlansController_list: {
+        parameters: {
+            query: {
+                market: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformPlansController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformPlansController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformPlansController_priceMigrations: {
+        parameters: {
+            query: {
+                status: string;
+                planId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformPlansController_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformPlansController_listPrices: {
+        parameters: {
+            query: {
+                marketId: string;
+            };
+            header?: never;
+            path: {
+                planId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformPlansController_createPrice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OnboardingController_getSampleData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OnboardingController_createSampleData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OnboardingController_removeSampleData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OnboardingController_getProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OnboardingController_patchStep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatchOnboardingStepDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OnboardingController_dismiss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ImportsController_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ImportsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ImportsController_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @enum {string} */
+                    entity: "PATIENTS" | "APPOINTMENTS" | "PRICE_LIST" | "STAFF";
+                    /** @enum {string} */
+                    dedupeMode?: "SKIP" | "MERGE";
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ImportsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ImportsController_errorReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ImportsController_commit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ImportsController_undo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_roi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_createTenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_resendOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_portfolio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_commission: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_listImports: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SalesRepsController_commit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSalesRepsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSalesRepsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_createCarePlanRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_labOrderStatus: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_verify: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_listClinics: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_listProviders: {
+        parameters: {
+            query: {
+                updatedSince: string;
+                page: string;
+                pageSize: string;
+            };
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_listPhysicians: {
         parameters: {
             query: {
                 clinicId: string;
             };
-            header?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7703,15 +26631,56 @@ export interface operations {
             };
         };
     };
-    IntegrationsAppointmentsController_availability: {
+    MarketplaceController_listSlots: {
+        parameters: {
+            query: {
+                clinicianId: string;
+                typeId: string;
+                from: string;
+                to: string;
+                serviceLocation: string;
+                district: string;
+                lat: string;
+                lng: string;
+            };
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                clinicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_availability: {
         parameters: {
             query: {
                 clinicId: string;
                 clinicianId: string;
+                typeId: string;
                 from: string;
                 to: string;
             };
-            header?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7725,10 +26694,435 @@ export interface operations {
             };
         };
     };
-    IntegrationsAppointmentsController_book: {
+    MarketplaceController_createHold: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_releaseHold: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_createBooking: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_getBooking: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                externalRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_cancelBooking: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                externalRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_rescheduleBooking: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                externalRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_depositPaid: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                externalRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_depositLinkPaid: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_recordPayout: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_syncProfileViews: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_syncReviews: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_slotCapacityCounts: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                clinicId: string;
+                clinicianId: string;
+            };
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_joinWaitlist: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_getWaitlist: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                externalRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_leaveWaitlist: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                externalRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_acceptWaitlistOffer: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                offerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_declineWaitlistOffer: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                offerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_book: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7746,7 +27140,179 @@ export interface operations {
             };
         };
     };
-    IntegrationsAppointmentsController_getOne: {
+    MarketplaceController_getOne: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_cancel: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_upsertRecordShareConsents: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceReferralLinksController_list: {
+        parameters: {
+            query: {
+                updatedSince: string;
+                limit: string;
+                cursor: string;
+            };
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceReferralLinksController_get: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceOrgController_list: {
+        parameters: {
+            query: {
+                clinicId: string;
+                sync: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceOrgController_pause: {
+        parameters: {
+            query: {
+                paused: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceListingsProfileController_getProfile: {
         parameters: {
             query?: never;
             header?: never;
@@ -7765,7 +27331,30 @@ export interface operations {
             };
         };
     };
-    IntegrationsAppointmentsController_cancel: {
+    MarketplaceListingsProfileController_putProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PutProviderProfileDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceListingsProfileController_uploadPhoto: {
         parameters: {
             query?: never;
             header?: never;
@@ -7784,7 +27373,46 @@ export interface operations {
             };
         };
     };
-    IntegrationAdminController_list: {
+    KiorexSettingsController_overview: {
+        parameters: {
+            query: {
+                clinicId: string;
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexSettingsController_get: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexSettingsController_put: {
         parameters: {
             query?: never;
             header?: never;
@@ -7801,7 +27429,345 @@ export interface operations {
             };
         };
     };
-    IntegrationAdminController_create: {
+    KiorexSettingsController_ratings: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexSettingsController_reply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexSettingsController_bookingLink: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexSettingsController_updateBookingLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicBookingPageController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexImportController_records: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexImportController_rollback: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexConnectController_get: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexConnectController_consent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexConnectController_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexConnectController_refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexFrontDoorController_get: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexFrontDoorController_interest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexFrontDoorController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexFrontDoorController_talk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexConnectionController_ping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orgRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    KiorexConnectionController_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orgRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PushController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PushController_upsert: {
         parameters: {
             query?: never;
             header?: never;
@@ -7810,81 +27776,22 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateIntegrationClientDto"];
+                "application/json": components["schemas"]["UpsertPushSubscriptionDto"];
             };
         };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    IntegrationAdminController_rotate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    IntegrationAdminController_deactivate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    EncountersController_amend: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["EncounterDetailDto"];
-                };
+                content?: never;
             };
         };
     };
-    ClinicalController_listTemplates: {
+    PushController_remove: {
         parameters: {
             query: {
-                specialty: string;
+                endpoint: string;
             };
             header?: never;
             path?: never;
@@ -7900,24 +27807,7 @@ export interface operations {
             };
         };
     };
-    ClinicalController_upsertTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ClinicalController_shortcuts: {
+    ProviderLinksController_access: {
         parameters: {
             query?: never;
             header?: never;
@@ -7934,7 +27824,27 @@ export interface operations {
             };
         };
     };
-    ClinicalController_createShortcut: {
+    ProviderLinksController_list: {
+        parameters: {
+            query: {
+                clinicId: string;
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -7951,7 +27861,7 @@ export interface operations {
             };
         };
     };
-    ClinicalController_deleteShortcut: {
+    ProviderLinksController_update: {
         parameters: {
             query?: never;
             header?: never;
@@ -7970,7 +27880,586 @@ export interface operations {
             };
         };
     };
-    ClinicalController_searchIcd: {
+    ProviderLinksController_qrSvg: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_qrPng: {
+        parameters: {
+            query: {
+                width: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_poster: {
+        parameters: {
+            query: {
+                lang: string;
+                size: string;
+                kind: string;
+                print: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_vcard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_summary: {
+        parameters: {
+            query: {
+                clinicId: string;
+                days: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_performance: {
+        parameters: {
+            query: {
+                clinicId: string;
+                days: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_recommendations: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_profilePreview: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_getWidget: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderLinksController_putWidget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicLinkController_qr: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicLinkController_go: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMobileController_overview: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMobileController_links: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMobileController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMobileController_qr: {
+        parameters: {
+            query: {
+                linkId: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMobileController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_bootstrap: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-kiorly-device": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_devices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_pushToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_inbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_readAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_pushTest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_listAlerts: {
+        parameters: {
+            query: {
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_ack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_upgradeRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_search: {
         parameters: {
             query: {
                 q: string;
@@ -7989,50 +28478,31 @@ export interface operations {
             };
         };
     };
-    ClinicalController_favIcd: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ClinicalController_vitalsSeries: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                patientId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ClinicalController_lastVisit: {
+    MobileController_prescriptions: {
         parameters: {
             query: {
-                excludeEncounterId: string;
+                status: string;
             };
             header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_sign: {
+        parameters: {
+            query?: never;
+            header?: never;
             path: {
-                patientId: string;
+                encounterId: string;
             };
             cookie?: never;
         };
@@ -8046,10 +28516,50 @@ export interface operations {
             };
         };
     };
-    ClinicalController_letter: {
+    MobileController_labResults: {
+        parameters: {
+            query: {
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_approve: {
         parameters: {
             query?: never;
             header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MobileController_recordVitals: {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8063,7 +28573,7 @@ export interface operations {
             };
         };
     };
-    ClinicalController_safetyCheck: {
+    MobileController_revenue: {
         parameters: {
             query?: never;
             header?: never;
@@ -8072,7 +28582,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            201: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

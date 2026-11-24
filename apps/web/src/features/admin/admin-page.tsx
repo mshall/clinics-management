@@ -66,7 +66,8 @@ export function AdminPage() {
   const authUser = useAuthStore((s) => s.user);
   const refreshSession = useAuthStore((s) => s.refreshSessionFromServer);
   const orgBaseCurrency = useOrgBaseCurrency();
-  const isGroupAdmin = authUser?.role === "group_admin";
+  // the self-serve owner is a physician with GROUP_ADMIN as an additional role: the page (and the API) treat them as group admin
+  const isGroupAdmin = authUser?.role === "group_admin" || Boolean(authUser?.additionalRoles?.includes("group_admin"));
   const isClinicAdmin = authUser?.role === "clinic_admin";
   const isBranchManager = authUser?.role === "branch_manager";
   const isGroupSupervisor = authUser?.role === "group_supervisor";
@@ -242,7 +243,11 @@ export function AdminPage() {
 
   const [adminSection, setAdminSection] = useState<
     "clinics" | "users" | "patients" | "organization" | "data" | "governance" | "insights"
-  >("clinics");
+  >(() => {
+    // Quick setup deep link: /admin?section=organization opens that section (e.g. WhatsApp reminders)
+    const s = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search).get("section");
+    return s === "organization" || s === "users" || s === "patients" || s === "data" || s === "governance" || s === "insights" ? s : "clinics";
+  });
   const [clinicAdminSection, setClinicAdminSection] = useState<"staff" | "organization" | "governance" | "insights">(
     "staff",
   );
@@ -614,7 +619,7 @@ export function AdminPage() {
             </Card>
           ) : null}
 
-          {isGroupAdmin ? <OrgWhatsAppRemindersCard /> : null}
+          {isGroupAdmin || authUser?.isTenantOwner ? <OrgWhatsAppRemindersCard /> : null}
 
           {isGroupAdmin ? <OrgSignInDefaultCard /> : null}
 

@@ -88,6 +88,8 @@ export type PublishedProviderDto = {
   verification?: { register: string };
   /** Agencies only: the agency assigns a clinician after booking (HOME_VISIT_ASSIGNED). */
   assignsClinician?: boolean;
+  /** GRW-P1-D1 (contracts 1.10.0): exact https origins allowed to embed the Kiorex booking widget (empty when the widget is off). */
+  widgetOrigins?: string[];
   listingId: string;
   tenantId: string;
   clinicId: string;
@@ -108,6 +110,8 @@ export type PublishedProviderDto = {
     longitude: number | null;
     phone: string;
     logoUrl: string | null;
+    /** GRW-P1-G: the clinic booking slug (also the widget embed slug). Additive: the contract's `clinic` object is open. */
+    bookingSlug?: string | null;
     clinicalSpecialty: string;
     parking: boolean;
     wheelchairAccess: boolean;
@@ -178,6 +182,7 @@ export class MarketplaceProviderProfileService {
       updatedAt: updated.updatedAt.toISOString(),
       provider: published.provider,
       clinic: published.clinic,
+      widgetOrigins: published.widgetOrigins ?? [],
     });
 
     await this.audit.recordEvent({
@@ -268,6 +273,35 @@ export class MarketplaceProviderProfileService {
     });
   }
 
+  /** GRW-P1-D1: allowed widget origins of the clinic, empty while the widget is disabled. */
+  private async widgetOriginsFor(clinicId: string): Promise<string[]> {
+    const cfg = await this.prisma.bookingWidgetConfig.findUnique({ where: { clinicId }, select: { enabled: true, allowedOrigins: true } });
+    if (!cfg?.enabled || !Array.isArray(cfg.allowedOrigins)) return [];
+    return (cfg.allowedOrigins as unknown[]).filter((o): o is string => typeof o === "string");
+  }
+
+  /** GRW-P1-D1: widget settings changed -> Kiorex gets a PROVIDER_PROFILE_UPDATED (with widgetOrigins) for every published listing of the clinic. Returns how many were queued. */
+  async republishClinicProfiles(tenantId: string, clinicId: string): Promise<number> {
+    const rows = await this.prisma.marketplaceListing.findMany({
+      where: { tenantId, clinicId, status: { in: [ListingStatus.LIVE, ListingStatus.PAUSED] } },
+    });
+    for (const row of rows) {
+      const published = await this.buildPublishedFromRow(row);
+      await this.outbox.enqueue(tenantId, PROVIDER_PROFILE_UPDATED_TOPIC, {
+        listingId: row.id,
+        clinicId: row.clinicId,
+        clinicianId: row.clinicianId,
+        status: row.status,
+        completenessPercent: published.completenessPercent,
+        updatedAt: new Date().toISOString(),
+        provider: published.provider,
+        clinic: published.clinic,
+        widgetOrigins: published.widgetOrigins ?? [],
+      });
+    }
+    return rows.length;
+  }
+
   private async buildPublishedFromRow(
     row: Prisma.MarketplaceListingGetPayload<object>,
   ): Promise<PublishedProviderDto> {
@@ -286,6 +320,7 @@ export class MarketplaceProviderProfileService {
           logoUrl: true,
           clinicalSpecialty: true,
           defaultCurrency: true,
+          bookingSlug: true,
         },
       }),
       this.prisma.appointmentType.findMany({
@@ -306,6 +341,7 @@ export class MarketplaceProviderProfileService {
     ]);
 
     const completenessPercent = await this.completenessForListing(row);
+    const widgetOrigins = await this.widgetOriginsFor(row.clinicId);
     // HOME is offered only while clinic.home_visits is effective and the clinician takes home visits ("Home visit types hidden for new bookings").
     const v23 = await this.v23Fields(row.tenantId, row.clinicianId, types.map((t) => t.serviceLocation));
     const offered = types.filter((t) => (t.serviceLocation !== "HOME" || v23.homeOffered) && (t.serviceLocation !== "VIDEO" || v23.telehealthOffered));
@@ -313,6 +349,7 @@ export class MarketplaceProviderProfileService {
 
     return {
       ...v23.fields,
+      widgetOrigins,
       listingId: row.id,
       tenantId: row.tenantId,
       clinicId: row.clinicId,
@@ -334,6 +371,7 @@ export class MarketplaceProviderProfileService {
         longitude: clinic.longitude != null ? Number(clinic.longitude) : null,
         phone: clinic.phone,
         logoUrl: clinic.logoUrl,
+        bookingSlug: clinic.bookingSlug, // GRW-P1-G: lets Kiorex resolve the widget embed slug to this clinic
         clinicalSpecialty: clinic.clinicalSpecialty,
         parking: Boolean(profile.parking),
         wheelchairAccess: Boolean(profile.wheelchairAccess),

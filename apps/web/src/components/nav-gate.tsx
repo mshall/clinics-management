@@ -11,7 +11,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { UpgradeHint } from "@/components/upgrade-hint";
 import { NAV_TAB_ENTITLEMENT } from "@/lib/plan-nav-entitlements";
 
-export function NavGate({ tab, children }: { tab: NavItemKey; children: ReactNode }) {
+export function NavGate({ tab, orTab, children }: { tab: NavItemKey; /** also allowed through this tab (e.g. Kiorex pages for Lite owners: Lite has Admin but no Clinics tab) */ orTab?: NavItemKey; children: ReactNode }) {
   const role = useAuthStore((s) => s.user?.role);
   const navTabKeys = useAuthStore((s) => s.user?.navTabKeys);
   const roleNavTabKeys = useAuthStore((s) => s.user?.roleNavTabKeys);
@@ -21,7 +21,8 @@ export function NavGate({ tab, children }: { tab: NavItemKey; children: ReactNod
   const allRoles = useAuthStore((s) => s.user?.roles);
 
   if (
-    showNavItem(role, tab, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles, planEntitlements, planKey)
+    showNavItem(role, tab, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles, planEntitlements, planKey) ||
+    (orTab && showNavItem(role, orTab, navTabKeys, roleNavTabKeys, employeePrivilegeGrants, allRoles, planEntitlements, planKey))
   ) {
     return <>{children}</>;
   }

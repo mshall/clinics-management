@@ -53,6 +53,12 @@ export function authRatePolicy(path: string, method = "GET"): { limit: number; w
   return PUBLIC_AUTH_RATE;
 }
 
+/** Online password guessing is limited per ACCOUNT as well as per IP (an attacker rotating IPs / forged forwarding headers shares one bucket per e-mail). */
+export const LOGIN_ACCOUNT_RATE = { limit: 20, windowMs: 15 * 60_000 } as const;
+export function isLoginPath(path: string): boolean {
+  return path.includes("/auth/login") || path.includes("/auth/handoff/login");
+}
+
 /** Test helper — clear global store. */
 export function clearRateLimitStore(): void {
   store.clear();

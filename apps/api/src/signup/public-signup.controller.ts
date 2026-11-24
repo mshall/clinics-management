@@ -1,3 +1,4 @@
+import { clientIpOf } from "../common/http-hardening";
 import { Body, Controller, Get, HttpCode, HttpStatus, Optional, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
@@ -24,10 +25,7 @@ export class PublicSignupController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Send phone OTP for signup" })
   requestOtp(@Body() body: { phone: string; market: string }, @Req() req: Request) {
-    const clientIp =
-      (typeof req.headers["x-forwarded-for"] === "string"
-        ? req.headers["x-forwarded-for"].split(",")[0]?.trim()
-        : undefined) || req.socket.remoteAddress;
+    const clientIp = clientIpOf(req);
     return this.signup.requestOtp(body, clientIp);
   }
 
@@ -62,9 +60,12 @@ export class PublicSignupController {
       ref?: string;
       rep?: string;
       legalAcceptances?: { document: string; version: string }[];
+      /** Kiorly Nurse edition sign-up (ADR-031): the Nurse web sends CLINIC|NURSE and, for NURSE, SOLO|AGENCY. */
+      edition?: "CLINIC" | "NURSE";
+      nurseKind?: "SOLO" | "AGENCY";
     },
   ) {
-    const { signupToken, profile, specialty, clinic, planKey, salesRepCode, referralCode, ref, rep, legalAcceptances } =
+    const { signupToken, profile, specialty, clinic, planKey, salesRepCode, referralCode, ref, rep, legalAcceptances, edition, nurseKind } =
       body;
     // clinic.field_rep_onboarding OFF: rep codes are rejected at signup (global/market flag, no org yet).
     if ((salesRepCode ?? rep)?.trim() && this.flags) {
@@ -78,6 +79,8 @@ export class PublicSignupController {
       salesRepCode: salesRepCode ?? rep,
       referralCode: referralCode ?? ref,
       legalAcceptances,
+      edition: edition === "NURSE" ? "NURSE" : undefined,
+      nurseKind: edition === "NURSE" ? nurseKind : undefined,
     });
   }
 }

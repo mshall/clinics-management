@@ -1,3 +1,4 @@
+import { safeRequest } from "../common/safe-outbound";
 import { createHmac } from "node:crypto";
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
@@ -65,7 +66,7 @@ export class OutboxDeliveryService {
         this.log.debug(`KIOREX outbox skip (no URL): ${row.id} ${row.type}`);
         return { ok: true };
       }
-      return this.post(url, secret, row.type, row.id, timestamp, body);
+      return this.post(url, secret, row.type, row.id, timestamp, body, false); // operator-configured Kiorex URL: trusted, not tenant input
     }
 
     if (row.target.startsWith("TENANT_WEBHOOK:")) {
@@ -74,7 +75,7 @@ export class OutboxDeliveryService {
         where: { id: webhookId, tenantId: row.tenantId, deactivatedAt: null },
       });
       if (!hook) return { ok: false, message: "Webhook not found", retryable: false };
-      const result = await this.post(hook.url, hook.signingSecret, row.type, row.id, timestamp, body);
+      const result = await this.post(hook.url, hook.signingSecret, row.type, row.id, timestamp, body, true); // tenant-chosen URL: SSRF-guarded
       if (result.ok) {
         await this.prisma.integrationWebhook.update({
           where: { id: hook.id },
@@ -99,10 +100,12 @@ export class OutboxDeliveryService {
     eventId: string,
     timestamp: number,
     body: string,
+    guarded: boolean,
   ): Promise<{ ok: true } | { ok: false; message: string; retryable: boolean }> {
     const signature = this.signBody(secret, timestamp, body);
     try {
-      const res = await fetch(url, {
+      const send = guarded ? safeRequest : (u: string, i: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }) => fetch(u, { method: i.method, headers: i.headers, body: i.body, signal: AbortSignal.timeout(i.timeoutMs ?? 15_000) });
+      const res = await send(url, { // SSRF guard (pentest 2026-11): a tenant-chosen URL must resolve to public addresses, no redirects
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -113,7 +116,7 @@ export class OutboxDeliveryService {
           "X-Kiorly-Signature": `sha256=${signature}`,
         },
         body,
-        signal: AbortSignal.timeout(15_000),
+        timeoutMs: 15_000,
       });
       if (res.ok) return { ok: true };
       const snippet = (await res.text()).slice(0, 240);

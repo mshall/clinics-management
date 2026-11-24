@@ -21,7 +21,7 @@
     "db:doctor": "tsx scripts/db-doctor.mjs",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "openapi:export": "tsx scripts/openapi-export.ts",
+    "openapi:export": "rm -rf dist-openapi && tsc -p tsconfig.openapi.json && node dist-openapi/scripts/openapi-export.js && rm -rf dist-openapi",
     "pretest:unit": "npm run build -w @kiorly/field-visit --silent",
     "pretest:integration": "npm run build -w @kiorly/field-visit --silent",
     "test:integration": "node --import tsx --test --test-concurrency=1 \"src/**/*.integration.test.ts\"",
@@ -63,7 +63,7 @@
     "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "sharp": "^0.34.4",
+    "sharp": "^0.35.5",
     "swagger-ui-express": "^5.0.1",
     "zod": "^4.6.7"
   },
@@ -79,6 +79,7 @@
     "@types/piexifjs": "^1.0.0",
     "@types/qrcode": "^1.5.6",
     "fast-check": "^4.10.3",
+    "jsqr": "^1.4.0",
     "prisma": "^7.10.1",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3"

@@ -92,3 +92,8 @@ extra_interface_endpoints = []
 
 # ADR-039 telehealth: empty /kiorly-clinic/prod/cloudflare-turn container (value via scripts/setup-telehealth-turn.sh prod)
 telehealth_turn_secret = true
+
+# ADR-040 front door: EMPTY container /kiorly-clinic/prod/kiorex-lead-signing. Founder steps (docs: kiorex-platform Docs/NEEDS_HUMAN.md "Partner lead signing secret"):
+#   1. tofu apply (creates the container)  2. kiorex-platform/scripts/setup-partner-lead-secret.sh prod  3. set lead_signing_secret_inject = true and apply.
+lead_signing_secret        = true
+lead_signing_secret_inject = false

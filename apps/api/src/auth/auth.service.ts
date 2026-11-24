@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { PlanKey, SubscriptionStatus, TenantStatus, UserRole } from "@prisma/client";
-import * as bcrypt from "bcryptjs";
+import { passwordHasher } from "./password-hasher";
 import { randomUUID } from "crypto";
 import * as path from "path";
 import type { Readable } from "stream";
@@ -29,13 +29,11 @@ type AvatarFile = { buffer: Buffer; originalname: string; mimetype: string; size
 
 export type LoginSessionMeta = { userAgent?: string; ipHash?: string };
 
-function passwordMatches(password: string, passwordHash: string | null | undefined): boolean {
-  if (!passwordHash) return false;
-  try {
-    return bcrypt.compareSync(password, passwordHash);
-  } catch {
-    return false;
-  }
+/** Off the event loop (see password-hasher.ts): a synchronous bcrypt compare blocks every other request for ~50 ms. */
+/** bcrypt cost-10 hash of a random string: only ever compared against, never matches. */
+const DUMMY_PASSWORD_HASH = "$2b$10$ddXgvmEVsQCgeK94hKf92u1hwaUDa9eY64ULbM8nTYXEsrY.jyJjK";
+function passwordMatches(password: string, passwordHash: string | null | undefined): Promise<boolean> {
+  return passwordHasher.compare(password, passwordHash);
 }
 
 @Injectable()
@@ -181,7 +179,10 @@ export class AuthService {
         deactivatedAt: true,
       },
     });
-    const user = candidates.find((u) => passwordMatches(password, u.passwordHash));
+    let user: (typeof candidates)[number] | undefined;
+    for (const u of candidates) if (await passwordMatches(password, u.passwordHash)) { user = u; break; }
+    // user-enumeration timing (pentest 2026-11): an unknown e-mail used to return ~50 ms faster than a known one, so burn one bcrypt compare either way
+    if (!candidates.length) await passwordMatches(password, DUMMY_PASSWORD_HASH);
     if (!user) throw new UnauthorizedException("Invalid credentials");
     await this.assertLoginAllowed(user);
     return user;
@@ -426,15 +427,15 @@ export class AuthService {
       select: { id: true, passwordHash: true },
     });
     if (!user) throw new UnauthorizedException();
-    if (!passwordMatches(currentPassword, user.passwordHash)) {
+    if (!(await passwordMatches(currentPassword, user.passwordHash))) {
       throw new BadRequestException("Current password is incorrect");
     }
-    if (passwordMatches(newPassword, user.passwordHash)) {
+    if (await passwordMatches(newPassword, user.passwordHash)) {
       throw new BadRequestException("New password must be different from the current password");
     }
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: bcrypt.hashSync(newPassword, 10) },
+      data: { passwordHash: await passwordHasher.hash(newPassword, 10) },
     });
     await this.sessions.revokeAllSessions(user.id);
     return { ok: true as const };

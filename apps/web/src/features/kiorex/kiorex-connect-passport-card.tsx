@@ -20,7 +20,7 @@ export function KiorexConnectPassportCard() {
     <Card data-testid="connect-passport">
       <CardHeader className="space-y-1.5"><CardTitle className="text-base">{t("kiorexConnect.passport.title")}</CardTitle><CardDescription>{t("kiorexConnect.passport.body")}</CardDescription></CardHeader>
       <CardContent className="flex flex-wrap items-center gap-2">
-        {isPassport ? <span className="text-sm text-emerald-700">{t("kiorexConnect.passport.done")}</span> : <Button disabled={set.isPending} onClick={() => set.mutate()} data-testid="connect-passport-set">{t("kiorexConnect.passport.set")}</Button>}
+        {isPassport ? <span className="text-sm text-emerald-700 dark:text-emerald-400">{t("kiorexConnect.passport.done")}</span> : <Button disabled={set.isPending} onClick={() => set.mutate()} data-testid="connect-passport-set">{t("kiorexConnect.passport.set")}</Button>}
         <Button asChild variant="outline"><Link to="/team">{t("kiorexConnect.passport.invite")}</Link></Button>
       </CardContent>
     </Card>

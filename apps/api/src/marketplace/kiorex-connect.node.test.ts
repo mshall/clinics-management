@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { ListingStatus, SubscriptionStatus, VerificationStatus } from "@prisma/client";
 import { MARKETPLACE_BLOCKER, evaluateMarketplaceListingEligibility } from "./marketplace-listing-eligibility";
 import { canRequestGoLive, computeConnectSteps, connectProgressPct, connectionGateFromSettings, type ConnectFacts } from "./kiorex-connect.logic";
-import { kiorexApiBase, signConnectBody } from "./kiorex-connect.service";
+import { deriveIntakeSigningKey, enrolmentIdOf, intakeHeaders, kiorexApiBase, newIntakeNonce, signConnectBody } from "./kiorex-connect.service";
 
 const doctor = (o: Partial<ConnectFacts["doctors"][number]> = {}): ConnectFacts["doctors"][number] => ({ listingId: "l1", clinicianId: "u1", name: "Dr A", verification: "VERIFIED", hasAvailability: true, profilePercent: 90, profileMissing: [], status: "DRAFT", pausedReason: null, ...o });
 const facts = (o: Partial<ConnectFacts> = {}): ConnectFacts => ({ connectStatus: "CONSENTED", subscription: "ACTIVE", entitlementOn: true, bookableTypes: 1, bookableTypesWithFee: 1, doctors: [doctor()], profileMin: 80, consentGiven: true, edition: "CLINIC", optionConfigured: false, ...o });
@@ -72,5 +72,23 @@ describe("signed request to Kiorex", () => {
     assert.equal(kiorexApiBase({ KIOREX_OUTBOX_WEBHOOK_URL: "http://localhost:4000/api/v1/webhooks/kiorly" }), "http://localhost:4000/api/v1");
     assert.equal(kiorexApiBase({}), null);
     assert.match(signConnectBody("s", 1, "{}"), /^sha256=[0-9a-f]{64}$/);
+  });
+  it("intake auth (contracts 1.9.0): enrolment code signs the first request, the issued key later ones; same vectors as kiorex-contracts", () => {
+    const code = "kxe_AAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
+    assert.equal(deriveIntakeSigningKey(code), "a0ce8b1dc66e4970ef3b844867fabe228c276e5bfffaccfe2ace5e67232adac3");
+    const h = intakeHeaders(code, 1700000000, '{"a":1}', code);
+    assert.equal(h["X-Kiorly-Signature"], "sha256=0f75288125b5933d50f18d797e51ff3160081300fb82c2b8753a22711baf3e14");
+    assert.equal(h["X-Kiorex-Enrolment"], "kxe_AAAAAAAA");
+    assert.equal(intakeHeaders("kxi_secret", 1, "{}")["X-Kiorex-Enrolment"], undefined);
+    assert.equal(enrolmentIdOf("kxe_short"), undefined);
+    assert.match(newIntakeNonce(), /^[A-Za-z0-9_-]{16,64}$/);
+  });
+  it("browser-walk regressions: a self-serve owner (PHYSICIAN + GROUP_ADMIN) can read the Passport default, and the partner contact e-mail is sent so Kiorex can notify", async () => {
+    const { readFileSync } = await import("node:fs"); const { join } = await import("node:path");
+    const admin = readFileSync(join(__dirname, "..", "admin", "admin.controller.ts"), "utf8");
+    assert.doesNotMatch(admin, /user\.role !== "GROUP_ADMIN"\) throw new ForbiddenException\("Only group administrators can (read|change) the sign-in default"/);
+    assert.match(admin, /hasRole\(user, UserRole\.GROUP_ADMIN\)\) throw new ForbiddenException\("Only group administrators can read the sign-in default"/);
+    const svc = readFileSync(join(__dirname, "kiorex-connect.service.ts"), "utf8");
+    assert.match(svc, /send\(clinic, state, doc, enrolmentCode, user\.email\)/); assert.match(svc, /\.\.\.\(contactEmail &&/);
   });
 });

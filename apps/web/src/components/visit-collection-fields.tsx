@@ -83,13 +83,23 @@ export const VisitCollectionFields = forwardRef<VisitCollectionFieldsHandle, Pro
     setFocusPending(false);
   }, [focusPending, value.mode]);
 
-  useImperativeHandle(ref, () => ({
-    focusReference: () => refInput.current?.focus(),
-    selectOption: (index: number) => {
+  // The handle must stay referentially stable: parents keep it in state (`ref={setHandle}`), and a handle rebuilt on every render
+  // re-sets that state on every commit ("Maximum update depth exceeded"). The latest option picker is read through a ref.
+  const selectRef = useRef<(index: number) => void>(() => {});
+  useEffect(() => {
+    selectRef.current = (index: number) => {
       const opt = options[index];
       if (opt) pick(opt);
-    },
-  }));
+    };
+  });
+  useImperativeHandle(
+    ref,
+    () => ({
+      focusReference: () => refInput.current?.focus(),
+      selectOption: (index: number) => selectRef.current(index),
+    }),
+    [],
+  );
 
   if (amount <= 0) return null;
 

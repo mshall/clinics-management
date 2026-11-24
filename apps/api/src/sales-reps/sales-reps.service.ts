@@ -1,3 +1,4 @@
+import { devAuthHelpersEnabled } from "../common/http-hardening";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import {
   BadRequestException,
@@ -70,7 +71,7 @@ export class SalesRepsService {
   ) {}
 
   private devOtpCode(): string | null {
-    const raw = this.config.get<string>("SIGNUP_OTP_DEV_CODE")?.trim();
+    const raw = devAuthHelpersEnabled() ? this.config.get<string>("SIGNUP_OTP_DEV_CODE")?.trim() : undefined;
     return raw && raw.length >= 4 ? raw : null;
   }
 

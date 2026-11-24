@@ -4,6 +4,7 @@ export const en = {
   subtitle: "Your clinic works fully on its own. When you are ready, finish these steps and ask Kiorex to list you so patients can find and book you.",
   progress: "Progress",
   legacy: "Your organisation is already connected to Kiorex. Nothing to do here.",
+  decision: {"CHANGES_REQUESTED": "Kiorex asked for changes before it can approve your request. The details were sent to the contact e-mail of your request. Fix the open steps, then send the request again.", "REJECTED": "Kiorex did not approve this request. Your organisation keeps working on its own. Contact Kiorex support if you think this is a mistake.", "PAUSED": "Kiorex paused your listing. Patients cannot book you until it is resumed. Contact Kiorex support."},
   banner: { standalone: "You are running standalone. Connect to Kiorex to be found by patients.", open: "Open the checklist", requested: "Waiting for Kiorex to review your request.", live: "You are live on Kiorex.", changes: "Kiorex asked for a change.", rejected: "Your request was not approved.", paused: "Your Kiorex listing is paused." },
   status: { STANDALONE: "Standalone", CONSENTED: "Ready to request", REQUESTED: "Waiting for Kiorex", CHANGES_REQUESTED: "Changes requested", REJECTED: "Not approved", APPROVED: "Approved", PAUSED: "Paused by Kiorex" },
   state: { done: "Done", action_needed: "Action needed", waiting_kiorex: "Waiting on Kiorex", blocked: "Blocked" },
@@ -25,7 +26,7 @@ export const en = {
   missing: { bioEn: "English bio", bioAr: "Arabic bio", photo: "photo", specialty: "specialty", address: "address", mapPin: "map pin" },
   missingLabel: "Missing",
   doctors: "Per-doctor progress",
-  doctor: { verification: "Credential", availability: "Slots", profile: "Profile", ready: "Ready", status: "Listing" },
+  doctor: { verification: "Credential", availability: "Slots", profile: "Profile", ready: "Ready", status: "Listing", verif: { NONE: "Not submitted", PENDING: "In review", UNDER_REVIEW: "In review", VERIFIED: "Verified", REJECTED: "Rejected", EXPIRED: "Expired" }, listing: { DRAFT: "Draft", PENDING_VERIFICATION: "Pending verification", LIVE: "Live", PAUSED: "Paused" } },
   terms: {
     title: "Marketplace terms and fee acknowledgement",
     body: "By continuing you agree to the Kiorex marketplace terms (version {{version}}). Kiorex lists you and sends booking requests; Kiorly stays your system of record for appointments.",
@@ -49,6 +50,7 @@ export const ar = {
   subtitle: "عيادتك تعمل بالكامل بشكل مستقل. عندما تكون جاهزا، أكمل هذه الخطوات واطلب من كيوريكس إدراجك ليتمكن المرضى من العثور عليك والحجز عندك.",
   progress: "التقدم",
   legacy: "منشأتك مرتبطة بكيوريكس بالفعل. لا يوجد ما تفعله هنا.",
+  decision: {"CHANGES_REQUESTED": "طلب كيوريكس تعديلات قبل الموافقة على طلبك. أُرسلت التفاصيل إلى بريد التواصل في طلبك. أكمل الخطوات المفتوحة ثم أعد إرسال الطلب.", "REJECTED": "لم يوافق كيوريكس على هذا الطلب. تستمر منشأتك في العمل بشكل مستقل. تواصل مع دعم كيوريكس إن كنت ترى أن هناك خطأ.", "PAUSED": "أوقف كيوريكس ظهورك مؤقتا. لا يستطيع المرضى الحجز عندك حتى يُستأنف. تواصل مع دعم كيوريكس."},
   banner: { standalone: "تعمل بشكل مستقل. اربط منشأتك بكيوريكس ليجدك المرضى.", open: "افتح القائمة", requested: "بانتظار مراجعة كيوريكس لطلبك.", live: "أنت مفعل على كيوريكس.", changes: "طلب كيوريكس تعديلا.", rejected: "لم تتم الموافقة على طلبك.", paused: "تم إيقاف ظهورك على كيوريكس مؤقتا." },
   status: { STANDALONE: "مستقل", CONSENTED: "جاهز للطلب", REQUESTED: "بانتظار كيوريكس", CHANGES_REQUESTED: "مطلوب تعديل", REJECTED: "غير معتمد", APPROVED: "معتمد", PAUSED: "موقوف من كيوريكس" },
   state: { done: "تم", action_needed: "مطلوب إجراء", waiting_kiorex: "بانتظار كيوريكس", blocked: "متوقف" },
@@ -70,7 +72,7 @@ export const ar = {
   missing: { bioEn: "النبذة بالإنجليزية", bioAr: "النبذة بالعربية", photo: "الصورة", specialty: "التخصص", address: "العنوان", mapPin: "موقع الخريطة" },
   missingLabel: "ناقص",
   doctors: "تقدم كل طبيب",
-  doctor: { verification: "التوثيق", availability: "المواعيد", profile: "الملف", ready: "جاهز", status: "الإدراج" },
+  doctor: { verification: "التوثيق", availability: "المواعيد", profile: "الملف", ready: "جاهز", status: "الإدراج", verif: { NONE: "لم يُرسل", PENDING: "قيد المراجعة", UNDER_REVIEW: "قيد المراجعة", VERIFIED: "موثق", REJECTED: "مرفوض", EXPIRED: "منتهي" }, listing: { DRAFT: "مسودة", PENDING_VERIFICATION: "بانتظار التوثيق", LIVE: "مفعل", PAUSED: "متوقف" } },
   terms: {
     title: "شروط السوق وإقرار الرسوم",
     body: "بالمتابعة توافق على شروط سوق كيوريكس (الإصدار {{version}}). يدرجك كيوريكس ويرسل لك طلبات الحجز، ويبقى كيورلي نظام السجل الأساسي لمواعيدك.",

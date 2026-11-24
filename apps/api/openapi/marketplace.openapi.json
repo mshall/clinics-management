@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Kiorex Marketplace API",
-    "version": "1.3.0",
-    "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers. v1.2.0 (KX-09 Rev 2.3, additive): provider sync profession/edition/home-visit fields, serviceLocation+district on slots, visitAddress on holds, 422 OUT_OF_COVERAGE, care-plan-requests (P3 draft). The same client serves both Kiorly editions (Clinic and Nurse)."
+    "version": "1.5.0",
+    "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers. v1.2.0 (KX-09 Rev 2.3, additive): provider sync profession/edition/home-visit fields, serviceLocation+district on slots, visitAddress on holds, 422 OUT_OF_COVERAGE, care-plan-requests (P3 draft). The same client serves both Kiorly editions (Clinic and Nurse). v1.4.0 (growth engine, contracts 1.10.0, additive): optional signed `acquisition` block on POST /bookings (origin, decisionId, policyVersion, reason, evidenceHash) stored and frozen on the appointment; absent = UNATTRIBUTED and today's rules. Evidence can only remove a Kiorex fee (PROVIDER_LED), never add one. v1.5.0 (contracts 1.11.0, additive): optional `lt` on POST /bookings; signed link registry lookup GET /referral-links/{code} and reconciliation feed GET /referral-links."
   },
   "servers": [
     {
@@ -526,6 +526,19 @@
                   "bookingPageSlug": {
                     "type": "string",
                     "description": "Slug of the clinic/doctor booking page (KX-09)"
+                  },
+                  "attribution": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Existing free-form display attribution ({source: 'kiorex' | 'kiorex_whatsapp', searchId, campaign, landingPage}); kept as is, never used for commission evidence."
+                  },
+                  "acquisition": {
+                    "$ref": "#/components/schemas/AcquisitionBlock"
+                  },
+                  "lt": {
+                    "type": "string",
+                    "maxLength": 600,
+                    "description": "Signed link-touch token issued by the Clinic for a provider referral link, QR or widget (`<base64url claims>.<base64url hmac>`, claims {o: organisation, c: 8-character link code, t: issued-at ms, v: 1}, 72 h lifetime; domain-separated HMAC over `kx-lt1\\n` + payload). Kiorex forwards the token it verified at decision time and only when the signed `acquisition.origin` is PROVIDER_LED. The Clinic re-checks the link at booking time (ACTIVE, same organisation); an invalid, expired, other-organisation or revoked token is ignored (the booking is then not attributed to the link) and is never an error. Optional and additive: absent = today's rules. Never a patient or visitor identifier."
                   }
                 }
               }
@@ -537,7 +550,14 @@
             "description": "Created"
           },
           "400": {
-            "description": "BOOKING_PAGE_MISMATCH when the slug belongs to another clinic or doctor"
+            "description": "BOOKING_PAGE_MISMATCH when the slug belongs to another clinic or doctor; ACQUISITION_BLOCK_INVALID or ACQUISITION_EVIDENCE_HASH_INVALID when the optional acquisition block is malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcquisitionError"
+                }
+              }
+            }
           },
           "422": {
             "description": "OUT_OF_COVERAGE after a zone change (release the hold, show in-zone alternatives); the address is carried from the hold",
@@ -1430,6 +1450,96 @@
           }
         }
       }
+    },
+    "/referral-links/{code}": {
+      "get": {
+        "operationId": "marketplaceGetReferralLink",
+        "summary": "Signed lookup of one referral link (link registry)",
+        "description": "Kiorex asks the Clinic which organisation owns a link code and whether it is still active. Authenticated like every marketplace call (HMAC). Returns the same record the `ReferralLinkCreated` and `ReferralLinkRevoked` events carry, so a code is known to Kiorex before its first token and a revocation can be read back after a missed event. No patient data.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{8}$"
+            },
+            "description": "8 Crockford base32 characters"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralLinkRecord"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "REFERRAL_LINK_NOT_FOUND: no link with this code exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralLinkError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/referral-links": {
+      "get": {
+        "operationId": "marketplaceListReferralLinks",
+        "summary": "Link registry reconciliation feed",
+        "description": "Links created or changed since a timestamp, oldest first, for the periodic reconciliation that repairs a missed event. Cursor pagination.",
+        "parameters": [
+          {
+            "name": "updatedSince",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralLinkPage"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "webhooks": {
@@ -1851,6 +1961,210 @@
           }
         },
         "additionalProperties": true
+      },
+      "AcquisitionBlock": {
+        "type": "object",
+        "description": "Attribution evidence produced by the Kiorex deterministic decision function. Covered by the request HMAC like the rest of the body; evidenceHash is the sha256 inputsHash of the stored decision so the Clinic can later fetch and compare the evidence. The Clinic stores it, never recomputes it, and may only use it to REMOVE a commission (PROVIDER_LED), never to add one. Absent = UNATTRIBUTED and today's rules apply unchanged.",
+        "required": [
+          "origin",
+          "decisionId",
+          "policyVersion",
+          "reason",
+          "evidenceHash"
+        ],
+        "properties": {
+          "origin": {
+            "enum": [
+              "PROVIDER_LED",
+              "MARKETPLACE",
+              "UNATTRIBUTED"
+            ]
+          },
+          "decisionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "policyVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Version id of the ATTRIBUTION_POLICY that was ACTIVE at decision time."
+          },
+          "reason": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{2,63}$",
+            "description": "EXPLICIT_PROVIDER_CHANNEL, PRIOR_PROVIDER_TOUCH, PATIENT_REFERRAL, MARKETPLACE_TOUCH, NO_PROVIDER_EVIDENCE. Receivers must tolerate unknown codes."
+          },
+          "evidenceHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "sha256 hex of the canonical decision inputs (see computeAttributionInputsHash in @kiorex/contracts)."
+          },
+          "touch": {
+            "type": "object",
+            "description": "The winning touch, when there is one. Opaque ref: never a visitor key, IP, or patient identifier.",
+            "required": [
+              "kind",
+              "ref",
+              "at"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{2,32}$",
+                "description": "Source kind: PROVIDER_LINK, PROVIDER_QR, WIDGET, ORGANIC_SEARCH, DIRECT, REFERRAL, CAMPAIGN, WHATSAPP, OFFLINE."
+              },
+              "ref": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "AcquisitionError": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "statusCode": {
+            "enum": [
+              400
+            ]
+          },
+          "code": {
+            "enum": [
+              "ACQUISITION_BLOCK_INVALID",
+              "ACQUISITION_EVIDENCE_HASH_INVALID"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "description": "Malformed acquisition block. A well-formed block from an older or newer Kiorex is never an error; unknown reason codes are accepted."
+      },
+      "ReferralLinkRecord": {
+        "type": "object",
+        "required": [
+          "code",
+          "orgRef",
+          "status",
+          "ownerScope",
+          "channelKind",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[0-9A-HJKMNP-TV-Z]{8}$"
+          },
+          "orgRef": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Organisation (tenant) reference; the same value the signed `lt` carries as `o`."
+          },
+          "clinicRef": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Clinic the link belongs to, when scoped to one."
+          },
+          "ownerScope": {
+            "enum": [
+              "ORG",
+              "CLINIC",
+              "BRANCH",
+              "DOCTOR",
+              "DESK"
+            ]
+          },
+          "channelKind": {
+            "enum": [
+              "WEB_LINK",
+              "QR_POSTER",
+              "QR_DESK",
+              "SOCIAL",
+              "SMS",
+              "WHATSAPP_SHARE",
+              "EMAIL_SIG",
+              "GOOGLE_PROFILE"
+            ]
+          },
+          "status": {
+            "enum": [
+              "ACTIVE",
+              "PAUSED",
+              "REVOKED"
+            ],
+            "description": "A PAUSED or REVOKED link never makes a new booking provider-led."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "ReferralLinkPage": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferralLinkRecord"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ReferralLinkError": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "statusCode": {
+            "enum": [
+              404
+            ]
+          },
+          "code": {
+            "enum": [
+              "REFERRAL_LINK_NOT_FOUND"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
       }
     }
   }

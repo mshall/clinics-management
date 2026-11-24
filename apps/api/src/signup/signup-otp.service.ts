@@ -1,3 +1,4 @@
+import { devAuthHelpersEnabled } from "../common/http-hardening";
 import { BadRequestException, HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
@@ -34,6 +35,7 @@ export class SignupOtpService {
   ) {}
 
   private devOtpCode(): string | null {
+    if (!devAuthHelpersEnabled()) return null; // a stray SIGNUP_OTP_DEV_CODE must never become a production master OTP
     const raw = this.config.get<string>("SIGNUP_OTP_DEV_CODE")?.trim();
     return raw && raw.length >= 4 ? raw : null;
   }

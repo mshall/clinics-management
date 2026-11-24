@@ -1,3 +1,4 @@
+import { devAuthHelpersEnabled } from "../common/http-hardening";
 import { BadRequestException, Injectable, Logger, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcryptjs";
@@ -75,7 +76,7 @@ export class AuthPasswordResetService {
       } else {
         this.logger.log(`Password reset link for ${user.email}: ${link}`);
       }
-      if (this.config.get<string>("AUTH_RESET_DEV_EXPOSE") === "1") {
+      if (devAuthHelpersEnabled() && this.config.get<string>("AUTH_RESET_DEV_EXPOSE") === "1") {
         return { ok: true as const, channel: "email" as const, devResetLink: link };
       }
     }

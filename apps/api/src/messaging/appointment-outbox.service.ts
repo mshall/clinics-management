@@ -19,6 +19,18 @@ async function telehealthPayload(tx: Tx | undefined, appointmentId: string): Pro
   return s ? { telehealth: telehealthBlock(s, s.appointment) } : {};
 }
 
+/**
+ * GRW-P1-D2 (contracts 1.10.0): every appointment status event carries `acquisitionOrigin` once it is known; absent = UNATTRIBUTED (additive, no PHI).
+ * GRW-P1-J: and `isNewPatientAtBooking` when the Clinic stamped it (the contract has always allowed it on these events): Kiorex needs it to report attended NEW patients
+ * (KX-32 ANP), including provider-led ones that never get a commission charge. A boolean about the visit, no identifier.
+ */
+async function acquisitionPayload(tx: Tx | undefined, appointmentId: string): Promise<Record<string, unknown>> {
+  const c = tx as Partial<Prisma.TransactionClient> | undefined;
+  if (!c?.appointment) return {};
+  const a = await c.appointment.findUnique({ where: { id: appointmentId }, select: { acquisitionOrigin: true, isNewPatientAtBooking: true } });
+  return { ...(a?.acquisitionOrigin ? { acquisitionOrigin: a.acquisitionOrigin } : {}), ...(typeof a?.isNewPatientAtBooking === "boolean" ? { isNewPatientAtBooking: a.isNewPatientAtBooking } : {}) };
+}
+
 @Injectable()
 export class AppointmentOutboxService {
   constructor(private readonly outbox: OutboxEventService) {}
@@ -51,6 +63,7 @@ export class AppointmentOutboxService {
           nextStatus: params.nextStatus,
           bookingSource: params.bookingSource,
           ...params.metadata,
+          ...(await acquisitionPayload(tx, params.appointmentId)),
           ...(await telehealthPayload(tx, params.appointmentId)),
         },
       },

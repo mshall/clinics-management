@@ -85,6 +85,14 @@ data "aws_route53_zone" "this" {
 # ---------------------------------------------------------------------------------------------------------
 # secrets (+ customer-managed KMS keys)
 # ---------------------------------------------------------------------------------------------------------
+locals {
+  # ADR-040 front door: shared signing secret for "Talk to us" leads. Same value in Kiorex (verifier) and in every product (signer).
+  is_kiorex_platform = var.product == "kiorex-platform"
+  lead_secret_name   = "/${var.product}/${var.env}/${local.is_kiorex_platform ? "partner-lead-signing" : "kiorex-lead-signing"}"
+  lead_secret_env    = local.is_kiorex_platform ? "PARTNER_LEAD_SIGNING_SECRET" : "KIOREX_LEAD_SIGNING_SECRET"
+  lead_secret_inject = var.lead_signing_secret && var.lead_signing_secret_inject
+}
+
 module "secrets" {
   source = "../aws/secrets"
 
@@ -93,7 +101,7 @@ module "secrets" {
   generated_secrets         = local.generated_secrets
   generated_hex_secrets     = local.generated_hex_secrets
   placeholder_secrets       = var.placeholder_secrets
-  named_placeholder_secrets = var.telehealth_turn_secret ? toset([local.telehealth_turn_secret_name]) : toset([])
+  named_placeholder_secrets = toset(concat(var.telehealth_turn_secret ? [local.telehealth_turn_secret_name] : [], var.lead_signing_secret ? [local.lead_secret_name] : []))
   openai_secret_name        = var.openai_secret_name
   recovery_window_days      = var.env == "prod" ? 30 : 0
   tags                      = local.tags
@@ -239,6 +247,7 @@ locals {
     local.has_jobs ? { INTERNAL_JOB_KEY = module.secrets.secret_field_arns["internal-jobs"] } : {},
     var.enable_home_visit_address_key ? { HOME_VISIT_ADDRESS_ENCRYPTION_KEY = module.secrets.secret_field_arns["home-visit-address-key"] } : {},
     module.secrets.openai_secret_arn == null ? {} : { OPENAI_API_KEY = "${module.secrets.openai_secret_arn}:apiKey::" },
+    local.lead_secret_inject ? { (local.lead_secret_env) = module.secrets.named_placeholder_secret_arns[local.lead_secret_name] } : {},
     var.runtime_secrets,
   )
 }

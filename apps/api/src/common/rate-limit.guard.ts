@@ -1,11 +1,8 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from "@nestjs/common";
-import { authRatePolicy, consumeRateLimit, rateLimitKey } from "./rate-limit";
+import { clientIpOf } from "./http-hardening";
+import { authRatePolicy, consumeRateLimit, isLoginPath, LOGIN_ACCOUNT_RATE, rateLimitKey } from "./rate-limit";
 
-function clientIp(req: { ip?: string; headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }): string {
-  const xf = req.headers?.["x-forwarded-for"];
-  if (typeof xf === "string" && xf.trim()) return xf.split(",")[0]!.trim();
-  return req.ip || req.socket?.remoteAddress || "unknown";
-}
+const clientIp = clientIpOf; // TRUSTED_PROXY_HOPS-aware (the leftmost X-Forwarded-For entry is attacker-controlled)
 
 @Injectable()
 export class PublicAuthRateLimitGuard implements CanActivate {
@@ -23,8 +20,12 @@ export class PublicAuthRateLimitGuard implements CanActivate {
     const path = (req.originalUrl ?? req.url ?? req.path ?? "").split("?")[0] ?? "";
     const ip = clientIp(req);
     const policy = authRatePolicy(path, req.method);
-    const key = rateLimitKey(["auth", path, ip, req.body?.email, req.body?.phone]);
-    const result = consumeRateLimit(key, policy.limit, policy.windowMs);
+    // pre-validation: a body field may be an array / object (pentest 2026-11: `{"email":["a"]}` used to crash the guard with a 500)
+    const str = (v: unknown) => (typeof v === "string" ? v.slice(0, 254) : undefined);
+    const key = rateLimitKey(["auth", path, ip, str(req.body?.email), str(req.body?.phone)]);
+    let result = consumeRateLimit(key, policy.limit, policy.windowMs);
+    const account = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    if (result.ok && account && isLoginPath(path)) result = consumeRateLimit(rateLimitKey(["acct", account]), LOGIN_ACCOUNT_RATE.limit, LOGIN_ACCOUNT_RATE.windowMs);
     if (!result.ok) {
       throw new HttpException(
         { message: "Too many requests", code: "RATE_LIMITED", retryAfterSec: result.retryAfterSec },

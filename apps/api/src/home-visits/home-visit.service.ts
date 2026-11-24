@@ -72,7 +72,7 @@ export class HomeVisitService {
     if (!s || !s.acceptsHomeVisits) throw new HomeVisitRuleException("HOME_VISITS_NOT_OFFERED", "This clinician does not offer home visits");
     const district = districtRaw ? normalizeDistrictId(districtRaw) : "";
     const zone = { districtIds: s.coverageDistrictIds, maxTravelMinutes: s.maxTravelMinutes, startDistrictId: s.startDistrictId };
-    const res = this.port.checkCoverage(zone, { districtId: district }, this.maps.travelMatrix([...s.coverageDistrictIds, district, s.startDistrictId ?? ""]));
+    const res = this.port.checkCoverage(zone, { districtId: district }, await this.maps.travelMatrix([...s.coverageDistrictIds, district, s.startDistrictId ?? ""]));
     if (!res.inZone) throw new OutOfCoverageException(district || null, res.reason, await this.alternativesFor(tenantId, clinicianId));
     return s;
   }
@@ -125,7 +125,7 @@ export class HomeVisitService {
         defaultBuffers: { beforeMinutes: 0, afterMinutes: 0 },
         dailyCap: settings.dailyVisitCap,
         dayKey: (ms) => DateTime.fromMillis(ms, { zone: tz }).toISODate()!,
-        matrix: this.maps.travelMatrix([]),
+        matrix: await this.maps.travelMatrix([normalizeDistrictId(ctx.address.district), ...existing.map((e) => e.districtId ?? "")]),
       },
     );
     if (!check.ok) {
@@ -163,7 +163,7 @@ export class HomeVisitService {
       defaultBuffers: { beforeMinutes: 0, afterMinutes: 0 },
       dailyCap: settings.dailyVisitCap,
       dayKey: (ms: number) => DateTime.fromMillis(ms, { zone: tz }).toISODate()!,
-      matrix: this.maps.travelMatrix([]),
+      matrix: await this.maps.travelMatrix([district, ...existing.map((e) => e.districtId ?? "")]),
     };
     return input.slots
       .filter((s) => {
@@ -298,7 +298,7 @@ export class HomeVisitService {
     const items = await Promise.all(rows.map((r) => this.serialize(user, { ...r, patient: byId.get(r.patientId) ?? null })));
     const routeView = (await this.flags.evaluate(tenantId, HOME_ROUTE_VIEW_FLAG)).effective && (await this.entitled(tenantId, "home_route_view"));
     if (!routeView) return { date: day.toISODate(), view: "LIST" as const, items };
-    const legs = this.maps.legs(rows.map((r) => ({ id: r.id, districtId: r.districtId })));
+    const legs = await this.maps.legs(rows.map((r) => ({ id: r.id, districtId: r.districtId })));
     const withLinks = items.map((it, i) => {
       const row = rows[i]!;
       const a = it.address;

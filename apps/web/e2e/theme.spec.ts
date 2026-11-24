@@ -82,7 +82,9 @@ test.describe("Theme switcher", () => {
     await page.goto("/login");
     const lang = page.locator("[data-kx-control=language]:visible").first();
     await expect(lang).toContainText("EN");
-    await lang.click();
+    await lang.click(); // opens the language menu (globe + code, one control)
+    await expect(lang).toHaveAttribute("aria-expanded", "true");
+    await page.locator('[role="menuitemradio"][data-kx-lang="ar"]').click();
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(lang).toContainText("AR");
     await page.reload();

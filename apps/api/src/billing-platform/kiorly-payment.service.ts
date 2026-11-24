@@ -23,7 +23,7 @@ import { assertNoPanOrCvvInBody } from "./kiorly-payment-no-pan";
 import { DunningService } from "../subscriptions/dunning.service";
 import { ReferralRewardService } from "../growth/referral-reward.service";
 
-export type PayInvoiceMethod = "card" | "saved_card" | "fawry" | "instapay" | "bank";
+export type PayInvoiceMethod = "card" | "saved_card" | "paymob" | "fawry" | "instapay" | "bank";
 
 @Injectable()
 export class KiorlyPaymentService {
@@ -66,7 +66,7 @@ export class KiorlyPaymentService {
       return this.payWithCard(tenantId, invoiceId, invoice.currency, amount, idempotencyKey, body.paymentMethodId);
     }
 
-    const provider = body.method === "fawry" ? "fawry" : body.method === "instapay" ? "instapay" : "bank";
+    const provider = body.method === "paymob" ? "paymob" : body.method === "fawry" ? "fawry" : body.method === "instapay" ? "instapay" : "bank"; // "paymob" = hosted checkout, no stored card
     const gateway = this.gateways.get(provider);
     if (!gateway) throw new BadRequestException("Payment method not available");
 
@@ -106,6 +106,7 @@ export class KiorlyPaymentService {
       provider,
       providerRef: link.providerRef,
       referenceCode: link.referenceCode,
+      paymentUrl: link.paymentUrl,
       instructionsEn: link.instructionsEn,
       instructionsAr: link.instructionsAr,
     };

@@ -40,7 +40,7 @@ test("lockup renders the product lockup and the tagline beneath it (en + ar), an
   assert.doesNotMatch(bare, /data-kx-tagline/);
 });
 
-test("language toggle in ui-kit is localised and shows the current code", async () => {
-  assert.match(await render("en", createElement(LanguageToggle, { onChange: () => {} })), /aria-label="Language: EN · Arabic"/);
+test("language control in ui-kit is one menu button that shows the current code", async () => {
+  assert.match(await render("en", createElement(LanguageToggle, { onChange: () => {} })), /aria-label="Language: EN · English"[^>]*aria-haspopup="menu"/);
   assert.match(await render("ar", createElement(LanguageToggle, { onChange: () => {} })), /AR/);
 });

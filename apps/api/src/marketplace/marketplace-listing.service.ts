@@ -86,6 +86,8 @@ export class MarketplaceListingService implements OnModuleInit {
   }
 
   async listClinicListings(user: JwtUser, clinicId: string, sync = true): Promise<MarketplaceListingDto[]> {
+    // `findFirst({ where: { id: undefined } })` ignores the id and returns ANY clinic of the tenant, after which the upsert below failed with a Prisma validation 500 (EDGE-49)
+    if (!clinicId || typeof clinicId !== "string") throw new BadRequestException("clinicId is required");
     const clinic = await this.prisma.clinic.findFirst({
       where: { id: clinicId, tenantId: user.tenantId ?? undefined },
     });

@@ -1,0 +1,9 @@
+{
+  "source": "kiorex-contracts 1.9.0 test/partner-intake.test.ts (copy these when the contract version changes; Clinic does not vendor the package, see kiorex-intake-signing.node.test.ts)",
+  "enrolmentCode": "kxe_AAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+  "derivedKey": "a0ce8b1dc66e4970ef3b844867fabe228c276e5bfffaccfe2ace5e67232adac3",
+  "timestamp": 1700000000,
+  "body": "{\"a\":1}",
+  "signature": "sha256=0f75288125b5933d50f18d797e51ff3160081300fb82c2b8753a22711baf3e14",
+  "enrolmentHeader": "kxe_AAAAAAAA"
+}

@@ -100,4 +100,36 @@ describe("ON-04 onboarding API service", () => {
     assert.ok(dto.activatedAt);
     assert.ok(dto.steps.find((s) => s.key === "first_check_in")?.status === "done");
   });
+
+  it("a step is never ticked by hand; skipping needs a role that can do it and (per-clinic steps) a clinic of the organisation", async () => {
+    await assert.rejects(() => onboarding.patchStep(tenantId, userId, "clinic_logo", "complete", undefined), /completes automatically/);
+    const clinic = await prisma.clinic.findFirstOrThrow({ where: { tenantId } });
+    await assert.rejects(() => onboarding.patchStep(tenantId, userId, "clinic_logo", "skip"), /entityId/);
+    await assert.rejects(() => onboarding.patchStep(tenantId, userId, "clinic_logo", "skip", "not-a-clinic"), /Clinic not found/);
+    await assert.rejects(
+      () => onboarding.patchStep(tenantId, userId, "whatsapp_reminders", "skip", undefined, { isOwner: false, roles: ["receptionist"] }),
+      /ask the owner/,
+    );
+    const dto = await onboarding.patchStep(tenantId, userId, "clinic_logo", "skip", clinic.id, { isOwner: true, roles: [] });
+    const logo = dto.steps.find((x) => x.key === "clinic_logo")!;
+    assert.equal(logo.status, "skipped");
+    assert.equal(logo.entities?.[0]?.status, "skipped");
+  });
+
+  it("a second clinic reopens the per-clinic steps; dismissal needs everything done and is forgotten when new work appears", async () => {
+    const first = await onboarding.getOrCreate(tenantId);
+    const before = first.steps.find((x) => x.key === "working_hours")!;
+    assert.equal(before.totalCount, 1);
+    const base = await prisma.clinic.findFirstOrThrow({ where: { tenantId } });
+    await prisma.clinic.create({
+      data: { tenantId, nameEn: "Second", nameAr: "الثانية", country: "EG", city: "Cairo", addressEn: "x", addressAr: "x", locationUrl: base.locationUrl, phone: base.phone, email: `second.${Date.now()}@example.com`, licenseNumber: "L-2", defaultCurrency: "EGP" },
+    });
+    const after = await onboarding.getOrCreate(tenantId);
+    const hours = after.steps.find((x) => x.key === "working_hours")!;
+    assert.equal(hours.totalCount, 2);
+    assert.equal(hours.entities?.length, 2);
+    assert.equal(hours.status, "pending");
+    assert.match(hours.href, /entity=/);
+    await assert.rejects(() => onboarding.dismiss(tenantId, userId, { isOwner: true, roles: [] }), /once every step is done or skipped/);
+  });
 });

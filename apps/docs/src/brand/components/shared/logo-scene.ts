@@ -4,15 +4,16 @@ import { WORDS } from "./wordmarks.generated";
 import { WORDS_AR } from "./wordmarks-ar.generated";
 
 export type Variant = "lockup" | "mark" | "wordmark";
-/** "kiorly" is a deprecated alias of "clinic" (the Kiorly product lockup is always "Kiorly <Product> by Kiorex"). Nurse is an edition of Clinic and keeps its Nurse Rose look. */
-export type Product = "kiorex" | "kiorly" | "clinic" | "lab" | "pharmacy" | "passport" | "nurse";
+/** "staff" = the Kiorly staff app / Kiorly Home brand (founder, 24 Nov 2026): Indigo + Periwinkle chevrons, coral pulse, wordmark KIORLY with the final Y (Arabic: final ي) in Periwinkle, no "by Kiorex" line (that appears only on the splash and About, ADR-037). Static files: kiorly-{mark,lockup,wordmark}[-ar][-mono|-inverse].svg.
+ *  "kiorly" is a deprecated alias of "clinic" (the Kiorly product lockup is always "Kiorly <Product> by Kiorex"). Nurse is an edition of Clinic and keeps its Nurse Rose look. */
+export type Product = "kiorex" | "kiorly" | "clinic" | "lab" | "pharmacy" | "passport" | "nurse" | "staff";
 export type ProductAccent = "clinic" | "lab" | "pharmacy";
 /** UI language of the lockup words. The artwork (chevrons + pulse) is identical; only the words change (Arabic: shaped RTL outlines, mark on the right). */
 export type Lang = "en" | "ar";
 /** Anything starting with "ar" (ar, ar-EG, ar-SA ...) selects the Arabic wordmark; other/undefined = Latin. */
 export const langOf = (l?: string | null): Lang => (l && /^ar\b|^ar[-_]/i.test(l) ? "ar" : "en");
 export type Tone = "color" | "mono" | "inverse";
-export type Role = "indigo" | "ocean" | "coral" | "sub" | "rose" | ProductAccent;
+export type Role = "indigo" | "ocean" | "coral" | "sub" | "rose" | "peri" | ProductAccent;
 
 export type Node =
   | { k: "poly"; points: string; role: Role; sw: number; id?: string }
@@ -26,34 +27,36 @@ const PULSE = "M222 440 H510 L525 428 L540 466 L557 392 L574 460 L588 441 H877";
 export const PULSE_LENGTH = 800;
 
 export const PALETTE: Record<Tone, Record<Role, string>> = {
-  color: { indigo: "#3730A3", ocean: "#0369A1", coral: "#E8735E", sub: "#5F6888", rose: "#E11D48", clinic: "#0D9488", lab: "#7C3AED", pharmacy: "#16A34A" },
-  inverse: { indigo: "#FFFFFF", ocean: "#7DD3FC", coral: "#F08A75", sub: "#C7CBEA", rose: "#FB7185", clinic: "#2DD4BF", lab: "#A78BFA", pharmacy: "#4ADE80" },
-  mono: { indigo: "currentColor", ocean: "currentColor", coral: "currentColor", sub: "currentColor", rose: "currentColor", clinic: "currentColor", lab: "currentColor", pharmacy: "currentColor" },
+  color: { indigo: "#3730A3", ocean: "#0369A1", coral: "#E8735E", sub: "#5F6888", rose: "#E11D48", peri: "#818CF8", clinic: "#0D9488", lab: "#7C3AED", pharmacy: "#16A34A" },
+  inverse: { indigo: "#FFFFFF", ocean: "#7DD3FC", coral: "#F08A75", sub: "#C7CBEA", rose: "#FB7185", peri: "#A5B4FC", clinic: "#2DD4BF", lab: "#A78BFA", pharmacy: "#4ADE80" },
+  mono: { indigo: "currentColor", ocean: "currentColor", coral: "currentColor", sub: "currentColor", rose: "currentColor", peri: "currentColor", clinic: "currentColor", lab: "currentColor", pharmacy: "currentColor" },
 };
 
 /** Normalises the deprecated "kiorly" alias. */
 export const canonicalProduct = (p: Product): Product => (p === "kiorly" ? "clinic" : p);
 /** Accent role of a product: Ocean for Kiorex/Passport, Nurse Rose for Nurse, else the per-product accent. */
-export const accentRole = (p: Product): Role => { const c = canonicalProduct(p); return c === "nurse" ? "rose" : c === "clinic" || c === "lab" || c === "pharmacy" ? c : "ocean"; };
+export const accentRole = (p: Product): Role => { const c = canonicalProduct(p); return c === "nurse" ? "rose" : c === "staff" ? "peri" : c === "clinic" || c === "lab" || c === "pharmacy" ? c : "ocean"; };
 /** English product name used in aria-labels/titles, e.g. "Kiorly Clinic by Kiorex". */
 export const PRODUCT_NAMES: Record<Product, string> = {
   kiorex: "Kiorex", kiorly: "Kiorly Clinic by Kiorex", clinic: "Kiorly Clinic by Kiorex", lab: "Kiorly Lab by Kiorex", pharmacy: "Kiorly Pharmacy by Kiorex",
-  passport: "Kiorex Passport", nurse: "Kiorly Nurse by Kiorex",
+  passport: "Kiorex Passport", nurse: "Kiorly Nurse by Kiorex", staff: "Kiorly",
 };
+/** Accessible name of the bare mark. */
+export const markName = (p: Product) => (p === "staff" ? "Kiorly mark" : "Kiorex mark");
 
 /** Arabic accessible names (aria-label/title). */
 export const PRODUCT_NAMES_AR: Partial<Record<Product, string>> = {
-  kiorly: "كيورلي للعيادات من كيوريكس", clinic: "كيورلي للعيادات من كيوريكس", lab: "كيورلي لاب من كيوريكس", pharmacy: "كيورلي للصيدليات من كيوريكس",
+  kiorly: "كيورلي للعيادات من كيوريكس", clinic: "كيورلي للعيادات من كيوريكس", lab: "كيورلي لاب من كيوريكس", pharmacy: "كيورلي للصيدليات من كيوريكس", staff: "كيورلي",
 };
 export const productName = (p: Product, lang: Lang = "en") => (lang === "ar" && PRODUCT_NAMES_AR[p]) || PRODUCT_NAMES[p];
-export const hasArabicWordmark = (p: Product) => { const c = canonicalProduct(p); return c === "clinic" || c === "lab" || c === "pharmacy"; };
+export const hasArabicWordmark = (p: Product) => { const c = canonicalProduct(p); return c === "clinic" || c === "lab" || c === "pharmacy" || c === "staff"; };
 
 function markNodes(product: Product): Node[] {
   const c = canonicalProduct(product);
   return [
     { k: "poly", points: "373,237 505,440 373,643", role: "indigo", sw: 38 },
     // right-hand chevron: Ocean for Kiorex/Passport/Nurse, the product accent for Clinic/Lab/Pharmacy
-    { k: "poly", points: "720,237 588,440 720,643", role: c === "clinic" || c === "lab" || c === "pharmacy" ? c : "ocean", sw: 38 },
+    { k: "poly", points: "720,237 588,440 720,643", role: c === "clinic" || c === "lab" || c === "pharmacy" ? c : c === "staff" ? "peri" : "ocean", sw: 38 },
     { k: "pulse", d: PULSE, role: c === "nurse" ? "rose" : "coral", sw: 11 },
   ];
 }
@@ -89,12 +92,18 @@ function wordNodes(product: Product, x: number, baseline: number): { nodes: Node
 // ---- Arabic lockup: line 1 كيورلي (ك ي و ر ل indigo, final ي = product accent), line 2 <product word, accent> + «من كيوريكس» (muted); right-aligned (RTL start).
 const AR_SUB_SCALE = 0.25;
 const AR_SUB_GAP = 36; // units between the product word and «من كيوريكس»
+const AR_STAFF_SCALE = 1.28; // the single Arabic word is set larger so it carries the same visual weight as the Latin KIORLY next to the mark
 const AR_LINE2_DROP = 160; // line-2 baseline below line-1 baseline (clears the tail of the final ي)
 const arPlace = (w: { letters: { d: string; role: string }[] }, x: number, y: number, scale: number | null, role: (r: string) => Role): Node[] =>
   w.letters.map((l) => ({ k: "glyph", d: l.d, role: role(l.role), transform: scale ? `translate(${x} ${y}) scale(${scale})` : `translate(${x} ${y})` }));
 
 /** Arabic words with their right ink edge at x=right and line-1 baseline at y=baseline. */
 function arWordNodes(product: Product, right: number, baseline: number): { nodes: Node[]; width: number; line2Baseline: number } {
+  if (product === "staff") {
+    // Kiorly staff brand: line 1 only (كيورلي, final ي in Periwinkle)
+    const k = WORDS_AR.KIORLY, sc = AR_STAFF_SCALE;
+    return { nodes: arPlace(k, right - k.width * sc, baseline, sc, (r) => (r === "secondary" ? "peri" : "indigo")), width: k.width * sc, line2Baseline: baseline };
+  }
   const c = canonicalProduct(product) as "clinic" | "lab" | "pharmacy";
   const accent = accentRole(c);
   const k = WORDS_AR.KIORLY, pw = WORDS_AR[({ clinic: "CLINIC", lab: "LAB", pharmacy: "PHARMACY" } as const)[c]], by = WORDS_AR.BY_KIOREX;
@@ -111,8 +120,9 @@ function arWordNodes(product: Product, right: number, baseline: number): { nodes
 function arScene(variant: Variant, product: Product): Scene {
   if (variant === "wordmark") {
     const probe = arWordNodes(product, 0, 0);
-    const W = Math.ceil(probe.width), B = 182;
+    const W = Math.ceil(probe.width), B = product === "staff" ? Math.ceil(-WORDS_AR.KIORLY.top * AR_STAFF_SCALE) + 4 : 182;
     const { nodes, line2Baseline } = arWordNodes(product, W, B);
+    if (product === "staff") return { viewBox: [-2, -2, W + 4, Math.ceil(WORDS_AR.KIORLY.bottom * AR_STAFF_SCALE) + B + 4], nodes };
     return { viewBox: [-2, -2, W + 4, Math.ceil(line2Baseline + 30) + 4], nodes };
   }
   // lockup (RTL): words | coral rule | mark. The artwork is NOT mirrored; only its position moves to the right (start side).
@@ -120,13 +130,15 @@ function arScene(variant: Variant, product: Product): Scene {
   const ruleX = MARK_INK_LEFT - 180, right = ruleX - 185;
   const probe = arWordNodes(product, 0, 0);
   const W = Math.ceil(probe.width);
-  const { nodes: wn } = arWordNodes(product, right, 448);
+  // staff: the single word is centred on the mark's pulse axis (y = 440); product lockups keep the two-line block geometry
+  const baseA = product === "staff" ? 440 - (AR_STAFF_SCALE * (WORDS_AR.KIORLY.top + WORDS_AR.KIORLY.bottom)) / 2 : 448;
+  const { nodes: wn } = arWordNodes(product, right, baseA);
   const x0 = right - W - 40;
   const nodes: Node[] = [...markNodes(product), { k: "line", x1: ruleX, y1: 210, x2: ruleX, y2: 670, role: "coral", sw: 4 }, ...wn];
   return { viewBox: [x0, 190, MARK_INK_RIGHT + 26.5 - x0, 500], nodes };
 }
 
-const hasSub = (p: Product) => p !== "kiorex";
+const hasSub = (p: Product) => p !== "kiorex" && p !== "staff";
 
 export function buildScene(variant: Variant, product: Product = "kiorex", lang: Lang = "en"): Scene {
   if (lang === "ar" && hasArabicWordmark(product) && variant !== "mark") return arScene(variant, product);

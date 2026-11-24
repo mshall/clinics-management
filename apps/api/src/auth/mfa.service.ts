@@ -1,7 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 import { createHmac, randomBytes } from "crypto";
-import * as bcrypt from "bcryptjs";
+import { passwordHasher } from "./password-hasher";
 import { effectiveRoles } from "../common/effective-roles";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuthOtpChallengeService } from "./auth-otp-challenge.service";
@@ -105,7 +105,7 @@ export class MfaService {
       throw new BadRequestException("Invalid authenticator code");
     }
     const recoveryCodes = this.generateRecoveryCodes();
-    const hashes = recoveryCodes.map((c) => bcrypt.hashSync(c, 10));
+    const hashes = await Promise.all(recoveryCodes.map((c) => passwordHasher.hash(c, 10)));
     await this.prisma.user.update({
       where: { id: userId },
       data: { mfaTotpSecret: secret, mfaEnabled: true, mfaRecoveryHashes: hashes },
@@ -124,10 +124,10 @@ export class MfaService {
       select: { passwordHash: true, mfaEnabled: true, mfaTotpSecret: true },
     });
     if (!user?.mfaEnabled) throw new BadRequestException("MFA is not enabled");
-    if (!bcrypt.compareSync(password, user.passwordHash)) throw new BadRequestException("Password is incorrect");
+    if (!(await passwordHasher.compare(password, user.passwordHash))) throw new BadRequestException("Password is incorrect");
     if (!verifyTotpCode(user.mfaTotpSecret, totpCode)) throw new BadRequestException("Invalid authenticator code");
     const recoveryCodes = this.generateRecoveryCodes();
-    const hashes = recoveryCodes.map((c) => bcrypt.hashSync(c, 10));
+    const hashes = await Promise.all(recoveryCodes.map((c) => passwordHasher.hash(c, 10)));
     await this.prisma.user.update({
       where: { id: userId },
       data: { mfaRecoveryHashes: hashes },
@@ -146,7 +146,7 @@ export class MfaService {
     const normalized = code.trim().toUpperCase();
     for (let i = 0; i < hashes.length; i += 1) {
       const h = hashes[i]!;
-      if (bcrypt.compareSync(normalized, h)) {
+      if ((await passwordHasher.compare(normalized, h))) {
         const next = [...hashes.slice(0, i), ...hashes.slice(i + 1)];
         await this.prisma.user.update({
           where: { id: userId },
@@ -164,7 +164,7 @@ export class MfaService {
       select: { passwordHash: true, mfaTotpSecret: true, mfaEnabled: true, mfaWhatsAppEnabled: true },
     });
     if (!user?.mfaEnabled) throw new BadRequestException("MFA is not enabled");
-    if (!bcrypt.compareSync(password, user.passwordHash)) {
+    if (!(await passwordHasher.compare(password, user.passwordHash))) {
       throw new BadRequestException("Password is incorrect");
     }
     const totpOk = user.mfaTotpSecret ? verifyTotpCode(user.mfaTotpSecret, code) : false;
@@ -190,7 +190,7 @@ export class MfaService {
       },
     });
     if (!user) throw new BadRequestException("User not found");
-    if (!bcrypt.compareSync(password, user.passwordHash)) throw new BadRequestException("Password is incorrect");
+    if (!(await passwordHasher.compare(password, user.passwordHash))) throw new BadRequestException("Password is incorrect");
     if (!effectiveRoles(user).includes(UserRole.PHYSICIAN)) {
       throw new ForbiddenException("WhatsApp MFA is available for physicians");
     }

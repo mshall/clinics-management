@@ -32,7 +32,7 @@ export function ClinicKiorexListingsPanel({ clinicId }: Props) {
   });
 
   return (
-    <Card>
+    <Card data-setup-target="kiorex_profile" tabIndex={-1}>
       <CardHeader>
         <CardTitle className="text-base">{t("kiorex.listings.title", "Kiorex doctor listings")}</CardTitle>
         <CardDescription>

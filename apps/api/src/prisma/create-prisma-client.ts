@@ -16,6 +16,17 @@ export function resolvePoolMax(connectionLimit: number): number {
   return Number.isInteger(env) && env > 0 ? env : DEFAULT_POOL_MAX;
 }
 
+/**
+ * How long a request waits for a free pooled connection before failing (-> 503 Retry-After, see db-pool-exhausted.filter.ts). `pool_timeout` in DATABASE_URL (seconds,
+ * Prisma's name) wins, then `DB_POOL_TIMEOUT_MS`, else 10 s (what Prisma 6 waited).
+ */
+export const DEFAULT_POOL_TIMEOUT_MS = 10_000;
+export function resolvePoolTimeoutMs(poolTimeoutSeconds: number): number {
+  if (Number.isFinite(poolTimeoutSeconds) && poolTimeoutSeconds > 0) return Math.round(poolTimeoutSeconds * 1000);
+  const env = Number(process.env.DB_POOL_TIMEOUT_MS);
+  return Number.isInteger(env) && env > 0 ? env : DEFAULT_POOL_TIMEOUT_MS;
+}
+
 /** Prisma-only URL parameters that the `pg` driver does not understand. */
 const PRISMA_ONLY_PARAMS = ["schema", "connection_limit", "pool_timeout", "connect_timeout", "pgbouncer"];
 
@@ -29,15 +40,19 @@ export function createPrismaAdapter(databaseUrl: string | undefined = process.en
   const url = new URL(databaseUrl);
   const schema = url.searchParams.get("schema") ?? undefined;
   const limit = Number(url.searchParams.get("connection_limit"));
+  const poolTimeout = Number(url.searchParams.get("pool_timeout"));
   for (const p of PRISMA_ONLY_PARAMS) url.searchParams.delete(p);
   return new PrismaPg(
     {
       connectionString: url.toString(),
       max: resolvePoolMax(limit),
       // Prisma 6 waited up to 10 s for a pooled connection; `pg` waits forever by default.
-      connectionTimeoutMillis: 10_000,
+      connectionTimeoutMillis: resolvePoolTimeoutMs(poolTimeout),
+      // Return idle connections before a proxy / Postgres drops them silently (pg default 10 s churns connections under bursty load).
+      idleTimeoutMillis: 30_000,
+      keepAlive: true,
     },
-    schema ? { schema } : undefined,
+    { ...(schema ? { schema } : {}), onPoolError: (e: Error) => console.error(`[db-pool] idle connection error: ${e.message}`), onConnectionError: (e: Error) => console.error(`[db-pool] connection error: ${e.message}`) },
   );
 }
 

@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "crypto";
 import { createReadStream, createWriteStream } from "fs";
 import { mkdir, readFile, stat, unlink, writeFile } from "fs/promises";
 import { join } from "path";
-import { unzipSync } from "fflate";
+import { buildInsert, checkRestoreStatement, parseExportInserts, restorableObjectPath, safeUnzip, UnzipLimitError } from "./org-backup-safe";
 import { Prisma } from "@prisma/client";
 import type { JwtUser } from "../../auth/jwt-user";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -27,30 +27,9 @@ export type OrgBackupFormat = "SQL" | "DOCUMENTS" | "FULL";
 export { ExportCancelledError };
 
 const EXPORT_TTL_HOURS = 72;
-const ALLOWED_SQL_TABLES = new Set([
-  "Tenant",
-  "User",
-  "Clinic",
-  "ClinicAdminScope",
-  "UserNavTabGrant",
-  "Patient",
-  "PatientDocument",
-  "Employee",
-  "Appointment",
-  "Encounter",
-  "Diagnosis",
-  "EncounterMedication",
-  "EncounterDocument",
-  "Operation",
-  "OperationDocument",
-  "OperationMedication",
-  "Expense",
-  "RevenueEntry",
-  "Attendance",
-  "LeaveRequest",
-  "AuditLog",
-  "FeatureFlag",
-]);
+const IMPORT_MAX_UNZIPPED_BYTES = 1024 * 1024 * 1024; // actually inflated bytes across all entries
+const IMPORT_MAX_ENTRY_BYTES = 256 * 1024 * 1024;
+const IMPORT_MAX_ZIP_ENTRIES = 100_000;
 
 function scopeForFormat(format: OrgBackupFormat): string {
   if (format === "SQL") return "ORG_SQL";
@@ -573,15 +552,24 @@ export class OrgBackupService {
     await this.setProgress(jobId, 10, { status: "RUNNING" });
     let sqlText: string | null = null;
     let filesRestored = 0;
+    let filesSkipped = 0;
     let sqlApplied = 0;
     let sqlAttempted = 0;
+    let sqlRejected = 0;
 
     try {
       const buffer = await this.loadImportBuffer(file);
       await this.setProgress(jobId, 18);
 
       if (isZip) {
-        const unzipped = unzipSync(new Uint8Array(buffer));
+        let unzipped: Record<string, Uint8Array>;
+        try {
+          // zip-bomb safe: caps are enforced on the bytes actually inflated, not on the sizes the archive declares
+          unzipped = safeUnzip(new Uint8Array(buffer), { maxTotal: IMPORT_MAX_UNZIPPED_BYTES, maxEntries: IMPORT_MAX_ZIP_ENTRIES, maxEntry: IMPORT_MAX_ENTRY_BYTES });
+        } catch (e) {
+          if (e instanceof UnzipLimitError) throw new BadRequestException(`Backup archive rejected: ${e.message}`);
+          throw new BadRequestException("Backup archive could not be read");
+        }
         await this.setProgress(jobId, 25);
         const sqlEntry =
           unzipped["organization-export.sql"] ??
@@ -597,17 +585,21 @@ export class OrgBackupService {
           }
           const total = Math.max(manifest.files?.length ?? 0, 1);
           let done = 0;
+          const ownUsers = new Set((await this.prisma.user.findMany({ where: { tenantId }, select: { id: true } })).map((u) => u.id));
           for (const f of manifest.files ?? []) {
-            const zipPath = f.zipPath.replace(/^\.\//, "");
+            const zipPath = String(f.zipPath ?? "").replace(/^\.\//, "");
             const data =
               unzipped[zipPath] ??
               unzipped[zipPath.replace(/^files\//, "")] ??
               unzipped[`files/${zipPath}`];
-            if (!data) {
+            // The manifest is attacker-controlled: only keys inside THIS tenant's own folder are written (no `..`, no other tenant's prefix, no platform kinds)
+            const target = restorableObjectPath(String(f.storageKind ?? ""), String(f.relativePath ?? ""), tenantId, ownUsers);
+            if (!data || !target) {
+              if (data && !target) filesSkipped += 1;
               done += 1;
               continue;
             }
-            await this.uploads.put(f.storageKind as UploadKind, f.relativePath, Buffer.from(data), f.mimeType);
+            await this.uploads.put(f.storageKind as UploadKind, target, Buffer.from(data), f.mimeType);
             filesRestored += 1;
             done += 1;
             if (done % 3 === 0) await this.setProgress(jobId, 25 + Math.round((done / total) * 45));
@@ -629,6 +621,7 @@ export class OrgBackupService {
         );
         sqlApplied = result.applied;
         sqlAttempted = result.attempted;
+        sqlRejected = result.rejected;
       }
 
       await this.setProgress(jobId, 100, {
@@ -636,6 +629,8 @@ export class OrgBackupService {
         completedAt: new Date(),
         rowCounts: {
           filesRestored,
+          filesSkipped,
+          sqlRejected,
           sqlStatements: sqlApplied,
           sqlAttempted,
           mode: isZip ? "zip" : "sql",
@@ -649,42 +644,50 @@ export class OrgBackupService {
     }
   }
 
-  /** Apply INSERT statements for allowlisted tables; skip statements that don't target this tenant when tenantId column exists. */
+  /**
+   * Restore rows from an uploaded backup. The text is NEVER executed: it is parsed with the strict exporter grammar and each statement is rebuilt from
+   * validated tokens (see org-backup-safe.ts). Only INSERTs into this tenant's own tables; the tenantId literal and every foreign key must belong to the
+   * restoring tenant (or to a row inserted earlier in this same restore); conflicts are skipped, never updated.
+   */
   private async applyAllowlistedSql(
     tenantId: string,
     sql: string,
     onProgress?: (ratio: number) => Promise<unknown>,
-  ): Promise<{ applied: number; attempted: number }> {
-    const statements = sql
-      .split(/\n/)
-      .filter((line) => !line.trim().startsWith("--"))
-      .join("\n")
-      .split(/;\s*\n/)
-      .map((s) => s.trim())
-      .filter((s) => /^INSERT\s+INTO/i.test(s));
-
-    let applied = 0;
-    let attempted = 0;
+  ): Promise<{ applied: number; attempted: number; rejected: number }> {
+    const { statements, rejected: parseRejected } = parseExportInserts(sql);
+    const restoredIds = new Map<string, Set<string>>(); // table -> ids inserted by this restore
+    let applied = 0, attempted = 0, rejected = parseRejected;
     const total = Math.max(statements.length, 1);
     for (let i = 0; i < statements.length; i++) {
-      const stmt = statements[i]!;
-      const m = stmt.match(/^INSERT\s+INTO\s+"?([A-Za-z0-9_]+)"?/i);
-      if (!m) continue;
-      const table = m[1]!;
-      if (!ALLOWED_SQL_TABLES.has(table)) continue;
-      // Soft-guard: if statement mentions a different tenant id literal for Tenant table, skip.
-      if (table === "Tenant" && !stmt.includes(tenantId)) continue;
+      const st = statements[i]!;
+      const verdict = checkRestoreStatement(st, tenantId);
+      if (!verdict.ok) { rejected += 1; continue; }
+      let parentsOk = true;
+      for (const fk of verdict.fks) {
+        if (restoredIds.get(fk.parent)?.has(fk.id)) continue;
+        if (!(await this.parentBelongsToTenant(fk.parent, fk.id, tenantId))) { parentsOk = false; break; }
+      }
+      if (!parentsOk) { rejected += 1; continue; }
       attempted += 1;
       try {
-        await this.prisma.$executeRawUnsafe(stmt.endsWith(";") ? stmt : `${stmt};`);
+        await this.prisma.$executeRawUnsafe(`${buildInsert(st)};`); // rebuilt from validated tokens: no uploaded SQL text reaches the database
         applied += 1;
+        const idIdx = st.columns.indexOf("id");
+        const idVal = st.values[idIdx];
+        if (idVal?.kind === "str") { let set = restoredIds.get(st.table); if (!set) restoredIds.set(st.table, (set = new Set())); set.add(idVal.v); }
       } catch {
-        // Prefer ON CONFLICT style failures to be ignored for idempotent re-import.
+        // duplicate keys / constraint violations are skipped (idempotent re-import); existing rows are never updated
       }
       if (onProgress && i % 10 === 0) await onProgress(i / total);
     }
     if (onProgress) await onProgress(1);
-    return { applied, attempted };
+    return { applied, attempted, rejected };
+  }
+
+  private async parentBelongsToTenant(parent: string, id: string, tenantId: string): Promise<boolean> {
+    if (!/^[A-Za-z]+$/.test(parent)) return false;
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ ok: number }>>(`SELECT 1 AS ok FROM "${parent}" WHERE id = $1 AND ("tenantId" = $2${parent === "ClinicalFormTemplate" ? ' OR "tenantId" IS NULL' : ""}) LIMIT 1`, id, tenantId); // built-in clinical templates are shared, everything else must be this tenant's
+    return rows.length > 0;
   }
 
   /** Expose stream helper for controllers. */

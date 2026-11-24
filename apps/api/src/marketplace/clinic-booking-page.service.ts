@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { ClinicRecordStatus, ListingStatus } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { AuditService } from "../audit/audit.service";
@@ -10,6 +10,8 @@ import {
   isValidBookingSlug,
   slugifyBookingName,
 } from "./booking-slug";
+import { ProviderLinkCoreService } from "../growth/provider-links/provider-link-core.service";
+import { widgetEmbedUrl } from "../growth/provider-links/link-urls";
 import { MarketplaceListingService } from "./marketplace-listing.service";
 import type { ProviderProfileJson } from "./provider-profile-schema";
 
@@ -33,7 +35,7 @@ export function bookingPageUrl(slug: string): string {
   return `${bookingLinkBaseUrl()}/${encodeURIComponent(slug)}`;
 }
 
-/** Kiorex-hosted booking widget; null until Kiorex provides the widget origin (see KIORLY_NEEDS_HUMAN). */
+/** @deprecated GRW-P1-D1: the public page now uses `widgetEmbedUrl` (never null). Kept for callers that need the raw dedicated-widget URL. */
 export function kiorexWidgetUrl(slug: string, clinicId: string, clinicianId?: string): string | null {
   const base = process.env.KIOREX_BOOKING_WIDGET_URL?.trim();
   if (!base) return null;
@@ -62,6 +64,8 @@ export class ClinicBookingPageService {
     private readonly prisma: PrismaService,
     private readonly listings: MarketplaceListingService,
     private readonly audit: AuditService,
+    /** GRW-P1-D1: provider links (`?s=` touch, signed `lt`). Optional so older constructions keep working. */
+    @Optional() private readonly links?: ProviderLinkCoreService,
   ) {}
 
   private async slugTaken(slug: string, except?: { clinicId?: string; listingId?: string }) {
@@ -179,7 +183,7 @@ export class ClinicBookingPageService {
   }
 
   /** Public, unauthenticated page payload. Never returns patient data. */
-  async publicPage(rawSlug: string) {
+  async publicPage(rawSlug: string, opts?: { s?: string | null; bot?: boolean }) {
     const slug = (rawSlug ?? "").trim().toLowerCase();
     if (!isValidBookingSlug(slug)) throw new NotFoundException("Booking page not found");
 
@@ -204,6 +208,8 @@ export class ClinicBookingPageService {
       where: { id: clinicId, recordStatus: ClinicRecordStatus.ACTIVE },
       select: {
         id: true,
+        tenantId: true,
+        country: true,
         nameEn: true,
         nameAr: true,
         logoUrl: true,
@@ -235,10 +241,28 @@ export class ClinicBookingPageService {
       }),
     ]);
 
+    // GRW-P1-D1: `?s=<code>` of an ACTIVE link of this organisation counts one visit (no cookie, bots filtered) and yields the signed `lt`; anything else is ignored.
+    const touch = opts?.s && this.links ? await this.links.touch(opts.s, clinic.tenantId, { bot: opts.bot === true }) : null;
+    const lt = touch?.lt ?? null;
+    const embed = (clinicianId: string | undefined, doctorSlug: string | null) =>
+      widgetEmbedUrl({
+        kind: doctorSlug ? "doctor" : "clinic",
+        slug: doctorSlug ?? slug,
+        pageSlug: slug,
+        clinicId: clinic.id,
+        clinicianId,
+        country: clinic.country,
+        lt,
+        channelKind: touch?.link.channelKind,
+        tags: touch?.link.tags,
+      });
+
     return {
       slug,
       channel: CLINIC_LINK_CHANNEL,
       commissionFree: true,
+      tracked: Boolean(touch),
+      lt,
       clinic: {
         id: clinic.id,
         nameEn: clinic.nameEn,
@@ -256,7 +280,7 @@ export class ClinicBookingPageService {
         clinicianId: l.clinicianId,
         slug: l.bookingSlug,
         ...doctorNames(l.profileJson, l.clinician.displayName),
-        widgetUrl: kiorexWidgetUrl(slug, clinic.id, l.clinicianId),
+        widgetUrl: embed(l.clinicianId, l.bookingSlug),
       })),
       appointmentTypes: types.map((t) => ({
         id: t.id,
@@ -265,7 +289,8 @@ export class ClinicBookingPageService {
         durationMinutes: t.durationMinutes,
         feeAmount: t.feeAmount?.toString() ?? null,
       })),
-      widgetUrl: kiorexWidgetUrl(slug, clinic.id, onlyClinicianId ?? undefined),
+      widgetUrl: embed(onlyClinicianId ?? undefined, onlyClinicianId ? slug : null),
+      widgetEmbedUrl: embed(onlyClinicianId ?? undefined, onlyClinicianId ? slug : null),
     };
   }
 

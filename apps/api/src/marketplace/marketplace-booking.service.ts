@@ -7,6 +7,7 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import {
+  AcquisitionOrigin,
   AppointmentStatus,
   BookingSource,
   MessageChannel,
@@ -19,6 +20,8 @@ import { ConsentPolicyService } from "../compliance/consent-policy.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { parseAcquisitionBlock, type AcquisitionBlock } from "../growth/acquisition-contract";
+import { ProviderLinkCoreService } from "../growth/provider-links/provider-link-core.service";
 import { DEFAULT_COMMERCIAL_CONFIG } from "../markets/commercial-config.schema";
 import { mapEffectiveAppointmentType } from "../scheduling/appointment-type-rules";
 import { appointmentIntervalsOverlap } from "../common/appointment-scheduling";
@@ -70,6 +73,10 @@ export type MarketplaceBookingBody = {
   /** KX-09 §03 — HOME visit types: the address normally travels on the hold; sending it here too is accepted. */
   visitAddress?: unknown;
   serviceLocation?: string;
+  /** GRW-P1-D2 (contracts 1.10.0): Kiorex attribution evidence, covered by the request HMAC. Absent = UNATTRIBUTED (today's rules). Validated, stored, never recomputed. */
+  acquisition?: unknown;
+  /** GRW-P1-D1: signed provider-link touch carried by the public page / widget; a valid one makes the booking provider-led. */
+  lt?: string;
 };
 
 @Injectable()
@@ -89,6 +96,8 @@ export class MarketplaceBookingService {
     @Optional() private readonly homeVisits?: HomeVisitService,
     @Optional() private readonly flags?: FeatureFlagsService,
     @Optional() private readonly entitlements?: EntitlementsService,
+    /** GRW-P1-D1/D2: provider-link verification and counters. Optional so older constructions keep working (no link attribution without it). */
+    @Optional() private readonly providerLinks?: ProviderLinkCoreService,
   ) {}
 
   async getByExternalRef(client: PlatformIntegrationPrincipal, externalRef: string) {
@@ -130,10 +139,26 @@ export class MarketplaceBookingService {
       await assertBookingSlugMatchesClinic(this.prisma, body.bookingPageSlug, body.clinicId, body.clinicianId);
     }
     const bookingSource = viaClinicLink ? BookingSource.CLINIC_LINK : BookingSource.KIOREX_MARKETPLACE;
-    const attribution =
-      viaClinicLink && body.bookingPageSlug
-        ? { ...(body.attribution ?? {}), bookingPageSlug: body.bookingPageSlug.trim().toLowerCase() }
-        : body.attribution;
+    // GRW-P1-D2: the optional signed `acquisition` block. A malformed block is rejected with the contract's error code; an absent one is UNATTRIBUTED (today's rules).
+    let block: AcquisitionBlock | null = null;
+    if (body.acquisition !== undefined && body.acquisition !== null) {
+      const parsed = parseAcquisitionBlock(body.acquisition);
+      if (!parsed.ok) throw new BadRequestException({ code: parsed.code, message: parsed.message });
+      block = parsed.block;
+    }
+    // GRW-P1-D1: a valid, unexpired `lt` of an ACTIVE link of THIS organisation, or the clinic's own booking page channel, makes the booking provider-led.
+    // Evidence only ever REMOVES a fee: the stored origin can move to PROVIDER_LED here, never away from it.
+    const link = await this.providerLinks?.verifyForBooking(body.lt, tenantId);
+    const providerLed = Boolean(link) || viaClinicLink || block?.origin === AcquisitionOrigin.PROVIDER_LED;
+    const acquisitionOrigin: AcquisitionOrigin = providerLed ? AcquisitionOrigin.PROVIDER_LED : block?.origin ?? AcquisitionOrigin.UNATTRIBUTED;
+    const acquisitionDecisionRef = block?.decisionId ?? (link ? `link:${link.code}` : viaClinicLink ? "clinic-link" : null);
+    const acquisitionPolicyVersion = block?.policyVersion ?? (link ? "LINK_TOUCH_V1" : viaClinicLink ? "CLINIC_LINK_V1" : null);
+    const attributionBase = {
+      ...(viaClinicLink && body.bookingPageSlug ? { ...(body.attribution ?? {}), bookingPageSlug: body.bookingPageSlug.trim().toLowerCase() } : body.attribution ?? {}),
+      ...(link ? { referralLinkCode: link.code } : {}),
+      ...(block ? { acquisition: { reason: block.reason, evidenceHash: block.evidenceHash, ...(block.touch ? { touch: block.touch } : {}) } } : {}),
+    };
+    const attribution = Object.keys(attributionBase).length ? attributionBase : body.attribution;
     const start = new Date(body.startsAt);
     if (Number.isNaN(start.getTime())) throw new BadRequestException("Invalid startsAt");
     const typeRow = await this.prisma.appointmentType.findFirst({
@@ -322,6 +347,10 @@ export class MarketplaceBookingService {
             status,
             bookingSource,
             attributionJson: (attribution ?? undefined) as Prisma.InputJsonValue | undefined,
+            // frozen at booking (D2): later Kiorex decisions never change these; only an approved PROVIDER_LED_EVIDENCE dispute may flip the origin, to PROVIDER_LED
+            acquisitionOrigin,
+            acquisitionDecisionRef,
+            acquisitionPolicyVersion,
             isNewPatientAtBooking: newPatientStamp.isNewPatientAtBooking,
             newPatientCheckedAt: newPatientStamp.newPatientCheckedAt,
             platformIntegrationClientId: client.id,
@@ -332,6 +361,7 @@ export class MarketplaceBookingService {
         });
 
         if (hold) await tx.slotHold.delete({ where: { id: hold.id } });
+        if (link) await this.providerLinks!.countBooking(tx, link);
         if (isVideo) await ensureTelehealthSession(tx, appt, null);
 
         if (home && this.homeVisits) {
@@ -403,11 +433,15 @@ export class MarketplaceBookingService {
           alternatives,
         });
       }
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && (e.code === "P2002" || e.code === "P2034")) {
         const again = await this.prisma.appointment.findFirst({
           where: { platformIntegrationClientId: client.id, externalReference: key },
         });
         if (again) return this.serializeBooking(again);
+        // P2034 = serializable write conflict: a parallel booking for the same slot won the race (GRW-P1-D2 concurrency test). Same answer as SLOT_TAKEN, with alternatives, so Kiorex can retry.
+        if (e.code === "P2034") {
+          throw new ConflictException({ code: SLOT_TAKEN_CODE, message: "Slot already taken", alternatives: await this.nearestAlternatives(tenantId, body) });
+        }
       }
       throw e;
     }
@@ -534,7 +568,22 @@ export class MarketplaceBookingService {
       }
     }
 
-    const updated = await this.prisma.$transaction(
+    // Two patients moving onto the same slot at once: the Serializable snapshot of the loser predates the winner's commit, so PostgreSQL aborts it (P2034 / 40001).
+    // That is the same answer as an ordinary conflict (409 SLOT_TAKEN with alternatives), never a 500 (EDGE-41).
+    const slotTaken = async () =>
+      new ConflictException({
+        code: SLOT_TAKEN_CODE,
+        message: "Slot already taken",
+        alternatives: await this.nearestAlternatives(appt.tenantId, {
+          clinicId: appt.clinicId,
+          clinicianId: appt.clinicianId,
+          typeId: appt.appointmentTypeId ?? undefined,
+          startsAt: start.toISOString(),
+        } as MarketplaceBookingBody),
+      });
+    let updated;
+    try {
+      updated = await this.prisma.$transaction(
       async (tx) => {
         const lockKey = BigInt(Math.abs(appt.clinicianId.split("").reduce((s, c) => s + c.charCodeAt(0), 0) + start.getTime()));
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
@@ -578,7 +627,12 @@ export class MarketplaceBookingService {
         return row;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+      );
+    } catch (e) {
+      if (e instanceof ConflictException && (e.getResponse() as { code?: string })?.code === SLOT_TAKEN_CODE) throw await slotTaken();
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2034") throw await slotTaken();
+      throw e;
+    }
     await this.slots.invalidateAndNotify(updated.tenantId, updated.clinicId, updated.clinicianId, "marketplace_reschedule");
     await this.audit.recordEvent({
       tenantId: updated.tenantId,

@@ -15,6 +15,7 @@ import {
 import { localeForLanguage } from "@/lib/locale-display";
 import { ApiError, apiPatch } from "@/lib/http";
 import { useSyncOnChange } from "@/lib/use-sync-on-change";
+import { useSetupSession } from "@/features/onboarding/setup-session";
 
 type ClinicHoursSettingsPanelProps = {
   clinicId: string;
@@ -36,6 +37,9 @@ export function ClinicHoursSettingsPanel({
   const resolvedClose = resolveClinicClosingTime(closingTime);
   const [open, setOpen] = useState(resolvedOpen);
   const [close, setClose] = useState(resolvedClose);
+  const setup = useSetupSession();
+  /** Quick setup: keeping the default hours still needs an explicit confirmation, so Save stays enabled. */
+  const confirming = setup?.key === "working_hours" && setup.entity === clinicId;
 
   useSyncOnChange([openingTime, closingTime], () => {
     setOpen(resolveClinicOpeningTime(openingTime));
@@ -82,6 +86,7 @@ export function ClinicHoursSettingsPanel({
                 <Label htmlFor="clinic-opening-time">{t("admin.clinicOpeningTime", "Opening time")}</Label>
                 <Input
                   id="clinic-opening-time"
+                  data-setup-target="working_hours"
                   type="time"
                   className="ltr-nums"
                   value={open}
@@ -106,10 +111,10 @@ export function ClinicHoursSettingsPanel({
             ) : null}
             <Button
               type="button"
-              disabled={saveMut.isPending || unchanged || hourIssues.length > 0}
+              disabled={saveMut.isPending || (unchanged && !confirming) || hourIssues.length > 0}
               onClick={() => saveMut.mutate()}
             >
-              {t("common.save", "Save")}
+              {unchanged && confirming ? t("onboarding.confirmHours", "Confirm these hours") : t("common.save", "Save")}
             </Button>
           </>
         ) : (

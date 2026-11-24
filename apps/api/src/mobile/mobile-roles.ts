@@ -9,6 +9,7 @@ export const CLINICIAN_ROLES = [R.PHYSICIAN, R.NURSE] as const;
 export const SIGNING_ROLES = [R.PHYSICIAN, R.GROUP_ADMIN, R.GROUP_SUPERVISOR] as const;
 export const VITALS_ROLES = [R.PHYSICIAN, R.NURSE, R.CLINIC_ASSISTANT, R.BRANCH_MANAGER, R.GROUP_ADMIN, R.GROUP_SUPERVISOR, R.CLINIC_ADMIN] as const;
 export const REVENUE_ROLES = [R.GROUP_ADMIN, R.GROUP_SUPERVISOR, R.BRANCH_MANAGER, R.FINANCE_OFFICER, R.CLINIC_ADMIN] as const;
+export const GROWTH_ROLES = [R.GROUP_ADMIN, R.GROUP_SUPERVISOR, R.BRANCH_MANAGER, R.CLINIC_ADMIN, R.CLINIC_ASSISTANT, R.PHYSICIAN] as const;
 export const ALERT_ROLES = [R.GROUP_ADMIN, R.GROUP_SUPERVISOR, R.BRANCH_MANAGER, R.CLINIC_ADMIN, R.PHYSICIAN, R.NURSE] as const;
 
 /** Nurse-edition agency dispatchers (front-desk roles): coordinate nurses, see home-visit safety alerts, no clinical-record or prescription access. */
@@ -28,6 +29,8 @@ export const MODULES: ModuleDef[] = [
   { key: "clinic.vitals", allow: VITALS_ROLES, screens: ["entry", "trend"] },
   { key: "clinic.homevisits", allow: [R.NURSE, R.PHYSICIAN], screens: ["round", "checkin", "safety", "sample"], nurseEdition: true },
   { key: "clinic.revenue", allow: REVENUE_ROLES, screens: ["snapshot"] },
+  /** GRW-P1-L Growth tab: owner/admin/manager, supervisor (view), marketing assistant, and doctors (their own link only). Plan: same `mobile_staff_app` gate as every other tile. */
+  { key: "clinic.growth", allow: GROWTH_ROLES, screens: ["share", "links", "performance"] },
 ];
 
 /** Professions that never sign prescriptions or approve results (scope of practice, ADR-029): nurses and assistants. */

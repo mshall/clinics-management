@@ -25,3 +25,4 @@ infra/cdk.out
 infra/lib
 .sync/
 dist-seed
+dist-openapi

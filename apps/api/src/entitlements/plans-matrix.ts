@@ -61,6 +61,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "admin/platform-admin.controller.ts": { kind: "platform" },
   /** Kiorly: gated by MobileInterceptor (`mobile_staff_app`), with the ADR-025 safety-alert routes open on every plan. */
   "mobile/mobile.controller.ts": { kind: "open" },
+  "mobile/growth-mobile.controller.ts": { kind: "open" }, // /mobile/* is plan-gated by MobilePlanGuard (mobile_staff_app); the module key clinic.growth scopes roles
   "admin/admin.controller.ts": { kind: "open" },
   "admin/data-explorer/admin-data-explorer.controller.ts": { kind: "gated", entitlement: "mod_data_explorer" },
   /** Token download only (no JWT); token proves access to a READY org backup artifact. */
@@ -82,6 +83,9 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "scope-of-practice/scope-of-practice.controller.ts": { kind: "open" },
   "feature-flags/kiorex-flag-webhook.controller.ts": { kind: "webhook" },
   "growth/growth-referral.controller.ts": { kind: "open" },
+  /** GRW-P1-D1: links work standalone (no Kiorex entitlement); plan limits are applied in the service (growth-plan-limits.ts). */
+  "growth/provider-links/provider-links.controller.ts": { kind: "open" },
+  "growth/provider-links/public-link.controller.ts": { kind: "open" },
   "billing-platform/kiorly-invoices.controller.ts": { kind: "open" },
   "billing-platform/kiorly-billing-payments.controller.ts": { kind: "open" },
   "billing-platform/kiorly-payments-webhook.controller.ts": { kind: "webhook" },
@@ -135,10 +139,13 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "kiorex/platform-commission-disputes.controller.ts": { kind: "platform" },
   "kiorex/public-kiorex-fees.controller.ts": { kind: "open" },
   "kiorex/kiorex-billing-charges.controller.ts": { kind: "open" },
+  "kiorex/commission-decisions.controller.ts": { kind: "open" },
   "marketplace/marketplace.controller.ts": { kind: "webhook" },
+  "marketplace/marketplace-referral-links.controller.ts": { kind: "webhook" }, // HMAC marketplace client (link registry lookup for Kiorex), same guard as marketplace.controller.ts
   "marketplace/kiorex-import.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connection.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connect.controller.ts": { kind: "open" },
+  "marketplace/kiorex-front-door.controller.ts": { kind: "open" },
   "home-visits/home-visits.controller.ts": { kind: "open" },
   "home-visits/home-visit-internal.controller.ts": { kind: "webhook" },
   /** ADR-039: telehealth_video + telehealth.video are checked inside the service so already-scheduled visits stay reachable (flag OFF never hides data). */
@@ -165,6 +172,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "user-nav-tabs/tenant-role-nav-tabs.controller.ts": { kind: "open" },
   "user-nav-tabs/user-nav-tabs.controller.ts": { kind: "open" },
   "users/users.controller.ts": { kind: "open" },
+  "users/user-preferences.controller.ts": { kind: "open" },
   "usage/usage.controller.ts": { kind: "open" },
 };
 

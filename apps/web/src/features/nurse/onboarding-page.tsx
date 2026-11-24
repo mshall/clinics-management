@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { apiGet } from "@/lib/http";
 import { useAuthStore } from "@/stores/auth-store";
+import { OnboardingChecklist } from "@/features/onboarding/onboarding-checklist";
 import { AvailabilityEditor, ZonesEditor } from "./availability-zones";
 import { ErrorBlock, LoadingBlock, PageShell, StatusPill } from "./nurse-shared";
 import { useNurseContext } from "./nurse-shared-utils";
@@ -25,6 +26,7 @@ export function NurseOnboardingPage() {
   const listingOn = ctx.data?.features["nurse.individual_kiorex_listing"];
   return (
     <PageShell title={t("nurse.onboarding.title")} subtitle={kind ? t(`nurse.onboarding.kind.${kind}`) : undefined} testId="nurse-onboarding">
+      <OnboardingChecklist variant="page" />
       {q.isLoading ? <LoadingBlock /> : null}
       {q.isError ? <ErrorBlock error={q.error} onRetry={() => void q.refetch()} /> : null}
       {q.data ? (

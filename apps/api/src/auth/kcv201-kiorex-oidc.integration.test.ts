@@ -74,6 +74,7 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
 
   before(async () => {
     await prisma.$connect();
+    await prisma.kiorexLogoutTokenSeen.deleteMany({});
     process.env.KIOREX_OIDC_ISSUER = ISSUER;
     const u = await prisma.user.findFirstOrThrow({ where: { email: "dr.ahmed@drahmedshall.com", deletedAt: null } });
     const o = await prisma.user.findFirstOrThrow({ where: { email: "admin@drahmedshall.com", deletedAt: null } });
@@ -94,6 +95,7 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
   after(async () => {
     await prisma.kiorexIdentityLink.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.kiorexOidcTransaction.deleteMany({});
+    await prisma.kiorexLogoutTokenSeen.deleteMany({}); // the replay cache is shared and the test counts it: a second run on the same database must start empty
     if (savedIssuer === undefined) delete process.env.KIOREX_OIDC_ISSUER;
     else process.env.KIOREX_OIDC_ISSUER = savedIssuer;
     await prisma.$disconnect();
@@ -196,6 +198,11 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
     assert.deepEqual(await svc.backchannelLogout(tok), { revoked: 1 });
     assert.ok((await prisma.userSession.findUniqueOrThrow({ where: { id: s.sessionId } })).revokedAt);
     await assert.rejects(() => svc.backchannelLogout(tok), /replayed/);
+    // a SECOND API instance (own service object, same database) refuses the same token: the replay cache is shared, not per process
+    const otherInstance = new KiorexOidcService(prismaSvc, {} as never, new AuditService(prismaSvc), { isEnabledForUser: async () => true } as never);
+    otherInstance.setPortForTests(port());
+    await assert.rejects(() => otherInstance.backchannelLogout(tok), /replayed/);
+    assert.equal(await prisma.kiorexLogoutTokenSeen.count(), 1);
     const badAud = await logoutToken({ sid: "x" }, { aud: "other" });
     await assert.rejects(() => svc.backchannelLogout(badAud), /invalid logout token/);
     const other = await generateKeyPair("RS256");

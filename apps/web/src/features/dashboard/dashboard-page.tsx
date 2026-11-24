@@ -13,6 +13,7 @@ import { canViewDashboardFinancialKpis, canViewDashboardHrKpis } from "@/lib/das
 import { formatMultiCurrencyAmounts } from "@/lib/money-display";
 import { localeForLanguage } from "@/lib/locale-display";
 import { OnboardingChecklistCard } from "@/features/dashboard/onboarding-checklist-card";
+import { KiorexHomeCard } from "@/features/kiorex/kiorex-home-card";
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -76,6 +77,7 @@ export function DashboardPage() {
         }
       />
       <OnboardingChecklistCard />
+      <KiorexHomeCard />
 
       {isError ? (
         <EmptyState tone="error" compact title={t("dashboard.loadError")} description={error instanceof Error ? error.message : undefined} />

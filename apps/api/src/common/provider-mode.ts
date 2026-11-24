@@ -29,8 +29,8 @@ function parse(raw: string | undefined): ProviderMode | null {
 
 export function providerMode(kind: ProviderKind): ProviderMode {
   const K = kind.toUpperCase();
-  // Precedence: KIORLY_PROVIDER_MODE_<KIND> > <KIND>_MODE (short alias) > KIORLY_PROVIDER_MODE (global).
-  const explicit = parse(process.env[`KIORLY_PROVIDER_MODE_${K}`]) ?? parse(process.env[`${K}_MODE`]) ?? parse(process.env.KIORLY_PROVIDER_MODE);
+  // Precedence: KIORLY_PROVIDER_MODE_<KIND> > <KIND>_MODE (short alias; PAYMENT_MODE also names the psp kind, same word as the Kiorex platform) > KIORLY_PROVIDER_MODE (global).
+  const explicit = parse(process.env[`KIORLY_PROVIDER_MODE_${K}`]) ?? parse(process.env[`${K}_MODE`]) ?? (kind === "psp" ? parse(process.env.PAYMENT_MODE) : null) ?? parse(process.env.KIORLY_PROVIDER_MODE);
   if (explicit) return explicit;
   if (process.env.NODE_ENV === "production" && LEGACY_REAL_SWITCH[kind]()) return "real";
   return "mock";
