@@ -59,6 +59,8 @@ html[data-edition="nurse"]:not(.dark), html[data-edition="nurse"][data-theme]:no
   --accent: 347 78% 96%;
   --accent-foreground: 344 75% 37%;
   --ring: 347 77% 50%;
+  /* the shadcn buttons hover with --kx-primary-hover: keep it Nurse Rose (it was Clinic indigo, so Nurse buttons faded rose to indigo on hover and failed AA mid-transition) */
+  --kx-primary-hover: #BE123C;
 }
 html[data-edition="nurse"].dark, html[data-edition="nurse"][data-theme].dark {
   --primary: 351 95% 71%;
@@ -66,4 +68,5 @@ html[data-edition="nurse"].dark, html[data-edition="nurse"][data-theme].dark {
   --accent: 335 49% 15%;
   --accent-foreground: 349 96% 82%;
   --ring: 351 95% 71%;
+  --kx-primary-hover: #FDA4AF;
 }
