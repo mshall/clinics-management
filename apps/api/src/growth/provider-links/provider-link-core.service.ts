@@ -4,6 +4,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { bumpLinkCounter } from "./link-counters";
 import { normalizeLinkCode } from "./link-code";
 import { signLinkTouch, verifyLinkTouch } from "./link-touch";
+import { enqueueLinkEvent, REFERRAL_LINK_CREATED, REFERRAL_LINK_REVOKED, toReferralLinkRecord, type ReferralLinkRecord } from "./link-registry";
 
 export interface LinkTarget {
   kind: "clinic" | "doctor";
@@ -26,6 +27,40 @@ export class ProviderLinkCoreService {
     const code = normalizeLinkCode(rawCode);
     if (!code) return null;
     return this.prisma.providerReferralLink.findUnique({ where: { code } });
+  }
+
+  // ---- link registry (contracts 1.11.0): Kiorex learns codes and revocations from events and can read any code back through a signed marketplace call ----
+
+  async emitCreated(link: ProviderReferralLink): Promise<void> {
+    await enqueueLinkEvent(this.prisma, REFERRAL_LINK_CREATED, link);
+  }
+
+  async emitRevoked(link: ProviderReferralLink, reason = "PROVIDER_REQUEST"): Promise<void> {
+    await enqueueLinkEvent(this.prisma, REFERRAL_LINK_REVOKED, link, reason);
+  }
+
+  /** Signed lookup for Kiorex (marketplace HMAC). Code, organisation, status only. */
+  async lookupRecord(rawCode: unknown): Promise<ReferralLinkRecord | null> {
+    const link = await this.findByCode(rawCode);
+    return link ? toReferralLinkRecord(link) : null;
+  }
+
+  /** Reconciliation feed: links changed since `updatedSince`, oldest first, keyset-paged on (updatedAt, id). */
+  async listRecords(opts: { updatedSince?: Date; limit?: number; cursor?: string }): Promise<{ items: ReferralLinkRecord[]; nextCursor: string | null }> {
+    const limit = Math.min(Math.max(Math.floor(opts.limit ?? 200), 1), 500);
+    let after: { at: Date; id: string } | null = null;
+    if (opts.cursor) {
+      const [ms, id] = Buffer.from(opts.cursor, "base64url").toString("utf8").split("|");
+      if (ms && id && Number.isFinite(Number(ms))) after = { at: new Date(Number(ms)), id };
+    }
+    const where: Prisma.ProviderReferralLinkWhereInput = {};
+    if (after) where.OR = [{ updatedAt: { gt: after.at } }, { updatedAt: after.at, id: { gt: after.id } }];
+    else if (opts.updatedSince) where.updatedAt = { gte: opts.updatedSince };
+    const rows = await this.prisma.providerReferralLink.findMany({ where, orderBy: [{ updatedAt: "asc" }, { id: "asc" }], take: limit + 1 });
+    const page = rows.slice(0, limit);
+    const last = page[page.length - 1];
+    const nextCursor = rows.length > limit && last ? Buffer.from(`${last.updatedAt.getTime()}|${last.id}`).toString("base64url") : null;
+    return { items: page.map(toReferralLinkRecord), nextCursor };
   }
 
   /** Where the link points: DOCTOR -> the doctor's page, BRANCH -> that branch's page, everything else -> the clinic page. Slugs are read, never assigned here. */

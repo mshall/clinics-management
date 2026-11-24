@@ -38,6 +38,7 @@ import { KiorexImportController } from "./kiorex-import.controller";
 import { KiorexImportService } from "./kiorex-import.service";
 import { KiorexModule } from "../kiorex/kiorex.module";
 import { ProviderLinkCoreModule } from "../growth/provider-links/provider-link-core.module";
+import { MarketplaceReferralLinksController } from "./marketplace-referral-links.controller";
 import { KiorexConnectController } from "./kiorex-connect.controller";
 import { KiorexConnectService } from "./kiorex-connect.service";
 import { KiorexFrontDoorController } from "./kiorex-front-door.controller";
@@ -66,6 +67,7 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
   ],
   controllers: [
     MarketplaceController,
+    MarketplaceReferralLinksController,
     MarketplaceOrgController,
     MarketplaceListingsProfileController,
     KiorexSettingsController,

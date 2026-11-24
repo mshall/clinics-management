@@ -21,7 +21,7 @@
     "db:doctor": "tsx scripts/db-doctor.mjs",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "openapi:export": "tsx scripts/openapi-export.ts",
+    "openapi:export": "rm -rf dist-openapi && tsc -p tsconfig.openapi.json && node dist-openapi/scripts/openapi-export.js && rm -rf dist-openapi",
     "pretest:unit": "npm run build -w @kiorly/field-visit --silent",
     "pretest:integration": "npm run build -w @kiorly/field-visit --silent",
     "test:integration": "node --import tsx --test --test-concurrency=1 \"src/**/*.integration.test.ts\"",

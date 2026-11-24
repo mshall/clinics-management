@@ -252,6 +252,7 @@ export class ProviderLinksService {
       }
     }
     if (!created) throw new ConflictException({ code: GROWTH_ERROR.LINK_INVALID, message: "Could not allocate a link code, try again" });
+    await this.core.emitCreated(created); // link registry: Kiorex learns the code and its organisation before the first signed token
     await this.audit.recordEvent({
       tenantId,
       actorId: user.userId,
@@ -301,6 +302,7 @@ export class ProviderLinksService {
       meta.status = body.status;
     }
     const row = await this.prisma.providerReferralLink.update({ where: { id }, data });
+    if (action === "growth.link.revoked") await this.core.emitRevoked(row); // link registry: a revoked code stops deciding provider-led for new bookings
     await this.audit.recordEvent({ tenantId: existing.tenantId, actorId: user.userId, clinicId: existing.clinicId, action, resource: "ProviderReferralLink", resourceId: id, metadata: { code: existing.code, ...meta } });
     return (await this.toDtos(existing.tenantId, [row]))[0]!;
   }

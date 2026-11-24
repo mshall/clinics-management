@@ -160,7 +160,7 @@ describe("QA-04 marketplace OpenAPI contract", () => {
 
   it("GRW-P1-D2 contracts 1.4.0: the copy documents the optional signed acquisition block, its error codes and keeps the old fields", () => {
     const spec = loadSpec() as OpenApiSpec & { components: { schemas: Record<string, { required?: string[]; properties?: Record<string, { enum?: string[] }> }> } };
-    assert.equal(spec.info.version, "1.4.0");
+    assert.match(spec.info.version, /^1\.(4|5)\.\d+$/, "1.4.0 added the acquisition block; 1.5.0 (contracts 1.11.0) only adds");
     const body = spec.paths["/bookings"]?.post?.requestBody?.content?.["application/json"]?.schema?.properties as Record<string, unknown>;
     for (const f of ["channel", "bookingPageSlug", "attribution", "acquisition"]) assert.ok(f in body, `booking request lost ${f}`);
     assert.deepEqual(body.acquisition, { $ref: "#/components/schemas/AcquisitionBlock" });
@@ -178,5 +178,26 @@ describe("QA-04 marketplace OpenAPI contract", () => {
     assert.deepEqual([...ACQUISITION_ORIGINS].sort(), [...spec.components.schemas.AcquisitionBlock!.properties!.origin!.enum!].sort());
     const bad = parseAcquisitionBlock({ origin: "MARKETPLACE", decisionId: "d", policyVersion: "v", reason: "MARKETPLACE_TOUCH", evidenceHash: "nope" });
     assert.ok(!bad.ok && spec.components.schemas.AcquisitionError!.properties!.code!.enum!.includes(bad.code));
+  });
+
+  it("documents the optional Clinic link token `lt` on POST /bookings (contracts 1.11.0)", () => {
+    const spec = loadSpec() as unknown as { paths: Record<string, Record<string, { requestBody?: { content?: { "application/json"?: { schema?: { properties?: Record<string, { type?: string }>; required?: string[] } } } } }>> };
+    const schema = spec.paths["/bookings"]?.post?.requestBody?.content?.["application/json"]?.schema;
+    assert.equal(schema?.properties?.lt?.type, "string", "lt must be documented on POST /bookings");
+    assert.ok(!(schema?.required ?? []).includes("lt"), "lt is optional");
+  });
+
+  it("link registry lookup routes of the referral-links controller are in OpenAPI", () => {
+    const spec = loadSpec();
+    const src = readFileSync(join(__dirname, "marketplace-referral-links.controller.ts"), "utf8");
+    assert.match(src, /MarketplaceAuthGuard/);
+    const base = /@Controller\("marketplace\/v1\/([^"]*)"\)/.exec(src)?.[1];
+    assert.equal(base, "referral-links");
+    for (const r of parseControllerRoutes(src)) {
+      const openApiPath = nestPathToOpenApi(`/${base}${r.path === "/" ? "" : r.path}`);
+      assert.ok(spec.paths[openApiPath]?.[r.method], `referral-links ${r.method.toUpperCase()} ${openApiPath} missing from OpenAPI`);
+    }
+    assert.equal(spec.paths["/referral-links/{code}"]?.get?.operationId, "marketplaceGetReferralLink");
+    assert.equal(spec.paths["/referral-links"]?.get?.operationId, "marketplaceListReferralLinks");
   });
 });

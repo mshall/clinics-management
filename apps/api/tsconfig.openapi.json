@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "outDir": "./dist-openapi", "rootDir": ".", "incremental": false, "declaration": false, "sourceMap": false, "noEmitOnError": false },
+  "include": ["src/**/*", "scripts/openapi-export.ts"],
+  "exclude": ["node_modules", "dist", "dist-openapi", "test", "**/*spec.ts", "**/*.test.ts", "prisma"]
+}

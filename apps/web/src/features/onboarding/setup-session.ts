@@ -33,7 +33,7 @@ function write(k: string, v: unknown | null) {
 
 let cache: { raw: string | null; value: SetupSession | null } = { raw: null, value: null };
 function snapshot(): SetupSession | null {
-  let raw: string | null = null;
+  let raw: string | null;
   try {
     raw = sessionStorage.getItem(ACTIVE);
   } catch {

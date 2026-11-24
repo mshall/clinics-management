@@ -9,6 +9,9 @@ import { ClinicDto } from "../src/common/dto/clinic.dto";
 import { GroupOverviewKpisDto } from "../src/common/dto/dashboard.dto";
 import { PatientDto } from "../src/common/dto/patient.dto";
 
+// The export only needs the route table: it never reads data, so the placeholder URL is enough and no database has to be running.
+process.env.DATABASE_URL ??= "postgresql://postgres:postgres@127.0.0.1:5433/kiorly?schema=public";
+
 async function main() {
   const app = await NestFactory.create(AppModule, { logger: false });
   await app.init();
@@ -36,6 +39,7 @@ async function main() {
   writeFileSync(file, `${JSON.stringify(document, null, 2)}\n`);
   await app.close();
   console.log(`Wrote ${file}`);
+  process.exit(0); // background schedulers started by init must not keep the process (or the log) busy
 }
 
 main().catch((err) => {
