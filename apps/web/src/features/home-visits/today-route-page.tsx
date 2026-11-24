@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KiorexHomeCard } from "@/features/kiorex/kiorex-home-card";
+import { NurseSetupCard } from "@/features/nurse/nurse-setup-card";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -97,6 +98,7 @@ export function TodayRoutePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4 pb-24 md:pb-4" data-testid="home-today-route">
+      <NurseSetupCard />
       <KiorexHomeCard />
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">

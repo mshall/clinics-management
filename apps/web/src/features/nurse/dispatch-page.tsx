@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KiorexHomeCard } from "@/features/kiorex/kiorex-home-card";
+import { NurseSetupCard } from "./nurse-setup-card";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ export function DispatchPage() {
   const { t } = useTranslation();
   return (
     <PageShell title={t("nurse.dispatch.title")} subtitle={t("nurse.dispatch.subtitle")} testId="nurse-dispatch">
+      <NurseSetupCard />
       <KiorexHomeCard />
       <Tabs defaultValue="visits">
         <TabsList className="h-auto w-full flex-wrap">

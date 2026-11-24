@@ -97,18 +97,20 @@ test.describe("Quick setup - Clinic journey (fresh Pro organisation)", () => {
     const types = (await (await request.get(`${API}/scheduling/appointment-types?clinicId=${clinics[0]!.id}`, { headers: H })).json()) as { id: string }[];
     const meFull = (await (await request.get(`${API}/auth/me`, { headers: H })).json()) as { tenantId: string };
     const patientId = (await prisma.patient.findFirstOrThrow({ where: { tenantId: meFull.tenantId, isSample: false }, select: { id: true } })).id;
-    const start = new Date(Date.now() + 26 * 3600_000); start.setMinutes(0, 0, 0);
+    const start = new Date(Date.now() + 125 * 60_000); start.setSeconds(0, 0); // the type needs 120 min notice
     const booked = await request.post(`${API}/appointments`, { headers: H, data: { clinicId: clinics[0]!.id, patientId, clinicianId: me.id, appointmentTypeId: types[0]!.id, startsAt: start.toISOString(), endsAt: new Date(start.getTime() + 1200_000).toISOString() } });
     expect(booked.ok(), await booked.text()).toBeTruthy();
-    const apptId = ((await booked.json()) as { id: string }).id;
     await expectFlipsToDone(page, "first_appointment", "first_check_in");
 
-    // 10 first check-in: the deep link goes straight to the earliest open appointment. (The appointment page itself currently throws "Maximum update depth exceeded"
-    //    in this working tree, with or without quick setup: the existing FS-02 spec fails the same way. So the check-in is applied in the database and the flip is asserted.)
+    // 10 first check-in, done through the real UI (the appointment page used to crash with "Maximum update depth exceeded"; fixed in VisitCollectionFields).
+    //    The deep link goes straight to the earliest open appointment, the receptionist-style panel checks the patient in with cash, the step flips by itself.
     await openStep(page, "first_check_in", /\/appointments\/[^/?]+\?.*setup=first_check_in/);
-    await prisma.appointment.update({ where: { id: apptId }, data: { status: "CHECKED_IN" } });
-    await page.goto("/onboarding");
-    await expect(row(page, "first_check_in")).toHaveAttribute("data-status", "done", { timeout: 20_000 });
+    await expect(page.getByTestId("quick-check-in-submit")).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId("collection-method-CASH_ON_VISIT").click();
+    const checkIn = page.waitForResponse((r) => r.url().includes("/front-desk/appointments/") && r.url().includes("/check-in") && r.request().method() === "POST");
+    await page.getByTestId("quick-check-in-submit").click();
+    expect((await checkIn).ok(), "check-in accepted").toBeTruthy();
+    await expectFlipsToDone(page, "first_check_in", "doctor_verification");
 
     // 11-13 the rest open the right screen (their completion needs outside review: doctor verification, Kiorex approval)
     await openStep(page, "doctor_verification", /\/profile\/verification/);
