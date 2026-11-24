@@ -10,6 +10,7 @@ import {
 import type { Request, Response } from "express";
 import { IntegrationFailureCategory } from "@prisma/client";
 import { randomUUID } from "node:crypto";
+import { replyIfDbPoolExhausted } from "../common/db-pool-exhausted.filter";
 import { PrismaService } from "../prisma/prisma.service";
 import type { IntegrationPrincipal } from "./integration.types";
 import { IntegrationFailureLogService } from "./integration-failure-log.service";
@@ -42,6 +43,7 @@ export class IntegrationFailureExceptionFilter implements ExceptionFilter {
   ) {}
 
   async catch(exception: unknown, host: ArgumentsHost): Promise<void> {
+    if (replyIfDbPoolExhausted(exception, host)) return; // transient overload: 503 + Retry-After, and no DB work for the failure log
     const ctx = host.switchToHttp();
     const req = ctx.getRequest<Request & { integrationClient?: IntegrationPrincipal }>();
     const res = ctx.getResponse<Response>();

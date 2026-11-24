@@ -1,5 +1,6 @@
 import { type ArgumentsHost, Catch, ExceptionFilter, HttpStatus, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { replyIfDbPoolExhausted } from "./db-pool-exhausted.filter";
 
 type PrismaHttpError =
   | Prisma.PrismaClientKnownRequestError
@@ -24,6 +25,8 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
 
     const code = exception instanceof Prisma.PrismaClientKnownRequestError ? exception.code : "PRISMA_CLIENT";
     this.logger.error(`${code} ${req.method} ${req.url} — ${exception.message}`, exception.stack);
+
+    if (replyIfDbPoolExhausted(exception, host)) return; // P2024 / pool timeout wording: 503 + Retry-After
 
     if (exception instanceof Prisma.PrismaClientKnownRequestError && (exception.code === "P2021" || exception.code === "P2022")) {
       res.status(HttpStatus.SERVICE_UNAVAILABLE).json({

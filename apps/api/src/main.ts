@@ -10,8 +10,7 @@ import { AuthUserDto, LoginResponseDto } from "./common/dto/auth-responses.dto";
 import { ClinicDto } from "./common/dto/clinic.dto";
 import { GroupOverviewKpisDto } from "./common/dto/dashboard.dto";
 import { PatientDto } from "./common/dto/patient.dto";
-import { MulterExceptionFilter } from "./common/multer-exception.filter";
-import { PrismaClientExceptionFilter } from "./common/prisma-exception.filter";
+import { orderedGlobalFilters } from "./common/global-filters";
 import { IntegrationFailureExceptionFilter } from "./integrations/integration-failure.filter";
 import { webBuildIdMiddleware } from "./common/web-build-id.middleware";
 import compressionMiddleware from "compression";
@@ -43,11 +42,7 @@ async function bootstrap() {
       },
     }),
   );
-  app.useGlobalFilters(
-    new MulterExceptionFilter(),
-    new PrismaClientExceptionFilter(),
-    app.get(IntegrationFailureExceptionFilter),
-  );
+  app.useGlobalFilters(...orderedGlobalFilters(app.get(IntegrationFailureExceptionFilter)));
   app.enableCors({
     origin: true,
     credentials: true,
