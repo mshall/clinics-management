@@ -88,6 +88,8 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "growth/growth-referral.controller.ts": { kind: "open" },
   /** GRW-P1-D1: links work standalone (no Kiorex entitlement); plan limits are applied in the service (growth-plan-limits.ts). */
   "growth/provider-links/provider-links.controller.ts": { kind: "open" },
+  "growth/b2b/b2b-referral.controller.ts": { kind: "open" }, // GRW-P4-C: growth.provider_marketing_v2 on send; Growth role matrix in the service; company data only
+  "growth/b2b/b2b-mobile.controller.ts": { kind: "open" }, // GRW-P4-C: /mobile/* is plan-gated by MobilePlanGuard (mobile_staff_app)
   "growth/provider-links/public-link.controller.ts": { kind: "open" },
   "billing-platform/kiorly-invoices.controller.ts": { kind: "open" },
   "billing-platform/kiorly-billing-payments.controller.ts": { kind: "open" },
