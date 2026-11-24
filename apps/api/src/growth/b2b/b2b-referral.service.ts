@@ -32,7 +32,10 @@ export class B2bReferralService {
       if (c.code === "PERSONAL_DATA") throw new UnprocessableEntityException({ code: "B2B_PERSONAL_DATA", message: c.message });
       throw new BadRequestException({ code: "B2B_INVALID", message: c.message });
     }
-    const clinic = await this.prisma.clinic.findFirst({ where: { id: body.clinicId ?? "", tenantId }, select: { id: true } });
+    // the staff app sends no clinic: the organisation's first main clinic stands for it (the referral belongs to the organisation, the clinic is only where it was sent from)
+    const clinic = body.clinicId
+      ? await this.prisma.clinic.findFirst({ where: { id: body.clinicId, tenantId }, select: { id: true } })
+      : await this.prisma.clinic.findFirst({ where: { tenantId, parentClinicId: null }, orderBy: { createdAt: "asc" }, select: { id: true } });
     if (!clinic) throw new NotFoundException("Clinic not found");
     const dayAgo = new Date(now.getTime() - 86_400_000);
     if ((await this.prisma.providerB2BReferral.count({ where: { tenantId, createdAt: { gt: dayAgo } } })) >= DAILY_LIMIT) throw new HttpException({ code: "B2B_RATE_LIMITED", message: `At most ${DAILY_LIMIT} company referrals a day` }, HttpStatus.TOO_MANY_REQUESTS);

@@ -54,6 +54,11 @@ describe("GRW-P4-C provider B2B referral, Clinic side (real Postgres)", () => {
     assert.equal(await codeOf(svc.create(w.platform, { clinicId: w.A.clinicId, companyName: "Platform Co" })), "GROWTH_FORBIDDEN");
   });
 
+  it("without a clinic id (the staff app) the first main clinic of the organisation stands for it", async () => {
+    const r = await svc.create(w.A.admin, { companyName: "Staff App Co" });
+    assert.equal(r.clinicId, w.A.clinicId);
+  });
+
   it("no reward, credit or fee-share side effect exists: no credit grant or wallet entry is written by a referral", async () => {
     const credits = async () => (await prisma.creditWallet.count()) + (await prisma.creditLedgerEntry.count());
     const before = await credits(); await svc.create(w.A.admin, { clinicId: w.A.clinicId, companyName: "No Reward Co" });
