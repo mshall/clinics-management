@@ -13,6 +13,7 @@ import {
   sha256BodyHex,
   verifyMarketplaceSignature,
 } from "./marketplace-hmac";
+import { clientIpOf } from "../common/http-hardening";
 import { PlatformIntegrationClientService } from "./platform-integration-client.service";
 
 const HEADER_KEY = "x-kiorly-client-key";
@@ -43,11 +44,11 @@ export class MarketplaceAuthGuard implements CanActivate {
       throw new UnauthorizedException("Stale marketplace timestamp");
     }
 
-    const principal = await this.clients.authenticate(clientKey, secret);
+    const principal = await this.clients.authenticate(clientKey, secret, clientIpOf(req));
     if (!principal.scopes.includes("MARKETPLACE")) {
       throw new ForbiddenException("MARKETPLACE scope required");
     }
-    this.clients.assertNonce(principal.id, nonce);
+    await this.clients.assertNonce(principal.id, nonce);
     this.clients.assertIpAllowed(principal, req.ip);
 
     const body = marketplaceSignedBody(req.rawBody, req.body);

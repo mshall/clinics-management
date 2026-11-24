@@ -5556,3 +5556,24 @@ model KiorexCommissionDecision {
   @@index([tenantId, createdAt])
   @@index([clinicId, createdAt])
 }
+
+/// Shared rate-limit counters (PgRateLimiter): one row per (key|windowMs, aligned window). Backs the sign-in and client-secret throttles across API instances; expired rows are swept opportunistically.
+model RateLimitBucket {
+  key         String
+  windowStart DateTime
+  count       Int
+  expiresAt   DateTime
+
+  @@id([key, windowStart])
+  @@index([expiresAt])
+}
+
+/// Marketplace HMAC nonces already seen (KX-PT-L1): a signed request replayed on ANOTHER API instance inside the skew window is refused as well. Expired rows are swept opportunistically.
+model MarketplaceNonce {
+  clientId  String
+  nonce     String
+  expiresAt DateTime
+
+  @@id([clientId, nonce])
+  @@index([expiresAt])
+}
