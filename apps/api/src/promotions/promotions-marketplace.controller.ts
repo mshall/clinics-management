@@ -1,9 +1,10 @@
-import { Body, Controller, ForbiddenException, HttpCode, NotFoundException, Param, Post, UseGuards, ConflictException } from "@nestjs/common";
-import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, ForbiddenException, HttpCode, NotFoundException, Param, Post, Res, ServiceUnavailableException, UseGuards, ConflictException } from "@nestjs/common";
+import type { Response } from "express";
+import { ApiHeader, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { ListingStatus } from "@prisma/client";
 import { MarketplaceAuthGuard } from "../marketplace/marketplace-auth.guard";
 import { PrismaService } from "../prisma/prisma.service";
-import { PromotionBudgetService } from "./promotion-budget.service";
+import { PromotionBudgetService, ReserveBusyError } from "./promotion-budget.service";
 import { parseReserve, parseRelease, parseReverse, parseReviewDecision } from "./promotion-commands";
 import { PromotionService } from "./promotion.service";
 
@@ -29,10 +30,17 @@ export class PromotionsMarketplaceController {
   }
 
   @Post(":promotionId/reserve") @HttpCode(200) @ApiOperation({ summary: "Hold budget of a provider-sponsored promotion for one booking (signed, idempotent)" })
-  async reserve(@Param("promotionId") promotionId: string, @Body() body: unknown) {
+  @ApiResponse({ status: 200, description: "Reserved: {reservationRef, expiresAt}" })
+  @ApiResponse({ status: 503, description: "The promotion is busy: retry with the same idempotency key after the Retry-After seconds. Nothing was reserved." })
+  async reserve(@Param("promotionId") promotionId: string, @Body() body: unknown, @Res({ passthrough: true }) res?: Response) {
     const i = parseReserve(body); const tenantId = await this.tenantOf(promotionId);
     if (!(await this.prisma.marketplaceListing.count({ where: { tenantId, status: ListingStatus.LIVE } }))) throw new ForbiddenException({ code: "MARKETPLACE_LISTING_REQUIRED" });
-    const r = await this.budget.reserve({ ...i, promotionId });
+    let r;
+    try { r = await this.budget.reserve({ ...i, promotionId }); } catch (e) {
+      // busy promotion: nothing was written, the cap is untouched; the caller retries with the same Idempotency-Key
+      if (e instanceof ReserveBusyError) { res?.setHeader("Retry-After", String(e.retryAfterSeconds)); throw new ServiceUnavailableException({ code: "PROMOTION_RESERVE_BUSY", message: "The promotion is busy, retry shortly", retryAfterSeconds: e.retryAfterSeconds }); }
+      throw e;
+    }
     if (!r.ok) throw new ConflictException({ code: r.reason, message: r.message });
     return { reservationRef: r.reservationRef, expiresAt: r.expiresAt.toISOString() };
   }

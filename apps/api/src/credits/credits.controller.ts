@@ -1,5 +1,5 @@
 import { Body, Controller, ForbiddenException, Get, Headers, Param, Post, Query, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -40,6 +40,8 @@ export class CreditsController {
 
   @RequiresFeature("clinic.provider_credit_v2")
   @Get("statement/:period")
+  @ApiResponse({ status: 200, description: "The credit section of the statement" })
+  @ApiResponse({ status: 400, description: "INVALID_PERIOD: the period must be a calendar month written YYYY-MM" })
   @ApiOperation({ summary: "Credit section of the monthly statement (YYYY-MM): opening, grants, use by purpose, expiries, closing" })
   async statement(@CurrentUser() user: JwtUser, @Param("period") period: string) {
     this.assertCanRead(user);

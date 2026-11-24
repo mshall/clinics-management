@@ -6,7 +6,7 @@ import { CreditWalletService } from "../credits/credit-wallet.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { createPrismaClient } from "../prisma/create-prisma-client";
 import type { PrismaService } from "../prisma/prisma.service";
-import { PromotionBudgetService } from "./promotion-budget.service";
+import { PromotionBudgetService, ReserveBusyError } from "./promotion-budget.service";
 import { PromotionCompletionConsumer } from "./promotion-completion.consumer";
 import { PromotionReconcileService } from "./promotion-reconcile.service";
 import { PromotionService, type VersionBody } from "./promotion.service";
@@ -139,6 +139,21 @@ describe("GRW-P2-S sponsored promotions (Clinic)", () => {
     assert.ok(results.filter((r) => !r.ok).every((r) => !r.ok && r.reason === "BUDGET_EXHAUSTED"));
     assert.equal(await exposure(id), 70_000);
     assert.equal((await prisma.sponsoredPromotion.findUniqueOrThrow({ where: { id } })).status, "EXHAUSTED");
+  });
+
+  it("W8: 120 parallel reservations on one promotion (a flood above the admission queue): every answer is ok, a business refusal or ReserveBusyError (503 + Retry-After at the edge); the cap is never exceeded and the books reconcile", async () => {
+    const id = await activePromo({ budgetCapMinor: 600_000, perPatientLimit: 1, perDayLimit: undefined });
+    await grant(5_000);
+    const results = await Promise.allSettled(Array.from({ length: 120 }, () => rsv(id)));
+    const ok = results.filter((r) => r.status === "fulfilled" && r.value.ok).length;
+    const busy = results.filter((r) => r.status === "rejected" && r.reason instanceof ReserveBusyError).length;
+    const refused = results.filter((r) => r.status === "fulfilled" && !r.value.ok).length;
+    assert.equal(ok + busy + refused, 120, "no other failure shape (no 500, no pool timeout surfaced raw)");
+    assert.ok(ok >= 1 && ok <= 60, `ok=${ok}`);
+    const total = await exposure(id);
+    assert.ok(total <= 600_000);
+    assert.equal(total, ok * 10_000, "every ok reserve is exactly one budget entry; every busy or refused one wrote nothing");
+    assert.equal(await prisma.promotionReservation.count({ where: { promotionId: id } }), ok);
   });
 
   it("reserve refusals carry the contract reasons and replays return the same reservation", async () => {

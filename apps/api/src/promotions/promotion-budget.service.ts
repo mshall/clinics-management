@@ -23,6 +23,16 @@ export interface ReleaseInput { promotionId: string; reservationRef: string; ide
 
 const MINOR = (m: number) => (m / 100).toFixed(2);
 const MAX_RETRIES = 5;
+/** Reserve admission (per promotion, per process): at most one reserve transaction holds a connection per promotion; the rest wait in memory, not on the pool. Bounded so a flood answers 503 + Retry-After instead of exhausting connections. */
+export const RESERVE_MAX_QUEUE = 60;
+export const RESERVE_QUEUE_WAIT_MS = 12_000;
+export const RESERVE_RETRY_AFTER_SECONDS = 2;
+const RESERVE_TX = { timeout: 10_000, maxWait: 5_000 } as const;
+/** The Clinic is busy with this promotion: the caller may retry after `retryAfterSeconds`. Never a business refusal and never a partial write (the cap holds in the database). */
+export class ReserveBusyError extends Error {
+  constructor(readonly retryAfterSeconds = RESERVE_RETRY_AFTER_SECONDS) { super("PROMOTION_RESERVE_BUSY"); }
+}
+const isPoolOrTxTimeout = (e: unknown) => { const c = (e as { code?: string })?.code; return c === "P2028" || c === "P2024"; };
 const cairoDay = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 const lockPromotion = (tx: Tx, id: string) => tx.$queryRaw`SELECT "id" FROM "SponsoredPromotion" WHERE "id" = ${id} FOR UPDATE`;
 
@@ -34,6 +44,7 @@ const lockPromotion = (tx: Tx, id: string) => tx.$queryRaw`SELECT "id" FROM "Spo
 @Injectable()
 export class PromotionBudgetService {
   private readonly log = new Logger(PromotionBudgetService.name);
+  private readonly gates = new Map<string, { tail: Promise<void>; waiting: number }>();
   constructor(
     private readonly prisma: PrismaService,
     private readonly hold: CreditPromotionHoldService,
@@ -73,19 +84,43 @@ export class PromotionBudgetService {
     await this.audit(tx, promotionId, "system", holds(signal, policy.fraudEnforce) ? "fraud.hold" : "fraud.shadow", { rule: signal.rule, score: signal.score, detail: signal.detail, mode: holds(signal, policy.fraudEnforce) ? "ENFORCE" : "SHADOW", ...ctx });
   }
 
+  /** Runs `fn` when it is this caller's turn for the promotion; a full queue or a long wait is ReserveBusyError (503 + Retry-After at the edge). */
+  private async admit<T>(promotionId: string, fn: () => Promise<T>): Promise<T> {
+    const g = this.gates.get(promotionId) ?? { tail: Promise.resolve(), waiting: 0 };
+    this.gates.set(promotionId, g);
+    if (g.waiting >= RESERVE_MAX_QUEUE) throw new ReserveBusyError();
+    g.waiting++;
+    const prev = g.tail; let done!: () => void;
+    g.tail = new Promise<void>((r) => { done = r; });
+    let timer: NodeJS.Timeout | undefined;
+    const settle = () => { g.waiting--; done(); if (g.waiting === 0 && this.gates.get(promotionId) === g) this.gates.delete(promotionId); };
+    try {
+      const timedOut = await Promise.race([prev.then(() => false), new Promise<boolean>((r) => { timer = setTimeout(() => r(true), RESERVE_QUEUE_WAIT_MS); })]);
+      if (timer) clearTimeout(timer);
+      if (timedOut) { void prev.then(settle); throw new ReserveBusyError(); } // keep the chain order: release our slot only after the one before us
+    } catch (e) { if (!(e instanceof ReserveBusyError)) settle(); throw e; }
+    try { return await fn(); } finally { settle(); }
+  }
+
   /** Reserve (called by the signed marketplace command). Never throws a business refusal: it returns `{ ok: false, reason }` with the contract reason. */
   async reserve(i: ReserveInput, now = new Date()): Promise<ReserveResult> {
     const promo = await this.prisma.sponsoredPromotion.findUnique({ where: { id: i.promotionId }, select: { tenantId: true } });
     if (!promo) return { ok: false, reason: "NOT_ELIGIBLE", message: "UNKNOWN_PROMOTION" };
     if (this.flags && !(await flagOn(this.flags, promo.tenantId, "clinic.provider_credit_v2"))) return { ok: false, reason: "PAUSED", message: "PROVIDER_CREDIT_DISABLED" };
-    return this.retry(() => this.prisma.$transaction(async (tx) => {
+    // replay fast path: no lock, no queue, no transaction
+    const replayOf = (prior: PromotionReservation): ReserveResult => prior.state === "RELEASED" ? { ok: false, reason: "NOT_ELIGIBLE", message: "RESERVATION_RELEASED" } : { ok: true, reservationRef: prior.reservationRef, expiresAt: prior.expiresAt, replay: true };
+    const early = await this.prisma.promotionReservation.findUnique({ where: { idempotencyKey: i.idempotencyKey } });
+    if (early) return replayOf(early);
+    // read-only facts that do not need the lock are read before the transaction (smaller critical section)
+    const policy = await this.policyOf(this.prisma, promo.tenantId);
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: promo.tenantId }, select: { baseCurrency: true } });
+    try {
+      return await this.admit(i.promotionId, () => this.retry(() => this.prisma.$transaction(async (tx) => {
       await lockPromotion(tx, i.promotionId);
       const prior = await tx.promotionReservation.findUnique({ where: { idempotencyKey: i.idempotencyKey } });
-      if (prior) return prior.state === "RELEASED" ? ({ ok: false, reason: "NOT_ELIGIBLE", message: "RESERVATION_RELEASED" } as const) : ({ ok: true, reservationRef: prior.reservationRef, expiresAt: prior.expiresAt, replay: true } as const);
+      if (prior) return replayOf(prior);
       const p = await this.load(tx, i.promotionId); if (!p) return { ok: false, reason: "NOT_ELIGIBLE", message: "UNKNOWN_PROMOTION" } as const;
       const v = this.current(p); if (!v || v.version !== i.version) return { ok: false, reason: "NOT_ELIGIBLE", message: "VERSION_NOT_CURRENT" } as const;
-      const policy = await this.policyOf(tx, p.tenantId);
-      const tenant = await tx.tenant.findUnique({ where: { id: p.tenantId }, select: { baseCurrency: true } });
       if (i.currency !== (tenant?.baseCurrency ?? "EGP")) return { ok: false, reason: "NOT_ELIGIBLE", message: "CURRENCY_MISMATCH" } as const;
       const scope = v.scope as unknown as PromotionScope;
       const maxDiscount = v.discountKind === "FIXED_MINOR" ? Math.min(v.discountValue, v.maxPerBookingMinor ?? Infinity) : (v.maxPerBookingMinor ?? 0);
@@ -125,7 +160,8 @@ export class PromotionBudgetService {
       await enqueuePromotionEvent(this.outbox, tx, p.tenantId, PROMOTION_EVENT.RESERVED, p.id, discountPayload({ promotionId: p.id, version: v.version, reservationRef, bookingRef: i.bookingRef, amountMinor: i.amountMinor, currency: i.currency }, now));
       await this.syncExhausted(tx, p, v, now);
       return { ok: true, reservationRef, expiresAt, replay: false } as const;
-    }, { timeout: 20_000, maxWait: 20_000 }));
+    }, RESERVE_TX)));
+    } catch (e) { if (isPoolOrTxTimeout(e)) throw new ReserveBusyError(); throw e; }
   }
 
   /** Releases an unspent hold (cancelled, expired, not confirmed, or a booking that could not use the discount). Idempotent; an unknown or already released reservation is a no-op. */

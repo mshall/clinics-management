@@ -7241,7 +7241,10 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "The credit section of the statement"
+          },
+          "400": {
+            "description": "INVALID_PERIOD: the period must be a calendar month written YYYY-MM"
           }
         },
         "security": [
@@ -26262,7 +26265,10 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Reserved: {reservationRef, expiresAt}"
+          },
+          "503": {
+            "description": "The promotion is busy: retry with the same idempotency key after the Retry-After seconds. Nothing was reserved."
           }
         },
         "summary": "Hold budget of a provider-sponsored promotion for one booking (signed, idempotent)",
