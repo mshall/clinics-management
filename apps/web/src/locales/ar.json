@@ -77,6 +77,14 @@
     "guideBook": "كتيب التعليمات",
     "kiorex": "كيوريكس",
     "growth": "النمو والتسويق",
+    "groupPlatform": "المنصة",
+    "groupOverview": "نظرة عامة",
+    "groupClinical": "الرعاية السريرية",
+    "groupNetwork": "الشبكة",
+    "groupFinance": "المالية",
+    "groupWorkforce": "القوى العاملة والتحليلات",
+    "groupAdministration": "الإدارة",
+    "groupAccount": "الحساب",
     "mobileToday": "اليوم",
     "mobileMore": "المزيد",
     "mobileBottom": "التنقل الرئيسي"
@@ -4133,6 +4141,8 @@
     "title": "كيوريكس",
     "subtitle": "تحكّم في طريقة عثور المرضى عليك وحجزهم عبر كيوريكس، وتابع ما يحققه لك.",
     "clinic": "الفرع",
+    "scopeOrganization": "كل المنظمة",
+    "scopeOrganizationHint": "أداء كيوريكس المجمّع عبر كل الفروع",
     "loadError": "إعدادات كيوريكس متاحة لمالكي العيادات ومديريها.",
     "policy": {
       "title": "سياسة إعادة الجدولة والإلغاء",
@@ -4186,6 +4196,7 @@
     "performance": {
       "title": "الأداء",
       "hint": "ما حققته Kiorex لهذا الفرع في الشهر المحدد.",
+      "hintOrg": "ما حققته كيوريكس عبر كل الفروع في الشهر المحدد.",
       "period": "الشهر",
       "loadError": "تعذّر تحميل أداء Kiorex.",
       "views": "مشاهدات الملف",
