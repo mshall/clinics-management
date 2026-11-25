@@ -10,7 +10,7 @@ import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceBookingService, type MarketplaceBookingBody } from "./marketplace-booking.service";
 import { KiorexReviewsService, type ReviewAggregateBody } from "./kiorex-reviews.service";
 import { KiorexOverviewService, type ProfileViewsBody } from "./kiorex-overview.service";
-import { CommissionCollectionsService, type CollectionBody } from "../kiorex/commission-collections.service";
+import { CommissionCollectionsService, type CollectionBody, type CommissionRateViewBody } from "../kiorex/commission-collections.service";
 import { KiorexDepositsService, type DepositPaidBody, type PayoutBody } from "../billing/kiorex-deposits.service";
 import { RecordShareService } from "./record-share.service";
 import { SlotCapacityService } from "./slot-capacity.service";
@@ -208,6 +208,13 @@ export class MarketplaceController {
   @ApiOperation({ summary: "Kiorex reports a commission collection run (COM-1); idempotent on runId, newest version wins, refused when it names another organization's charge" })
   recordCommissionCollection(@Body() body: CollectionBody) {
     return this.commissionCollections.ingest(body);
+  }
+
+  @Post("commission-rates")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex reports the organization's commission rate view (COM-2: default, override, history); idempotent, newest version wins" })
+  recordCommissionRate(@Body() body: CommissionRateViewBody) {
+    return this.commissionCollections.ingestRate(body);
   }
 
   @Post("analytics/profile-views")

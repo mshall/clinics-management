@@ -29,6 +29,8 @@ export class CommissionCollectionsController {
   deductions(@CurrentUser() user: JwtUser) { return this.svc.deductions(user, requireTenantId(user)); }
   @Get("disputes") @ApiOperation({ summary: "Commission disputes (CR-08) with status" })
   disputes(@CurrentUser() user: JwtUser) { return this.svc.disputes(user, requireTenantId(user)); }
+  @Get("rate") @ApiOperation({ summary: "COM-2: the organization's effective commission rate, the default, any override and the history (read only; set by Kiorex)" })
+  rate(@CurrentUser() user: JwtUser) { return this.svc.rate(user, requireTenantId(user)); }
   @Get("charges/:id/timeline") @ApiOperation({ summary: "Status timeline of one charge" })
   timeline(@CurrentUser() user: JwtUser, @Param("id") id: string) { return this.svc.chargeTimeline(user, requireTenantId(user), id); }
 

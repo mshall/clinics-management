@@ -2,13 +2,17 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { pinLocaleAndTheme } from "./crash-sweep-helpers";
 import { login } from "./helpers";
+import { provisionOrg, type Fixtures } from "./support/db-fixtures";
 
 /**
  * GRW-P2-S sponsored promotions screen against a running stack: the three-step wizard, the content guard refusing clinical wording, the draft, the budget card and the ledger, in English and Arabic (RTL),
- * no horizontal scroll at 320 and 1440, and axe (WCAG 2 A and AA). Needs one Kiorex-bookable visit type in the demo organisation (the test skips itself when there is none).
+ * no horizontal scroll at 320 and 1440, and axe (WCAG 2 A and AA). The spec creates its own organisation with one Kiorex-bookable visit type (and removes it afterwards): it needs DATABASE_URL of the private database the stack runs on (see support/db-fixtures.ts).
  */
 const axe = async (page: Page) => { const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze(); expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]); };
 const noOverflow = async (page: Page) => expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+let fx: Fixtures;
+test.beforeAll(async () => { fx = await provisionOrg({ bookableVisitType: true }); });
+test.afterAll(async () => { await fx?.cleanup(); });
 const stamp = Date.now().toString(36);
 const local = (d: Date) => { const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 
@@ -32,15 +36,14 @@ for (const lang of ["en", "ar"] as const) {
     test(`promotions (${lang}, ${width}px): wizard creates a draft, the budget card and ledger render, no overflow, axe clean`, async ({ page }) => {
       await page.setViewportSize({ width, height: width === 320 ? 740 : width === 640 ? 450 : width === 2560 ? 1440 : 900 });
       await pinLocaleAndTheme(page, lang, "light");
-      await login(page, "admin@drahmedshall.com");
+      await login(page, fx.org.admin);
       await page.goto("/promotions");
       await expect(page.getByTestId("promotions-page")).toBeVisible({ timeout: 30_000 });
       await expect(page.locator("html")).toHaveAttribute("dir", lang === "ar" ? "rtl" : "ltr");
       await fill(page, { nameEn: `Visit discount ${stamp}${lang}${width}`, nameAr: `خصم الكشف ${stamp}`, copyEn: "A discount on the visit fee, sponsored by the clinic", copyAr: "خصم على سعر الكشف برعاية العيادة" });
       await page.getByTestId("promotion-save").click();
       const created = page.getByTestId("promotions-page");
-      const skip = await page.getByTestId("promotion-error").isVisible({ timeout: 4000 }).catch(() => false);
-      test.skip(skip, "the demo organisation has no Kiorex-bookable visit type");
+      await expect(page.getByTestId("promotion-error")).toHaveCount(0); // the fixture organisation has a Kiorex-bookable visit type: no skipping
       await expect(created).toBeVisible({ timeout: 15_000 });
       const card = page.locator('[data-testid^="promotion-"]').filter({ hasText: lang === "ar" ? `خصم الكشف ${stamp}` : `Visit discount ${stamp}${lang}${width}` }).first();
       await expect(card).toBeVisible();
@@ -57,7 +60,7 @@ for (const lang of ["en", "ar"] as const) {
 
 test("clinical wording is refused with the terms to change, and nothing reaches review", async ({ page }) => {
   await pinLocaleAndTheme(page, "en", "light");
-  await login(page, "admin@drahmedshall.com");
+  await login(page, fx.org.admin);
   await page.goto("/promotions");
   await expect(page.getByTestId("promotions-page")).toBeVisible({ timeout: 30_000 });
   await fill(page, { nameEn: `Free surgery ${stamp}`, nameAr: `جراحة مجانية ${stamp}`, copyEn: "Free surgery for new patients", copyAr: "جراحة مجانية للمرضى الجدد" });
@@ -71,7 +74,7 @@ test("clinical wording is refused with the terms to change, and nothing reaches 
 
 test("a reception user cannot read promotions", async ({ page }) => {
   await pinLocaleAndTheme(page, "en", "light");
-  await login(page, "receptionist.hel@drahmedshall.com");
+  await login(page, fx.org.reception);
   const token = await page.evaluate(() => (JSON.parse(localStorage.getItem("cms-auth") ?? "{}") as { state?: { accessToken?: string } }).state?.accessToken ?? "");
   const res = await page.request.get("/api/v1/promotions", { headers: { authorization: `Bearer ${token}` } });
   expect([401, 403]).toContain(res.status());

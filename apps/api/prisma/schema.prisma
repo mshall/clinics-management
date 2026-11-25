@@ -548,8 +548,12 @@ model KiorexCommissionCharge {
   patient           Patient                @relation(fields: [patientId], references: [id], onDelete: Cascade)
   clinicianId       String
   clinician         User                   @relation("KiorexCommissionClinician", fields: [clinicianId], references: [id], onDelete: Restrict)
-  rateId            String
-  rate              KiorexCommissionRate   @relation(fields: [rateId], references: [id], onDelete: Restrict)
+  /// COM-2: null when the charge was priced by the organisation's Kiorex rate (default per type or own rate; see rateSource) instead of a market rate row.
+  rateId            String?
+  rate              KiorexCommissionRate?  @relation(fields: [rateId], references: [id], onDelete: Restrict)
+  /// COM-2: "MARKET_ROW" (Clinic market rate table) or "KIOREX_DEFAULT" / "KIOREX_OVERRIDE" (the rate Kiorex reported for this organisation); never rewritten.
+  rateSource        String?
+  rateVersion       Int?
   amount            Decimal                @db.Decimal(14, 2)
   currency          String
   status            CommissionChargeStatus @default(PENDING)
@@ -1423,6 +1427,7 @@ model Tenant {
   createdAt                          DateTime                            @default(now())
   updatedAt                          DateTime                            @updatedAt
   kiorexCommissionCollections KiorexCommissionCollection[]
+  kiorexCommissionRateView KiorexCommissionRateView?
 }
 
 model OnboardingProgress {
@@ -5669,6 +5674,8 @@ model KiorexCommissionDecision {
   decision               CommissionDecisionKind
   reasonCodes            String[]
   rateId                 String?
+  /// COM-2: KIOREX_DEFAULT | KIOREX_OVERRIDE when the price came from the Kiorex rate of the organisation (rateId is then null); null = a market rate row.
+  rateSource  String?
   amount                 Decimal?               @db.Decimal(14, 2)
   currency               String?
   inputsHash             String
@@ -6106,6 +6113,19 @@ model WhatsAppChannelEvent {
 
 /// COM-1: Kiorex's commission collection run for this organisation, as reported by Kiorex (idempotent on runRef, newest `version` wins). The provider-side statement, timeline and exports read it.
 /// Source of truth is Kiorex's ledger; the charge, decision and dispute rows it refers to are this product's own (KiorexCommissionCharge, KiorexCommissionDecision, CommissionDispute).
+/// COM-2: the organisation's commission rate as Kiorex reports it (default for the organisation type, this organisation's override, history). Read-only here: the rate is set in Kiorex by super admins (maker-checker).
+/// One row per tenant, the newest `version` wins; the effective rate is computed at read time from the history so a future-dated change takes effect on its own.
+model KiorexCommissionRateView {
+  id         String   @id @default(cuid())
+  tenantId   String   @unique
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product    String
+  version    BigInt
+  view       Json
+  receivedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 model KiorexCommissionCollection {
   id             String   @id @default(cuid())
   tenantId       String

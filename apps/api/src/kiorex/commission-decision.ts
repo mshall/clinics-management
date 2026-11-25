@@ -65,6 +65,8 @@ export interface DecisionRowInput {
   decision: CommissionDecisionKind;
   reasonCodes: string[];
   rateId?: string | null;
+  /** COM-2: KIOREX_DEFAULT | KIOREX_OVERRIDE when the Kiorex rate of the organisation priced the charge (rateId is then null). */
+  rateSource?: string | null;
   amount?: string | null;
   currency?: string | null;
   /** Anything else that influenced the outcome (fee base, attribution evidence hash). Included in the hash. */
@@ -112,6 +114,7 @@ export async function writeCommissionDecision(tx: Prisma.TransactionClient, i: D
         decision: i.decision,
         reasonCodes: i.reasonCodes,
         rateId: i.rateId ?? null,
+        rateSource: i.rateSource ?? null,
         amount: i.amount != null ? new Prisma.Decimal(i.amount) : null,
         currency: i.currency ?? null,
         inputsHash: decisionInputsHash(i),
