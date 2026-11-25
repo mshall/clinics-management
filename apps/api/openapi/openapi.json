@@ -3247,6 +3247,14 @@
         "operationId": "PatientsController_removeFamilyLink",
         "parameters": [
           {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "linkId",
             "required": true,
             "in": "path",
@@ -5157,6 +5165,35 @@
           }
         ],
         "summary": "Create draft encounter for a patient",
+        "tags": [
+          "encounters"
+        ]
+      }
+    },
+    "/encounters/{id}/suggest-care-plan": {
+      "post": {
+        "operationId": "EncountersController_suggestCarePlan",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Suggest follow-up care at home to the patient (CARE_PLAN_SUGGESTED, consent-gated, idempotent)",
         "tags": [
           "encounters"
         ]

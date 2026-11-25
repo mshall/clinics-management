@@ -94,6 +94,14 @@ jobs:
         if: ${{ inputs.run_integration }}
         run: npm run test:integration -w api
 
+      - name: OpenAPI document is current (contract drift) and valid (Redocly lint)
+        working-directory: apps/api
+        run: |
+          set -a; . ./.env.example; set +a
+          npm run openapi:export
+          git diff --exit-code -- openapi/openapi.json
+          npx --yes @redocly/cli@2.2.0 lint openapi/openapi.json --config ../../.redocly.yaml
+
       - name: Money-path coverage gate (QA-02)
         if: ${{ inputs.run_integration }}
         run: npm run test:money-coverage -w api

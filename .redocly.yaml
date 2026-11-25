@@ -1,0 +1,21 @@
+# OpenAPI conformance (gap closure): structure and references must be valid; style rules that generated Nest documents cannot satisfy are off.
+# Run: npx --yes @redocly/cli@2.2.0 lint <spec> --config .redocly.yaml   (CI runs it next to the drift check)
+extends:
+  - minimal
+rules:
+  struct: error
+  no-unresolved-refs: error
+  path-parameters-defined: error
+  operation-operationId-unique: error
+  operation-operationId-url-safe: error
+  no-identical-paths: error
+  no-ambiguous-paths: warn
+  no-path-trailing-slash: error
+  no-server-example.com: off
+  no-empty-servers: off
+  info-license: off
+  operation-4xx-response: off
+  security-defined: off
+  operation-summary: off
+  tag-description: off
+  operation-description: off
