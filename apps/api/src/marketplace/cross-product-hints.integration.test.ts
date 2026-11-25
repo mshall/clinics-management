@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { EncounterStatus, Gender, RecordShareScope, UserRole } from "@prisma/client";
@@ -47,7 +47,8 @@ describe("cross-product hints (appointmentId, CARE_PLAN_SUGGESTED)", () => {
     await prisma.$disconnect();
   });
 
-  it("the contract lists appointmentId as OPTIONAL on both events and CARE_PLAN_SUGGESTED requires ids and a time only", () => {
+  it("the contract lists appointmentId as OPTIONAL on both events and CARE_PLAN_SUGGESTED requires ids and a time only (when the sibling contracts checkout carries 1.13.0)", (t) => {
+    if (!existsSync(join(contracts, "CARE_PLAN_SUGGESTED.schema.json"))) { t.skip("kiorex-contracts 1.13.0 is not checked out beside this repository (it is unpublished)"); return; }
     for (const n of ["PRESCRIPTION_SHARED", "LabOrderPlaced"]) {
       const s = schema(n).properties.data;
       assert.ok("appointmentId" in s.properties, n);
