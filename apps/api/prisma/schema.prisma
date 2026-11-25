@@ -6073,4 +6073,29 @@ model SubscriptionPolicyChange {
   decidedAt   DateTime?
 
   @@index([marketId, status])
+
+/// MSG-REAL: WhatsApp 24 h customer-service window. One row per (business phone-number id, customer phone): the time of the customer's last INBOUND message. Free-form / interactive
+/// messages are allowed only inside it; everything else must be an approved template.
+model WhatsAppContactWindow {
+  id            String   @id @default(cuid())
+  phoneNumberId String
+  phone         String
+  lastInboundAt DateTime
+  updatedAt     DateTime @updatedAt
+
+  @@unique([phoneNumberId, phone])
+  @@index([lastInboundAt])
+}
+
+/// MSG-REAL: account-level WhatsApp webhook events (template review, template and phone-number quality, messaging tier, account alerts). Names, codes and states only, never content.
+model WhatsAppChannelEvent {
+  id        String   @id @default(cuid())
+  kind      String
+  name      String?
+  language  String?
+  event     String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
 }

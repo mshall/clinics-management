@@ -29,6 +29,8 @@ async function bootstrap() {
   warnIfLeadSigningMissing(); // production without KIOREX_LEAD_SIGNING_SECRET: a notice only (names, never values)
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
+  // Amazon SNS (SES bounce / complaint events) posts Content-Type text/plain; the controller needs the body as text
+  (app as unknown as { useBodyParser?: (t: string, o: object) => void }).useBodyParser?.("text", { type: "text/plain", limit: "1mb" });
   applyHttpHardening(app); // security headers, no X-Powered-By, trust-proxy hops (TRUSTED_PROXY_HOPS)
   // Org-onboarding import chunks carry base64 documents: a larger JSON limit on that HMAC path only (the signature is verified over the raw bytes).
   // The parser is wrapped on purpose: Nest decides whether to install its own global JSON parser by looking for a router layer named

@@ -1,5 +1,7 @@
 import { isMock } from "../common/provider-mode";
 import { pickString, providerHttp } from "../common/provider-http";
+import { metaCloudProviderFromEnv } from "./whatsapp-meta-cloud.provider";
+import { whatsAppBackend } from "../common/provider-env";
 import { DevInboxRecorder } from "./dev-inbox.recorder";
 import type { WhatsAppSendResult } from "./whatsapp-provider.types";
 
@@ -57,4 +59,17 @@ export async function sendWhatsAppMessageLegacy(toPhone: string, body: string): 
     return { ok: false, error: `WhatsApp API: ${res.error}`, failureClass: res.failureClass === "AUTH" ? "AUTH" : res.retryable ? "TRANSIENT" : "UNKNOWN", retryable: res.retryable };
   }
   return { ok: true, providerMessageId: pickString(res.json, "id", "messageId", "message_id", "messages.0.id") ?? `http-${res.idempotencyKey}` };
+}
+
+
+/**
+ * Sign-in / sign-up code over WhatsApp. In production free text is refused outside the 24 h window, so a real Meta number sends the code through an approved AUTHENTICATION template
+ * (`WHATSAPP_OTP_TEMPLATE_NAME`, default `kiorly_auth_otp`; language `WHATSAPP_OTP_TEMPLATE_LANGUAGE`, default `en`). Mock mode and the generic http gateway keep the old text path.
+ */
+export async function sendWhatsAppOtp(toPhone: string, code: string, message: string): Promise<WhatsAppSendResultLegacy> {
+  if (isMock("whatsapp") || whatsAppBackend() === "http") return sendWhatsAppMessage(toPhone, message);
+  const provider = metaCloudProviderFromEnv();
+  if (!provider) return { ok: false, error: "WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID not configured" };
+  const r = await provider.sendAuthenticationOtp({ toPhone, code, templateName: process.env.WHATSAPP_OTP_TEMPLATE_NAME?.trim() || "kiorly_auth_otp", languageCode: process.env.WHATSAPP_OTP_TEMPLATE_LANGUAGE?.trim() || "en" });
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
