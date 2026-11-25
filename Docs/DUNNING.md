@@ -19,6 +19,10 @@ Defaults in `market.featureDefaults.kiorlyBilling.dunning` (see `dunning-config.
 
 Anchor: oldest unpaid **ISSUED** `KiorlyInvoice.dueAt`. Dunning pauses while `Subscription.kiorlyDunningPausedUntil` (SB-02 manual review).
 
+## SUB-01: dunning ends in Lite, not lockout
+
+With `kiorlyBilling.subscription.lapseAction = DOWNGRADE_TO_LITE` (the default) the timeline above stops at `GRACE`: from `downgradeAfterDays` (15) after the due date the organisation moves to the free Lite plan (`SubscriptionRenewalService.downgradeToLite`, idempotent), keeps ACTIVE status, and every record stays readable for the Lite grace window. `READ_ONLY` and `SUSPENDED` only apply when the market sets `READ_ONLY_SUSPEND`. See [PLANS_AND_PRICING.md](./PLANS_AND_PRICING.md#sub-01-recurring-subscription-auto-renew-and-lite-downgrade-built-and-tested-locally-not-deployed).
+
 ## Access classes
 
 `SubscriptionAccessGuard` + `subscription-access-policy.ts`:

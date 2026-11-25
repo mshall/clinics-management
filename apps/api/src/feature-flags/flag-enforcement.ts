@@ -53,8 +53,8 @@ export const FLAG_ENFORCEMENT: Record<string, FlagEnforcement> = {
   "nurse.private_duty_shifts": { kind: "service", files: ["nurse/shift.service.ts"] },
   "nurse.family_updates": { kind: "service", files: ["nurse/family-update.service.ts"] },
   "growth.provider_links": { kind: "controller", files: ["growth/provider-links/provider-links.controller.ts", "mobile/growth-mobile.controller.ts"] },
-  "growth.provider_marketing_v2": { kind: "controller", files: ["growth/provider-marketing/provider-marketing.controller.ts", "mobile/growth-marketing-mobile.controller.ts"] },
-  "clinic.provider_credit_v2": { kind: "controller", files: ["credits/credits.controller.ts", "credits/credit-fee-drawdown.service.ts", "credits/credit-grants.service.ts", "credits/credit-promotion-hold.service.ts"] },
+  "growth.provider_marketing_v2": { kind: "controller", files: ["growth/provider-marketing/provider-marketing.controller.ts", "mobile/growth-marketing-mobile.controller.ts", "growth/b2b/b2b-referral.controller.ts", "growth/b2b/b2b-mobile.controller.ts"] },
+  "clinic.provider_credit_v2": { kind: "controller", files: ["credits/credits.controller.ts", "credits/credit-fee-drawdown.service.ts", "credits/credit-grants.service.ts", "credits/credit-promotion-hold.service.ts", "promotions/promotions.controller.ts", "promotions/promotion-budget.service.ts"] },
   "clinic.usage_bundles": { kind: "service", files: ["credits/usage-bundles/usage-bundle.service.ts"] },
   "nurse.individual_kiorex_listing": { kind: "service", files: ["marketplace/marketplace-listing-eligibility.ts"] },
 };

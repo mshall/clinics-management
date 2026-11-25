@@ -64,3 +64,6 @@ Pay modal on Kiorly invoices table: card (hosted add + saved charge), Fawry code
 - Real settlement reconciliation API per provider
 - Webhook replay dashboard for ops
 - Card tokenization callback route from Paymob redirect
+## Unified Kiorly Pay collections (LG-INT-PAY-14..19, Nov 2026)
+
+Clinic collections now speak the shared `@kiorex/pay-contract` (vendored tarball in `vendor/`, no registry). SaaS gateways: `PaymentGatewayRegistry.getPayAdapter(key)`. Patient invoices: `POST /billing/pay/matching/ipn` (finance roles) matches bank IPN rows to invoices by reference and remaining amount (AUTO only when exact and unambiguous, recorded as a TRANSFER payment; the rest in `GET /billing/pay/matching/queue`), `POST /billing/pay/collections/prepare` (front desk: rail, reference, tenant channels), `POST /billing/pay/links` (amount-locked, expiring links, consumed by the exact payment; public view `GET /public/pay/l/:token`), `GET /billing/pay/reports/rollup` (branch / organisation, json, csv, AR/EN pdf). Migration `20270303090000_pay_unified_collections`. Kiorly never holds funds; the bank layout and every funds-flow question are NEEDS_HUMAN (see kiorex-platform `Docs/PAYMENTS_UNIFIED_LAYER.md`).

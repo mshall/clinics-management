@@ -26,3 +26,13 @@ test("payout reconciliation: collected − refunded = due; due − paid = outsta
   });
   assert.deepEqual(t, { collected: 250.5, refunded: 70.25, netDue: 180.25, payoutsReceived: 100, outstanding: 80.25 });
 });
+
+test("tender of a Kiorex deposit (contracts 1.12.0) is validated: minor units that add up to the amount, no other key; absent is fine", async () => {
+  const { parseTender } = await import("./kiorex-deposits.service");
+  assert.equal(parseTender(undefined, 300), null);
+  assert.deepEqual(parseTender({ cardMinor: 20000, patientCreditMinor: 5000, sponsoredDiscountMinor: 5000 }, 300), { cardMinor: 20000, patientCreditMinor: 5000, sponsoredDiscountMinor: 5000 });
+  assert.deepEqual(parseTender({ cardMinor: 30000 }, 300), { cardMinor: 30000, patientCreditMinor: 0, sponsoredDiscountMinor: 0 });
+  for (const bad of [{ cardMinor: 29999 }, { cardMinor: -1, patientCreditMinor: 30001 }, { cardMinor: 300.5 }, { cardMinor: 30000, wallet: 1 }, "x", []]) {
+    assert.throws(() => parseTender(bad, 300), (e: { getResponse?: () => { code?: string } }) => ["TENDER_INVALID", "TENDER_MISMATCH"].includes(e.getResponse?.().code ?? ""), JSON.stringify(bad));
+  }
+});

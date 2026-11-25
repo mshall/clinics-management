@@ -65,7 +65,8 @@
     "rxjs": "^7.8.2",
     "sharp": "^0.35.5",
     "swagger-ui-express": "^5.0.1",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "@kiorex/pay-contract": "file:../../vendor/kiorex-pay-contract-0.1.0.tgz"
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.15",

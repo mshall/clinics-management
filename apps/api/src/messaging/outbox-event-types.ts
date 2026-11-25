@@ -23,6 +23,8 @@ export const OUTBOX_EVENT = {
   PRESCRIPTION_ISSUED: "PrescriptionIssued",
   /** KCV204 — lab order handed off to Kiorly Lab via Kiorex (patient consent token required). */
   LAB_ORDER_PLACED: "LabOrderPlaced",
+  /** Contracts 1.13.0: the clinician of a signed visit suggested follow-up care at home (ids and a time only). */
+  CARE_PLAN_SUGGESTED: "CARE_PLAN_SUGGESTED",
   /** KX waitlist — a slot opened for a Kiorex-sourced waitlist entry; Kiorex offers it to the patient. */
   WAITLIST_OFFER: "WAITLIST_OFFER",
   /** GRW-GC-2 G-8 (contracts 1.12.0): explicit counterparts; WAITLIST_OFFER stays the delivered event. */
@@ -30,6 +32,8 @@ export const OUTBOX_EVENT = {
   WAITLIST_OFFER_EXPIRED: "WAITLIST_OFFER_EXPIRED",
   /** GRW-P2-C (contracts 1.12.0): provider asks Kiorex ops to update a verified listing field. */
   PROVIDER_VERIFICATION_UPDATE_REQUESTED: "ProviderVerificationUpdateRequested",
+  /** GRW-P4-C (unreleased contracts 1.14.0 set): a provider referred a company to Kiorex as an enterprise lead. Company data only; no reward or fee share. */
+  CORPORATE_LEAD_REFERRED: "CorporateLeadReferred",
 } as const;
 
 export type OutboxEventType = (typeof OUTBOX_EVENT)[keyof typeof OUTBOX_EVENT];

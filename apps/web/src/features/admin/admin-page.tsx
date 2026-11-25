@@ -57,6 +57,7 @@ import { AdminOrgBillingPanel } from "./admin-org-billing-panel";
 import { AdminKiorlyInvoicesPanel } from "./admin-kiorly-invoices-panel";
 import { AdminKiorlyStatementsPanel } from "./admin-kiorly-statements-panel";
 import { AdminKiorexChargesPanel } from "./admin-kiorex-charges-panel";
+import { AdminKiorexCommissionsPanel } from "./admin-kiorex-commissions-panel";
 import { LiteAdminSettings } from "./lite-admin-settings";
 import { useSyncOnChange } from "@/lib/use-sync-on-change";
 
@@ -473,6 +474,7 @@ export function AdminPage() {
             <>
               <AdminOrgBillingPanel canManage={canManageOrgBilling} />
               <AdminKiorexChargesPanel />
+              <AdminKiorexCommissionsPanel />
               <AdminKiorlyInvoicesPanel canManagePay={canManageOrgBilling} />
               <AdminKiorlyStatementsPanel />
             </>

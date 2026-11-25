@@ -204,4 +204,16 @@ describe("KX-07 Kiorex deposits & prepayments into clinic billing", () => {
     assert.equal(Number(close.expectedCash), 0);
     assert.equal(Number(close.expectedCard), 0);
   });
+
+  it("tender (contracts 1.12.0) is honoured: a mismatch is refused, a valid one is recorded on the audit trail and never changes the held amount", async () => {
+    const { ref } = await kiorexBooking();
+    await assert.rejects(
+      kiorex.depositPaid(clientId, ref, { amount: 100, paymentRef: `kpay-${stamp}-t0`, tender: { cardMinor: 9000 } }),
+      (e: { response?: { code?: string } }) => e.response?.code === "TENDER_MISMATCH",
+    );
+    const d = await kiorex.depositPaid(clientId, ref, { amount: 100, paymentRef: `kpay-${stamp}-t1`, tender: { cardMinor: 7000, patientCreditMinor: 2000, sponsoredDiscountMinor: 1000 } });
+    assert.equal(Number(d.amount), 100);
+    const row = await prisma.auditLog.findFirst({ where: { action: "KIOREX_DEPOSIT_TENDER", resourceId: d.id } });
+    assert.deepEqual(row?.metadata, { paymentRef: `kpay-${stamp}-t1`, cardMinor: 7000, patientCreditMinor: 2000, sponsoredDiscountMinor: 1000 });
+  });
 });

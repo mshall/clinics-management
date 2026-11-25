@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "../credits/credits-i18n";
+import "../plan-billing/plan-billing-i18n";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -192,6 +193,10 @@ export function AdminOrgBillingPanel({ canManage }: { canManage: boolean }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild size="sm" data-testid="open-upgrade-plan"><Link to="/plan">{t("planBilling.compare")}</Link></Button>
+          <span className="text-xs text-muted-foreground">{t("planBilling.intro")}</span>
+        </div>
         {subQuery.isPending ? (
           <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
         ) : sub ? (

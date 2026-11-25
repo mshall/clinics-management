@@ -10,6 +10,7 @@ import { MarketplacePatientIntakeService } from "../marketplace/marketplace-pati
 import { PrismaService } from "../prisma/prisma.service";
 import { CarePlanService } from "./care-plan.service";
 import type { CarePlanItem } from "./care-plan-schedule";
+import { parseAcquisitionBlock } from "../growth/acquisition-contract";
 
 /** Contracts 1.5.0 `CarePlanRequest` (P3 DRAFT). */
 export type CarePlanRequestBody = {
@@ -21,6 +22,8 @@ export type CarePlanRequestBody = {
   notes?: string;
   visitAddress?: unknown;
   patient: { phone: string; firstNameEn: string; lastNameEn: string };
+  /** Contracts 1.13.0 (optional): the Kiorex decision evidence. An invalid block is ignored (never a rejection of the request). */
+  acquisition?: unknown;
 };
 
 export type CarePlanRequestAck = { requestRef: string; status: "RECEIVED" | "DECLINED"; carePlanId: string | null };
@@ -86,6 +89,8 @@ export class CarePlanRequestService {
       }
       cipher = encryptVisitAddress(address, tenantId);
     }
+    const parsedAcquisition = parseAcquisitionBlock(body.acquisition);
+    const acquisition = parsedAcquisition.ok ? parsedAcquisition.block : null;
     try {
       const row = await this.prisma.carePlanRequest.create({
         data: {
@@ -100,6 +105,7 @@ export class CarePlanRequestService {
           patientPhone: p.phone.trim(),
           patientFirstName: p.firstNameEn.trim(),
           patientLastName: p.lastNameEn.trim(),
+          ...(acquisition ? { acquisition: acquisition as unknown as Prisma.InputJsonValue } : {}),
         },
       });
       await this.audit.recordEvent({ tenantId, actorId: null, clinicId: body.clinicId, action: "care_plan_request.received", resource: "CarePlanRequest", resourceId: row.id, metadata: { requestRef: row.requestRef } });

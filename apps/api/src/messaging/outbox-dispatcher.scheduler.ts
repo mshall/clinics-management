@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { OutboxDispatcherService } from "./outbox-dispatcher.service";
 
-const SCAN_MS = 5_000;
+const SCAN_MS = Math.max(250, Number(process.env.OUTBOX_POLL_INTERVAL_MS ?? 5_000) || 5_000); // 5 s by default; a private test stack sets OUTBOX_POLL_INTERVAL_MS
 
 @Injectable()
 export class OutboxDispatcherScheduler implements OnModuleInit, OnModuleDestroy {

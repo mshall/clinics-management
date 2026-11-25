@@ -13,7 +13,11 @@ export const MarketplaceListingProfilePage = lazyNamed(
 );
 export const KiorexPage = lazyNamed(() => import("@/features/kiorex/kiorex-page"), "KiorexPage");
 export const GrowthPage = lazyNamed(() => import("@/features/growth/growth-page"), "GrowthPage");
+export const PlatformSubscriptionsTab = lazyNamed(() => import("@/features/plan-billing/PlatformSubscriptionsTab"), "PlatformSubscriptionsTab");
+export const KiorexCommissionsPage = lazyNamed(() => import("@/features/admin/kiorex-commissions-page"), "KiorexCommissionsPage");
 export const CreditWalletPage = lazyNamed(() => import("@/features/credits/CreditWalletPage"), "CreditWalletPage");
+export const UpgradePlanPage = lazyNamed(() => import("@/features/plan-billing/UpgradePlanPage"), "UpgradePlanPage");
+export const PromotionsPage = lazyNamed(() => import("@/features/promotions/PromotionsPage"), "PromotionsPage");
 export const KiorexConnectPage = lazyNamed(() => import("@/features/kiorex/kiorex-connect-page"), "KiorexConnectPage");
 export const DashboardPage = lazyNamed(() => import("@/features/dashboard/dashboard-page"), "DashboardPage");
 export const PatientsPage = lazyNamed(() => import("@/features/patients/patients-page"), "PatientsPage");

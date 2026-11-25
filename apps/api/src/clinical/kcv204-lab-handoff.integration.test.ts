@@ -101,6 +101,24 @@ describe("KCV204 lab order handoff emits LabOrderPlaced with a consent token", (
     await assert.rejects(() => svc.handoffToLab(tenantId, second.id, undefined), (e: unknown) => e instanceof ConflictException);
   });
 
+  it("contracts 1.13.0: LabOrderPlaced carries the OPTIONAL appointmentId of the order's encounter; absent when there is none", async () => {
+    await prisma.patientRecordShareConsent.updateMany({ where: { patientId, scope: "LAB_RESULTS" }, data: { granted: true, revokedAt: null } });
+    const clinicianId = (await prisma.user.create({ data: { tenantId, email: `${suffix}.dr@example.com`, passwordHash: "x", displayName: "Dr", role: "PHYSICIAN" } })).id;
+    const appt = await prisma.appointment.create({ data: { tenantId, clinicId, patientId, clinicianId, startsAt: new Date(Date.now() - 7200_000), endsAt: new Date(Date.now() - 3600_000) } });
+    const enc = await prisma.encounter.create({ data: { tenantId, clinicId, patientId, clinicianId, visitType: "CONSULTATION", appointmentId: appt.id } });
+    const withEnc = await svc.create(tenantId, undefined, { clinicId, patientId, kind: ClinicalOrderKind.LAB, encounterId: enc.id, items: [{ nameEn: "TSH" }] } as never);
+    const without = await svc.create(tenantId, undefined, { clinicId, patientId, kind: ClinicalOrderKind.LAB, items: [{ nameEn: "Ferritin" }] });
+    const a = await svc.handoffToLab(tenantId, withEnc.id, undefined);
+    const b = await svc.handoffToLab(tenantId, without.id, undefined);
+    assert.equal(((await prisma.outboxEvent.findUniqueOrThrow({ where: { id: a.eventId } })).payload as { appointmentId?: string }).appointmentId, appt.id);
+    assert.ok(!("appointmentId" in ((await prisma.outboxEvent.findUniqueOrThrow({ where: { id: b.eventId } })).payload as object)));
+    await prisma.clinicalOrderItem.deleteMany({ where: { order: { tenantId } } });
+    await prisma.clinicalOrder.deleteMany({ where: { tenantId } });
+    await prisma.encounter.deleteMany({ where: { tenantId } });
+    await prisma.appointment.deleteMany({ where: { tenantId } });
+    await prisma.user.deleteMany({ where: { tenantId } });
+  });
+
   it("CL-06: results PDF is stored per tenant, only real PDFs are accepted, and it streams back", async () => {
     const blobs = new Map<string, Buffer>();
     const uploads = {

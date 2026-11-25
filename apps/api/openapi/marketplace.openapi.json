@@ -3,7 +3,7 @@
   "info": {
     "title": "Kiorex Marketplace API",
     "version": "1.6.0",
-    "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers. v1.2.0 (KX-09 Rev 2.3, additive): provider sync profession/edition/home-visit fields, serviceLocation+district on slots, visitAddress on holds, 422 OUT_OF_COVERAGE, care-plan-requests (P3 draft). The same client serves both Kiorly editions (Clinic and Nurse). v1.4.0 (contracts 1.10.0, additive): optional signed `acquisition` block on POST /bookings (growth attribution evidence, ARCH section 6.7); a Clinic that does not know it ignores it and treats the booking as UNATTRIBUTED; booking GET and every response are unchanged. v1.5.0 (contracts 1.11.0, additive): optional Clinic link token `lt` on POST /bookings (GRW-P1-C/D1: a valid, unexpired token of an ACTIVE referral link of the booking organisation makes the booking provider-led; it can only remove a commission); signed link-registry lookup `GET /referral-links/{code}` and reconciliation list `GET /referral-links` (a code is known to Kiorex before its first token; revocations are visible). v1.6.0 (contracts 1.12.0, additive): booking `channel` accepts KIOREX_WHATSAPP; the Kiorex pay-link registration call is documented (`POST /pay/links`, hosted on Kiorex, called by Kiorly); provider listings may declare `modalities` including VIDEO; events WAITLIST_OFFER_CREATED/EXPIRED, optional Rx `items[]` and optional `followUp.intervalDays` on the visit summary; waitlist join/leave and slot capacity were already documented in 1.1.0 and are unchanged. Rewards never reach the clinic: no referral or reward field exists on any marketplace call. Rev 2.6 additions (still 1.6.0, additive): signed promotion commands `POST /promotions/{promotionId}/reserve` and `/release` (provider-sponsored promotions, P2-S: the clinic funds its own discount, it is never a Kiorex discount), optional `sponsoredDiscount` block on `POST /bookings`, optional `tender` on the two deposit-paid calls (gross and funding sources, never a patient identity)."
+    "description": "Platform connector for Kiorex (KX-01). Authenticate with HMAC headers. v1.2.0 (KX-09 Rev 2.3, additive): provider sync profession/edition/home-visit fields, serviceLocation+district on slots, visitAddress on holds, 422 OUT_OF_COVERAGE, care-plan-requests (P3 draft). The same client serves both Kiorly editions (Clinic and Nurse). v1.4.0 (contracts 1.10.0, additive): optional signed `acquisition` block on POST /bookings (growth attribution evidence, ARCH section 6.7); a Clinic that does not know it ignores it and treats the booking as UNATTRIBUTED; booking GET and every response are unchanged. v1.5.0 (contracts 1.11.0, additive): optional Clinic link token `lt` on POST /bookings (GRW-P1-C/D1: a valid, unexpired token of an ACTIVE referral link of the booking organisation makes the booking provider-led; it can only remove a commission); signed link-registry lookup `GET /referral-links/{code}` and reconciliation list `GET /referral-links` (a code is known to Kiorex before its first token; revocations are visible). v1.6.0 (contracts 1.12.0, additive): booking `channel` accepts KIOREX_WHATSAPP; the Kiorex pay-link registration call is documented (`POST /pay/links`, hosted on Kiorex, called by Kiorly); provider listings may declare `modalities` including VIDEO; events WAITLIST_OFFER_CREATED/EXPIRED, optional Rx `items[]` and optional `followUp.intervalDays` on the visit summary; waitlist join/leave and slot capacity were already documented in 1.1.0 and are unchanged. Rewards never reach the clinic: no referral or reward field exists on any marketplace call. Rev 2.6 additions (still 1.6.0, additive): signed promotion commands `POST /promotions/{promotionId}/reserve` and `/release` (provider-sponsored promotions, P2-S: the clinic funds its own discount, it is never a Kiorex discount), optional `sponsoredDiscount` block on `POST /bookings`, optional `tender` on the two deposit-paid calls (gross and funding sources, never a patient identity). Rev 2.7 addition (still 1.6.0, additive): signed `POST /commission-collections` (COM-1: Kiorex reports a commission collection run to the provider's transparency view; idempotent on runId, newest version wins; money is never held by Kiorly)."
   },
   "servers": [
     {
@@ -186,6 +186,171 @@
         "responses": {
           "200": {
             "description": "Payout recorded (idempotent)"
+          }
+        }
+      }
+    },
+    "/commission-collections": {
+      "post": {
+        "operationId": "marketplaceRecordCommissionCollection",
+        "summary": "Kiorex reports a commission collection run (COM-1); idempotent on runId, the newest version wins, refused when it names another organization's charge",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "runId",
+                  "orgRef",
+                  "periodKey",
+                  "version",
+                  "currency",
+                  "claimsCount",
+                  "claimsMinor",
+                  "collectedMinor",
+                  "deductedMinor",
+                  "invoicedMinor",
+                  "paidMinor"
+                ],
+                "properties": {
+                  "runId": {
+                    "type": "string",
+                    "description": "Idempotency key of the run"
+                  },
+                  "orgRef": {
+                    "type": "string"
+                  },
+                  "periodKey": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "mode": {
+                    "type": "string"
+                  },
+                  "modeRequested": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "fallbackReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "provider": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "currency": {
+                    "type": "string"
+                  },
+                  "claimsCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "claimsMinor": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "collectedMinor": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "deductedMinor": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "invoicedMinor": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "paidMinor": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "invoiceNo": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "invoiceDueAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "cutoffAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "collectAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "version": {
+                    "type": "integer",
+                    "description": "Newest version wins"
+                  },
+                  "claims": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "chargeId",
+                        "amountMinor"
+                      ],
+                      "properties": {
+                        "chargeId": {
+                          "type": "string"
+                        },
+                        "appointmentId": {
+                          "type": "string"
+                        },
+                        "amountMinor": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "collectedMinor": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "collectionStatus": {
+                          "type": "string"
+                        },
+                        "chargeStatus": {
+                          "type": "string"
+                        },
+                        "decisionRef": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  },
+                  "attempts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "timeline": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Run recorded (idempotent)"
+          },
+          "400": {
+            "description": "Missing field or a negative amount"
           }
         }
       }

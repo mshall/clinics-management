@@ -44,7 +44,7 @@ export function UpgradePaywallModal() {
         {ownerCapable ? (
           <div className="flex flex-wrap gap-2 pt-2">
             <Button type="button" size="sm" asChild onClick={() => trackPaywallEvent("conversion_intent", payload, source)}>
-              <Link to="/admin" onClick={() => hide()}>
+              <Link to="/plan" onClick={() => hide()}>
                 {t("paywall.goToBilling", "Plan & billing")}
               </Link>
             </Button>

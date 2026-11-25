@@ -58,6 +58,7 @@
     "customerSupport": "Customer support",
     "admin": "Admin",
     "doctorRevenue": "Doctor revenue",
+    "kiorexCommissions": "Kiorex commissions",
     "profile": "Profile",
     "platform": "Platform",
     "platformOverview": "Overview",
@@ -5810,5 +5811,24 @@
       "TELEHEALTH_NOT_OFFERED": "This doctor does not offer telehealth.",
       "TELEHEALTH_PATIENT_PHONE_REQUIRED": "A patient phone number is required for a telehealth visit."
     }
+  },
+  "kiorexCom": {
+    "noAccess": "Kiorex commission figures are money: they are visible to finance (and to administrators when your organization enables it).",
+    "title": "Kiorex commissions",
+    "description": "What Kiorex charges for new patients it brought you, how each amount is explained, and how it was collected through your chosen payment provider. Every total is the sum of the rows below it.",
+    "period": "Month",
+    "tabs": { "summary": "Summary", "ledger": "Ledger", "collections": "Collections", "deductions": "Payout deductions", "disputes": "Disputes" },
+    "cards": { "claims": "In collection runs", "collected": "Charged to saved method", "deducted": "Kept from payouts", "invoiced": "Invoiced", "paid": "Invoice paid", "open": "Open balance", "disputes": "Open disputes" },
+    "col": { "date": "Date", "doctor": "Doctor", "amount": "Amount", "status": "Status", "decision": "Why", "basis": "Fee basis", "sponsored": "Sponsored discount", "policy": "Policy", "collection": "Collection", "period": "Period", "mode": "Mode", "provider": "Provider", "fallback": "Fallback", "invoice": "Invoice", "payout": "Payout", "gross": "Gross", "cash": "Cash paid", "deducted": "Commission kept", "reason": "Reason", "resolution": "Resolution", "at": "When", "event": "Event" },
+    "status": { "PENDING": "Pending", "CONFIRMED": "Confirmed", "DISPUTED": "Disputed", "REVERSED": "Reversed", "WAIVED": "Waived", "BILLED": "Billed", "PLANNED": "Planned", "COLLECTING": "Collecting", "RETRYING": "Retrying", "COLLECTED": "Collected", "INVOICE_OPEN": "Invoice open", "SETTLED": "Settled", "OPEN": "Open", "APPROVED": "Approved", "AUTO_APPROVED": "Auto-approved", "REJECTED": "Rejected", "UNCOLLECTED": "Not yet collected", "IN_RUN": "In a run", "INVOICED": "Invoiced", "PAID": "Paid" },
+    "modes": { "NET_FROM_PAYOUT": "Kept from payout", "AUTO_CHARGE_SAVED_METHOD": "Charged to saved method", "INVOICE_AND_COLLECT": "Invoice" },
+    "fallbackNote": "Collected by invoice instead of {{requested}} ({{reason}}). Nothing is written off and care is never affected.",
+    "balanced": "This run balances: charged, kept and invoiced add up to the claims.",
+    "timeline": "Status timeline",
+    "export": "Export CSV",
+    "statement": "Statement PDF",
+    "empty": "Nothing in this period.",
+    "detail": "Details",
+    "close": "Close"
   }
 }

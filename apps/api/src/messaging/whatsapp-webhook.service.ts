@@ -8,6 +8,8 @@ import { WhatsAppAiReceptionistService } from "./whatsapp-ai-receptionist.servic
 import { replyActionFromPayload } from "./whatsapp-reply-payloads";
 import { isMessagingOptOutKeyword } from "../patients/messaging-consent.constants";
 import { MessagingConsentService } from "../patients/messaging-consent.service";
+import { windowOpen as windowOpenFn } from "./meta-cloud-events";
+import { classifyMetaCode, failureClassForAction, parseMetaAccountEvents } from "./meta-cloud-events";
 
 /** Normalize digits for comparing Meta display phone numbers to KIORLY_SUPPORT_WHATSAPP_NUMBER. */
 function phoneDigits(value: string | undefined | null): string {
@@ -57,6 +59,7 @@ export class WhatsAppWebhookService {
     let supportTickets = 0;
     let aiReceptionist = 0;
     const supportLine = phoneDigits(process.env.KIORLY_SUPPORT_WHATSAPP_NUMBER);
+    await this.recordAccountEvents(body);
     for (const entry of entries) {
       const changes = Array.isArray((entry as { changes?: unknown }).changes)
         ? (entry as { changes: unknown[] }).changes
@@ -70,6 +73,7 @@ export class WhatsAppWebhookService {
         const messages = Array.isArray(value?.messages) ? value!.messages! : [];
         const displayPhone = phoneDigits(value?.metadata?.display_phone_number);
         for (const message of messages) {
+          await this.touchWindow(value?.metadata?.phone_number_id, (message as { from?: string; timestamp?: string }).from, (message as { timestamp?: string }).timestamp);
           const m = message as {
             id?: string;
             from?: string;
@@ -157,7 +161,8 @@ export class WhatsAppWebhookService {
             const errs = (status as { errors?: { title?: string; message?: string; code?: number }[] }).errors;
             const detail = errs?.map((e) => e.message ?? e.title).filter(Boolean).join("; ");
             data.error = detail?.slice(0, 500) ?? "Provider reported failure";
-            data.failureClass = /template|1320/i.test(data.error) ? "TEMPLATE" : "POLICY";
+            const code = errs?.[0]?.code;
+            data.failureClass = classifyMetaCode(code) !== "UNKNOWN" ? failureClassForAction(classifyMetaCode(code)).failureClass : /template|1320/i.test(data.error) ? "TEMPLATE" : "POLICY";
           }
           if (Object.keys(data).length) {
             await this.prisma.outboundMessage.update({ where: { id: row.id }, data });
@@ -178,5 +183,33 @@ export class WhatsAppWebhookService {
       }
     }
     return { processed, replies, optOuts, supportTickets, aiReceptionist };
+  }
+
+  /** The customer wrote to us: the 24 h window is open from this moment. Never moves backwards (a delayed, replayed webhook cannot shrink it). */
+  async touchWindow(phoneNumberId: string | undefined, from: string | undefined, timestampSeconds: string | undefined): Promise<void> {
+    const phone = phoneDigits(from);
+    if (!phoneNumberId || !phone) return;
+    const at = new Date(Math.min(Number(timestampSeconds) * 1000 || Date.now(), Date.now()));
+    const key = { phoneNumberId_phone: { phoneNumberId, phone } };
+    await this.prisma.whatsAppContactWindow.upsert({ where: key, create: { phoneNumberId, phone, lastInboundAt: at }, update: {} });
+    await this.prisma.whatsAppContactWindow.updateMany({ where: { phoneNumberId, phone, lastInboundAt: { lt: at } }, data: { lastInboundAt: at } });
+  }
+
+  /** Is the free-form window open for this customer now? (`hours` default 24). */
+  async windowOpen(phoneNumberId: string, toPhone: string, now = Date.now(), hours = 24): Promise<boolean> {
+    const row = await this.prisma.whatsAppContactWindow.findUnique({ where: { phoneNumberId_phone: { phoneNumberId, phone: phoneDigits(toPhone) } } });
+    return !!row && windowOpenFn(row.lastInboundAt.getTime(), now, hours);
+  }
+
+  /** Template review, quality, tier and account events: stored by name and state, logged as warnings when something needs a human. */
+  async recordAccountEvents(body: unknown): Promise<number> {
+    let n = 0;
+    for (const e of parseMetaAccountEvents(body)) {
+      const detail = e.type === "TEMPLATE_STATUS" ? e.reason ?? null : e.type === "PHONE_QUALITY" ? e.tier ?? null : e.type === "TEMPLATE_QUALITY" ? e.quality : null;
+      await this.prisma.whatsAppChannelEvent.create({ data: { kind: e.type, name: "name" in e ? e.name.slice(0, 200) : null, language: "language" in e ? e.language : null, event: e.type === "TEMPLATE_QUALITY" ? "QUALITY" : e.event, detail } });
+      if ((e.type === "TEMPLATE_STATUS" && ["REJECTED", "PAUSED", "DISABLED", "FLAGGED"].includes(e.event)) || (e.type === "PHONE_QUALITY" && ["FLAGGED", "DOWNGRADE"].includes(e.event)) || e.type === "ACCOUNT") this.log.warn(`WhatsApp account event ${e.type} ${"event" in e ? e.event : ""} (see WhatsAppChannelEvent)`);
+      n++;
+    }
+    return n;
   }
 }

@@ -21,6 +21,9 @@ import { OutboxEventService } from "../messaging/outbox-event.service";
 import { AppointmentOutboxService } from "../messaging/appointment-outbox.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { parseAcquisitionBlock, type AcquisitionBlock } from "../growth/acquisition-contract";
+import { PromotionBudgetService } from "../promotions/promotion-budget.service";
+import { parseSponsoredDiscountBlock } from "../promotions/promotion-commands";
+import { careTypeOfServiceLocation } from "../promotions/promotion-eligibility";
 import { ProviderLinkCoreService } from "../growth/provider-links/provider-link-core.service";
 import { DEFAULT_COMMERCIAL_CONFIG } from "../markets/commercial-config.schema";
 import { mapEffectiveAppointmentType } from "../scheduling/appointment-type-rules";
@@ -29,7 +32,7 @@ import { MESSAGING_CONSENT_TRANSACTIONAL } from "../patients/messaging-consent.c
 import { SlotService } from "../scheduling/slot.service";
 import { SLOT_CHANNEL } from "../scheduling/slot-channel";
 import { addMinutes, effectiveAppointmentEnd } from "../common/appointment-scheduling";
-import { DEFAULT_SLOT_HOLD_MINUTES, MARKETPLACE_BOOKING_CONFIRM_TIMEOUT_TOPIC, SLOT_TAKEN_CODE } from "./marketplace-booking.constants";
+import { defaultSlotHoldMinutes, MARKETPLACE_BOOKING_CONFIRM_TIMEOUT_TOPIC, SLOT_TAKEN_CODE } from "./marketplace-booking.constants";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplacePatientIntakeService, type MarketplacePatientInput } from "./marketplace-patient-intake.service";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
@@ -79,6 +82,8 @@ export type MarketplaceBookingBody = {
   acquisition?: unknown;
   /** GRW-P1-D1: signed provider-link touch carried by the public page / widget; a valid one makes the booking provider-led. */
   lt?: string;
+  /** GRW-P2-S (contracts 1.12.0): optional block naming the reservation Kiorex holds for a provider-sponsored discount. The booking is never refused because of it. */
+  sponsoredDiscount?: unknown;
 };
 
 @Injectable()
@@ -100,6 +105,8 @@ export class MarketplaceBookingService {
     @Optional() private readonly entitlements?: EntitlementsService,
     /** GRW-P1-D1/D2: provider-link verification and counters. Optional so older constructions keep working (no link attribution without it). */
     @Optional() private readonly providerLinks?: ProviderLinkCoreService,
+    /** GRW-P2-S: provider-sponsored discount reservations (confirmed after the booking commits, never inside it). */
+    @Optional() private readonly promotions?: PromotionBudgetService,
   ) {}
 
   async getByExternalRef(client: PlatformIntegrationPrincipal, externalRef: string) {
@@ -128,8 +135,9 @@ export class MarketplaceBookingService {
       where: { platformIntegrationClientId: client.id, externalReference: key },
     });
     if (existing) {
-      return this.serializeBooking(existing);
+      return { ...(await this.serializeBooking(existing)), ...(await this.sponsoredAnswer(existing.id, body.sponsoredDiscount)) };
     }
+    const sponsoredBlock = parseSponsoredDiscountBlock(body.sponsoredDiscount); // a malformed block is a contract violation (400); a stale or unusable reservation is not (the booking goes on without the discount)
 
     const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
     await this.access.assertListingBookable(body.clinicId, body.clinicianId);
@@ -426,7 +434,8 @@ export class MarketplaceBookingService {
         })
         .catch(() => undefined);
 
-      return this.serializeBooking(created);
+      const sponsored = sponsoredBlock && this.promotions ? await this.confirmSponsored(tenantId, created, key, sponsoredBlock, { patientId, newPatientStamp, careType: careTypeOfServiceLocation(typeRow.serviceLocation), bookingSource, start }) : sponsoredBlock ? { sponsoredDiscount: { applied: false, promotionId: sponsoredBlock.promotionId, reservationRef: sponsoredBlock.reservationRef, reason: "PROMOTIONS_UNAVAILABLE" } } : {};
+      return { ...(await this.serializeBooking(created)), ...sponsored };
     } catch (e) {
       if (e instanceof ConflictException && (e.getResponse() as { code?: string })?.code === SLOT_TAKEN_CODE) {
         const alternatives = await this.nearestAlternatives(tenantId, body);
@@ -448,6 +457,41 @@ export class MarketplaceBookingService {
       }
       throw e;
     }
+  }
+
+  /**
+   * GRW-P2-S: after the booking has committed, confirm the reservation Kiorex holds for a provider-sponsored discount. Own transaction, never throws: a failure leaves the reservation RESERVED
+   * (the sweeper releases it) and the answer says the discount did not apply, so Kiorex charges the full deposit. The booking itself is never refused or rolled back because of a promotion.
+   */
+  private async confirmSponsored(
+    tenantId: string,
+    appt: { id: string; startsAt: Date; feeAmount: Prisma.Decimal | number | string },
+    bookingRef: string,
+    block: NonNullable<ReturnType<typeof parseSponsoredDiscountBlock>>,
+    ctx: { patientId: string; newPatientStamp: { isNewPatientAtBooking: boolean | null }; careType: ReturnType<typeof careTypeOfServiceLocation>; bookingSource: BookingSource; start: Date },
+  ) {
+    try {
+      const patient = await this.prisma.patient.findUnique({ where: { id: ctx.patientId }, select: { phone: true } });
+      const kiorexBefore = await this.prisma.appointment.count({ where: { tenantId, patientId: ctx.patientId, id: { not: appt.id }, bookingSource: { in: [BookingSource.KIOREX_MARKETPLACE, BookingSource.KIOREX_WHATSAPP] }, status: { not: AppointmentStatus.CANCELLED } } });
+      const full = await this.prisma.appointment.findUniqueOrThrow({ where: { id: appt.id }, select: { clinicianId: true, appointmentTypeId: true } });
+      const r = await this.prisma.$transaction((tx) => this.promotions!.confirmForBooking(tx, tenantId, {
+        promotionId: block.promotionId, promotionVersion: block.promotionVersion, reservationRef: block.reservationRef, amountMinor: block.amountMinor, currency: block.currency, bookingRef, appointmentId: appt.id,
+        facts: { doctorId: full.clinicianId, appointmentTypeId: full.appointmentTypeId ?? "", careType: ctx.careType, startsAt: ctx.start, isNewToClinic: Boolean(ctx.newPatientStamp.isNewPatientAtBooking), kiorexBookingsBefore: kiorexBefore, channelIsKiorex: ctx.bookingSource === BookingSource.KIOREX_MARKETPLACE || ctx.bookingSource === BookingSource.KIOREX_WHATSAPP, visitFeeMinor: Math.round(Number(appt.feeAmount) * 100) },
+        patientPhone: patient?.phone ?? null,
+      }));
+      return { sponsoredDiscount: { applied: r.applied, promotionId: block.promotionId, reservationRef: block.reservationRef, ...(r.applied ? { amountMinor: r.amountMinor, currency: block.currency } : { reason: r.reason }) } };
+    } catch (e) {
+      return { sponsoredDiscount: { applied: false, promotionId: block.promotionId, reservationRef: block.reservationRef, reason: "CONFIRMATION_FAILED" } };
+    }
+  }
+
+  /** The answer of a replayed booking call: what became of the reservation (read only). */
+  private async sponsoredAnswer(appointmentId: string, raw: unknown) {
+    const block = (() => { try { return parseSponsoredDiscountBlock(raw); } catch { return null; } })();
+    if (!block) return {};
+    const r = await this.prisma.promotionReservation.findUnique({ where: { reservationRef: block.reservationRef } });
+    const applied = !!r && r.appointmentId === appointmentId && (r.state === "BOOKED" || r.state === "DEBITED");
+    return { sponsoredDiscount: { applied, promotionId: block.promotionId, reservationRef: block.reservationRef, ...(applied ? { amountMinor: r!.amountMinor, currency: r!.currency } : { reason: r ? `RESERVATION_${r.state}` : "RESERVATION_NOT_FOUND" }) } };
   }
 
   async loadCancellationPolicy(tenantId: string, clinicId: string) {

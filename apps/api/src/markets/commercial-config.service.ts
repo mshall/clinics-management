@@ -92,6 +92,17 @@ export class CommercialConfigService {
     const row = await this.prisma.market.findFirst({ where: { id: marketId } });
     if (!row) throw new NotFoundException("Market not found");
 
+    // SUB-01: the subscription policy moves money (auto-renew default, dunning end, proration), so it is never written here.
+    // It changes only through the maker-checker flow; this endpoint preserves the stored block and rejects an edit to it.
+    const storedSubscription = this.readStoredConfig(row).config.subscription;
+    if (parsed.data.subscription && JSON.stringify(parsed.data.subscription) !== JSON.stringify(storedSubscription)) {
+      throw new BadRequestException({
+        code: "SUBSCRIPTION_POLICY_REQUIRES_APPROVAL",
+        message: "Subscription policy changes need a proposal and a second platform admin's approval",
+      });
+    }
+    if (storedSubscription) parsed.data.subscription = storedSubscription;
+
     const preview = await this.buildPreview(marketId, parsed.data);
     const patch = commercialConfigToFeatureDefaultsPatch(parsed.data);
     const featureDefaults = mergeFeatureDefaults(row.featureDefaults, patch);

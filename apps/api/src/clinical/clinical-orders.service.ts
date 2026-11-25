@@ -194,6 +194,10 @@ export class ClinicalOrdersService {
         errorCode: "LAB_HANDOFF_NO_CONSENT",
       });
     }
+    // contracts 1.13.0 (optional): the appointment of the visit the order was placed in (an id; Kiorex falls back to its 7-day inference when absent)
+    const appointmentId = order.encounterId
+      ? (await this.prisma.encounter.findFirst({ where: { id: order.encounterId, tenantId }, select: { appointmentId: true } }))?.appointmentId ?? null
+      : null;
     const eventId = await this.outbox.enqueueEvent({
       tenantId,
       type: OUTBOX_EVENT.LAB_ORDER_PLACED,
@@ -206,6 +210,7 @@ export class ClinicalOrdersService {
         consentToken,
         orderedAt: (order.orderedAt ?? order.createdAt).toISOString(),
         ...(order.encounterId ? { encounterId: order.encounterId } : {}),
+        ...(appointmentId ? { appointmentId } : {}),
         ...(order.createdByUserId ? { orderingClinicianId: order.createdByUserId } : {}),
         items: order.items.map((it) => ({
           ...(it.code ? { code: it.code } : {}),

@@ -28,6 +28,8 @@ export type SettlementCalculatorInput = {
   seatCount: number;
   seatUnitPrice: number;
   addons: SettlementAddonItem[];
+  /** GRW-P2-S: the part of provider-sponsored discounts the clinic wallet could not cover (funding mode WALLET_THEN_INVOICE), one line each. Credit never pays these lines. */
+  promotionExpenses?: SettlementAddonItem[];
   usageOverage: number;
   commissionItems: SettlementCommissionItem[];
   commissionGrossBeforeCap: number;
@@ -161,6 +163,12 @@ export function settlePeriod(input: SettlementCalculatorInput): SettlementCalcul
     });
   }
 
+  for (const x of input.promotionExpenses ?? []) {
+    const amount = roundMoney(x.amount);
+    if (amount <= 0) continue;
+    lines.push({ type: KiorlyLineType.PROMOTION_EXPENSE, descEn: x.descEn, descAr: x.descAr, quantity: 1, unitAmount: amount, amount, refId: x.refId ?? null });
+  }
+
   if (input.usageOverage > 0) {
     const amount = roundMoney(input.usageOverage);
     lines.push({
@@ -276,8 +284,10 @@ export function settlePeriod(input: SettlementCalculatorInput): SettlementCalcul
     : sumRoundedLineAmounts(lines.map((l) => roundMoney(l.amount)));
 
   let creditsApplied = 0;
-  if (!skippedBelowMinimum && subtotal > 0 && input.walletCreditAvailable > 0) {
-    creditsApplied = roundMoney(Math.min(subtotal, input.walletCreditAvailable));
+  // wallet credit pays fees and subscription; a promotion expense is the clinic's own funding of a patient discount and is invoiced as it is
+  const promotionTotal = skippedBelowMinimum ? 0 : sumRoundedLineAmounts(lines.filter((l) => l.type === KiorlyLineType.PROMOTION_EXPENSE).map((l) => roundMoney(l.amount)));
+  if (!skippedBelowMinimum && subtotal - promotionTotal > 0 && input.walletCreditAvailable > 0) {
+    creditsApplied = roundMoney(Math.min(subtotal - promotionTotal, input.walletCreditAvailable));
   }
 
   const taxable = roundMoney(Math.max(subtotal - creditsApplied, 0));

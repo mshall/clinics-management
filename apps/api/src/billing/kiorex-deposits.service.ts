@@ -11,7 +11,24 @@ import { PatientMoneyService } from "./patient-money.service";
 export const KIOREX_PAY_SOURCE = "KIOREX_PAY";
 export const KIOREX_PAY_CHANNEL_KEY = "KIOREX_PAY";
 
-export type DepositPaidBody = { amount: number; currency?: string; paymentRef: string; paidAt?: string };
+export type DepositTender = { cardMinor?: number; patientCreditMinor?: number; sponsoredDiscountMinor?: number };
+export type DepositPaidBody = { amount: number; currency?: string; paymentRef: string; paidAt?: string; tender?: DepositTender };
+
+/**
+ * Contracts 1.12.0 optional `tender` of the two deposit-paid calls: how the gross `amount` was funded (card, the patient's Kiorex credit, a clinic-sponsored discount).
+ * The Clinic honours it by validating it (non-negative integers in minor units that add up to the gross amount, no other key) and recording it on the audit trail of the deposit; it never
+ * changes the held amount or the fee. Absent means all card (the old behaviour). Returns the normalised tender or null.
+ */
+export function parseTender(raw: unknown, amountMajor: number): Required<DepositTender> | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) throw new BadRequestException({ message: "tender must be an object", code: "TENDER_INVALID" });
+  const o = raw as Record<string, unknown>;
+  for (const k of Object.keys(o)) if (!["cardMinor", "patientCreditMinor", "sponsoredDiscountMinor"].includes(k)) throw new BadRequestException({ message: `Unknown tender key ${k}`, code: "TENDER_INVALID" });
+  const n = (k: string) => { const v = o[k] ?? 0; if (!Number.isInteger(v) || (v as number) < 0) throw new BadRequestException({ message: `${k} must be a non-negative integer of minor units`, code: "TENDER_INVALID" }); return v as number; };
+  const t = { cardMinor: n("cardMinor"), patientCreditMinor: n("patientCreditMinor"), sponsoredDiscountMinor: n("sponsoredDiscountMinor") };
+  if (t.cardMinor + t.patientCreditMinor + t.sponsoredDiscountMinor !== Math.round(amountMajor * 100)) throw new BadRequestException({ message: "tender must add up to the deposit amount", code: "TENDER_MISMATCH" });
+  return t;
+}
 export type PayoutBody = {
   payoutRef: string;
   clinicId: string;
@@ -19,6 +36,8 @@ export type PayoutBody = {
   currency?: string;
   paidAt?: string;
   depositPaymentRefs?: string[];
+  /** COM-1 (additive): commission Kiorex kept out of this payout; `amount` is the cash paid. */
+  commissionDeducted?: number;
 };
 
 export type PayoutTotals = {
@@ -63,6 +82,7 @@ export class KiorexDepositsService {
       select: { id: true, tenantId: true, clinicId: true, patientId: true, feeAmount: true },
     });
     if (!apt) throw new NotFoundException("Booking not found");
+    const tender = parseTender(body.tender, amount);
     const existing = await this.prisma.patientDeposit.findFirst({
       where: { tenantId: apt.tenantId, source: KIOREX_PAY_SOURCE, externalRef: paymentRef },
     });
@@ -79,7 +99,7 @@ export class KiorexDepositsService {
       orderBy: { createdAt: "desc" },
     });
     if (pendingLink && Math.abs(Number(pendingLink.amount) - amount) < 0.005) {
-      return this.payPendingLink(apt.tenantId, pendingLink.id, paymentRef, body.paidAt);
+      return this.payPendingLink(apt.tenantId, pendingLink.id, paymentRef, body.paidAt, tender);
     }
     try {
       const deposit = await this.prisma.$transaction(async (tx) => {
@@ -97,6 +117,7 @@ export class KiorexDepositsService {
           externalRef: paymentRef,
         });
         await this.settlement.settleAppointmentDepositsTx(tx, apt.tenantId, apt.id, null);
+        if (tender) await tx.auditLog.create({ data: { tenantId: apt.tenantId, actorId: null, clinicId: apt.clinicId, action: "KIOREX_DEPOSIT_TENDER", resource: "PatientDeposit", resourceId: d.id, metadata: { paymentRef, ...tender } } });
         return tx.patientDeposit.findUniqueOrThrow({ where: { id: d.id } });
       });
       return this.serialize(deposit);
@@ -117,6 +138,7 @@ export class KiorexDepositsService {
     if (!paymentRef) throw new BadRequestException("paymentRef is required");
     const amount = roundMoney(Number(body.amount));
     if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException("amount must be positive");
+    const tender = parseTender(body.tender, amount);
     const replay = await this.prisma.patientDeposit.findFirst({ where: { source: KIOREX_PAY_SOURCE, externalRef: paymentRef } });
     if (replay) return this.serialize(replay);
     const d = await this.prisma.patientDeposit.findUnique({ where: { linkTokenHash: hashDepositLinkToken(token.trim()) } });
@@ -127,10 +149,10 @@ export class KiorexDepositsService {
     if (body.currency?.trim() && body.currency.trim().toUpperCase() !== d.currency.toUpperCase()) {
       throw new BadRequestException({ message: `Deposit currency must be ${d.currency}`, code: "DEPOSIT_CURRENCY_MISMATCH" });
     }
-    return this.payPendingLink(d.tenantId, d.id, paymentRef, body.paidAt);
+    return this.payPendingLink(d.tenantId, d.id, paymentRef, body.paidAt, tender);
   }
 
-  private async payPendingLink(tenantId: string, depositId: string, paymentRef: string, paidAtRaw?: string) {
+  private async payPendingLink(tenantId: string, depositId: string, paymentRef: string, paidAtRaw?: string, tender?: Required<DepositTender> | null) {
     const paidAt = paidAtRaw ? new Date(paidAtRaw) : new Date();
     if (Number.isNaN(paidAt.getTime())) throw new BadRequestException("Invalid paidAt");
     await this.prisma.$transaction((tx) => this.ensureChannel(tx, tenantId));
@@ -139,6 +161,7 @@ export class KiorexDepositsService {
       externalRef: paymentRef,
       paidAt,
     });
+    if (tender) await this.prisma.auditLog.create({ data: { tenantId, actorId: null, clinicId: d.clinicId, action: "KIOREX_DEPOSIT_TENDER", resource: "PatientDeposit", resourceId: d.id, metadata: { paymentRef, ...tender } } });
     return this.serialize(d);
   }
 
@@ -166,7 +189,7 @@ export class KiorexDepositsService {
       const existing = await tx.kiorexPayout.findUnique({ where: { tenantId_payoutRef: { tenantId: clinic.tenantId, payoutRef } } });
       if (existing) return { ...existing, amount: Number(existing.amount) };
       const payout = await tx.kiorexPayout.create({
-        data: { tenantId: clinic.tenantId, clinicId: clinic.id, payoutRef, amount: new Prisma.Decimal(String(amount)), currency, paidAt, depositRefs: refs },
+        data: { tenantId: clinic.tenantId, clinicId: clinic.id, payoutRef, amount: new Prisma.Decimal(String(amount)), commissionDeducted: new Prisma.Decimal(String(Math.max(0, roundMoney(Number(body.commissionDeducted ?? 0)) || 0))), currency, paidAt, depositRefs: refs },
       });
       if (refs.length) {
         await tx.patientDeposit.updateMany({

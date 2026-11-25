@@ -394,6 +394,11 @@ export class EncountersService {
     await syncEncounterLock(this.prisma, tenantId, encounterId);
   }
 
+  /** CARE_PLAN_SUGGESTED (contracts 1.13.0): delegates to the record-share service, which owns the consent check and the outbox write. */
+  suggestCarePlan(tenantId: string, encounterId: string) {
+    return this.recordShare.suggestCarePlan(tenantId, encounterId);
+  }
+
   async create(tenantId: string, actor: JwtUser, dto: CreateEncounterDto): Promise<EncounterDetailDto> {
     let clinicianId: string;
     if (isPhysicianRole(actor.role)) {

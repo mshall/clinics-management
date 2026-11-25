@@ -15,6 +15,8 @@ import { KiorexDepositsService } from "./kiorex-deposits.service";
 import { NoShowGuaranteeScheduler } from "./no-show-guarantee.scheduler";
 import { NoShowGuaranteeService } from "./no-show-guarantee.service";
 import { PatientMoneyController } from "./patient-money.controller";
+import { PayCollectionsController, PayLinkPublicController } from "./pay/pay-collections.controller";
+import { PayCollectionsService } from "./pay/pay-collections.service";
 import { PatientMoneyService } from "./patient-money.service";
 
 @Module({
@@ -25,6 +27,8 @@ import { PatientMoneyService } from "./patient-money.service";
     CashierShiftsController,
     SplitPaymentsController,
     ClaimsController,
+    PayCollectionsController,
+    PayLinkPublicController,
   ],
   providers: [
     BillingService,
@@ -36,6 +40,7 @@ import { PatientMoneyService } from "./patient-money.service";
     NoShowGuaranteeService,
     NoShowGuaranteeScheduler,
     ClaimsService,
+    PayCollectionsService,
   ],
   exports: [
     BillingService,

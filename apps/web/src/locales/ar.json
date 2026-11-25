@@ -58,6 +58,7 @@
     "customerSupport": "دعم العملاء",
     "admin": "الإدارة",
     "doctorRevenue": "إيرادات الطبيب",
+    "kiorexCommissions": "عمولات كيوركس",
     "profile": "الملف الشخصي",
     "platform": "المنصة",
     "platformOverview": "نظرة عامة",
@@ -5820,5 +5821,24 @@
       "TELEHEALTH_NOT_OFFERED": "هذا الطبيب لا يقدّم زيارات عن بُعد.",
       "TELEHEALTH_PATIENT_PHONE_REQUIRED": "رقم هاتف المريض مطلوب للزيارة عن بُعد."
     }
+  },
+  "kiorexCom": {
+    "noAccess": "أرقام عمولات كيوركس أموال: تظهر للمالية (وللمديرين عندما تفعّل مؤسستك ذلك).",
+    "title": "عمولات كيوركس",
+    "description": "ما تحاسبك عليه كيوركس عن المرضى الجدد الذين أحضرتهم لك، وكيف يُشرح كل مبلغ، وكيف حُصّل عبر مزود الدفع الذي اخترته. كل إجمالي هو مجموع الصفوف تحته.",
+    "period": "الشهر",
+    "tabs": { "summary": "الملخص", "ledger": "الدفتر", "collections": "التحصيلات", "deductions": "الخصم من التحويلات", "disputes": "النزاعات" },
+    "cards": { "claims": "ضمن التحصيلات", "collected": "محصّل من الوسيلة المحفوظة", "deducted": "مخصوم من التحويلات", "invoiced": "مفوتر", "paid": "فاتورة مدفوعة", "open": "الرصيد المفتوح", "disputes": "نزاعات مفتوحة" },
+    "col": { "date": "التاريخ", "doctor": "الطبيب", "amount": "المبلغ", "status": "الحالة", "decision": "السبب", "basis": "أساس الرسم", "sponsored": "الخصم المموَّل", "policy": "السياسة", "collection": "التحصيل", "period": "الفترة", "mode": "الطريقة", "provider": "المزود", "fallback": "البديل", "invoice": "الفاتورة", "payout": "التحويل", "gross": "الإجمالي", "cash": "النقد المدفوع", "deducted": "العمولة المخصومة", "reason": "السبب", "resolution": "القرار", "at": "الوقت", "event": "الحدث" },
+    "status": { "PENDING": "معلّق", "CONFIRMED": "مؤكد", "DISPUTED": "متنازع عليه", "REVERSED": "معكوس", "WAIVED": "معفى", "BILLED": "مفوتر", "PLANNED": "مخطط", "COLLECTING": "قيد التحصيل", "RETRYING": "إعادة محاولة", "COLLECTED": "محصّل", "INVOICE_OPEN": "فاتورة مفتوحة", "SETTLED": "مسوّى", "OPEN": "مفتوح", "APPROVED": "معتمد", "AUTO_APPROVED": "معتمد تلقائيا", "REJECTED": "مرفوض", "UNCOLLECTED": "لم يُحصَّل بعد", "IN_RUN": "ضمن تشغيل", "INVOICED": "مفوتر", "PAID": "مدفوع" },
+    "modes": { "NET_FROM_PAYOUT": "مخصوم من التحويل", "AUTO_CHARGE_SAVED_METHOD": "مخصوم من الوسيلة المحفوظة", "INVOICE_AND_COLLECT": "فاتورة" },
+    "fallbackNote": "حُصّل بفاتورة بدلا من {{requested}} ({{reason}}). لا شيء يُشطب ولا تتأثر الرعاية أبدا.",
+    "balanced": "هذا التشغيل متوازن: المحصّل والمخصوم والمفوتر يساوي المطالبات.",
+    "timeline": "الخط الزمني للحالة",
+    "export": "تصدير CSV",
+    "statement": "كشف PDF",
+    "empty": "لا شيء في هذه الفترة.",
+    "detail": "التفاصيل",
+    "close": "إغلاق"
   }
 }

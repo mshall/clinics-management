@@ -59,6 +59,7 @@ export function PlatformLayout() {
     { to: "/platform/insights", label: t("nav.platformInsights", "Insights") },
     { to: "/platform/markets", label: t("nav.platformMarkets", "Market launch") },
     { to: "/platform/plans", label: t("nav.platformPlans", "Plans & pricing") },
+    { to: "/platform/subscriptions", label: t("nav.platformSubscriptions", "Subscriptions") },
     { to: "/platform/kiorex-rates", label: t("nav.platformKiorex", "Kiorex fees") },
     { to: "/platform/verifications", label: t("nav.platformVerifications", "Doctor verification") },
     { to: "/platform/disputes", label: t("nav.platformDisputes", "Commission disputes") },

@@ -21,6 +21,7 @@ import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
 import { AuditService } from "../audit/audit.service";
 import { BillingSeatService } from "../subscriptions/billing-seat.service";
 import { SubscriptionService } from "../subscriptions/subscription.service";
+import { SubscriptionRenewalService } from "../subscriptions/subscription-renewal.service";
 import { DunningService } from "../subscriptions/dunning.service";
 import { KiorlyInvoicesService } from "./kiorly-invoices.service";
 import { KiorlyPaymentMethodsService } from "./kiorly-payment-methods.service";
@@ -91,10 +92,18 @@ describe("SB-05 Lite commission invoicing (integration)", () => {
       new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc)),
       new BillingSeatService(prismaSvc),
     );
+    const listings = new MarketplaceListingService(prismaSvc, new OutboxEventService(prismaSvc));
     dunning = new DunningService(
       prismaSvc,
       subs,
-      new MarketplaceListingService(prismaSvc, new OutboxEventService(prismaSvc)),
+      listings,
+      new SubscriptionRenewalService(
+        prismaSvc,
+        subs,
+        new BillingSeatService(prismaSvc),
+        listings,
+        new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc)),
+      ),
     );
 
     const market = await prisma.market.findFirstOrThrow({ where: { code: "EG" } });

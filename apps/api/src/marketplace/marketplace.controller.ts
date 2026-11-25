@@ -10,6 +10,7 @@ import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceBookingService, type MarketplaceBookingBody } from "./marketplace-booking.service";
 import { KiorexReviewsService, type ReviewAggregateBody } from "./kiorex-reviews.service";
 import { KiorexOverviewService, type ProfileViewsBody } from "./kiorex-overview.service";
+import { CommissionCollectionsService, type CollectionBody } from "../kiorex/commission-collections.service";
 import { KiorexDepositsService, type DepositPaidBody, type PayoutBody } from "../billing/kiorex-deposits.service";
 import { RecordShareService } from "./record-share.service";
 import { SlotCapacityService } from "./slot-capacity.service";
@@ -37,6 +38,7 @@ export class MarketplaceController {
     private readonly reviews: KiorexReviewsService,
     private readonly overview: KiorexOverviewService,
     private readonly kiorexDeposits: KiorexDepositsService,
+    private readonly commissionCollections: CommissionCollectionsService,
     private readonly recordShare: RecordShareService,
     private readonly slotCapacity: SlotCapacityService,
     private readonly waitlist: MarketplaceWaitlistService,
@@ -199,6 +201,13 @@ export class MarketplaceController {
   @ApiOperation({ summary: "Kiorex paid the clinic out for collected deposits (KX-07); idempotent on payoutRef" })
   recordPayout(@Body() body: PayoutBody) {
     return this.kiorexDeposits.recordPayout(body);
+  }
+
+  @Post("commission-collections")
+  @HttpCode(200)
+  @ApiOperation({ summary: "Kiorex reports a commission collection run (COM-1); idempotent on runId, newest version wins, refused when it names another organization's charge" })
+  recordCommissionCollection(@Body() body: CollectionBody) {
+    return this.commissionCollections.ingest(body);
   }
 
   @Post("analytics/profile-views")

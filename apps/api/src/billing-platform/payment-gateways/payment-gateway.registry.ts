@@ -7,6 +7,8 @@ import { PaymobGateway } from "./paymob.gateway";
 import { HttpPspGateway } from "./http-psp.gateway";
 import { isMock } from "../../common/provider-mode";
 import { enabledPsps, pspVendor } from "../../common/provider-env";
+import { gatewayAsPayAdapter } from "./pay-contract-bridge";
+import type { PayAdapter } from "@kiorex/pay-contract";
 import { FawryVendorGateway, PaymobVendorGateway } from "./vendor-psp.gateways";
 
 @Injectable()
@@ -28,6 +30,12 @@ export class PaymentGatewayRegistry {
 
   get(key: string): PaymentGateway | null {
     return this.map.get(key as KiorlyPaymentProviderKey) ?? null;
+  }
+
+  /** The same gateway as a shared Kiorly Pay adapter (@kiorex/pay-contract). */
+  getPayAdapter(key: string): PayAdapter | null {
+    const g = this.get(key);
+    return g ? gatewayAsPayAdapter(g) : null;
   }
 
   listKeys(): KiorlyPaymentProviderKey[] {

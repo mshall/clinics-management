@@ -4,7 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcryptjs";
 import { createHash, randomInt } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
-import { sendWhatsAppMessage } from "../messaging/whatsapp.provider";
+import { sendWhatsAppOtp } from "../messaging/whatsapp.provider";
 import { normalizePhoneDigits } from "../patients/patient-phone";
 
 const OTP_TTL_MS = 10 * 60_000;
@@ -90,7 +90,7 @@ export class AuthOtpChallengeService {
     }
 
     const message = `Kiorly code: ${code}`;
-    const wa = await sendWhatsAppMessage(phone, message);
+    const wa = await sendWhatsAppOtp(phone, code, message);
     if (!wa.ok) {
       this.logger.warn(`WhatsApp OTP failed for ${phone.slice(0, 6)}…: ${wa.error}`);
     }

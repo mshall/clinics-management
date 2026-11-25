@@ -11,7 +11,7 @@
     "typecheck": "tsc -b --noEmit",
     "check:dev-test-users": "node scripts/check-no-dev-test-users.mjs",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 40",
     "preview": "vite preview",
     "test:unit": "node --import tsx --test \"src/**/*.node.test.ts\"",
     "test:e2e": "bash ../../scripts/playwright-with-local-ports.sh",

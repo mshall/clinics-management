@@ -80,6 +80,8 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "billing/patient-money.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "billing/cashier-shifts.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "billing/split-payments.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
+  "kiorex/commission-collections.controller.ts": { kind: "open" }, // COM-1: provider-side commission transparency; access is decided by the finance/owner/admin rule of CommissionCollectionsService (GET /access), not by a plan entitlement
+  "billing/pay/pay-collections.controller.ts": { kind: "open" }, // LG-INT-PAY-12..16: no plan entitlement today (role checks are in PayCollectionsService); gating it by plan is a pricing decision for the founder
   "billing/claims.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "revenue-share/revenue-share.controller.ts": { kind: "gated", entitlement: "mod_revenue" },
   "dev-inbox/dev-inbox.controller.ts": { kind: "open" },
@@ -89,6 +91,8 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "growth/growth-referral.controller.ts": { kind: "open" },
   /** GRW-P1-D1: links work standalone (no Kiorex entitlement); plan limits are applied in the service (growth-plan-limits.ts). */
   "growth/provider-links/provider-links.controller.ts": { kind: "open" },
+  "growth/b2b/b2b-referral.controller.ts": { kind: "open" }, // GRW-P4-C: growth.provider_marketing_v2 on send; Growth role matrix in the service; company data only
+  "growth/b2b/b2b-mobile.controller.ts": { kind: "open" }, // GRW-P4-C: /mobile/* is plan-gated by MobilePlanGuard (mobile_staff_app)
   "growth/provider-links/public-link.controller.ts": { kind: "open" },
   "billing-platform/kiorly-invoices.controller.ts": { kind: "open" },
   "billing-platform/kiorly-billing-payments.controller.ts": { kind: "open" },
@@ -138,6 +142,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "operations/operations.controller.ts": { kind: "gated", entitlement: "mod_operations" },
   "patients/patients.controller.ts": { kind: "open" },
   "plans/platform-plans.controller.ts": { kind: "platform" },
+  "subscriptions/platform-subscriptions.controller.ts": { kind: "platform" },
   "plans/public-plans.controller.ts": { kind: "open" },
   "kiorex/platform-kiorex-rates.controller.ts": { kind: "platform" },
   "kiorex/platform-commission-disputes.controller.ts": { kind: "platform" },
@@ -145,7 +150,10 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "kiorex/kiorex-billing-charges.controller.ts": { kind: "open" },
   "kiorex/commission-decisions.controller.ts": { kind: "open" },
   "marketplace/marketplace.controller.ts": { kind: "webhook" },
+  "promotions/promotions.controller.ts": { kind: "open" }, // GRW-P2-S: gated by the flag clinic.provider_credit_v2 and the owner and admin roles in the controller
+  "promotions/promotions-marketplace.controller.ts": { kind: "webhook" }, // GRW-P2-S: signed Kiorex commands (HMAC marketplace client)
   "marketplace/marketplace-referral-links.controller.ts": { kind: "webhook" }, // HMAC marketplace client (link registry lookup for Kiorex), same guard as marketplace.controller.ts
+  "marketplace/marketplace-staff-phone-match.controller.ts": { kind: "webhook" }, // HMAC marketplace client (RF_PROVIDER_COLLUSION: keyed phone hashes in, one boolean out)
   "marketplace/kiorex-import.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connection.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connect.controller.ts": { kind: "open" },

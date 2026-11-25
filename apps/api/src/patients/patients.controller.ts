@@ -432,7 +432,7 @@ export class PatientsController {
   }
 
   @Delete(":id/family-links/:linkId")
-  removeFamilyLink(@CurrentUser() user: JwtUser, @Param("linkId") linkId: string) {
+  removeFamilyLink(@CurrentUser() user: JwtUser, @Param("id") _id: string, @Param("linkId") linkId: string) { // `id` is part of the documented path (OpenAPI lint: every path parameter is declared)
     return this.patient360.removeFamilyLink(requireTenantId(user), linkId);
   }
 

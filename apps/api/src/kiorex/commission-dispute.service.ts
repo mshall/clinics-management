@@ -125,10 +125,11 @@ export class CommissionDisputeService {
         },
       });
 
-      await tx.kiorexCommissionCharge.update({
+      const disputedCharge = await tx.kiorexCommissionCharge.update({
         where: { id: row.id },
         data: { status: CommissionChargeStatus.DISPUTED },
       });
+      await this.charges.emitStatusChanged(tx, disputedCharge);
 
       await tx.auditLog.create({
         data: {
@@ -357,7 +358,7 @@ export class CommissionDisputeService {
           ? CommissionChargeStatus.CONFIRMED
           : CommissionChargeStatus.PENDING;
 
-      await tx.kiorexCommissionCharge.update({
+      const backCharge = await tx.kiorexCommissionCharge.update({
         where: { id: chargeId },
         data: { status: backStatus },
       });
@@ -371,6 +372,7 @@ export class CommissionDisputeService {
           resolution: resolution!,
         },
       });
+      await this.charges.emitStatusChanged(tx, backCharge);
 
       await tx.auditLog.create({
         data: {

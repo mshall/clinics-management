@@ -15,9 +15,9 @@ const axe = async (page: Page, scope?: string) => {
 const noOverflow = async (page: Page) => expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
 
 for (const lang of ["en", "ar"] as const) {
-  for (const width of [320, 1440]) {
+  for (const width of [320, 640, 1440, 2560]) {
     test(`credit wallet (${lang}, ${width}px): balance, lots by expiry and category, what it can pay for, history, statement; no overflow; axe clean`, async ({ page }) => {
-      await page.setViewportSize({ width, height: width === 320 ? 740 : 900 });
+      await page.setViewportSize({ width, height: width === 320 ? 740 : width === 640 ? 450 : width === 2560 ? 1440 : 900 });
       await pinLocaleAndTheme(page, lang, "light");
       await login(page, "admin@drahmedshall.com");
       await page.goto("/credit");

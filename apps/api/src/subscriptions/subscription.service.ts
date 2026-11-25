@@ -21,6 +21,8 @@ import { assertEgyptPdpcPaidLaunchAllowed } from "../compliance/pdpc-egypt-launc
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
 import { isPaidPlanKey } from "../legal/legal-catalog";
 import { BillingSeatService } from "./billing-seat.service";
+import { resolveMarketForTenant } from "../markets/market-resolver";
+import { effectiveAutoRenew, subscriptionPolicyFromFeatureDefaults } from "./subscription-policy";
 import {
   computePlanChangeProration,
   computeSeatChangeProration,
@@ -51,6 +53,9 @@ export type SubscriptionView = {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
+  /** SUB-01: effective auto-renew (platform force wins). */
+  autoRenew: boolean;
+  downgradedToLiteAt: string | null;
   cohortKey: string | null;
   priceLockUntil: string | null;
   plan: { key: PlanKey; nameEn: string; nameAr: string };
@@ -115,6 +120,8 @@ export class SubscriptionService {
       currentPeriodStart: sub.currentPeriodStart.toISOString(),
       currentPeriodEnd: sub.currentPeriodEnd.toISOString(),
       cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+      autoRenew: effectiveAutoRenew(sub),
+      downgradedToLiteAt: sub.downgradedToLiteAt?.toISOString() ?? null,
       cohortKey: sub.cohortKey,
       priceLockUntil: sub.priceLockUntil?.toISOString() ?? null,
       plan: { key: sub.plan.key, nameEn: sub.plan.nameEn, nameAr: sub.plan.nameAr },
@@ -345,6 +352,15 @@ export class SubscriptionService {
     });
   }
 
+  private async loadSubscriptionPolicy(tenantId: string) {
+    try {
+      const ctx = await resolveMarketForTenant(this.prisma, tenantId);
+      return subscriptionPolicyFromFeatureDefaults(ctx.market.featureDefaults);
+    } catch {
+      return subscriptionPolicyFromFeatureDefaults(null);
+    }
+  }
+
   private toPriceShape(price: {
     amount: Prisma.Decimal;
     unit: PlanPriceShape["unit"];
@@ -392,8 +408,10 @@ export class SubscriptionService {
     const currentFull = periodAmountForSubscription({ price: currentShape, clinicianSeats: sub.clinicianSeats });
     const nextFull = periodAmountForSubscription({ price: nextShape, clinicianSeats: seats });
     const upgrade = isPlanUpgrade(sub.plan.key, body.planKey, currentFull, nextFull);
+    // SUB-01: default timing comes from the market subscription policy (proration values are NEEDS_HUMAN, LG-SUB-3).
+    const policy = await this.loadSubscriptionPolicy(tenantId);
     const timing =
-      body.timing ?? (upgrade ? "IMMEDIATE" : "PERIOD_END");
+      body.timing ?? (upgrade ? policy.proration.upgradeTiming : policy.proration.downgradeTiming);
     const proration: PlanChangeProration = computePlanChangeProration({
       currency: price.currency,
       periodStart: sub.currentPeriodStart,
@@ -655,7 +673,7 @@ export class SubscriptionService {
       if (!row) throw new NotFoundException("Subscription not found");
       const updated = await tx.subscription.update({
         where: { id: row.id },
-        data: { cancelAtPeriodEnd: true },
+        data: { cancelAtPeriodEnd: true, autoRenew: false, autoRenewChangedAt: new Date(), autoRenewChangedBy: user.userId },
       });
       await this.appendEvent(
         tx,
@@ -702,13 +720,16 @@ export class SubscriptionService {
     await this.applyScheduledSubscriptionChanges(tenantId, actorUserId);
 
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.subscription.update({
-        where: { id: sub.id },
+      // SUB-01: optimistic lock on the period being rolled, so concurrent scheduler runs roll exactly once.
+      const moved = await tx.subscription.updateMany({
+        where: { id: sub.id, currentPeriodEnd: sub.currentPeriodEnd },
         data: {
           currentPeriodStart: nextStart,
           currentPeriodEnd: nextEnd,
         },
       });
+      if (moved.count === 0) return null;
+      const updated = await tx.subscription.findUniqueOrThrow({ where: { id: sub.id } });
       await this.appendEvent(
         tx,
         sub.id,

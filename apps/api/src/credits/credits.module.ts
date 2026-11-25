@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { MessagingModule } from "../messaging/messaging.module";
 import { CreditFeeDrawdownService } from "./credit-fee-drawdown.service";
 import { CreditGrantsService } from "./credit-grants.service";
 import { CreditPromotionHoldService } from "./credit-promotion-hold.service";
@@ -10,6 +11,7 @@ import { CreditsController } from "./credits.controller";
 import { UsageBundleService } from "./usage-bundles/usage-bundle.service";
 
 @Module({
+  imports: [MessagingModule],
   controllers: [CreditsController],
   providers: [CreditWalletService, CreditWalletScheduler, CreditFeeDrawdownService, CreditGrantsService, CreditPromotionHoldService, CreditReconcileService, CreditStatementService, UsageBundleService],
   exports: [CreditWalletService, CreditFeeDrawdownService, CreditGrantsService, CreditPromotionHoldService, CreditStatementService, UsageBundleService],

@@ -42,11 +42,15 @@ import { ProviderLinkCoreModule } from "../growth/provider-links/provider-link-c
 import { VerificationCoreModule } from "../growth/provider-marketing/verification-core.module";
 import { MarketplaceProviderVerificationController } from "./marketplace-provider-verification.controller";
 import { MarketplaceReferralLinksController } from "./marketplace-referral-links.controller";
+import { MarketplaceStaffPhoneMatchController } from "./marketplace-staff-phone-match.controller";
+import { StaffPhoneMatchService } from "../growth/staff-phone-match.service";
 import { KiorexConnectController } from "./kiorex-connect.controller";
 import { KiorexConnectService } from "./kiorex-connect.service";
 import { KiorexFrontDoorController } from "./kiorex-front-door.controller";
 import { KiorexFrontDoorService } from "./kiorex-front-door.service";
 import { KiorexConnectionController } from "./kiorex-connection.controller";
+import { PromotionsModule } from "../promotions/promotions.module";
+import { PromotionsMarketplaceController } from "../promotions/promotions-marketplace.controller";
 
 @Module({
   imports: [
@@ -61,6 +65,7 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
     PatientsModule,
     BillingPlatformModule,
     CreditsModule,
+    PromotionsModule,
     BillingModule,
     RecordShareModule,
     KiorexModule,
@@ -73,6 +78,7 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
   controllers: [
     MarketplaceController,
     MarketplaceReferralLinksController,
+    MarketplaceStaffPhoneMatchController,
     MarketplaceProviderVerificationController,
     MarketplaceOrgController,
     MarketplaceListingsProfileController,
@@ -82,8 +88,10 @@ import { KiorexConnectionController } from "./kiorex-connection.controller";
     KiorexConnectController,
     KiorexFrontDoorController,
     KiorexConnectionController,
+    PromotionsMarketplaceController,
   ],
   providers: [
+    StaffPhoneMatchService,
     KiorexSettingsService,
     KiorexReviewsService,
     ClinicBookingPageService,

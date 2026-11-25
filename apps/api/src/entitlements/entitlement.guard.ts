@@ -23,13 +23,15 @@ export class EntitlementGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<{
       user?: JwtUser;
       integrationClient?: { tenantId: string };
+      method?: string;
     }>();
     const user = req.user;
     // Platform operators are not on a clinic subscription — do not gate them on Pro/Clinic plans.
     if (user && isPlatformSuperAdmin(user)) return true;
     const tenantId = user ? requireTenantId(user) : req.integrationClient?.tenantId;
     if (!tenantId) return false;
-    await this.entitlements.requireEntitlement(tenantId, entitlement);
+    const method = (req.method ?? "GET").toUpperCase();
+    await this.entitlements.requireEntitlement(tenantId, entitlement, { readOnlyRequest: method === "GET" || method === "HEAD" });
     return true;
   }
 }

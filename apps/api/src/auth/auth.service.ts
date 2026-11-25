@@ -148,6 +148,8 @@ export class AuthService {
           ? moneyVisibilityOverrides
           : undefined,
       plan: entitlementsBundle?.plan ?? platformEntitlements?.plan,
+      /** SUB-01: Lite read-only window (modules kept readable after a downgrade). */
+      planGrace: entitlementsBundle?.liteGrace ?? null,
       entitlements: entitlementsBundle?.entitlements ?? platformEntitlements?.entitlements,
     };
   }

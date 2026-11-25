@@ -3247,6 +3247,14 @@
         "operationId": "PatientsController_removeFamilyLink",
         "parameters": [
           {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "linkId",
             "required": true,
             "in": "path",
@@ -5157,6 +5165,35 @@
           }
         ],
         "summary": "Create draft encounter for a patient",
+        "tags": [
+          "encounters"
+        ]
+      }
+    },
+    "/encounters/{id}/suggest-care-plan": {
+      "post": {
+        "operationId": "EncountersController_suggestCarePlan",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Suggest follow-up care at home to the patient (CARE_PLAN_SUGGESTED, consent-gated, idempotent)",
         "tags": [
           "encounters"
         ]
@@ -7186,6 +7223,132 @@
         "summary": "Platform super admin only: waive an active charge (GOODWILL_WAIVER or POLICY_CORRECTION); removal only, note required, audited, emits CommissionAdjusted",
         "tags": [
           "kiorex"
+        ]
+      }
+    },
+    "/credits/wallet": {
+      "get": {
+        "operationId": "CreditsController_getWallet",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Credit wallet: balance, lots by expiry and category, history, what the credit can pay for",
+        "tags": [
+          "credits"
+        ]
+      }
+    },
+    "/credits/statement/{period}": {
+      "get": {
+        "operationId": "CreditsController_statement",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The credit section of the statement"
+          },
+          "400": {
+            "description": "INVALID_PERIOD: the period must be a calendar month written YYYY-MM"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Credit section of the monthly statement (YYYY-MM): opening, grants, use by purpose, expiries, closing",
+        "tags": [
+          "credits"
+        ]
+      }
+    },
+    "/credits/usage-bundles": {
+      "get": {
+        "operationId": "CreditsController_listBundles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Usage bundle skeleton (flag clinic.usage_bundles, OFF by default)",
+        "tags": [
+          "credits"
+        ]
+      }
+    },
+    "/credits/usage-bundles/{key}/purchase": {
+      "post": {
+        "operationId": "CreditsController_purchase",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Buy a usage bundle from credit (idempotent on Idempotency-Key)",
+        "tags": [
+          "credits"
         ]
       }
     },
@@ -9388,6 +9551,317 @@
         ]
       }
     },
+    "/admin/platform/subscriptions": {
+      "get": {
+        "operationId": "PlatformSubscriptionsController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "planKey",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "autoRenew",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "SUB-01 subscriptions list (platform super admin)",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/metrics": {
+      "get": {
+        "operationId": "PlatformSubscriptionsController_metrics",
+        "parameters": [
+          {
+            "name": "windowDays",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "MRR, churn-lite, downgrade counts",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/{tenantId}/force-auto-renew": {
+      "post": {
+        "operationId": "PlatformSubscriptionsController_forceAutoRenew",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformForceAutoRenewBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Force auto-renew ON/OFF (or null to release); reason mandatory, audited",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/{tenantId}/force-downgrade": {
+      "post": {
+        "operationId": "PlatformSubscriptionsController_forceDowngrade",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformForceDowngradeBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Move a tenant to Lite; reason mandatory, audited",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/policy/{marketId}": {
+      "get": {
+        "operationId": "PlatformSubscriptionsController_getPolicy",
+        "parameters": [
+          {
+            "name": "marketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Market subscription policy + pending maker-checker proposals",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/policy/{marketId}/history": {
+      "get": {
+        "operationId": "PlatformSubscriptionsController_policyHistory",
+        "parameters": [
+          {
+            "name": "marketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/policy/{marketId}/proposals": {
+      "put": {
+        "operationId": "PlatformSubscriptionsController_propose",
+        "parameters": [
+          {
+            "name": "marketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeSubscriptionPolicyBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Maker: propose a subscription policy change (needs a second admin to approve)",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/policy/proposals/{changeId}/decision": {
+      "post": {
+        "operationId": "PlatformSubscriptionsController_decide",
+        "parameters": [
+          {
+            "name": "changeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideSubscriptionPolicyBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Checker: approve or reject (must not be the maker)",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
     "/public/legal": {
       "get": {
         "operationId": "PublicLegalController_catalog",
@@ -9512,6 +9986,130 @@
         "parameters": [],
         "responses": {
           "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/subscription/renewal": {
+      "get": {
+        "operationId": "BillingController_getRenewal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/plans/compare": {
+      "get": {
+        "operationId": "BillingController_comparePlans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/subscription/downgrade-impact": {
+      "get": {
+        "operationId": "BillingController_downgradeImpact",
+        "parameters": [
+          {
+            "name": "plan",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/subscription/auto-renew": {
+      "post": {
+        "operationId": "BillingController_setAutoRenew",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingAutoRenewBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/subscription/reactivate": {
+      "post": {
+        "operationId": "BillingController_reactivate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReactivateBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": ""
           }
         },
@@ -16847,6 +17445,131 @@
         "summary": "CR-09 referral code, link, and reward history",
         "tags": [
           "growth"
+        ]
+      }
+    },
+    "/growth/b2b-referrals": {
+      "get": {
+        "operationId": "B2bReferralController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Companies my organisation referred to Kiorex (tracking only, no reward)",
+        "tags": [
+          "growth"
+        ]
+      },
+      "post": {
+        "operationId": "B2bReferralController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/B2bReferralBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Refer a company to Kiorex (company name, size bucket, your own opaque contact reference; never a person's details)",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/growth/b2b-referrals/{id}": {
+      "get": {
+        "operationId": "B2bReferralController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One company referral",
+        "tags": [
+          "growth"
+        ]
+      }
+    },
+    "/mobile/growth/b2b-referrals": {
+      "get": {
+        "operationId": "B2bMobileController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Companies my organisation referred (tracking only)",
+        "tags": [
+          "mobile"
+        ]
+      },
+      "post": {
+        "operationId": "B2bMobileController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/B2bReferralBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Refer a company to Kiorex",
+        "tags": [
+          "mobile"
         ]
       }
     },
@@ -25040,6 +25763,62 @@
         ]
       }
     },
+    "/marketplace/v1/growth/staff-phone-match": {
+      "get": {
+        "operationId": "MarketplaceStaffPhoneMatchController_get",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Nonce",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Does any of these keyed phone hashes belong to staff of the clinic's organisation? (one boolean, never the person)",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
     "/marketplace/v1/provider-verification/requests/{requestRef}": {
       "get": {
         "operationId": "MarketplaceProviderVerificationController_read",
@@ -25149,6 +25928,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationDecisionBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -25359,7 +26148,7 @@
             "bearer": []
           }
         ],
-        "summary": "Kiorex performance for a clinic and month: views, bookings, attendance, commission, free progress, rating (KX-10)",
+        "summary": "Kiorex performance for a clinic or the whole organization and month: views, bookings, attendance, commission, free progress, rating (KX-10). Omit clinicId or pass clinicId=all for organization scope.",
         "tags": [
           "kiorex"
         ]
@@ -25973,6 +26762,169 @@
         ]
       }
     },
+    "/marketplace/v1/promotions/{promotionId}/reserve": {
+      "post": {
+        "operationId": "PromotionsMarketplaceController_reserve",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promotionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reserved: {reservationRef, expiresAt}"
+          },
+          "503": {
+            "description": "The promotion is busy: retry with the same idempotency key after the Retry-After seconds. Nothing was reserved."
+          }
+        },
+        "summary": "Hold budget of a provider-sponsored promotion for one booking (signed, idempotent)",
+        "tags": [
+          "marketplace-promotions"
+        ]
+      }
+    },
+    "/marketplace/v1/promotions/{promotionId}/release": {
+      "post": {
+        "operationId": "PromotionsMarketplaceController_release",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promotionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Release a reservation (hold expired, booking cancelled or not confirmed); unknown or released answers 200",
+        "tags": [
+          "marketplace-promotions"
+        ]
+      }
+    },
+    "/marketplace/v1/promotions/{promotionId}/reverse": {
+      "post": {
+        "operationId": "PromotionsMarketplaceController_reverse",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promotionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "A refund or dispute after completion: reverse the debit once (the clinic gets its credit back)",
+        "tags": [
+          "marketplace-promotions"
+        ]
+      }
+    },
+    "/marketplace/v1/promotions/{promotionId}/review-decision": {
+      "post": {
+        "operationId": "PromotionsMarketplaceController_reviewDecision",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promotionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Kiorex review decision (PromotionReviewDecided): the author cannot decide, a high-value promotion needs a second approver",
+        "tags": [
+          "marketplace-promotions"
+        ]
+      }
+    },
     "/push/subscriptions": {
       "get": {
         "operationId": "PushController_list",
@@ -26045,6 +26997,273 @@
         "summary": "Remove a web push subscription by endpoint",
         "tags": [
           "push"
+        ]
+      }
+    },
+    "/promotions": {
+      "get": {
+        "operationId": "PromotionsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "My promotions with status and budget",
+        "tags": [
+          "promotions"
+        ]
+      },
+      "post": {
+        "operationId": "PromotionsController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a promotion (DRAFT, version 1)",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/{id}": {
+      "get": {
+        "operationId": "PromotionsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One promotion: current version, budget (reserved, debited, remaining), reservations by state, reviews",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/{id}/ledger": {
+      "get": {
+        "operationId": "PromotionsController_ledger",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The append-only budget ledger of a promotion (reserve, release, debit, reversal), newest first",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/{id}/versions": {
+      "post": {
+        "operationId": "PromotionsController_version",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit = a new version and a new review (never edited in place)",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/{id}/submit": {
+      "post": {
+        "operationId": "PromotionsController_submit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit for review: the content guard runs first; blocked wording is refused with the hits",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/{id}/pause": {
+      "post": {
+        "operationId": "PromotionsController_pause",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PausePromotionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pause at any time (reservations already held keep their discount)",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/{id}/resume": {
+      "post": {
+        "operationId": "PromotionsController_resume",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resume a paused promotion inside its window",
+        "tags": [
+          "promotions"
+        ]
+      }
+    },
+    "/promotions/{id}/archive": {
+      "post": {
+        "operationId": "PromotionsController_archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archive a finished or unused promotion (refused while a reservation is open)",
+        "tags": [
+          "promotions"
         ]
       }
     },
@@ -26726,6 +27945,16 @@
       "post": {
         "operationId": "ProviderMarketingController_render",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocialRenderBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -26746,6 +27975,16 @@
       "post": {
         "operationId": "ProviderMarketingController_share",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocialShareBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -26811,6 +28050,16 @@
       "post": {
         "operationId": "ProviderMarketingController_slotCard",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotCardBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -26840,6 +28089,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationStateBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -26887,6 +28146,16 @@
       "post": {
         "operationId": "ProviderMarketingController_verificationCreate",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationCreateBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -26945,6 +28214,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationEvidenceBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -27162,6 +28441,16 @@
       "post": {
         "operationId": "GrowthMarketingMobileController_render",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocialRenderBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -27182,6 +28471,16 @@
       "post": {
         "operationId": "GrowthMarketingMobileController_count",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SocialShareBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -27247,6 +28546,16 @@
       "post": {
         "operationId": "GrowthMarketingMobileController_slotCard",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotCardBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -27351,6 +28660,16 @@
       "post": {
         "operationId": "GrowthMarketingMobileController_verificationCreate",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationCreateBodyDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -30262,6 +31581,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "kiorexExcludedFromMarketplace": {
+            "type": "boolean",
+            "description": "When true, this branch is excluded from the Kiorex marketplace listing (online booking). Stored in clinic providerSettings; can be reversed later in clinic settings."
           }
         }
       },
@@ -33129,6 +34452,66 @@
           }
         }
       },
+      "PlatformForceAutoRenewBodyDto": {
+        "type": "object",
+        "properties": {
+          "force": {
+            "type": "string",
+            "enum": [
+              "ON",
+              "OFF"
+            ],
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "force",
+          "reason"
+        ]
+      },
+      "PlatformForceDowngradeBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "ProposeSubscriptionPolicyBodyDto": {
+        "type": "object",
+        "properties": {
+          "policy": {
+            "type": "object"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "policy",
+          "reason"
+        ]
+      },
+      "DecideSubscriptionPolicyBodyDto": {
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "approve"
+        ]
+      },
       "LegalAcceptBodyDto": {
         "type": "object",
         "properties": {
@@ -33165,6 +34548,45 @@
           "entitlement",
           "requiredPlan"
         ]
+      },
+      "BillingAutoRenewBodyDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "confirmDowngrade": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "BillingReactivateBodyDto": {
+        "type": "object",
+        "properties": {
+          "planKey": {
+            "type": "string",
+            "enum": [
+              "PRO",
+              "CLINIC",
+              "ENTERPRISE",
+              "NURSE_PRO",
+              "NURSE_AGENCY"
+            ]
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "MONTHLY",
+              "ANNUAL"
+            ]
+          },
+          "seats": {
+            "type": "number"
+          }
+        }
       },
       "BillingPurchaseSpecialtyAddonBodyDto": {
         "type": "object",
@@ -35396,6 +36818,10 @@
           "method"
         ]
       },
+      "B2bReferralBodyDto": {
+        "type": "object",
+        "properties": {}
+      },
       "ReportsPutScheduleBodyDto": {
         "type": "object",
         "properties": {
@@ -36791,6 +38217,38 @@
           "consents"
         ]
       },
+      "VerificationDecisionBodyDto": {
+        "type": "object",
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "kiorexRef": {
+            "type": "string"
+          },
+          "orgRef": {
+            "type": "string"
+          },
+          "clinicId": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED",
+              "NEEDS_INFO"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "decidedAt": {
+            "type": "string",
+            "description": "ISO 8601"
+          }
+        }
+      },
       "PutProviderProfileDto": {
         "type": "object",
         "properties": {}
@@ -36920,6 +38378,143 @@
           "endpoint",
           "keys"
         ]
+      },
+      "PausePromotionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "SocialRenderBodyDto": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "type": "string"
+          },
+          "clinicId": {
+            "type": "string"
+          },
+          "clinicianId": {
+            "type": "string"
+          },
+          "linkId": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "ar",
+              "en"
+            ]
+          },
+          "customLine": {
+            "type": "string",
+            "description": "Optional custom line; the content guard applies"
+          },
+          "png": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SocialShareBodyDto": {
+        "type": "object",
+        "properties": {
+          "templateId": {
+            "type": "string"
+          },
+          "clinicId": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          }
+        }
+      },
+      "SlotCardBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "clinicianId": {
+            "type": "string"
+          },
+          "startsAt": {
+            "description": "1 to 5 ISO date-times (the service enforces the range and re-checks each slot)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "linkId": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "ar",
+              "en"
+            ]
+          },
+          "png": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RecommendationStateBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DISMISSED",
+              "SNOOZED",
+              "DONE",
+              "OPEN"
+            ]
+          },
+          "snoozeDays": {
+            "type": "number",
+            "description": "1 to 90 (the service enforces the range)"
+          }
+        }
+      },
+      "VerificationCreateBodyDto": {
+        "type": "object",
+        "properties": {
+          "clinicId": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string",
+            "description": "LICENCE_NUMBER, SPECIALTY, ADDRESS, DISPLAY_NAME, PHOTO or DOCUMENT"
+          },
+          "newValue": {
+            "type": "string",
+            "description": "Encrypted at rest"
+          },
+          "oldRef": {
+            "type": "string"
+          },
+          "evidenceFileRefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "VerificationEvidenceBodyDto": {
+        "type": "object",
+        "properties": {
+          "evidenceFileRefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       },
       "MobileRegisterDeviceBodyDto": {
         "type": "object",

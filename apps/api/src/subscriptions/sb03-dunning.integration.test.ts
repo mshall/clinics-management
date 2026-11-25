@@ -14,6 +14,7 @@ import { AuditService } from "../audit/audit.service";
 import { BillingSeatService } from "./billing-seat.service";
 import { SubscriptionService } from "./subscription.service";
 import { DunningService } from "./dunning.service";
+import { SubscriptionRenewalService } from "./subscription-renewal.service";
 import { MarketplaceListingService } from "../marketplace/marketplace-listing.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { subscriptionAllowsAction, SubscriptionAccessAction } from "./subscription-access-policy";
@@ -24,11 +25,9 @@ const prismaSvc = prisma as unknown as PrismaService;
 const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc));
 const billingSeats = new BillingSeatService(prismaSvc);
 const subs = new SubscriptionService(prismaSvc, legal, billingSeats);
-const dunning = new DunningService(
-  prismaSvc,
-  subs,
-  new MarketplaceListingService(prismaSvc, new OutboxEventService(prismaSvc)),
-);
+const listings = new MarketplaceListingService(prismaSvc, new OutboxEventService(prismaSvc));
+const renewal = new SubscriptionRenewalService(prismaSvc, subs, billingSeats, listings, legal);
+const dunning = new DunningService(prismaSvc, subs, listings, renewal);
 
 describe("SB-03 dunning integration", () => {
   const suffix = `sb03-${Date.now()}`;
@@ -66,7 +65,20 @@ describe("SB-03 dunning integration", () => {
     return tenant;
   }
 
-  it("escalates to READ_ONLY on day +15 and reactivates when invoice paid", async () => {
+  it("legacy mode (lapseAction READ_ONLY_SUSPEND): escalates to READ_ONLY on day +15 and reactivates when invoice paid", async () => {
+    const market = await prisma.market.findFirstOrThrow({ where: { code: "EG" } });
+    const fd = (market.featureDefaults ?? {}) as Record<string, any>;
+    const prevFd = JSON.parse(JSON.stringify(fd));
+    fd.kiorlyBilling = { ...(fd.kiorlyBilling ?? {}), subscription: { lapseAction: "READ_ONLY_SUSPEND" } };
+    await prisma.market.update({ where: { id: market.id }, data: { featureDefaults: fd } });
+    try {
+      await legacyReadOnlyFlow();
+    } finally {
+      await prisma.market.update({ where: { id: market.id }, data: { featureDefaults: prevFd } });
+    }
+  });
+
+  async function legacyReadOnlyFlow() {
     const tenant = await seedTenant();
     const dueAt = new Date();
     dueAt.setUTCDate(dueAt.getUTCDate() - 15);
@@ -109,7 +121,7 @@ describe("SB-03 dunning integration", () => {
     await dunning.reconcileAfterPayment(tenant.id);
     const reactivated = await prisma.subscription.findUniqueOrThrow({ where: { tenantId: tenant.id } });
     assert.equal(reactivated.status, SubscriptionStatus.ACTIVE);
-  });
+  }
 
   it("READ_ONLY blocks scheduling but allows export policy", () => {
     assert.equal(subscriptionAllowsAction(SubscriptionStatus.READ_ONLY, SubscriptionAccessAction.SCHEDULING_WRITE), false);

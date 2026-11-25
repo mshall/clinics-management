@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Optional,
   Logger,
   NotFoundException,
 } from "@nestjs/common";
@@ -19,6 +20,8 @@ import type { JwtUser } from "../auth/jwt-user";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import { parsePageParams } from "../common/pagination";
 import { PrismaService } from "../prisma/prisma.service";
+import { OutboxEventService } from "../messaging/outbox-event.service";
+import { OUTBOX_TARGET_INTERNAL } from "../messaging/outbox-event-types";
 import {
   allocateConsumeFifo,
   applyCreditToCharges,
@@ -111,7 +114,18 @@ export type CreditWalletView = {
 export class CreditWalletService {
   private readonly log = new Logger(CreditWalletService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly outbox?: OutboxEventService) {}
+
+  /**
+   * Provider credit events (contracts 1.12.0 `ProviderCreditGranted`, `ProviderCreditConsumed`, `ProviderCreditExpired`): INTERNAL to the Clinic, written in the same transaction as the ledger entry.
+   * Tenant reference, category, reason code, amount in minor units and currency only. Never a patient field: this wallet is the provider's, a different system from the patient credit.
+   */
+  private async emitCredit(tx: Tx, type: "ProviderCreditGranted" | "ProviderCreditConsumed" | "ProviderCreditExpired", w: { id: string; tenantId: string; currency: string }, category: string, reason: string, amount: Prisma.Decimal): Promise<void> {
+    if (!this.outbox) return;
+    const amountMinor = Math.round(Math.abs(Number(amount.toFixed(2))) * 100);
+    if (amountMinor < 1) return;
+    await this.outbox.enqueueEvent({ tenantId: w.tenantId, type, aggregateType: "CreditWallet", aggregateId: w.id, target: OUTBOX_TARGET_INTERNAL, payload: { walletRef: w.id, orgRef: w.tenantId, category, reason: /^[A-Z][A-Z0-9_]{2,63}$/.test(reason) ? reason : "OTHER", amountMinor, currency: w.currency, at: new Date().toISOString() } }, tx as never);
+  }
 
   async ensureWallet(tenantId: string, tx: Tx = this.prisma): Promise<CreditWallet> {
     const existing = await tx.creditWallet.findUnique({ where: { tenantId } });
@@ -341,6 +355,7 @@ export class CreditWalletService {
         } as Prisma.InputJsonValue,
       },
     });
+    await this.emitCredit(tx, "ProviderCreditGranted", wallet, category, opts.reason, opts.amount);
     return entry;
   }
 
@@ -439,6 +454,7 @@ export class CreditWalletService {
         } as Prisma.InputJsonValue,
       },
     });
+    await this.emitCredit(tx, "ProviderCreditConsumed", wallet, use ?? "UNTYPED", reason, amount);
     return entry;
   }
 
@@ -507,6 +523,7 @@ export class CreditWalletService {
       }
 
       if (totalExpired.lte(0)) return;
+      await this.emitCredit(tx, "ProviderCreditExpired", wallet, "EXPIRED_LOTS", "EXPIRED", totalExpired);
 
       const fresh = await tx.creditWallet.findUniqueOrThrow({ where: { id: wallet.id } });
       const newBalance = fresh.balance.sub(totalExpired);
