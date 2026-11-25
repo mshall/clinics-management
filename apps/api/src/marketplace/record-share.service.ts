@@ -175,6 +175,7 @@ export class RecordShareService {
         patientId: true,
         clinicId: true,
         signedAt: true,
+        appointmentId: true,
         chiefComplaint: true,
         subjective: true,
         objective: true,
@@ -230,6 +231,8 @@ export class RecordShareService {
         encounterId: enc.id,
         clinicId: enc.clinicId,
         signedAt: enc.signedAt.toISOString(),
+        // contracts 1.13.0 (optional): the visit the prescription came from, an id only; Kiorex falls back to its 7-day inference when absent
+        ...(enc.appointmentId ? { appointmentId: enc.appointmentId } : {}),
         ...(rxItems(enc.medications).length ? { items: rxItems(enc.medications) } : {}),
         pdf: { url: rxPdfUrl(raw), expiresAt: expiresAt.toISOString() },
       });
@@ -237,6 +240,31 @@ export class RecordShareService {
     }
 
     return { shared };
+  }
+
+  /**
+   * Contracts 1.13.0 `CARE_PLAN_SUGGESTED`: the treating clinician of a SIGNED visit suggests follow-up care at home. Sent only when the patient's VISIT_SUMMARY share
+   * consent is active (the same consent that lets Kiorex know the visit exists); one event per encounter (idempotent); ids and a time only: never the reason, a diagnosis or a note.
+   */
+  async suggestCarePlan(tenantId: string, encounterId: string): Promise<{ suggested: boolean; reason?: "NOT_SIGNED" | "NO_CONSENT" | "ALREADY_SUGGESTED" | "SAMPLE_PATIENT" }> {
+    const enc = await this.prisma.encounter.findFirst({
+      where: { id: encounterId, tenantId },
+      select: { id: true, patientId: true, clinicId: true, signedAt: true, appointmentId: true, patient: { select: { isSample: true } } },
+    });
+    if (!enc) throw new NotFoundException("Encounter not found");
+    if (!enc.signedAt) return { suggested: false, reason: "NOT_SIGNED" };
+    if (enc.patient.isSample) return { suggested: false, reason: "SAMPLE_PATIENT" };
+    if (!(await this.hasActiveConsent(tenantId, enc.patientId, RecordShareScope.VISIT_SUMMARY))) return { suggested: false, reason: "NO_CONSENT" };
+    const existing = await this.prisma.outboxEvent.findFirst({ where: { tenantId, type: OUTBOX_EVENT.CARE_PLAN_SUGGESTED, aggregateType: "Encounter", aggregateId: enc.id }, select: { id: true } });
+    if (existing) return { suggested: false, reason: "ALREADY_SUGGESTED" };
+    await this.enqueueKiorex(tenantId, OUTBOX_EVENT.CARE_PLAN_SUGGESTED, "Encounter", enc.id, {
+      patientId: enc.patientId,
+      encounterId: enc.id,
+      clinicId: enc.clinicId,
+      ...(enc.appointmentId ? { appointmentId: enc.appointmentId } : {}),
+      suggestedAt: new Date().toISOString(),
+    });
+    return { suggested: true };
   }
 
   private async enqueueKiorex(

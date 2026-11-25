@@ -5315,6 +5315,8 @@ model CarePlanRequest {
   patientPhone           String
   patientFirstName       String
   patientLastName        String
+  /// Optional Kiorex acquisition block (contracts 1.13.0): stored as received after validation, never recomputed; a care plan carries no Kiorex fee, so it is evidence only.
+  acquisition            Json?
   /// RECEIVED | ACCEPTED | DECLINED
   status                 String    @default("RECEIVED")
   carePlanId             String?

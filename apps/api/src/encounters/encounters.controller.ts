@@ -107,6 +107,14 @@ export class EncountersController {
     return this.encounters.create(requireTenantId(user), user, body);
   }
 
+  /** Contracts 1.13.0 `CARE_PLAN_SUGGESTED`: the clinician suggests follow-up care at home after sign-off. Needs the patient's active visit-summary share consent; ids and a time only. */
+  @Post(":id/suggest-care-plan")
+  @ApiOperation({ summary: "Suggest follow-up care at home to the patient (CARE_PLAN_SUGGESTED, consent-gated, idempotent)" })
+  async suggestCarePlan(@CurrentUser() user: JwtUser, @Param("id") id: string) {
+    await this.assertMutate(user);
+    return this.encounters.suggestCarePlan(requireTenantId(user), id);
+  }
+
   @Get(":id/documents/:docId/file")
   @ApiOperation({ summary: "Stream encounter document (inline display)" })
   @ApiOkResponse({ description: "Binary file stream" })

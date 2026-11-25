@@ -61,8 +61,10 @@ describe("KX-09 care-plan requests (integration)", () => {
   });
 
   it("is idempotent on requestRef, stores the address encrypted and never echoes it in the ack", async () => {
-    const a = await svc.receive(w.tenantId, body());
+    const block = { origin: "MARKETPLACE", decisionId: "gpd_1", policyVersion: "v1", reason: "MARKETPLACE_TOUCH", evidenceHash: "a".repeat(64), product: "NURSE" };
+    const a = await svc.receive(w.tenantId, body({ acquisition: block }));
     assert.deepEqual(a, { requestRef: `kx_cpr_${suffix}`, status: "RECEIVED", carePlanId: null });
+    assert.deepEqual((await prisma.carePlanRequest.findFirstOrThrow({ where: { requestRef: a.requestRef } })).acquisition, block, "contracts 1.13.0: the optional acquisition block is stored as received");
     const again = await svc.receive(w.tenantId, body({ notes: "changed" }));
     assert.deepEqual(again, a);
     assert.equal(await prisma.carePlanRequest.count({ where: { tenantId: w.tenantId, requestRef: a.requestRef } }), 1);
