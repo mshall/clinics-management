@@ -32,9 +32,21 @@ const RESERVE_TX = { timeout: 10_000, maxWait: 5_000 } as const;
 export class ReserveBusyError extends Error {
   constructor(readonly retryAfterSeconds = RESERVE_RETRY_AFTER_SECONDS) { super("PROMOTION_RESERVE_BUSY"); }
 }
-const isPoolOrTxTimeout = (e: unknown) => { const c = (e as { code?: string })?.code; return c === "P2028" || c === "P2024"; };
+/**
+ * Gap closure (multi-instance): the per-process gate above keeps ONE reserve per promotion per process; across processes the promotion row lock (FOR UPDATE) is the real serialiser, so a reserve may wait
+ * for another instance's transaction. That wait is bounded with `lock_timeout` (a pooled connection is never held longer than this for a lock), and a timeout is the same retryable answer as a full queue.
+ * With N instances at most N connections per promotion are ever waiting or working.
+ */
+export const RESERVE_LOCK_WAIT_MS = 4_000;
+const isLockTimeout = (e: unknown) => /55P03|lock timeout|could not obtain lock/i.test(`${(e as { code?: string })?.code ?? ""} ${(e as { message?: string })?.message ?? ""} ${JSON.stringify((e as { meta?: unknown })?.meta ?? {})}`);
+const isPoolOrTxTimeout = (e: unknown) => { const c = (e as { code?: string })?.code; return c === "P2028" || c === "P2024" || isLockTimeout(e); };
 const cairoDay = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 const lockPromotion = (tx: Tx, id: string) => tx.$queryRaw`SELECT "id" FROM "SponsoredPromotion" WHERE "id" = ${id} FOR UPDATE`;
+/** Row lock with a bounded wait (SET LOCAL lasts for this transaction only). The number is clamped and interpolated as a literal (SET does not take parameters). */
+const lockPromotionBounded = async (tx: Tx, id: string, waitMs: number) => {
+  await tx.$executeRawUnsafe(`SET LOCAL lock_timeout = '${Math.max(100, Math.min(30_000, Math.floor(waitMs)))}ms'`);
+  return lockPromotion(tx, id);
+};
 
 /**
  * GRW-P2-S booking-time budget: reserve, release, debit, reverse. The budget is the append-only PromotionBudgetEntry ledger; the promotion row is locked FOR UPDATE for every write, and the database refuses
@@ -45,6 +57,8 @@ const lockPromotion = (tx: Tx, id: string) => tx.$queryRaw`SELECT "id" FROM "Spo
 export class PromotionBudgetService {
   private readonly log = new Logger(PromotionBudgetService.name);
   private readonly gates = new Map<string, { tail: Promise<void>; waiting: number }>();
+  /** Bound of the cross-instance row-lock wait of a reserve (public so a test can shorten it). */
+  lockWaitMs = RESERVE_LOCK_WAIT_MS;
   constructor(
     private readonly prisma: PrismaService,
     private readonly hold: CreditPromotionHoldService,
@@ -116,7 +130,7 @@ export class PromotionBudgetService {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: promo.tenantId }, select: { baseCurrency: true } });
     try {
       return await this.admit(i.promotionId, () => this.retry(() => this.prisma.$transaction(async (tx) => {
-      await lockPromotion(tx, i.promotionId);
+      await lockPromotionBounded(tx, i.promotionId, this.lockWaitMs);
       const prior = await tx.promotionReservation.findUnique({ where: { idempotencyKey: i.idempotencyKey } });
       if (prior) return replayOf(prior);
       const p = await this.load(tx, i.promotionId); if (!p) return { ok: false, reason: "NOT_ELIGIBLE", message: "UNKNOWN_PROMOTION" } as const;
