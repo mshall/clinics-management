@@ -307,6 +307,10 @@ export class MarketplaceBookingService {
           throw new BadRequestException("Hold does not match booking slot");
         }
 
+        // Daily marketplace cap on the write path (a booking without a hold never touched the slot list). A held slot already counts, so exclude it.
+        await this.slots.lockMarketplaceDay(tx, tenantId, body.clinicId, body.clinicianId, start);
+        await this.slots.assertMarketplaceDailyCapRoom(tx, { tenantId, clinicId: body.clinicId, clinicianId: body.clinicianId, startsAt: start, excludeHoldId: hold?.id });
+
         const sameDay = await tx.appointment.findMany({
           where: {
             tenantId,
@@ -642,6 +646,8 @@ export class MarketplaceBookingService {
         if (hold && (hold.startsAt.getTime() !== start.getTime() || hold.clinicianId !== appt.clinicianId)) {
           throw new BadRequestException("Hold does not match booking slot");
         }
+        await this.slots.lockMarketplaceDay(tx, appt.tenantId, appt.clinicId, appt.clinicianId, start);
+        await this.slots.assertMarketplaceDailyCapRoom(tx, { tenantId: appt.tenantId, clinicId: appt.clinicId, clinicianId: appt.clinicianId, startsAt: start, excludeHoldId: hold?.id, excludeAppointmentId: appt.id });
         const nearby = await tx.appointment.findMany({
           where: {
             tenantId: appt.tenantId,

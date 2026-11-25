@@ -1860,6 +1860,172 @@
           }
         }
       }
+    },
+    "/commission-rates": {
+      "post": {
+        "operationId": "marketplaceRecordCommissionRate",
+        "summary": "Kiorex reports the organization's commission rate view (COM-2, contracts 1.13.0): default per organization type, own rate, history. Read-only in the Clinic. Idempotent, the newest version wins; a malformed view is refused whole.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "orgRef",
+                  "product",
+                  "version",
+                  "history"
+                ],
+                "properties": {
+                  "orgRef": {
+                    "type": "string"
+                  },
+                  "product": {
+                    "enum": [
+                      "CLINIC",
+                      "PHARMACY",
+                      "LAB"
+                    ]
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^\\d{1,18}$"
+                  },
+                  "mode": {
+                    "enum": [
+                      "NET_FROM_PAYOUT",
+                      "AUTO_CHARGE_SAVED_METHOD",
+                      "INVOICE_AND_COLLECT",
+                      null
+                    ]
+                  },
+                  "history": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "version",
+                        "scope",
+                        "kind",
+                        "effectiveFrom"
+                      ],
+                      "properties": {
+                        "version": {
+                          "type": "integer"
+                        },
+                        "scope": {
+                          "enum": [
+                            "DEFAULT",
+                            "ORG"
+                          ]
+                        },
+                        "kind": {
+                          "enum": [
+                            "RATE",
+                            "INHERIT"
+                          ]
+                        },
+                        "effectiveFrom": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "reason": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "spec": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "required": [
+                                "feeType"
+                              ],
+                              "properties": {
+                                "feeType": {
+                                  "enum": [
+                                    "PERCENT",
+                                    "FLAT"
+                                  ]
+                                },
+                                "percentBps": {
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ],
+                                  "minimum": 0,
+                                  "maximum": 10000
+                                },
+                                "flatMinor": {
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "minMinor": {
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "maxMinor": {
+                                  "type": [
+                                    "integer",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "mode": {
+                                  "enum": [
+                                    "NET_FROM_PAYOUT",
+                                    "AUTO_CHARGE_SAVED_METHOD",
+                                    "INVOICE_AND_COLLECT",
+                                    null
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Applied (or ignored as not newer)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "applied": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_RATE_VIEW"
+          },
+          "404": {
+            "description": "Unknown organization"
+          }
+        }
+      }
     }
   },
   "webhooks": {

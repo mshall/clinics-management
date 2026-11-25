@@ -5,6 +5,7 @@ import { buildBilingualPdf, type PdfRow } from "../billing-platform/bilingual-pd
 import { loadUserMoneyVisibilityOverrides } from "../common/user-money-visibility";
 import { PrismaService } from "../prisma/prisma.service";
 import { adminViewEnabled, canViewKiorexCommissions } from "./kiorex-commission-access";
+import { effectiveRateAt, rateViewProblems, type RateHistoryRow } from "./commission-rate-view";
 
 export type CollectionBody = {
   runId: string; orgRef: string; periodKey: string; status: string; mode: string; modeRequested?: string | null; fallbackReason?: string | null; provider?: string | null; currency: string;
@@ -13,6 +14,8 @@ export type CollectionBody = {
   claims?: Array<{ chargeId: string; appointmentId?: string; amountMinor: number; collectedMinor?: number; collectionStatus?: string; chargeStatus?: string; decisionRef?: string | null; feeBasisMinor?: number | null; sponsoredDiscountMinor?: number | null; basisPolicyVersion?: string | null }>;
   attempts?: unknown[]; timeline?: unknown[];
 };
+/** COM-2 (contracts 1.13.0 `CommissionRateView`): validated by `rateViewProblems`, not by decorators (the body is refused whole when malformed). */
+export type CommissionRateViewBody = { orgRef: string; product: string; version: string; mode?: string | null; history: RateHistoryRow[] };
 export const EXPORT_VIEWS = ["ledger", "collections", "deductions", "disputes", "timeline"] as const;
 export type ExportView = (typeof EXPORT_VIEWS)[number];
 const m2 = (minor: number) => (minor / 100).toFixed(2);
@@ -56,6 +59,22 @@ export class CommissionCollectionsService {
     return { applied: true, id: row.id };
   }
 
+  /** COM-2 (Kiorex -> Clinic, HMAC): the organisation's commission rate view. Idempotent, the newest `version` wins; a view that names no known organisation or is malformed is refused whole. */
+  async ingestRate(b: CommissionRateViewBody | unknown) {
+    const problems = rateViewProblems(b);
+    if (problems.length) throw new BadRequestException({ code: "INVALID_RATE_VIEW", problems });
+    const v = b as { orgRef: string; product: string; version: string; history: RateHistoryRow[] } & Record<string, unknown>;
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: v.orgRef }, select: { id: true } });
+    if (!tenant) throw new NotFoundException("Organization not found");
+    const existing = await this.prisma.kiorexCommissionRateView.findUnique({ where: { tenantId: tenant.id } });
+    if (existing && existing.version >= BigInt(v.version)) return { applied: false };
+    const data = { product: v.product, version: BigInt(v.version), view: { history: v.history, mode: v.mode ?? null } as unknown as Prisma.InputJsonValue };
+    if (existing) await this.prisma.kiorexCommissionRateView.update({ where: { id: existing.id }, data });
+    else await this.prisma.kiorexCommissionRateView.create({ data: { tenantId: tenant.id, ...data } });
+    await this.prisma.auditLog.create({ data: { tenantId: tenant.id, actorId: null, action: "KIOREX_COMMISSION_RATE_RECEIVED", resource: "KiorexCommissionRateView", resourceId: tenant.id, metadata: { version: v.version, rows: v.history.length } } });
+    return { applied: true };
+  }
+
   // ───────────── access ─────────────
   async access(user: JwtUser, tenantId: string): Promise<boolean> {
     if (user.tenantId !== tenantId) return false;
@@ -74,6 +93,17 @@ export class CommissionCollectionsService {
     const mm = /^(\d{4})-(\d{2})$/.exec(period);
     if (!mm || Number(mm[2]) < 1 || Number(mm[2]) > 12) throw new BadRequestException("period must be YYYY-MM");
     return { gte: new Date(Date.UTC(Number(mm[1]), Number(mm[2]) - 1, 1)), lt: new Date(Date.UTC(Number(mm[1]), Number(mm[2]), 1)) };
+  }
+
+  /** COM-2: the organisation's effective commission rate now, the default, whether an override applies, and the history (read only; same visibility as the other commission figures). */
+  async rate(user: JwtUser, tenantId: string, now = new Date()) {
+    await this.need(user, tenantId);
+    const row = await this.prisma.kiorexCommissionRateView.findUnique({ where: { tenantId } });
+    const history = ((row?.view as { history?: RateHistoryRow[] } | null)?.history ?? []).slice().sort((a, b) => new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime() || b.version - a.version);
+    const effective = effectiveRateAt(history, now);
+    const defaultOnly = effectiveRateAt(history.filter((r) => r.scope === "DEFAULT"), now);
+    const upcoming = history.filter((r) => new Date(r.effectiveFrom) > now).sort((a, b) => new Date(a.effectiveFrom).getTime() - new Date(b.effectiveFrom).getTime())[0] ?? null;
+    return { known: !!row, product: row?.product ?? null, state: effective.state, effective, default: defaultOnly, override: effective.source === "OVERRIDE" ? effective : null, inheriting: effective.source !== "OVERRIDE", upcoming, history, receivedAt: row?.updatedAt ?? null };
   }
 
   // ───────────── views ─────────────

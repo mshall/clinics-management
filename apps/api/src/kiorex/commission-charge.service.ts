@@ -36,6 +36,7 @@ import {
 import { isActiveCommissionChargeStatus } from "./commission-charge-status";
 import { KiorexCommissionService } from "./kiorex-commission.service";
 import { resolveDisputeDeadlineDays } from "./kiorex-commission-config";
+import { commissionAmountMinor, effectiveRateAt, type RateHistoryRow } from "./commission-rate-view";
 
 const AUTO_CONFIRM_MS = 24 * 60 * 60 * 1000;
 
@@ -142,19 +143,28 @@ export class CommissionChargeService {
     const visitFee = sponsoredBasis.feeBasisMinor !== undefined ? sponsoredBasis.feeBasisMinor / 100 : Number(apt.feeAmount);
     // BR56: the home surcharge is a separate field (Appointment.homeSurchargeAmount) and is never part of visitFee (S) or the commission base (C).
     const profession = effectiveProfession(apt.clinician);
-    const resolved = this.kiorexRates.resolveForBooking(rows, specialty, visitFee, attendedAt, { profession, serviceLocation: apt.serviceLocation });
-    if (!resolved.rate) {
+    // COM-2: the rate Kiorex reported for THIS organisation (default for clinics, or the organisation's own rate, effective-dated) prices the charge; without one the Clinic's market rate table applies as before.
+    // Nothing is invented: no Kiorex rate and no market row = no charge (NO_RATE_CONFIGURED).
+    const orgRate = await this.kiorexOrgRateAt(tx, tenantId, attendedAt);
+    const marketRate = this.kiorexRates.resolveForBooking(rows, specialty, visitFee, attendedAt, { profession, serviceLocation: apt.serviceLocation });
+    const resolved: { commissionAmount: number; rate: { id: string } | null; source: string | null; version: number | null } = orgRate
+      ? { commissionAmount: commissionAmountMinor(Math.round(visitFee * 100), orgRate.spec!) / 100, rate: null, source: orgRate.source === "OVERRIDE" ? "KIOREX_OVERRIDE" : "KIOREX_DEFAULT", version: orgRate.version }
+      : { commissionAmount: marketRate.commissionAmount, rate: marketRate.rate, source: marketRate.rate ? "MARKET_ROW" : null, version: null };
+    if (!orgRate && !resolved.rate) {
       await writeCommissionDecision(tx, { ...base, decision: CommissionDecisionKind.NO_CHARGE, reasonCodes: [DECISION_REASON.NO_RATE_CONFIGURED] });
       return;
     }
     const amount = new Prisma.Decimal(resolved.commissionAmount.toFixed(2));
+    // a Kiorex rate change is a new policy version: the decision of an earlier version stays as it was written (append-only), the new one explains the new price
+    const priced = orgRate ? { ...base, policyVersion: `${base.policyVersion}+${resolved.source}:v${resolved.version}` } : base;
     await writeCommissionDecision(tx, {
-      ...base,
+      ...priced,
       decision: CommissionDecisionKind.CHARGE,
       reasonCodes: gate.reasonCodes,
-      rateId: resolved.rate.id,
+      rateId: resolved.rate?.id ?? null,
+      rateSource: orgRate ? resolved.source : null,
       amount: amount.toFixed(2),
-      extra: { visitFee: visitFee.toFixed(2) },
+      extra: { visitFee: visitFee.toFixed(2), ...(resolved.source ? { rateSource: resolved.source, ...(resolved.version != null ? { rateVersion: resolved.version } : {}) } : {}) },
     });
 
     const disputeDays = resolveDisputeDeadlineDays(apt.clinic.tenant.market?.featureDefaults);
@@ -172,7 +182,9 @@ export class CommissionChargeService {
             attendedAt,
             confirmedAt: null,
             disputeDeadline,
-            rateId: resolved.rate.id,
+            rateId: resolved.rate?.id ?? null,
+            rateSource: resolved.source,
+            rateVersion: resolved.version,
             amount,
             currency,
             reversalReason: null,
@@ -196,7 +208,9 @@ export class CommissionChargeService {
         appointmentId: apt.id,
         patientId: apt.patientId,
         clinicianId: apt.clinicianId,
-        rateId: resolved.rate.id,
+        rateId: resolved.rate?.id ?? null,
+        rateSource: resolved.source,
+        rateVersion: resolved.version,
         amount,
         currency,
         status: CommissionChargeStatus.PENDING,
@@ -206,6 +220,14 @@ export class CommissionChargeService {
     });
     await this.auditCharge(tx, tenantId, "kiorex.commission_charge.created", charge);
     await this.outbox.enqueue(tenantId, COMMISSION_CHARGE_CREATED, await this.outboxPayload(tx, charge), tx);
+  }
+
+  /** COM-2: the effective Kiorex rate of this organisation at `at` (computed from the reported history), or null when none is in force. */
+  private async kiorexOrgRateAt(tx: Tx, tenantId: string, at: Date) {
+    const row = await tx.kiorexCommissionRateView.findUnique({ where: { tenantId }, select: { view: true } });
+    const history = ((row?.view as { history?: RateHistoryRow[] } | null)?.history ?? []);
+    const eff = effectiveRateAt(history, at);
+    return eff.state === "SET" && eff.spec ? eff : null;
   }
 
   async onRevert(
