@@ -3,11 +3,14 @@ import { PlanKey, SubscriptionStatus, UserRole } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { ENTITLEMENT_MIN_PLAN } from "./entitlement-catalog";
 import { entitlementLimit, entitlementTruthy, parseEntitlementValue, type EntitlementValue } from "./entitlement-value";
+import { liteGraceActive } from "../subscriptions/subscription-policy";
 import { PlanUpgradeRequiredException } from "./plan-upgrade-required.exception";
 
 export type ResolvedEntitlements = {
   plan: { key: PlanKey; status: SubscriptionStatus };
   entitlements: Record<string, EntitlementValue>;
+  /** SUB-01: after a downgrade to Lite, modules Lite does not include stay READ-ONLY until `until` (data is never deleted). */
+  liteGrace?: { until: string; readOnlyKeys: string[] } | null;
 };
 
 @Injectable()
@@ -89,9 +92,19 @@ export class EntitlementsService {
       map.max_clinicians = sub.clinicianSeats;
     }
 
+    let liteGrace: ResolvedEntitlements["liteGrace"] = null;
+    if (liteGraceActive(sub, now) && sub.previousPlanId) {
+      const prev = await this.prisma.planEntitlement.findMany({ where: { planId: sub.previousPlanId } });
+      const readOnlyKeys = prev
+        .filter((r) => r.key.startsWith("mod_") && entitlementTruthy(parseEntitlementValue(r.valueJson)) && !entitlementTruthy(map[r.key]))
+        .map((r) => r.key);
+      if (readOnlyKeys.length > 0) liteGrace = { until: sub.liteReadOnlyGraceUntil!.toISOString(), readOnlyKeys };
+    }
+
     return {
       plan: { key: planKey, status: sub.status },
       entitlements: map,
+      liteGrace,
     };
   }
 
@@ -113,8 +126,10 @@ export class EntitlementsService {
     throw new PlanUpgradeRequiredException(entitlement, requiredPlan);
   }
 
-  async requireEntitlement(tenantId: string, entitlement: string): Promise<void> {
+  async requireEntitlement(tenantId: string, entitlement: string, opts: { readOnlyRequest?: boolean } = {}): Promise<void> {
     const resolved = await this.resolve(tenantId);
+    // SUB-01: Lite grace window: reads of previously entitled modules still work; writes need an upgrade.
+    if (opts.readOnlyRequest && resolved.liteGrace?.readOnlyKeys.includes(entitlement)) return;
     this.assertEntitled(entitlement, resolved);
   }
 

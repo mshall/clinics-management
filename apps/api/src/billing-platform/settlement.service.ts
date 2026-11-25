@@ -310,7 +310,25 @@ export class SettlementService {
     });
     if (!tenant) throw new NotFoundException("Organization not found");
     if (!tenant.subscription) throw new BadRequestException("Subscription required for settlement");
-    const sub = tenant.subscription;
+    let sub = tenant.subscription;
+    // SUB-01 "paid through": an org that switched auto-renew OFF paid for the plan until the period end, so the settlement
+    // that covers the period in which it moved to Lite still bills the paid plan (it would otherwise get that month free).
+    // Dunning/forced downgrades are NOT billed forward: the unpaid invoice already stands.
+    if (
+      sub.downgradedToLiteAt &&
+      sub.downgradeReason === "auto_renew_off" &&
+      sub.downgradedToLiteAt >= periodStart &&
+      sub.downgradedToLiteAt < periodEnd &&
+      sub.previousPlanId
+    ) {
+      const [prevPlan, prevPrice] = await Promise.all([
+        this.prisma.plan.findUnique({ where: { id: sub.previousPlanId } }),
+        sub.previousPlanPriceId ? this.prisma.planPrice.findUnique({ where: { id: sub.previousPlanPriceId } }) : Promise.resolve(null),
+      ]);
+      if (prevPlan && prevPrice) {
+        sub = { ...sub, plan: prevPlan, planPrice: prevPrice, clinicianSeats: sub.previousClinicianSeats ?? sub.clinicianSeats };
+      }
+    }
     const pack = resolveSettlementMarketPack(
       tenant.market?.featureDefaults,
       sub.trialConfigOverride,

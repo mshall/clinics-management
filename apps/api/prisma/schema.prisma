@@ -444,6 +444,7 @@ enum BookingSource {
 
 model Market {
   id                           String                        @id @default(cuid())
+  subscriptionPolicyChanges    SubscriptionPolicyChange[]
   code                         String                        @unique
   nameEn                       String
   nameAr                       String                        @default("")
@@ -787,11 +788,29 @@ model Subscription {
   scheduledInterval        BillingInterval?
   scheduledClinicianSeats  Int?
   scheduledEffectiveAt     DateTime?
+  /// SUB-01: automatic renewal. ON by default; the org owner can turn it off in Plan & billing (stay on the paid plan until the period end, then Lite).
+  autoRenew                Boolean              @default(true)
+  /// SUB-01: platform super admin force ("ON" | "OFF"); while set, the org cannot change autoRenew.
+  autoRenewForced          String?
+  autoRenewChangedAt       DateTime?
+  autoRenewChangedBy       String?
+  /// SUB-01: set when the tenant was moved to Lite (auto-renew off, dunning ended, platform force). Cleared on upgrade/reactivation.
+  downgradedToLiteAt       DateTime?
+  downgradeReason          String?
+  /// The paid plan/price/interval/seats the tenant had before Lite, so Reactivate is one click.
+  previousPlanId           String?
+  previousPlanPriceId      String?
+  previousInterval         BillingInterval?
+  previousClinicianSeats   Int?
+  /// During this window modules Lite does not include stay readable (never deleted); writes are blocked.
+  liteReadOnlyGraceUntil   DateTime?
   events                   SubscriptionEvent[]
   priceMigrations          PlanPriceMigration[]
   createdAt                DateTime             @default(now())
   updatedAt                DateTime             @updatedAt
 
+  @@index([downgradedToLiteAt])
+  @@index([autoRenew, status, currentPeriodEnd])
   @@index([planPriceId])
   @@index([scheduledPlanId])
   @@index([planId])
@@ -6027,4 +6046,29 @@ model ProviderB2BReferral {
 
   @@index([tenantId, createdAt])
   @@index([tenantId, companyKey])
+}
+
+
+enum SubscriptionPolicyChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// SUB-01 maker-checker: a change to the market's subscription policy (auto-renew default, grace, dunning end, proration) is proposed by one platform admin and applied only when a DIFFERENT platform admin approves.
+model SubscriptionPolicyChange {
+  id          String                         @id @default(cuid())
+  marketId    String
+  market      Market                         @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  status      SubscriptionPolicyChangeStatus @default(PENDING)
+  payloadJson Json
+  beforeJson  Json?
+  reason      String
+  makerId     String
+  checkerId   String?
+  decisionNote String?
+  createdAt   DateTime                       @default(now())
+  decidedAt   DateTime?
+
+  @@index([marketId, status])
 }

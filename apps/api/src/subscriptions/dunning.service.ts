@@ -16,6 +16,7 @@ import {
   SubscriptionAccessAction,
 } from "./subscription-access-policy";
 import { SubscriptionService } from "./subscription.service";
+import { SubscriptionRenewalService } from "./subscription-renewal.service";
 import { MarketplaceListingService } from "../marketplace/marketplace-listing.service";
 
 const UNPAID_INVOICE_STATUSES = [KiorlyInvoiceStatus.ISSUED, KiorlyInvoiceStatus.PARTIALLY_PAID] as const;
@@ -28,6 +29,7 @@ export class DunningService {
     private readonly prisma: PrismaService,
     private readonly subscriptions: SubscriptionService,
     private readonly listings: MarketplaceListingService,
+    private readonly renewal: SubscriptionRenewalService,
   ) {}
 
   async getAccessState(tenantId: string, user?: { isTenantOwner?: boolean; role?: string } | null) {
@@ -143,10 +145,21 @@ export class DunningService {
       return true;
     }
 
-    const isLite = sub.plan.key === PlanKey.LITE;
+    const isLite = sub.plan.key === PlanKey.LITE || sub.plan.key === PlanKey.NURSE_LITE;
     const daysOverdue = daysAfterDue(anchor, now);
+    // SUB-01: when dunning runs out the tenant moves to the free Lite plan (never lockout). Config: kiorlyBilling.subscription.
+    const lapsePolicy = await this.renewal.loadPolicy(tenantId);
+    const downgradeMode = !isLite && lapsePolicy.lapseAction === "DOWNGRADE_TO_LITE";
+    if (downgradeMode && daysOverdue >= lapsePolicy.downgradeAfterDays) {
+      const moved = await this.renewal.downgradeToLite(tenantId, "dunning_exhausted", null, now);
+      if (moved) return true;
+    }
     // Lite pays commission only: unpaid fees pause the Kiorex listing, Kiorly itself keeps working.
-    const target = isLite ? null : subscriptionStatusForDaysOverdue(daysOverdue, pack);
+    let target = isLite ? null : subscriptionStatusForDaysOverdue(daysOverdue, pack);
+    if (downgradeMode && (target === SubscriptionStatus.READ_ONLY || target === SubscriptionStatus.SUSPENDED)) {
+      target = SubscriptionStatus.GRACE; // full access with the banner until the downgrade day
+    }
+    if (downgradeMode) await this.maybeSendLapseNotices(tenantId, sub.id, anchor, daysOverdue, lapsePolicy.downgradeAfterDays);
     if (target && target !== sub.status) {
       await this.applyDunningStatusSteps(tenantId, sub.status, target);
       await this.listings.recomputeTenantListings(tenantId);
@@ -256,6 +269,35 @@ export class DunningService {
     if (!row?.dueAt) return null;
     if (row.total.sub(row.amountPaid).lte(0)) return null;
     return row.dueAt;
+  }
+
+  /** SUB-01: owner notices when a renewal charge failed and one day before the move to Lite. Deduped per invoice due date. */
+  private async maybeSendLapseNotices(
+    tenantId: string,
+    subscriptionId: string,
+    dueAt: Date,
+    daysOverdue: number,
+    downgradeAfterDays: number,
+  ): Promise<void> {
+    const marker = dueAt.toISOString().slice(0, 10);
+    const steps: { type: string; kind: "payment_failed" | "downgrade_warning"; when: boolean }[] = [
+      { type: "lapse_notice_payment_failed", kind: "payment_failed", when: daysOverdue >= 1 && daysOverdue < downgradeAfterDays - 1 },
+      { type: "lapse_notice_downgrade_warning", kind: "downgrade_warning", when: daysOverdue >= downgradeAfterDays - 1 && daysOverdue < downgradeAfterDays },
+    ];
+    for (const step of steps) {
+      if (!step.when) continue;
+      const prior = await this.prisma.subscriptionEvent.findFirst({
+        where: { subscriptionId, type: step.type, toJson: { path: ["dueDate"], equals: marker } },
+      });
+      if (prior) continue;
+      await this.prisma.subscriptionEvent.create({
+        data: { subscriptionId, type: step.type, toJson: { dueDate: marker, daysOverdue } as Prisma.InputJsonValue },
+      });
+      await this.renewal.notifyOwner(tenantId, subscriptionId, step.kind, {
+        dueDate: marker,
+        downgradeInDays: Math.max(0, downgradeAfterDays - daysOverdue),
+      });
+    }
   }
 
   private async loadDunningPack(tenantId: string) {

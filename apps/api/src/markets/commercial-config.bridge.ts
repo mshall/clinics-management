@@ -1,5 +1,5 @@
 import type { CommercialConfig } from "./commercial-config.schema";
-import { CREDIT_CONFIG_DEFAULTS, DEFAULT_COMMERCIAL_CONFIG, type CreditConfig } from "./commercial-config.schema";
+import { CREDIT_CONFIG_DEFAULTS, DEFAULT_COMMERCIAL_CONFIG, type CreditConfig, type SubscriptionPolicyConfig } from "./commercial-config.schema";
 
 export function commercialConfigToFeatureDefaultsPatch(config: CommercialConfig): Record<string, unknown> {
   const trialPolicy =
@@ -37,6 +37,7 @@ export function commercialConfigToFeatureDefaultsPatch(config: CommercialConfig)
         liteCommissionMarketplacePauseDays: 30,
         reminderDaysBeforeDue: [3, 0],
       },
+      ...(config.subscription ? { subscription: { ...config.subscription, renewalReminderDaysBefore: [...config.subscription.renewalReminderDaysBefore] } } : {}),
     },
     referral: {
       rewardMonths: config.referral.rewardMonths,
@@ -117,6 +118,11 @@ export function commercialConfigFromFeatureDefaults(featureDefaults: unknown): C
   base.dunning.readOnlyAfterDays = readNumber(dunning, "readOnlyFromDay") ?? base.dunning.readOnlyAfterDays;
   base.dunning.suspendAfterDays = readNumber(dunning, "suspendedFromDay") ?? base.dunning.suspendAfterDays;
 
+  if (billing.subscription && typeof billing.subscription === "object" && !Array.isArray(billing.subscription)) {
+    // Parsed leniently by the runtime reader; here we only surface what is stored so the platform UI can show it.
+    base.subscription = billing.subscription as SubscriptionPolicyConfig;
+  }
+
   const referral =
     root.referral && typeof root.referral === "object" && !Array.isArray(root.referral)
       ? (root.referral as Record<string, unknown>)
@@ -182,6 +188,7 @@ export function commercialConfigPreviewDiff(before: CommercialConfig, after: Com
   walk("dunning", before.dunning, after.dunning);
   walk("referral", before.referral, after.referral);
   walk("credit", before.credit, after.credit);
+  walk("subscription", before.subscription, after.subscription);
   return keys;
 }
 

@@ -6,16 +6,19 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { JwtUser } from "../auth/jwt-user";
 import { requireTenantId } from "../auth/require-tenant";
+import { assertSubscriptionBillingAccess } from "../subscriptions/subscription-access";
 import { BillingInterval, PlanKey } from "@prisma/client";
 import { DunningService } from "../subscriptions/dunning.service";
 import { SubscriptionService } from "../subscriptions/subscription.service";
 import { TrialEngineService } from "../subscriptions/trial-engine.service";
+import { SubscriptionRenewalService } from "../subscriptions/subscription-renewal.service";
+import { PlanComparisonService } from "../subscriptions/plan-comparison.service";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { BillingService } from "./billing.service";
 import { NoShowGuaranteeService } from "./no-show-guarantee.service";
 import { SpecialtyPacksService } from "../clinical/specialty-packs.service";
-import { BillingRecordPaywallEventBodyDto, BillingPurchaseSpecialtyAddonBodyDto, BillingPreviewChangeBodyDto, BillingChangePlanBodyDto, BillingChangeSeatsBodyDto, BillingPreviewSeatsBodyDto, BillingCancelSubscriptionBodyDto, BillingCreateCatalogBodyDto, BillingRecordPaymentBodyDto, BillingCashCloseBodyDto } from "./billing.controller.dto";
+import { BillingRecordPaywallEventBodyDto, BillingPurchaseSpecialtyAddonBodyDto, BillingPreviewChangeBodyDto, BillingChangePlanBodyDto, BillingChangeSeatsBodyDto, BillingPreviewSeatsBodyDto, BillingCancelSubscriptionBodyDto, BillingCreateCatalogBodyDto, BillingRecordPaymentBodyDto, BillingCashCloseBodyDto, BillingAutoRenewBodyDto, BillingReactivateBodyDto } from "./billing.controller.dto";
 
 @ApiTags("billing")
 @ApiBearerAuth("bearer")
@@ -27,6 +30,8 @@ export class BillingController {
     private readonly subscriptions: SubscriptionService,
     private readonly dunning: DunningService,
     private readonly trialEngine: TrialEngineService,
+    private readonly renewal: SubscriptionRenewalService,
+    private readonly planComparison: PlanComparisonService,
     private readonly creditWallet: CreditWalletService,
     private readonly noShowGuarantee: NoShowGuaranteeService,
     private readonly specialtyPacks: SpecialtyPacksService,
@@ -61,6 +66,36 @@ export class BillingController {
   @Get("subscription")
   getSubscription(@CurrentUser() user: JwtUser) {
     return this.subscriptions.getForTenant(user, requireTenantId(user));
+  }
+
+  /** SUB-01: renewal state for the Upgrade plan page and the staff-app plan card. */
+  @Get("subscription/renewal")
+  getRenewal(@CurrentUser() user: JwtUser) {
+    return this.renewal.getRenewalState(user, requireTenantId(user));
+  }
+
+  /** SUB-01: plan comparison table (all values from the catalog and market pack). */
+  @Get("plans/compare")
+  comparePlans(@CurrentUser() user: JwtUser) {
+    return this.planComparison.compare(user, requireTenantId(user));
+  }
+
+  /** SUB-01: what is lost/limited if the tenant moves to a lower plan (shown BEFORE the user confirms). */
+  @Get("subscription/downgrade-impact")
+  async downgradeImpact(@CurrentUser() user: JwtUser, @Query("plan") plan?: string) {
+    const tenantId = requireTenantId(user);
+    assertSubscriptionBillingAccess(user);
+    return this.renewal.getImpact(tenantId, plan && plan in PlanKey ? (plan as PlanKey) : undefined);
+  }
+
+  @Post("subscription/auto-renew")
+  setAutoRenew(@CurrentUser() user: JwtUser, @Body() body: BillingAutoRenewBodyDto) {
+    return this.renewal.setAutoRenew(user, requireTenantId(user), body);
+  }
+
+  @Post("subscription/reactivate")
+  reactivate(@CurrentUser() user: JwtUser, @Body() body: BillingReactivateBodyDto) {
+    return this.renewal.reactivate(user, requireTenantId(user), body);
   }
 
   @Get("access-state")

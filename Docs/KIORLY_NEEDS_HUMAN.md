@@ -115,3 +115,13 @@ credentials exist. No credentials are ever committed; keys live in Secrets Manag
 - Product: whether Kiorex should send the outcome of a lead back to the referring provider (needs a Kiorex-to-Clinic event in the contracts); the status page shows only "Sent to Kiorex".
 - Numbers: 90 day duplicate window and 20 referrals per organisation per day are `PROPOSED_DEFAULT` code constants (`b2b-logic.ts`).
 - Contracts: `CorporateLeadReferred` is in the unreleased contracts set (to be published with 1.13.0 and 1.14.0 by one owner).
+
+## Recurring subscription, auto-renew and Lite (SUB-01)
+| ID | Owner | Item | Status |
+|---|---|---|---|
+| LG-SUB-1 | Founder | Plan prices for Pro, Clinic, Enterprise, Nurse (the comparison table shows "Price to be confirmed" when a market has no active price; nothing is invented). | open |
+| LG-SUB-2 | Counsel | Wording of renewal terms: automatic renewal notice, what Lite keeps and loses, reminder and downgrade e-mail copy (EN + AR), renewal consent text shown at upgrade; the notices carry operational text only. Arabic copy review. | open |
+| LG-SUB-3 | Founder + Accounting | Proration rules (upgrade timing, downgrade timing, credit of unused time on downgrade), grace days (`liteReadOnlyGraceDays` 30 and `downgradeAfterDays` 15 are engineering defaults), reminder days (7, 3, 1), VAT rate on subscription invoices. Maker-checker approval needed to change them in a market. | open |
+| LG-SUB-4 | Founder | Apple App Store and Google Play: subscriptions for this SaaS are sold on the web only; the Kiorly staff app shows a read-only plan card and "manage on the web". Confirm that reading plan status in the app and linking out is acceptable under the current store rules before submission; do not add in-app purchase. | open |
+| LG-SUB-5 | Founder | Saved-card mandate wording and the PSP's recurring/tokenised-charge approval (Paymob merchant account), cancellation and refund policy for the period already paid when auto-renew is switched off. | open |
+| LG-SUB-6 | Founder | Whether the free Lite plan should also be offered to Pharmacy and Lab at launch and which limits (patients, users, branches) it carries; Pharmacy and Lab values are placeholders. | open |

@@ -132,6 +132,45 @@ Migration `20261118236000_sb06_price_indexation` (`PlanPriceMigration`, `PriceMi
 
 Tests: `sb06-price-indexation.node.test.ts`, `sb06-price-indexation.integration.test.ts`, `apps/web/e2e/sb06-price-impact.spec.ts`.
 
+## SUB-01 recurring subscription, auto-renew and Lite downgrade (built and tested locally; not deployed)
+
+**Rule (founder):** a paid subscription renews automatically by default; switching renewal off, or a lapse that dunning cannot fix, moves the organisation to the **free Lite plan, never to lockout**. Data is never deleted.
+
+| Topic | How it works | Where |
+|---|---|---|
+| Default | `Subscription.autoRenew` defaults to ON; after the trial the activation keeps it ON; the market default is `kiorlyBilling.subscription.autoRenewDefault` | `subscription-policy.ts`, migration `20270201100000_sub01_auto_renew_lite_downgrade` |
+| Renewal charge | The renewal money path is the existing one: the monthly settlement issues the invoice, `KiorlyPaymentService.scheduleAutoChargeOnIssue` charges the saved card token through the `PaymentGateway` interface (`chargeToken`), retries D+1, D+3, D+7, dunning after. Nothing new talks to a PSP, so the concurrent payments lane can swap the adapter layer without touching this. | `billing-platform/*`, unchanged contract |
+| Period end | `SubscriptionRenewalService.runDaily` (called by the daily lifecycle): auto-renew ON rolls the period (optimistic lock, so concurrent runs roll once); OFF or a scheduled cancel moves to Lite. A scheduled cancel no longer ends in CANCELLED. | `subscription-renewal.service.ts`, `subscription-lifecycle.service.ts` |
+| Reminders | `renewal_reminder` (auto-renew on), `renewal_off_reminder`, `payment_method_missing`, `payment_failed`, `downgrade_warning`, `downgraded_to_lite`, `auto_renew_on/off`, `reactivated` through the INTERNAL outbox topic `billing.subscription_notice` (email + WhatsApp row, MODE=mock by default). One reminder per offset per period, the tightest due offset only; deferred out of the owner quiet hours (policy `reminderQuietHours`). They are account-holder transactional notices, not marketing. | `email-templates.ts`, `email-outbox.service.ts` |
+| Dunning end | `lapseAction = DOWNGRADE_TO_LITE` (default): grace until day `downgradeAfterDays` (15) after the oldest unpaid invoice due date, then Lite. The legacy READ_ONLY then SUSPENDED path stays available as `READ_ONLY_SUSPEND`. A warning goes out the day before. The unpaid invoice stays payable; paying it does not undo Lite (the owner upgrades). | `dunning.service.ts`, `DUNNING.md` |
+| Cancel auto-renew | Owner or org admin only, with a confirmation that carries the downgrade impact (`AUTO_RENEW_CONFIRMATION_REQUIRED` until `confirmDowngrade: true`). The plan stays until the period end. The month in which the paid term ends is still billed (`downgradeReason = auto_renew_off` is "paid through" in the settlement); a dunning or forced downgrade is not billed forward. | `setAutoRenew`, `settlement.service.ts` |
+| Reactivate / upgrade from Lite | `POST /billing/subscription/reactivate` (defaults to the plan held before Lite; same legal acceptance and PDPC launch gates as `change-plan`). Paid to paid uses the existing `change-plan` preview + confirm. | `reactivate` |
+| Proration | Upgrade/downgrade timing defaults come from `kiorlyBilling.subscription.proration` (engineering defaults IMMEDIATE and PERIOD_END). The daily-prorated amounts are the PL-07 ones. `creditUnusedOnDowngrade` is stored but NOT applied (no credit is granted until LG-SUB-3 is decided). | `subscription.service.ts` |
+| Tax | Display line from the market pack `kiorlyBilling.taxRatePercent` (NEEDS_HUMAN); never submitted to any authority (ADR-011). | `plan-comparison.service.ts` |
+
+### Lite (free) definition
+Lite is a normal catalog plan: `PlanEntitlement` rows (seeded from `plans-matrix.ts`, editable on Platform, Plans and pricing) hold the limits (`max_clinicians`, `max_branches`, `max_assistant_seats`) and the modules. On downgrade: seats above the Lite cap become read-only (`billingSeatActive`, PL-07), nothing is removed; modules Lite does not include stay **readable** for `liteReadOnlyGraceDays` (default 30; `EntitlementsService.resolve().liteGrace`, GET and HEAD only on gated controllers, `/auth/me` returns `planGrace`), writes answer 402 `PLAN_UPGRADE_REQUIRED`. After the grace the modules need an upgrade; the data is still stored and returns on upgrade. The downgrade impact (lost features, shrinking limits against current usage) is returned **before** confirming by `GET /billing/subscription/downgrade-impact`, `POST auto-renew` and `GET /billing/plans/compare`.
+
+### Configuration (market pack, maker-checker)
+`kiorlyBilling.subscription` in `Market.featureDefaults` (mirrored in `commercialConfig.subscription`): `autoRenewDefault`, `orgMayDisableAutoRenew`, `renewalReminderDaysBefore`, `lapseAction`, `downgradeAfterDays`, `liteReadOnlyGraceDays`, `proration.{upgradeTiming,downgradeTiming,creditUnusedOnDowngrade}`, `reminderQuietHours`. The block is **only** changed through `PUT /admin/platform/subscriptions/policy/:marketId/proposals` (maker) and `POST .../proposals/:id/decision` (a different platform admin, checker); the plain commercial-config PUT refuses to edit it (`SUBSCRIPTION_POLICY_REQUIRES_APPROVAL`). Per organisation: the owner or an org admin switches auto-renew; a platform super admin can force ON or OFF (reason mandatory, audit `subscription.auto_renew_forced`) or move an organisation to Lite (`subscription.platform_force_downgrade`).
+
+### API
+| Endpoint | Who | Notes |
+|---|---|---|
+| `GET /billing/subscription/renewal` | owner, group admin, finance | state for the UI and the staff app card |
+| `GET /billing/plans/compare` | same | every plan of the edition, entitlements, prices (or `priceNeedsHuman`), downgrade impact |
+| `GET /billing/subscription/downgrade-impact?plan=` | same | |
+| `POST /billing/subscription/auto-renew` `{enabled, confirmDowngrade?}` | owner, group admin, clinic admin | `AUTO_RENEW_FORCED`, `AUTO_RENEW_CANNOT_DISABLE`, `AUTO_RENEW_CONFIRMATION_REQUIRED` |
+| `POST /billing/subscription/reactivate` | owner, group admin, clinic admin | |
+| `GET /admin/platform/subscriptions`, `/metrics` | platform super admin | list, MRR per currency, churn-lite, downgrades by reason, reactivations |
+| `POST /admin/platform/subscriptions/:tenantId/force-auto-renew`, `/force-downgrade` | platform super admin | reason mandatory |
+
+### Web
+Admin, Plan and billing links to **/plan** (Upgrade plan): current plan, usage against limits, renewal date, auto-renew switch with confirmation, comparison table, payment method, invoice history (English and Arabic RTL, light and dark, 320 and 1440 px, axe clean). Platform, **Subscriptions** (`/platform/subscriptions`): list, MRR, churn-lite, forced actions, policy proposals. The Kiorly staff app shows a read-only plan card with a "manage on the web" link: plans are not sold inside the iOS or Android apps (store policy, LG-SUB-4).
+
+### Tests
+`sub01-policy.node.test.ts`, `sub01-renewal.integration.test.ts` (default ON, renew, 8-way concurrent runs, cancel to Lite, Lite enforcement, dunning to Lite, reactivate, roles and tenant isolation, force, reminders and quiet hours, comparison, paid-through billing, maker-checker), web `plan-billing.node.test.ts`, Playwright `e2e/sub01-plan-billing.spec.ts` (`playwright.sub01.config.ts`).
+
 ## Follow-ups
 
 - Sender for INTERNAL `billing.price_change_notice` (WhatsApp/email) — pairs with MS-04 owner digests; needs approved templates (NH-004).

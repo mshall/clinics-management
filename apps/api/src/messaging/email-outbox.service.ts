@@ -33,6 +33,36 @@ export class EmailOutboxService {
     return { sent: true };
   }
 
+  /** SUB-01: renewal reminders, payment failed, downgrade to Lite, auto-renew switched (INTERNAL topic billing.subscription_notice). */
+  async deliverSubscriptionNotice(tenantId: string, payload: unknown): Promise<{ sent: boolean }> {
+    const p = asRecord(payload);
+    if (String(p.channel ?? "").toLowerCase() !== "email") return { sent: false };
+    const to = String(p.to ?? "").trim();
+    if (!to) {
+      this.log.warn(`subscription notice skipped: no owner email for tenant ${tenantId}`);
+      return { sent: false };
+    }
+    const res = await this.email.send({
+      tenantId,
+      to,
+      templateKey: "subscription_notice",
+      locale: "both",
+      variables: {
+        kind: String(p.kind ?? "renewal_reminder"),
+        planName: (p.planName as string) ?? (p.planKey as string) ?? "Kiorly",
+        renewsOn: p.renewsOn as string | undefined,
+        endsOn: p.endsOn as string | undefined,
+        daysBefore: p.daysBefore as number | undefined,
+        amount: p.amount as string | undefined,
+        currency: p.currency as string | undefined,
+        readOnlyGraceDays: p.readOnlyGraceDays as number | undefined,
+      },
+      tags: { topic: "billing.subscription_notice" },
+    });
+    if (!res.ok) throw new Error(res.error);
+    return { sent: true };
+  }
+
   async deliverStatementReady(tenantId: string, payload: unknown): Promise<{ sent: boolean }> {
     const p = asRecord(payload);
     if (String(p.channel ?? "").toLowerCase() !== "email") return { sent: false };

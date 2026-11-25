@@ -217,3 +217,37 @@ export class BillingCashCloseBodyDto {
   @IsString()
   notes?: string;
 }
+
+
+/** SUB-01: auto-renew switch. Switching OFF needs `confirmDowngrade: true` (the UI shows the Lite impact first). */
+@Lenient()
+export class BillingAutoRenewBodyDto {
+  @ApiProperty({ type: Boolean })
+  @IsBoolean()
+  enabled!: boolean;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  confirmDowngrade?: boolean;
+}
+
+/** SUB-01: upgrade from Lite (defaults to the plan held before the downgrade). */
+@Lenient()
+export class BillingReactivateBodyDto {
+  @ApiPropertyOptional({ enum: ["PRO", "CLINIC", "ENTERPRISE", "NURSE_PRO", "NURSE_AGENCY"] })
+  @IsOptional()
+  @IsIn(["PRO", "CLINIC", "ENTERPRISE", "NURSE_PRO", "NURSE_AGENCY"])
+  planKey?: PlanKey;
+
+  @ApiPropertyOptional({ enum: ["MONTHLY", "ANNUAL"] })
+  @IsOptional()
+  @IsIn(["MONTHLY", "ANNUAL"])
+  interval?: BillingInterval;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  seats?: number;
+}

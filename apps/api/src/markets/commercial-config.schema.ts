@@ -130,6 +130,37 @@ export const NO_SHOW_GUARANTEE_DEFAULTS: NoShowGuaranteeConfig = {
   minBaselineAppointments: 100,
 };
 
+/**
+ * SUB-01: recurring subscription policy. Money-affecting, so it is changed ONLY through the maker-checker flow
+ * (`SubscriptionPolicyService`), never by the plain commercial-config PUT. Engineering defaults; proration values are NEEDS_HUMAN (LG-SUB-3).
+ */
+export const subscriptionPolicySchema = z.object({
+  autoRenewDefault: z.boolean(),
+  orgMayDisableAutoRenew: z.boolean(),
+  renewalReminderDaysBefore: z.array(z.number().int().min(0).max(90)).max(6),
+  lapseAction: z.enum(["DOWNGRADE_TO_LITE", "READ_ONLY_SUSPEND"]),
+  downgradeAfterDays: z.number().int().min(1).max(365),
+  liteReadOnlyGraceDays: z.number().int().min(0).max(365),
+  proration: z.object({
+    upgradeTiming: z.enum(["IMMEDIATE", "PERIOD_END"]),
+    downgradeTiming: z.enum(["IMMEDIATE", "PERIOD_END"]),
+    creditUnusedOnDowngrade: z.boolean(),
+  }),
+  reminderQuietHours: z.object({ start: z.number().int().min(0).max(23), end: z.number().int().min(0).max(23) }),
+});
+export type SubscriptionPolicyConfig = z.infer<typeof subscriptionPolicySchema>;
+
+export const SUBSCRIPTION_POLICY_DEFAULTS: SubscriptionPolicyConfig = {
+  autoRenewDefault: true,
+  orgMayDisableAutoRenew: true,
+  renewalReminderDaysBefore: [7, 3, 1],
+  lapseAction: "DOWNGRADE_TO_LITE",
+  downgradeAfterDays: 15,
+  liteReadOnlyGraceDays: 30,
+  proration: { upgradeTiming: "IMMEDIATE", downgradeTiming: "PERIOD_END", creditUnusedOnDowngrade: false },
+  reminderQuietHours: { start: 21, end: 8 },
+};
+
 export const SALES_REP_COMMISSION_DEFAULTS = { commissionPercent: 10, retentionDays: 90 } as const;
 
 export const commercialConfigSchema = z
@@ -143,8 +174,16 @@ export const commercialConfigSchema = z
     salesRep: salesRepSchema.optional(),
     deposits: depositPolicySchema.optional(),
     noShowGuarantee: noShowGuaranteeSchema.optional(),
+    subscription: subscriptionPolicySchema.optional(),
   })
   .superRefine((val, ctx) => {
+    if (val.subscription && val.subscription.lapseAction === "DOWNGRADE_TO_LITE" && val.subscription.downgradeAfterDays <= val.dunning.graceDays) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "downgradeAfterDays must be greater than dunning.graceDays",
+        path: ["subscription", "downgradeAfterDays"],
+      });
+    }
     if (val.noShowGuarantee && val.noShowGuarantee.evaluationDay <= val.noShowGuarantee.baselineDays) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

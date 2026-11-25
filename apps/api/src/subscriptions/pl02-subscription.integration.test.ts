@@ -7,6 +7,9 @@ import { BillingSeatService } from "./billing-seat.service";
 import { SubscriptionService } from "./subscription.service";
 import { TrialEngineService } from "./trial-engine.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { SubscriptionRenewalService } from "./subscription-renewal.service";
+import { MarketplaceListingService } from "../marketplace/marketplace-listing.service";
+import { OutboxEventService } from "../messaging/outbox-event.service";
 import { AuditService } from "../audit/audit.service";
 import { LegalAcceptanceService } from "../legal/legal-acceptance.service";
 import { createPrismaClient } from "../prisma/create-prisma-client";
@@ -17,7 +20,14 @@ const legal = new LegalAcceptanceService(prismaSvc, new AuditService(prismaSvc))
 const billingSeats = new BillingSeatService(prismaSvc);
 const subs = new SubscriptionService(prismaSvc, legal, billingSeats);
 const trialEngine = new TrialEngineService(prismaSvc, subs);
-const lifecycle = new SubscriptionLifecycleService(prisma as unknown as PrismaService, subs, trialEngine);
+const renewal = new SubscriptionRenewalService(
+  prismaSvc,
+  subs,
+  billingSeats,
+  new MarketplaceListingService(prismaSvc, new OutboxEventService(prismaSvc)),
+  legal,
+);
+const lifecycle = new SubscriptionLifecycleService(prisma as unknown as PrismaService, subs, trialEngine, renewal);
 
 describe("PL-02 subscriptions", () => {
   before(async () => {

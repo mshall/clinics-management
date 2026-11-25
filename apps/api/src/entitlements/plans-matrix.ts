@@ -139,6 +139,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "operations/operations.controller.ts": { kind: "gated", entitlement: "mod_operations" },
   "patients/patients.controller.ts": { kind: "open" },
   "plans/platform-plans.controller.ts": { kind: "platform" },
+  "subscriptions/platform-subscriptions.controller.ts": { kind: "platform" },
   "plans/public-plans.controller.ts": { kind: "open" },
   "kiorex/platform-kiorex-rates.controller.ts": { kind: "platform" },
   "kiorex/platform-commission-disputes.controller.ts": { kind: "platform" },

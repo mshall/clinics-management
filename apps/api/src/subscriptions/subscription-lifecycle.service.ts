@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { SubscriptionStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { SubscriptionService } from "./subscription.service";
+import { SubscriptionRenewalService } from "./subscription-renewal.service";
 import { TrialEngineService } from "./trial-engine.service";
 
 @Injectable()
@@ -12,6 +12,7 @@ export class SubscriptionLifecycleService {
     private readonly prisma: PrismaService,
     private readonly subscriptions: SubscriptionService,
     private readonly trialEngine: TrialEngineService,
+    private readonly renewal: SubscriptionRenewalService,
   ) {}
 
   /** Idempotent daily pass: safe to run multiple times per day. */
@@ -19,30 +20,10 @@ export class SubscriptionLifecycleService {
     const trialPass = await this.trialEngine.runDaily(now);
     let processed = trialPass.processed;
 
-    const rows = await this.prisma.subscription.findMany({
-      where: {
-        status: {
-          in: [
-            SubscriptionStatus.ACTIVE,
-            SubscriptionStatus.PAST_DUE,
-            SubscriptionStatus.GRACE,
-          ],
-        },
-      },
-      select: { id: true, tenantId: true, status: true, trialEndsAt: true },
-    });
-
-    for (const row of rows) {
-      if (row.status === SubscriptionStatus.ACTIVE) {
-        const cancelled = await this.subscriptions.completeCancellationAtPeriodEnd(row.tenantId, null);
-        if (cancelled) {
-          processed += 1;
-          continue;
-        }
-        const rolled = await this.subscriptions.rollBillingPeriod(row.tenantId, null);
-        if (rolled) processed += 1;
-      }
-    }
+    // SUB-01: period end for every ACTIVE subscription: renew (auto-renew on), or move to Lite (auto-renew off / scheduled
+    // cancel). Never CANCELLED/lockout. Reminders ride the same pass.
+    const pass = await this.renewal.runDaily(now);
+    processed += pass.downgraded + pass.renewed;
 
     return { processed };
   }

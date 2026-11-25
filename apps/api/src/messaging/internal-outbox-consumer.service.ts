@@ -27,6 +27,8 @@ export class InternalOutboxConsumerService implements OnModuleInit, OnModuleDest
     if (emailOutbox) {
       this.handlers["billing.trial_notification"] = (tenantId, payload) =>
         emailOutbox.deliverTrialNotification(tenantId, payload);
+      this.handlers["billing.subscription_notice"] = (tenantId, payload) =>
+        emailOutbox.deliverSubscriptionNotice(tenantId, payload);
       this.handlers["billing.monthly_statement_ready"] = (tenantId, payload) =>
         emailOutbox.deliverStatementReady(tenantId, payload);
     }
