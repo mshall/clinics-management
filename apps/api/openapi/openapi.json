@@ -9551,6 +9551,317 @@
         ]
       }
     },
+    "/admin/platform/subscriptions": {
+      "get": {
+        "operationId": "PlatformSubscriptionsController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "planKey",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "autoRenew",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "SUB-01 subscriptions list (platform super admin)",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/metrics": {
+      "get": {
+        "operationId": "PlatformSubscriptionsController_metrics",
+        "parameters": [
+          {
+            "name": "windowDays",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "MRR, churn-lite, downgrade counts",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/{tenantId}/force-auto-renew": {
+      "post": {
+        "operationId": "PlatformSubscriptionsController_forceAutoRenew",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformForceAutoRenewBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Force auto-renew ON/OFF (or null to release); reason mandatory, audited",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/{tenantId}/force-downgrade": {
+      "post": {
+        "operationId": "PlatformSubscriptionsController_forceDowngrade",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformForceDowngradeBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Move a tenant to Lite; reason mandatory, audited",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/policy/{marketId}": {
+      "get": {
+        "operationId": "PlatformSubscriptionsController_getPolicy",
+        "parameters": [
+          {
+            "name": "marketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Market subscription policy + pending maker-checker proposals",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/policy/{marketId}/history": {
+      "get": {
+        "operationId": "PlatformSubscriptionsController_policyHistory",
+        "parameters": [
+          {
+            "name": "marketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/policy/{marketId}/proposals": {
+      "put": {
+        "operationId": "PlatformSubscriptionsController_propose",
+        "parameters": [
+          {
+            "name": "marketId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeSubscriptionPolicyBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Maker: propose a subscription policy change (needs a second admin to approve)",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
+    "/admin/platform/subscriptions/policy/proposals/{changeId}/decision": {
+      "post": {
+        "operationId": "PlatformSubscriptionsController_decide",
+        "parameters": [
+          {
+            "name": "changeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideSubscriptionPolicyBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Checker: approve or reject (must not be the maker)",
+        "tags": [
+          "admin-platform"
+        ]
+      }
+    },
     "/public/legal": {
       "get": {
         "operationId": "PublicLegalController_catalog",
@@ -9675,6 +9986,130 @@
         "parameters": [],
         "responses": {
           "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/subscription/renewal": {
+      "get": {
+        "operationId": "BillingController_getRenewal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/plans/compare": {
+      "get": {
+        "operationId": "BillingController_comparePlans",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/subscription/downgrade-impact": {
+      "get": {
+        "operationId": "BillingController_downgradeImpact",
+        "parameters": [
+          {
+            "name": "plan",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/subscription/auto-renew": {
+      "post": {
+        "operationId": "BillingController_setAutoRenew",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingAutoRenewBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/subscription/reactivate": {
+      "post": {
+        "operationId": "BillingController_reactivate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingReactivateBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": ""
           }
         },
@@ -34017,6 +34452,66 @@
           }
         }
       },
+      "PlatformForceAutoRenewBodyDto": {
+        "type": "object",
+        "properties": {
+          "force": {
+            "type": "string",
+            "enum": [
+              "ON",
+              "OFF"
+            ],
+            "nullable": true
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "force",
+          "reason"
+        ]
+      },
+      "PlatformForceDowngradeBodyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "ProposeSubscriptionPolicyBodyDto": {
+        "type": "object",
+        "properties": {
+          "policy": {
+            "type": "object"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "policy",
+          "reason"
+        ]
+      },
+      "DecideSubscriptionPolicyBodyDto": {
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "approve"
+        ]
+      },
       "LegalAcceptBodyDto": {
         "type": "object",
         "properties": {
@@ -34053,6 +34548,45 @@
           "entitlement",
           "requiredPlan"
         ]
+      },
+      "BillingAutoRenewBodyDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "confirmDowngrade": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "BillingReactivateBodyDto": {
+        "type": "object",
+        "properties": {
+          "planKey": {
+            "type": "string",
+            "enum": [
+              "PRO",
+              "CLINIC",
+              "ENTERPRISE",
+              "NURSE_PRO",
+              "NURSE_AGENCY"
+            ]
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "MONTHLY",
+              "ANNUAL"
+            ]
+          },
+          "seats": {
+            "type": "number"
+          }
+        }
       },
       "BillingPurchaseSpecialtyAddonBodyDto": {
         "type": "object",
