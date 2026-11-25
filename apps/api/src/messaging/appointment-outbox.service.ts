@@ -31,6 +31,18 @@ async function acquisitionPayload(tx: Tx | undefined, appointmentId: string): Pr
   return { ...(a?.acquisitionOrigin ? { acquisitionOrigin: a.acquisitionOrigin } : {}), ...(typeof a?.isNewPatientAtBooking === "boolean" ? { isNewPatientAtBooking: a.isNewPatientAtBooking } : {}) };
 }
 
+/**
+ * Contracts 1.13.0 (optional): the visit times Kiorex's short-visit fraud rule needs. CHECKED_IN carries `checkedInAt`; COMPLETED carries `checkedInAt` (when the patient was checked in) and
+ * `completedAt` (now). Times only: never a fee input, never clinical content.
+ */
+export async function visitTimesPayload(tx: Tx | undefined, appointmentId: string, nextStatus: AppointmentStatus, now = new Date()): Promise<Record<string, unknown>> {
+  if (nextStatus !== AppointmentStatus.CHECKED_IN && nextStatus !== AppointmentStatus.COMPLETED) return {};
+  const c = tx as Partial<Prisma.TransactionClient> | undefined;
+  const a = c?.appointment ? await c.appointment.findUnique({ where: { id: appointmentId }, select: { checkedInAt: true } }) : null;
+  const checkedInAt = a?.checkedInAt ?? (nextStatus === AppointmentStatus.CHECKED_IN ? now : null);
+  return { ...(checkedInAt ? { checkedInAt: checkedInAt.toISOString() } : {}), ...(nextStatus === AppointmentStatus.COMPLETED ? { completedAt: now.toISOString() } : {}) };
+}
+
 @Injectable()
 export class AppointmentOutboxService {
   constructor(private readonly outbox: OutboxEventService) {}
@@ -64,6 +76,7 @@ export class AppointmentOutboxService {
           bookingSource: params.bookingSource,
           ...params.metadata,
           ...(await acquisitionPayload(tx, params.appointmentId)),
+          ...(await visitTimesPayload(tx, params.appointmentId, params.nextStatus)),
           ...(await telehealthPayload(tx, params.appointmentId)),
         },
       },
