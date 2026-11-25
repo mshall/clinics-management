@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   AppointmentStatus,
   BookingSource,
   LeaveStatus,
 } from "@prisma/client";
 import { DateTime } from "luxon";
+import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { mapEffectiveAppointmentType } from "./appointment-type-rules";
@@ -24,6 +25,8 @@ export type GetSlotsParams = {
   to: Date;
   channel: SlotChannel;
 };
+
+export const MARKETPLACE_DAILY_CAP_CODE = "MARKETPLACE_DAILY_CAP_REACHED";
 
 export type SlotDto = {
   startsAt: string;
@@ -335,7 +338,11 @@ export class SlotService {
         tenantId,
         clinicId,
         clinicianId,
-        startsAt: { gte: from, lt: to },
+        // Whole clinic-local days: a narrow window (a hold or booking asks for one slot) must still see the day's earlier bookings.
+        startsAt: {
+          gte: DateTime.fromJSDate(from, { zone }).startOf("day").toUTC().toJSDate(),
+          lt: DateTime.fromJSDate(new Date(to.getTime() - 1), { zone }).plus({ days: 1 }).startOf("day").toUTC().toJSDate(),
+        },
         status: { notIn: [AppointmentStatus.CANCELLED] },
         bookingSource: { in: [BookingSource.KIOREX_MARKETPLACE, BookingSource.KIOREX_WHATSAPP] },
       },
@@ -347,5 +354,57 @@ export class SlotService {
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return [...map.entries()].map(([localDate, count]) => ({ localDate, count }));
+  }
+
+  /**
+   * Marketplace daily cap on the WRITE paths (holds, bookings, reschedules), not only on the slot list: the slot list is cached and a booking
+   * that carries no hold never consulted it. Counts the clinician's non-cancelled Kiorex bookings plus other active holds on the slot's clinic-local day.
+   * Call inside the caller's transaction, after taking the clinician-day advisory lock (see `lockMarketplaceDay`). Rejects with 409 MARKETPLACE_DAILY_CAP_REACHED.
+   */
+  async assertMarketplaceDailyCapRoom(
+    tx: Prisma.TransactionClient,
+    p: { tenantId: string; clinicId: string; clinicianId: string; startsAt: Date; excludeHoldId?: string; excludeAppointmentId?: string },
+  ): Promise<void> {
+    const tz = await resolveClinicTimezone(tx as unknown as PrismaService, p.tenantId, p.clinicId);
+    const template = await tx.clinicianAvailabilityTemplate.findFirst({
+      where: { tenantId: p.tenantId, clinicId: p.clinicId, clinicianId: p.clinicianId },
+      select: { marketplaceDailyCap: true },
+    });
+    const cap = template?.marketplaceDailyCap ?? 20;
+    const dayStart = DateTime.fromJSDate(p.startsAt, { zone: tz }).startOf("day").toUTC().toJSDate();
+    const dayEnd = DateTime.fromJSDate(p.startsAt, { zone: tz }).plus({ days: 1 }).startOf("day").toUTC().toJSDate();
+    const [booked, held] = await Promise.all([
+      tx.appointment.count({
+        where: {
+          tenantId: p.tenantId,
+          clinicId: p.clinicId,
+          clinicianId: p.clinicianId,
+          startsAt: { gte: dayStart, lt: dayEnd },
+          status: { notIn: [AppointmentStatus.CANCELLED] },
+          bookingSource: { in: [BookingSource.KIOREX_MARKETPLACE, BookingSource.KIOREX_WHATSAPP] },
+          ...(p.excludeAppointmentId ? { NOT: { id: p.excludeAppointmentId } } : {}),
+        },
+      }),
+      tx.slotHold.count({
+        where: {
+          tenantId: p.tenantId,
+          clinicId: p.clinicId,
+          clinicianId: p.clinicianId,
+          startsAt: { gte: dayStart, lt: dayEnd },
+          expiresAt: { gt: new Date() },
+          ...(p.excludeHoldId ? { NOT: { id: p.excludeHoldId } } : {}),
+        },
+      }),
+    ]);
+    if (booked + held >= cap) {
+      throw new ConflictException({ code: MARKETPLACE_DAILY_CAP_CODE, message: "The doctor's daily Kiorex booking limit is reached" });
+    }
+  }
+
+  /** Serialises hold/booking writes per clinician and clinic-local day so two parallel writers cannot both pass the cap check. */
+  async lockMarketplaceDay(tx: Prisma.TransactionClient, tenantId: string, clinicId: string, clinicianId: string, startsAt: Date): Promise<void> {
+    const tz = await resolveClinicTimezone(tx as unknown as PrismaService, tenantId, clinicId);
+    const day = DateTime.fromJSDate(startsAt, { zone: tz }).toISODate();
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`mkt-cap:${clinicianId}:${day}`}))`;
   }
 }

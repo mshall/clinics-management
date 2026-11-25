@@ -101,6 +101,8 @@ export class SlotHoldService {
       // above (check-then-insert race). The overlap re-check runs under the lock against committed rows, not the cache.
       const hold = await this.prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`slot-hold:${body.clinicianId}`}))`;
+        await this.slots.lockMarketplaceDay(tx, tenantId, body.clinicId, body.clinicianId, start);
+        await this.slots.assertMarketplaceDailyCapRoom(tx, { tenantId, clinicId: body.clinicId, clinicianId: body.clinicianId, startsAt: start });
         const clashingHold = await tx.slotHold.findFirst({
           where: { clinicianId: body.clinicianId, startsAt: { lt: end }, endsAt: { gt: start }, expiresAt: { gt: new Date() } },
           select: { id: true },
