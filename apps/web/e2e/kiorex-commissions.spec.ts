@@ -1,0 +1,49 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test, type Page } from "@playwright/test";
+import { pinLocaleAndTheme } from "./crash-sweep-helpers";
+import { login } from "./helpers";
+
+/**
+ * COM-1 Admin > Billing > Kiorex commissions against a private real API and database: finance sees the panel (cards, ledger with fee basis, collection with timeline),
+ * the receptionist never does. English and Arabic (RTL), 320 / 768 / 1440 / 2560 px, no horizontal overflow, axe serious/critical = 0.
+ */
+const open = async (page: Page) => { await page.goto("/kiorex-commissions"); };
+const axeClean = async (page: Page, scope: string) => {
+  const r = await new AxeBuilder({ page }).include(scope).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+  expect(r.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]);
+};
+
+for (const lang of ["en", "ar"] as const) for (const w of [320, 768, 1440, 2560]) {
+  test(`kiorex commissions panel (${lang}, ${w}px): finance sees summary, ledger and collection timeline; no overflow; axe clean`, async ({ page }) => {
+    const errors: string[] = []; page.on("pageerror", (e) => errors.push(e.message));
+    await page.setViewportSize({ width: w, height: 1000 });
+    await pinLocaleAndTheme(page, lang, "light");
+    await login(page, "finance@drahmedshall.com");
+    await open(page);
+    const panel = page.getByTestId("kiorex-commissions-panel");
+    await expect(panel).toBeVisible({ timeout: 45_000 });
+    await expect(page.locator("html")).toHaveAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+    await panel.scrollIntoViewIfNeeded();
+    await expect(page.getByTestId("kxc-cards")).toBeVisible();
+    await axeClean(page, '[data-testid="kiorex-commissions-panel"]');
+    await page.getByTestId("kxc-tab-ledger").click();
+    await expect(panel.locator("tbody tr").first()).toBeVisible();
+    await expect(panel).toContainText("300.00");
+    await page.getByTestId("kxc-tab-collections").click();
+    await panel.locator("tbody button").first().click();
+    await expect(page.getByTestId("kxc-timeline")).toContainText("CHARGE_SUCCEEDED");
+    await axeClean(page, '[data-testid="kiorex-commissions-panel"]');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    expect(errors).toEqual([]);
+  });
+}
+
+test("a receptionist never sees the Kiorex commissions panel, and the API refuses the figures", async ({ page }) => {
+  await pinLocaleAndTheme(page, "en", "light");
+  await login(page, "receptionist.hel@drahmedshall.com");
+  await page.goto("/kiorex-commissions");
+  await expect(page.getByTestId("kxc-no-access")).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByTestId("kiorex-commissions-panel")).toHaveCount(0);
+  const status = await page.evaluate(async () => { const s = JSON.parse(localStorage.getItem("cms-auth") ?? "{}").state; const r = await fetch("/api/v1/billing/kiorex-commissions/summary", { headers: { Authorization: `Bearer ${s?.accessToken}` } }); return r.status; });
+  expect(status).toBe(403);
+});

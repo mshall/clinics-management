@@ -17,11 +17,11 @@ type RunDetail = Run & { balanced: boolean; timeline: Array<{ at: string; event:
 type Ded = { payoutRef: string; paidAt: string; gross: string; cash: string; commissionDeducted: string; currency: string };
 type Disp = { id: string; appointmentId: string; reason: string; status: string; resolution: string | null; amount: string; currency: string; createdAt: string };
 const TABS = ["summary", "ledger", "collections", "deductions", "disputes"] as const;
-const B = "/billing/kiorex-commissions";
+const B = "/api/v1/billing/kiorex-commissions";
 const month = () => new Date().toISOString().slice(0, 7);
 
 /** COM-1: Admin > Billing > Kiorex commissions. Finance (and owner / group admin, and administrators when the organization enables it); renders nothing for anyone else. */
-export function AdminKiorexCommissionsPanel() {
+export function AdminKiorexCommissionsPanel({ standalone = false }: { standalone?: boolean } = {}) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<(typeof TABS)[number]>("summary");
   const [period, setPeriod] = useState(month());
@@ -35,7 +35,7 @@ export function AdminKiorexCommissionsPanel() {
   const deds = useCom<{ items: Ded[] }>("deductions", `${B}/deductions`);
   const disp = useCom<{ items: Disp[] }>("disputes", `${B}/disputes`);
   const detail = useQuery({ queryKey: ["billing", "kiorex-com", "run", run], queryFn: () => apiGet<RunDetail>(`${B}/collections/${run}`), enabled: enabled && !!run });
-  if (!enabled) return null;
+  if (!enabled) return standalone && access.isFetched ? <p role="alert" className="text-sm text-muted-foreground" data-testid="kxc-no-access">{t("kiorexCom.noAccess")}</p> : null;
   const st = (s: string) => <Badge variant={["CONFIRMED", "COLLECTED", "SETTLED", "PAID", "APPROVED"].includes(s) ? "default" : "secondary"}>{t(`kiorexCom.status.${s}`, { defaultValue: s })}</Badge>;
   const fail = () => toast.error(t("common.error", { defaultValue: "Something went wrong" }));
   const csv = (view: string) => void apiDownload(`${B}/export/${view}.csv?period=${period}`, `kiorex-commissions-${view}.csv`).catch(fail);

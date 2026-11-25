@@ -5783,6 +5783,7 @@
     }
   },
   "kiorexCom": {
+    "noAccess": "Kiorex commission figures are money: they are visible to finance (and to administrators when your organization enables it).",
     "title": "Kiorex commissions",
     "description": "What Kiorex charges for new patients it brought you, how each amount is explained, and how it was collected through your chosen payment provider. Every total is the sum of the rows below it.",
     "period": "Month",
