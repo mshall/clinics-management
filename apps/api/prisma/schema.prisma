@@ -6137,6 +6137,8 @@ model KiorexCommissionCollection {
 
   @@unique([tenantId, runRef])
   @@index([tenantId, periodKey])
+}
+
 /// Kiorly Pay unified collections (migration 20270303090000): bank IPN / receipt rows offered to the invoice matcher. Low-confidence rows wait for a finance person. Records only; Kiorly never holds money.
 model ClinicPayMatch {
   id              String    @id @default(cuid())
