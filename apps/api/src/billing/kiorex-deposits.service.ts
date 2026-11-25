@@ -36,6 +36,8 @@ export type PayoutBody = {
   currency?: string;
   paidAt?: string;
   depositPaymentRefs?: string[];
+  /** COM-1 (additive): commission Kiorex kept out of this payout; `amount` is the cash paid. */
+  commissionDeducted?: number;
 };
 
 export type PayoutTotals = {
@@ -187,7 +189,7 @@ export class KiorexDepositsService {
       const existing = await tx.kiorexPayout.findUnique({ where: { tenantId_payoutRef: { tenantId: clinic.tenantId, payoutRef } } });
       if (existing) return { ...existing, amount: Number(existing.amount) };
       const payout = await tx.kiorexPayout.create({
-        data: { tenantId: clinic.tenantId, clinicId: clinic.id, payoutRef, amount: new Prisma.Decimal(String(amount)), currency, paidAt, depositRefs: refs },
+        data: { tenantId: clinic.tenantId, clinicId: clinic.id, payoutRef, amount: new Prisma.Decimal(String(amount)), commissionDeducted: new Prisma.Decimal(String(Math.max(0, roundMoney(Number(body.commissionDeducted ?? 0)) || 0))), currency, paidAt, depositRefs: refs },
       });
       if (refs.length) {
         await tx.patientDeposit.updateMany({

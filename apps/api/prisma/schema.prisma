@@ -1422,6 +1422,7 @@ model Tenant {
   pushSubscriptions                  PushSubscription[]
   createdAt                          DateTime                            @default(now())
   updatedAt                          DateTime                            @updatedAt
+  kiorexCommissionCollections KiorexCommissionCollection[]
 }
 
 model OnboardingProgress {
@@ -3879,6 +3880,8 @@ model KiorexPayout {
   currency    String
   paidAt      DateTime
   depositRefs Json     @default("[]")
+  /// COM-1: commission Kiorex kept out of this payout (NET_FROM_PAYOUT); `amount` is the cash paid
+  commissionDeducted Decimal @default(0) @db.Decimal(14, 2)
   createdAt   DateTime @default(now())
 
   @@unique([tenantId, payoutRef])
@@ -6099,4 +6102,39 @@ model WhatsAppChannelEvent {
   createdAt DateTime @default(now())
 
   @@index([kind, createdAt])
+}
+
+/// COM-1: Kiorex's commission collection run for this organisation, as reported by Kiorex (idempotent on runRef, newest `version` wins). The provider-side statement, timeline and exports read it.
+/// Source of truth is Kiorex's ledger; the charge, decision and dispute rows it refers to are this product's own (KiorexCommissionCharge, KiorexCommissionDecision, CommissionDispute).
+model KiorexCommissionCollection {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  runRef         String
+  periodKey      String
+  status         String
+  mode           String
+  modeRequested  String?
+  fallbackReason String?
+  provider       String?
+  currency       String
+  claimsCount    Int
+  claimsMinor    Int
+  collectedMinor Int      @default(0)
+  deductedMinor  Int      @default(0)
+  invoicedMinor  Int      @default(0)
+  paidMinor      Int      @default(0)
+  invoiceNo      String?
+  invoiceDueAt   DateTime?
+  cutoffAt       DateTime?
+  collectAt      DateTime?
+  version        BigInt
+  claims         Json     @default("[]")
+  attempts       Json     @default("[]")
+  timeline       Json     @default("[]")
+  receivedAt     DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([tenantId, runRef])
+  @@index([tenantId, periodKey])
 }

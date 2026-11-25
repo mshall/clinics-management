@@ -25,7 +25,7 @@ import { OutboxEventService } from "../messaging/outbox-event.service";
 import { loadSponsoredBasis } from "../promotions/promotion-basis";
 import { PrismaService } from "../prisma/prisma.service";
 import { effectiveProfession } from "../scope-of-practice/scope-of-practice.service";
-import { COMMISSION_ADJUSTED, COMMISSION_CHARGE_CREATED, COMMISSION_CHARGE_REVERSED } from "./commission-charge-topics";
+import { COMMISSION_ADJUSTED, COMMISSION_CHARGE_CREATED, COMMISSION_CHARGE_REVERSED, COMMISSION_CHARGE_STATUS_CHANGED } from "./commission-charge-topics";
 import {
   DECISION_REASON,
   commissionPolicyVersion,
@@ -256,6 +256,7 @@ export class CommissionChargeService {
       data: { status: CommissionChargeStatus.CONFIRMED, confirmedAt },
     });
     await this.auditCharge(tx, tenantId, "kiorex.commission_charge.confirmed", updated);
+    await this.emitStatusChanged(tx, updated);
   }
 
   async onCancelOrNoShow(tx: Tx, tenantId: string, appointmentId: string): Promise<BilledReversalCreditIntent | null> {
@@ -408,6 +409,7 @@ export class CommissionChargeService {
             data: { status: CommissionChargeStatus.CONFIRMED, confirmedAt: new Date() },
           });
           await this.auditCharge(tx, row.tenantId, "kiorex.commission_charge.auto_confirmed", updated);
+          await this.emitStatusChanged(tx, updated);
           confirmed++;
         });
       } catch (e) {
@@ -521,7 +523,12 @@ export class CommissionChargeService {
   /** Additive contract 1.10.0 fields: the decision that explains the charge (latest append-only row). Absent when no decision exists (legacy). */
   private async outboxPayload(tx: Tx, charge: KiorexCommissionCharge): Promise<Record<string, unknown>> {
     const d = await tx.kiorexCommissionDecision.findFirst({ where: { appointmentId: charge.appointmentId }, orderBy: { createdAt: "desc" }, select: { id: true, origin: true, policyVersion: true, feeBasisMinor: true, sponsoredDiscountMinor: true, basisPolicyVersion: true } });
+    const dec = d ? await tx.kiorexCommissionDecision.findUnique({ where: { id: d.id }, select: { amount: true, decision: true } }) : null;
+    const disp = await tx.commissionDispute.findUnique({ where: { chargeId: charge.id }, select: { status: true } });
     return {
+      // COM-1 (additive): everything Kiorex needs to mirror the claim and to reconcile it with the decision
+      tenantId: charge.tenantId, clinicId: charge.clinicId, disputeDeadline: charge.disputeDeadline.toISOString(), disputeStatus: disp?.status ?? null,
+      ...(dec?.decision === CommissionDecisionKind.CHARGE && dec.amount ? { decisionAmount: dec.amount.toFixed(2) } : {}),
       ...(d ? { decisionRef: d.id, origin: d.origin, policyVersion: d.policyVersion } : {}),
       // GRW-P2-S (additive, contracts 1.12.0): present only for a sponsored booking
       ...(d?.feeBasisMinor != null ? { feeBasisMinor: d.feeBasisMinor, sponsoredDiscountMinor: d.sponsoredDiscountMinor ?? 0, basisPolicyVersion: d.basisPolicyVersion ?? undefined } : {}),
@@ -532,6 +539,11 @@ export class CommissionChargeService {
       status: charge.status,
       attendedAt: charge.attendedAt.toISOString(),
     };
+  }
+
+  /** COM-1: tell Kiorex a charge changed status (confirmed, disputed, dispute rejected). Idempotent per charge, status and time bucket through the outbox dedupe on the caller's transaction. */
+  async emitStatusChanged(tx: Tx, charge: KiorexCommissionCharge): Promise<void> {
+    await this.outbox.enqueue(charge.tenantId, COMMISSION_CHARGE_STATUS_CHANGED, { ...(await this.outboxPayload(tx, charge)), confirmedAt: charge.confirmedAt?.toISOString() ?? null }, tx);
   }
 
   private async auditCharge(
