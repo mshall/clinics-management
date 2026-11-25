@@ -79,6 +79,8 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "billing/patient-money.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "billing/cashier-shifts.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "billing/split-payments.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
+  "kiorex/commission-collections.controller.ts": { kind: "open" }, // COM-1: provider-side commission transparency; access is decided by the finance/owner/admin rule of CommissionCollectionsService (GET /access), not by a plan entitlement
+  "billing/pay/pay-collections.controller.ts": { kind: "open" }, // LG-INT-PAY-12..16: no plan entitlement today (role checks are in PayCollectionsService); gating it by plan is a pricing decision for the founder
   "billing/claims.controller.ts": { kind: "gated", entitlement: "mod_invoices" },
   "revenue-share/revenue-share.controller.ts": { kind: "gated", entitlement: "mod_revenue" },
   "dev-inbox/dev-inbox.controller.ts": { kind: "open" },

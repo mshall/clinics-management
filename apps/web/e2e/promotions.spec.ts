@@ -28,9 +28,9 @@ async function fill(page: Page, o: { nameEn: string; nameAr: string; copyEn: str
 }
 
 for (const lang of ["en", "ar"] as const) {
-  for (const width of [320, 1440]) {
+  for (const width of [320, 640, 1440, 2560]) {
     test(`promotions (${lang}, ${width}px): wizard creates a draft, the budget card and ledger render, no overflow, axe clean`, async ({ page }) => {
-      await page.setViewportSize({ width, height: width === 320 ? 740 : 900 });
+      await page.setViewportSize({ width, height: width === 320 ? 740 : width === 640 ? 450 : width === 2560 ? 1440 : 900 });
       await pinLocaleAndTheme(page, lang, "light");
       await login(page, "admin@drahmedshall.com");
       await page.goto("/promotions");

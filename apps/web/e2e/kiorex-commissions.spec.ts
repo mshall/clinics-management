@@ -13,10 +13,10 @@ const axeClean = async (page: Page, scope: string) => {
   expect(r.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => `${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]);
 };
 
-for (const lang of ["en", "ar"] as const) for (const w of [320, 768, 1440, 2560]) {
+for (const lang of ["en", "ar"] as const) for (const w of [320, 640, 768, 1440, 2560]) {
   test(`kiorex commissions panel (${lang}, ${w}px): finance sees summary, ledger and collection timeline; no overflow; axe clean`, async ({ page }) => {
     const errors: string[] = []; page.on("pageerror", (e) => errors.push(e.message));
-    await page.setViewportSize({ width: w, height: 1000 });
+    await page.setViewportSize({ width: w, height: w === 640 ? 450 : 1000 });
     await pinLocaleAndTheme(page, lang, "light");
     await login(page, "finance@drahmedshall.com");
     await open(page);
@@ -46,4 +46,29 @@ test("a receptionist never sees the Kiorex commissions panel, and the API refuse
   await expect(page.getByTestId("kiorex-commissions-panel")).toHaveCount(0);
   const status = await page.evaluate(async () => { const s = JSON.parse(localStorage.getItem("cms-auth") ?? "{}").state; const r = await fetch("/api/v1/billing/kiorex-commissions/summary", { headers: { Authorization: `Bearer ${s?.accessToken}` } }); return r.status; });
   expect(status).toBe(403);
+});
+
+for (const lang of ["en", "ar"] as const) {
+  test(`side nav (${lang}): finance has a Kiorex commissions entry that opens the stand-alone route; a receptionist has none`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await pinLocaleAndTheme(page, lang, "light");
+    await login(page, "finance@drahmedshall.com");
+    await page.goto("/");
+    const link = page.getByTestId("nav-kiorex-commissions");
+    await expect(link).toBeVisible({ timeout: 45_000 });
+    await expect(link).toContainText(lang === "ar" ? "عمولات كيوركس" : "Kiorex commissions");
+    await link.click();
+    await expect(page).toHaveURL(/\/kiorex-commissions$/);
+    await expect(page.getByTestId("kiorex-commissions-panel")).toBeVisible({ timeout: 45_000 });
+  });
+}
+
+test("side nav: a receptionist is not offered the Kiorex commissions entry", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await pinLocaleAndTheme(page, "en", "light");
+  await login(page, "receptionist.hel@drahmedshall.com");
+  await page.goto("/");
+  await expect(page.getByRole("navigation").first()).toBeVisible({ timeout: 45_000 });
+  await page.waitForLoadState("networkidle").catch(() => undefined); // the access query has answered by then
+  await expect(page.getByTestId("nav-kiorex-commissions")).toHaveCount(0);
 });

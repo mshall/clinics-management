@@ -124,6 +124,15 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
     retry: false,
   });
   const homeVisitsOn = orgCtx.data?.features?.["clinic.home_visits"] === true;
+  // COM-1: the stand-alone /kiorex-commissions entry is shown only to users the API says may see the figures (same query key as the panel, so it is fetched once)
+  const commissionAccess = useQuery({
+    queryKey: ["billing", "kiorex-com", "access"],
+    queryFn: () => apiGet<{ canView: boolean }>("/api/v1/billing/kiorex-commissions/access"),
+    enabled: hasToken && orgCtx.data?.edition !== "NURSE",
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const showCommissions = commissionAccess.data?.canView === true;
   const showRevenue = canViewRevenue(role) && showTab("revenue");
   const showPlatformNav =
     showTab("platform") ||
@@ -425,6 +434,12 @@ export function AppNavLinks({ onNavigate }: { onNavigate?: () => void }) {
                 <NavLink to="/doctor-revenue" className={navClass} onClick={go}>
                   <CircleDollarSign className="size-4 shrink-0" />
                   {t("nav.doctorRevenue")}
+                </NavLink>
+              ) : null}
+              {showCommissions ? (
+                <NavLink to="/kiorex-commissions" className={navClass} onClick={go} data-testid="nav-kiorex-commissions">
+                  <Sparkles className="size-4 shrink-0" />
+                  {t("nav.kiorexCommissions", "Kiorex commissions")}
                 </NavLink>
               ) : null}
             </NavGroup>
