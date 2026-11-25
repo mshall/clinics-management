@@ -6137,4 +6137,55 @@ model KiorexCommissionCollection {
 
   @@unique([tenantId, runRef])
   @@index([tenantId, periodKey])
+/// Kiorly Pay unified collections (migration 20270303090000): bank IPN / receipt rows offered to the invoice matcher. Low-confidence rows wait for a finance person. Records only; Kiorly never holds money.
+model ClinicPayMatch {
+  id              String    @id @default(cuid())
+  tenantId        String
+  clinicId        String?
+  dedupeKey       String
+  source          String // IPN | RECEIPT
+  bankRef         String
+  reference       String?
+  amount          Decimal   @db.Decimal(14, 2)
+  currency        String    @default("EGP")
+  paidAt          DateTime
+  payerMasked     String?
+  eventKind       String    @default("payment.captured")
+  decision        String // AUTO | REVIEW | UNMATCHED
+  status          String    @default("OPEN") // OPEN | APPLIED | CONFIRMED | REJECTED
+  targetInvoiceId String?
+  confidence      Float     @default(0)
+  reasons         Json
+  candidates      Json
+  paymentId       String?
+  decidedBy       String?
+  decidedAt       DateTime?
+  note            String?
+  createdAt       DateTime  @default(now())
+
+  @@unique([tenantId, dedupeKey])
+  @@index([tenantId, status, createdAt])
+}
+
+/// A signed, expiring, amount-locked payment request for an invoice, home visit or front-desk collection. It is consumed by the first payment applied to its subject for exactly the locked amount.
+model ClinicPayLink {
+  id          String    @id @default(cuid())
+  tenantId    String
+  clinicId    String
+  context     String // CLINIC_INVOICE | HOME_VISIT | FRONT_DESK
+  subjectId   String
+  invoiceId   String?
+  amount      Decimal   @db.Decimal(14, 2)
+  currency    String    @default("EGP")
+  rail        String    @default("bank_transfer")
+  qrKind      String    @default("LINK")
+  expiresAt   DateTime
+  usedAt      DateTime?
+  cancelledAt DateTime?
+  paymentId   String?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId, clinicId, createdAt])
+  @@index([tenantId, subjectId])
 }
