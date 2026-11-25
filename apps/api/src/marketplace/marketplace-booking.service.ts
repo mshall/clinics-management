@@ -32,7 +32,7 @@ import { MESSAGING_CONSENT_TRANSACTIONAL } from "../patients/messaging-consent.c
 import { SlotService } from "../scheduling/slot.service";
 import { SLOT_CHANNEL } from "../scheduling/slot-channel";
 import { addMinutes, effectiveAppointmentEnd } from "../common/appointment-scheduling";
-import { DEFAULT_SLOT_HOLD_MINUTES, MARKETPLACE_BOOKING_CONFIRM_TIMEOUT_TOPIC, SLOT_TAKEN_CODE } from "./marketplace-booking.constants";
+import { defaultSlotHoldMinutes, MARKETPLACE_BOOKING_CONFIRM_TIMEOUT_TOPIC, SLOT_TAKEN_CODE } from "./marketplace-booking.constants";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { MarketplacePatientIntakeService, type MarketplacePatientInput } from "./marketplace-patient-intake.service";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";

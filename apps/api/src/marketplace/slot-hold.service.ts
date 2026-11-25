@@ -4,7 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { SlotService } from "../scheduling/slot.service";
 import { SLOT_CHANNEL } from "../scheduling/slot-channel";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
-import { DEFAULT_SLOT_HOLD_MINUTES, SLOT_TAKEN_CODE } from "./marketplace-booking.constants";
+import { defaultSlotHoldMinutes, SLOT_TAKEN_CODE } from "./marketplace-booking.constants";
 import { MarketplaceAccessService } from "./marketplace-access.service";
 import { ACTIVE_APPOINTMENT_STATUSES, addMinutes } from "../common/appointment-scheduling";
 import { encryptVisitAddress } from "../home-visits/address-crypto";
@@ -128,7 +128,7 @@ export class SlotHoldService {
             platformIntegrationClientId: client.id,
             visitAddressCiphertext,
             visitDistrict,
-            expiresAt: addMinutes(new Date(), DEFAULT_SLOT_HOLD_MINUTES),
+            expiresAt: addMinutes(new Date(), defaultSlotHoldMinutes()),
           },
         });
       });

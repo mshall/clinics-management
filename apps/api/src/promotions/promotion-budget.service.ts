@@ -4,7 +4,7 @@ import { Prisma, type PromotionReservation, type SponsoredPromotion, type Sponso
 import { CreditPromotionHoldService } from "../credits/credit-promotion-hold.service";
 import { CreditWalletService } from "../credits/credit-wallet.service";
 import { FeatureFlagsService, flagOn } from "../feature-flags/feature-flags-public";
-import { DEFAULT_SLOT_HOLD_MINUTES } from "../marketplace/marketplace-booking.constants";
+import { defaultSlotHoldMinutes } from "../marketplace/marketplace-booking.constants";
 import { OutboxEventService } from "../messaging/outbox-event.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { budgetState } from "./promotion-budget-math";
@@ -147,7 +147,7 @@ export class PromotionBudgetService {
         if (code === "PROMOTION_CREDIT_INSUFFICIENT") return { ok: false, reason: "WALLET_INSUFFICIENT", message: "WALLET" } as const;
         throw e;
       }
-      const expiresAt = new Date(now.getTime() + (DEFAULT_SLOT_HOLD_MINUTES + policy.reservationTtlGraceMinutes) * 60_000);
+      const expiresAt = new Date(now.getTime() + (defaultSlotHoldMinutes() + policy.reservationTtlGraceMinutes) * 60_000);
       const row = await tx.promotionReservation.create({ data: { tenantId: p.tenantId, promotionId: p.id, versionId: v.id, reservationRef, bookingRef: i.bookingRef, patientRef: i.patientRef, careType: i.careType, amountMinor: i.amountMinor, currency: i.currency, expiresAt, idempotencyKey: i.idempotencyKey } });
       await tx.promotionBudgetEntry.create({ data: { promotionId: p.id, versionId: v.id, type: "RESERVE", amountMinor: i.amountMinor, currency: i.currency, idempotencyKey: `reserve:${reservationRef}`, bookingRef: i.bookingRef, reservationId: row.id, reason: "BOOKING_HOLD" } });
       // shadow-first fraud signals (never block a reservation that is allowed; enforced rules are checked at booking and at completion)

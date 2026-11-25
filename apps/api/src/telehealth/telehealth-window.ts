@@ -1,7 +1,9 @@
+import { policyNumber } from "../markets/clinic-policy";
 /**
  * ADR-039 join window. NEVER stored and NEVER inside the link token: it is computed at join time from the appointment's
  * CURRENT start/end, so a reschedule moves the window automatically and the link does not change.
  */
+/** Defaults; the live values come from `policyNumber` (CLINIC_TELEHEALTH_JOIN_* settings, clamped). */
 export const JOIN_OPENS_BEFORE_MS = 10 * 60_000;
 export const JOIN_CLOSES_AFTER_END_MS = 60 * 60_000;
 const DEFAULT_DURATION_MS = 30 * 60_000;
@@ -19,8 +21,8 @@ export type WindowState = "TOO_EARLY" | "OPEN" | "EXPIRED";
 export function joinWindow(startsAt: Date, endsAt: Date | null): JoinWindow {
   const scheduledEnd = endsAt && endsAt > startsAt ? endsAt : new Date(startsAt.getTime() + DEFAULT_DURATION_MS);
   return {
-    opensAt: new Date(startsAt.getTime() - JOIN_OPENS_BEFORE_MS),
-    closesAt: new Date(scheduledEnd.getTime() + JOIN_CLOSES_AFTER_END_MS),
+    opensAt: new Date(startsAt.getTime() - policyNumber("telehealthJoinOpensBeforeMinutes") * 60_000),
+    closesAt: new Date(scheduledEnd.getTime() + policyNumber("telehealthJoinClosesAfterEndMinutes") * 60_000),
     scheduledEnd,
   };
 }
