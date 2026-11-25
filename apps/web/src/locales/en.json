@@ -376,6 +376,35 @@
       "excludeSaved": "This branch will not be listed on Kiorex.",
       "continue": "Continue setup"
     },
+    "groups": {
+      "rail": "Setup phases",
+      "progress": "{{done}} of {{total}}",
+      "current": "Current",
+      "phaseOf": "Phase {{n}} of {{total}}",
+      "prev": "Previous",
+      "next": "Next",
+      "continuePhase": "Continue to next phase",
+      "clinic": {
+        "title": "Clinic foundations",
+        "hint": "License, working hours, and visit types for each branch."
+      },
+      "team": {
+        "title": "Team & schedule",
+        "hint": "Set when doctors are available for booking."
+      },
+      "golive": {
+        "title": "Go live",
+        "hint": "Book your first appointment and complete check-in."
+      },
+      "nurse": {
+        "title": "Nurse practice",
+        "hint": "Verification, zones, services, prices, and safety."
+      },
+      "optional": {
+        "title": "Optional extras",
+        "hint": "Logo, team invite, WhatsApp, patient import, and Kiorex growth — do these anytime."
+      }
+    },
     "dismiss": "Dismiss",
     "skip": "Skip",
     "optional": "optional",

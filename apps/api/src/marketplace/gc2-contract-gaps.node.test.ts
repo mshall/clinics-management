@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { WaitlistOfferStatus } from "@prisma/client";
@@ -10,6 +10,7 @@ import { followUpIntervalDays, parseDurationDays, rxItems } from "./record-share
 import { KIOREX_WHATSAPP_CHANNEL } from "./marketplace-booking.service";
 
 const events = join(__dirname, "../../../../../kiorex-contracts/events");
+const hasContracts = existsSync(events);
 const schema = (n: string) => JSON.parse(readFileSync(join(events, `${n}.schema.json`), "utf8")) as { properties: { data: { required: string[]; properties: Record<string, unknown> } } };
 
 describe("GRW-GC-2 (G-10) Rx items and follow-up interval", () => {
@@ -46,7 +47,7 @@ describe("GRW-GC-2 (G-10) Rx items and follow-up interval", () => {
     assert.equal(followUpIntervalDays(0), undefined);
     assert.equal(followUpIntervalDays(null), undefined);
   });
-  it("the contract schemas still declare what the Clinic emits", () => {
+  it("the contract schemas still declare what the Clinic emits", { skip: !hasContracts ? "kiorex-contracts sibling absent" : false }, () => {
     assert.ok("items" in schema("PRESCRIPTION_SHARED").properties.data.properties);
     assert.ok("followUp" in schema("VISIT_SUMMARY_SHARED").properties.data.properties);
   });
@@ -63,7 +64,7 @@ describe("GRW-GC-2 (G-10) telemedicine capability", () => {
 });
 
 describe("GRW-GC-2 (G-8) waitlist offer events", () => {
-  it("event names match the contract and the payload fields the Clinic sends are in the schema", () => {
+  it("event names match the contract and the payload fields the Clinic sends are in the schema", { skip: !hasContracts ? "kiorex-contracts sibling absent" : false }, () => {
     assert.equal(OUTBOX_EVENT.WAITLIST_OFFER_CREATED, "WAITLIST_OFFER_CREATED");
     assert.equal(OUTBOX_EVENT.WAITLIST_OFFER_EXPIRED, "WAITLIST_OFFER_EXPIRED");
     for (const f of ["offerId", "waitlistRef", "clinicId", "clinicianId", "startsAt", "expiresAt"]) assert.ok(f in schema("WAITLIST_OFFER_CREATED").properties.data.properties, f);

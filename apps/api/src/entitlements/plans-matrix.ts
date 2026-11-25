@@ -63,6 +63,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "mobile/mobile.controller.ts": { kind: "open" },
   "mobile/growth-marketing-mobile.controller.ts": { kind: "open" }, // GRW-P2-C: same /mobile/* plan gate; Growth module scoping and doctor-own-profile rule in the service
   "growth/provider-marketing/provider-marketing.controller.ts": { kind: "open" }, // GRW-P2-C: growth.provider_marketing_v2 on the new actions; Growth role matrix in the services
+  "credits/credits.controller.ts": { kind: "open" }, // GRW-P2-W: clinic.provider_credit_v2 / clinic.usage_bundles via @RequiresFeature; owner/finance roles in the controller
   "marketplace/marketplace-provider-verification.controller.ts": { kind: "webhook" }, // GRW-P2-C: HMAC marketplace client (Kiorex ops reads a request and delivers the decision)
   "mobile/growth-mobile.controller.ts": { kind: "open" }, // /mobile/* is plan-gated by MobilePlanGuard (mobile_staff_app); the module key clinic.growth scopes roles
   "admin/admin.controller.ts": { kind: "open" },

@@ -49,12 +49,13 @@ describe("GRW-GC-2 waitlist offer events (real Postgres)", () => {
     const entry = await prisma.appointmentWaitlistEntry.findUniqueOrThrow({ where: { externalRef: ref } });
     await prisma.appointmentWaitlistEntry.updateMany({ where: { tenantId, clinicId, status: AppointmentWaitlistStatus.WAITING, id: { not: entry.id } }, data: { status: AppointmentWaitlistStatus.CANCELLED } });
     await prisma.waitlistOpenSlot.updateMany({ where: { tenantId, status: WaitlistOpenSlotStatus.OPEN }, data: { status: WaitlistOpenSlotStatus.CLOSED, closedAt: new Date() } });
-    const startsAt = new Date(Date.now() + 6 * 86_400_000);
-    startsAt.setUTCMinutes(0, 0, 0);
+    // Far-future unique slot so seed appointments never mark the open slot as FILLED_ELSEWHERE.
+    const startsAt = new Date(Date.UTC(2031, 5, 15, 9 + (stamp % 8), stamp % 60, 0, 0));
     const type = await prisma.appointmentType.findFirstOrThrow({ where: { clinicId, marketplaceBookable: true } });
     const slot = await prisma.waitlistOpenSlot.create({ data: { tenantId, clinicId, clinicianId, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 60_000), appointmentTypeId: type.id, openKey: `gc2-${stamp}` } });
 
-    await autofill.offerNext(slot.id);
+    const offered = await autofill.offerNext(slot.id);
+    assert.ok(offered?.offerId, "offerNext should create a Kiorex waitlist offer");
     const offer = await prisma.waitlistSlotOffer.findFirstOrThrow({ where: { slotId: slot.id, waitlistEntryId: entry.id } });
     const created = await prisma.outboxEvent.findFirstOrThrow({ where: { type: "WAITLIST_OFFER_CREATED", aggregateId: offer.id } });
     const legacy = await prisma.outboxEvent.findFirstOrThrow({ where: { type: "WAITLIST_OFFER", aggregateId: offer.id } });
