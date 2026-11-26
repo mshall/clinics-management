@@ -1,5 +1,5 @@
 /**
- * COM-3 settlement statement of one period, provider side (pure; no I/O). Same figures and same shape as the Kiorex statement (`GET /api/v1/admin/commissions/settlement-statement/{orgRef}`): online collections,
+ * COM-3 settlement statement of one period, provider side (pure; no I/O). Same figures and same shape as the Kiorex statement (ops route `GET /api/v1/admin/commissions/settlement-statement/{orgRef}`; this product reads the same statement from the signed partner route `GET /api/v1/partner/commissions/settlement-statement`): online collections,
  * cash-visit commission accrued and netted (Kiorex never holds or pays cash: a commission on a cash visit is accrued and netted in the next bank-transfer settlement), deductions, net payable, payout bank
  * reference and reconciliation status (MATCHED / UNMATCHED / DISPUTED). Providers are paid by bank transfer only. Amounts are minor units. Nothing here moves money.
  * `normalizeStatement` is tolerant: unknown fields are dropped and a missing one reads as null / 0, so a newer or older Kiorex never breaks the page.
