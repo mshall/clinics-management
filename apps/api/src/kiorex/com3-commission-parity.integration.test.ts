@@ -18,7 +18,10 @@ import { loadRateParams } from "./commission-rate-params";
  * Clinic ledger as in the Kiorex ops claim row.
  */
 const url = process.env.DATABASE_URL ?? "";
-if (!/\/(gap_|e2e_|test_)[a-z0-9_]+(\?|$)/.test(url)) throw new Error("COM-3 integration test needs DATABASE_URL pointing at a PRIVATE database (gap_*, e2e_*, test_*)");
+// Private DB by name, or the throwaway CI service database (CI=true and a loopback host only; never a shared or remote DB).
+const privateByName = /\/(gap_|e2e_|test_)[a-z0-9_]+(\?|$)/.test(url);
+const ciThrowaway = process.env.CI === "true" && /^postgres(ql)?:\/\/[^/@]*@(localhost|127\.0\.0\.1)(:\d+)?\//.test(url);
+if (!privateByName && !ciThrowaway) throw new Error("COM-3 integration test needs DATABASE_URL pointing at a PRIVATE database (gap_*, e2e_*, test_*), or the localhost CI service database when CI=true");
 const prisma = createPrismaClient();
 const svcPrisma = prisma as unknown as PrismaService;
 const sfx = `com3-${Date.now()}`;

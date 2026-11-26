@@ -298,9 +298,11 @@ describe("SB-05 Lite commission invoicing (integration)", () => {
   });
 
   it("an unpaid commission still gets its reminder timeline record (reminders and aging are kept)", async () => {
-    const dueAt = new Date(Date.now() + 3 * 86_400_000 + 3_600_000);
+    // Fixed UTC noon so the whole-day maths (UTC calendar days) cannot flip when the suite runs near midnight UTC
+    const now = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 12));
+    const dueAt = new Date(now.getTime() + 3 * 86_400_000);
     await unpaidCommissionInvoice("rem", dueAt);
-    await dunning.runForTenant(tenantId, new Date());
+    await dunning.runForTenant(tenantId, now);
     const sub = await prisma.subscription.findUniqueOrThrow({ where: { tenantId } });
     const events = await prisma.subscriptionEvent.findMany({ where: { subscriptionId: sub.id, type: "dunning_reminder_d3" } });
     assert.ok(events.length >= 1, "reminder D-3 recorded");

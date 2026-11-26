@@ -62,7 +62,8 @@ describe("KNCP care plans (integration)", () => {
     assert.ok(ev);
     const payload = ev!.payload as { visits: unknown[]; requestRef: string };
     assert.equal(payload.visits.length, 3);
-    assert.ok(!/Care St|lat|lng/.test(JSON.stringify(payload)));
+    // no street text and no coordinate fields (match JSON keys, not substrings: random ids can contain "lat"/"lng")
+    assert.ok(!/Care St|"(lat|lng|latitude|longitude)"\s*:/.test(JSON.stringify(payload)));
   });
 
   it("KNCP03: pause releases future visits, extend adds days, end needs a discharge note, emits CARE_PLAN_ENDED, and sharing needs the patient's consent", async () => {
