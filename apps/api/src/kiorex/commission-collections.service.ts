@@ -253,7 +253,7 @@ export class CommissionCollectionsService {
   private async fetchKiorex(tenantId: string, tail: string, range: { from: Date; to: Date }, accept: string): Promise<Response> {
     const base = kiorexApiBase(); const secret = process.env.KIOREX_OUTBOX_WEBHOOK_SECRET?.trim();
     if (!base || !secret) throw new ServiceUnavailableException({ code: "STATEMENT_NOT_CONFIGURED", message: "The Kiorex statement is not connected yet" });
-    const url = new URL(`${base}/admin/commissions/settlement-statement/${encodeURIComponent(tenantId)}${tail}`);
+    const url = new URL(`${base}/partner/commissions/settlement-statement${tail}`);
     url.searchParams.set("from", range.from.toISOString()); url.searchParams.set("to", range.to.toISOString());
     // the signature covers the FULL request path (without the query), exactly as the partner endpoints of Kiorex verify it (same scheme as the rate view and the evidence call)
     const headers = { ...signEvidenceRequest({ secret, clientKey: process.env.KIOREX_EVIDENCE_CLIENT_KEY?.trim() || process.env.KIOREX_MARKETPLACE_CLIENT_KEY?.trim() || "kx_dev_client", method: "GET", path: url.pathname, orgRef: tenantId }), accept };

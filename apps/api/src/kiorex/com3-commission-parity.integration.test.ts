@@ -56,7 +56,7 @@ describe("COM-3 provider side: parity, disclosure, statement, tender, parameters
     fake = createServer((req, res) => {
       seen.push({ path: req.url ?? "", headers: req.headers });
       res.setHeader("content-type", req.url?.includes("/export") ? "text/csv" : "application/json");
-      const org = decodeURIComponent((req.url ?? "").split("/settlement-statement/")[1]?.split(/[/?]/)[0] ?? "");
+      const org = String(req.headers["x-kiorly-org-ref"] ?? "");
       res.end(req.url?.includes("/export") ? "item,amount,deducted,bankReference,status\r\nnetPayable,460.00,,,\r\n" : JSON.stringify(fixtureStatement(org)));
     });
     await new Promise<void>((r) => fake.listen(0, "127.0.0.1", r));
@@ -162,13 +162,13 @@ describe("COM-3 provider side: parity, disclosure, statement, tender, parameters
       assert.equal("unknownFutureField" in (s as object), false);
       const call = seen.at(-1)!; const h = call.headers;
       const path = call.path.split("?")[0]!;
-      assert.equal(path, `/api/v1/admin/commissions/settlement-statement/${a.tenantId}`);
+      assert.equal(path, "/api/v1/partner/commissions/settlement-statement");
       assert.equal(h["x-kiorly-org-ref"], a.tenantId); assert.equal(h["x-kiorly-client-key"], "kx_test_client");
       const sha = createHash("sha256").update("").digest("hex");
       assert.equal(h["x-kiorly-signature"], createHmac("sha256", "test-secret-xyz").update(`${h["x-kiorly-timestamp"]}\n${h["x-kiorly-nonce"]}\nGET\n${path}\n${sha}`).digest("base64url"));
       assert.ok(call.path.includes("from=2026-12-01") && call.path.includes("to=2027-01-01"));
       const csv = await svc.statementExport(a.finance, a.tenantId, "2026-12");
-      assert.match(csv.body, /netPayable,460\.00/); assert.equal(seen.at(-1)!.path.split("?")[0], `/api/v1/admin/commissions/settlement-statement/${a.tenantId}/export`);
+      assert.match(csv.body, /netPayable,460\.00/); assert.equal(seen.at(-1)!.path.split("?")[0], "/api/v1/partner/commissions/settlement-statement/export");
       process.env.KIOREX_API_BASE_URL = "http://127.0.0.1:1/api/v1";
       await assert.rejects(() => svc.statement(a.finance, a.tenantId, "2026-12"), (e: { getResponse?: () => { code?: string } }) => e.getResponse?.().code === "STATEMENT_UNAVAILABLE");
       delete process.env.KIOREX_OUTBOX_WEBHOOK_SECRET;
