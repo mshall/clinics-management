@@ -8,6 +8,7 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/field-visit/package.json packages/field-visit/
+COPY vendor ./vendor
 RUN npm ci && npm install -g prisma@7.10.1
 COPY packages ./packages
 COPY apps/api/prisma ./apps/api/prisma

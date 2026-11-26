@@ -6,6 +6,8 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages/field-visit/package.json packages/field-visit/
+# @kiorex/pay-contract is a file: dependency on this tarball; npm ci fails (ENOENT) without it.
+COPY vendor ./vendor
 RUN npm ci
 
 FROM deps AS build
@@ -27,6 +29,7 @@ COPY apps/api/docker-entrypoint.mjs ./apps/api/docker-entrypoint.mjs
 COPY apps/api/assets ./apps/api/assets
 # Runtime market/residency registries (SC-01 + MS-05). Nest resolves these from repo root via __dirname walk.
 COPY platform/data-cells.json platform/pdpc-egypt-filings.json platform/email-domain-auth.json ./platform/
+COPY vendor ./vendor
 RUN npm ci --omit=dev && npm install -g prisma@7.10.1 tsx
 COPY --from=build /repo/apps/api/dist ./apps/api/dist
 COPY --from=build /repo/packages/field-visit/dist ./packages/field-visit/dist
