@@ -10,7 +10,7 @@ import { resolveMarketForTenant } from "../markets/market-resolver";
 import { isKiorlyDunningPaused } from "../billing-platform/kiorly-dunning";
 import { dunningTimelineFromFeatureDefaults } from "./dunning-config";
 import { applyRateToDunning, loadRateParams } from "../kiorex/commission-rate-params";
-import { daysAfterDue, daysBeforeDue, resolveDunningPhase, subscriptionStatusForDaysOverdue } from "./dunning-timeline";
+import { daysAfterDue, dueReminderOffsets, resolveDunningPhase, subscriptionStatusForDaysOverdue } from "./dunning-timeline";
 import {
   kiorexMarketplacePaused,
   subscriptionAllowsAction,
@@ -310,10 +310,7 @@ export class DunningService {
     pack: ReturnType<typeof dunningTimelineFromFeatureDefaults>,
     now: Date,
   ): Promise<void> {
-    for (const offset of pack.reminderDaysBeforeDue) {
-      const daysUntil = daysBeforeDue(dueAt, now);
-      if (daysUntil !== offset) continue;
-      const key = `dunning_reminder_d${offset}`;
+    for (const { direction, offset, key } of dueReminderOffsets(pack, dueAt, now)) {
       const existing = await this.prisma.subscriptionEvent.findFirst({
         where: { subscriptionId, type: key },
         orderBy: { createdAt: "desc" },
@@ -327,7 +324,7 @@ export class DunningService {
           data: {
             subscriptionId,
             type: key,
-            toJson: { dueDate: marker, daysBeforeDue: offset } as Prisma.InputJsonValue,
+            toJson: (direction === "BEFORE" ? { dueDate: marker, daysBeforeDue: offset } : { dueDate: marker, daysAfterDue: offset }) as Prisma.InputJsonValue,
           },
         });
         await tx.auditLog.create({
@@ -338,7 +335,7 @@ export class DunningService {
             action: "subscription.dunning_reminder",
             resource: "Subscription",
             resourceId: subscriptionId,
-            metadata: { daysBeforeDue: offset, dueDate: marker } as Prisma.InputJsonValue,
+            metadata: (direction === "BEFORE" ? { daysBeforeDue: offset, dueDate: marker } : { daysAfterDue: offset, dueDate: marker }) as Prisma.InputJsonValue,
           },
         });
       });

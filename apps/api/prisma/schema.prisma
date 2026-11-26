@@ -483,6 +483,10 @@ model Market {
   kiorlyInvoiceNumberSequences KiorlyInvoiceNumberSequence[]
 }
 
+/// Clinic market rate table. KEPT AS THE FALLBACK pricing source (rateSource MARKET_ROW): since COM-2 a charge is priced first from the
+/// organisation's Kiorex rate (KiorexCommissionRateView); this table applies only when Kiorex has sent no rate in force, and no
+/// row means no charge (NO_RATE_CONFIGURED). Not retired on purpose: old charges reference it (rateId) and it keeps the Clinic
+/// working when Kiorex is unreachable. Do not add new pricing logic here. See Docs/KIOREX_COMMISSION_CHARGES.md.
 model KiorexCommissionRate {
   id                 String             @id @default(cuid())
   marketId           String

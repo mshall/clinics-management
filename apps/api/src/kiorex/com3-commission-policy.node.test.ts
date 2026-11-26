@@ -7,7 +7,7 @@ import { commissionAmountMinor, NO_RATE_PARAMS, parseCounselStatus, parseDisclos
 import { localStatement, normalizeStatement, periodRange, statementCsv } from "./commission-statement";
 import { asTender, commissionTender } from "./commission-tender";
 
-const base: DunningTimelineConfig = { ...DEFAULT_DUNNING_TIMELINE, reminderDaysBeforeDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue] };
+const base: DunningTimelineConfig = { ...DEFAULT_DUNNING_TIMELINE, reminderDaysBeforeDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue], reminderDaysAfterDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysAfterDue] };
 const spec = (o: Partial<RateSpecView> = {}): RateSpecView => ({ feeType: "PERCENT", percentBps: 1000, flatMinor: null, minMinor: null, maxMinor: null, mode: null, ...o });
 
 describe("COM-3 tender of a claim", () => {
@@ -74,7 +74,8 @@ describe("COM-3 rate parameters replace the Clinic constants only when present",
   it("platform values win when present", () => {
     const p = rateParamsOf(spec({ graceDays: 20, reminderDays: [-7, -1, 0, 3], retryDays: [2, 4], invoiceDueDays: 12, disputeWindowDays: 10, savedMethodChargeAllowed: false }));
     const t = applyRateToDunning(base, p);
-    assert.deepEqual(t.reminderDaysBeforeDue, [7, 1, 0]); // days after due are not reminders of this timeline
+    assert.deepEqual(t.reminderDaysBeforeDue, [7, 1, 0]);
+    assert.deepEqual(t.reminderDaysAfterDue, [3]); // positive days after the due date are now supported
     assert.equal(t.graceEndDay, 20);
     assert.ok(t.readOnlyFromDay > t.graceEndDay && t.suspendedFromDay > t.readOnlyFromDay);
     assert.equal(invoiceDueDaysWith(7, p), 12);

@@ -20,13 +20,15 @@ export async function loadRateParams(db: Reader, tenantId: string, at: Date = ne
   }
 }
 
-/** Reminders: the platform counts days relative to the due date (negative = before); the Clinic timeline counts days BEFORE due (3 = three days before, 0 = on the due date). Days after the due date are not reminders of this timeline and are left out. */
+/** Reminders: the platform counts days relative to the due date (negative = before); the Clinic timeline counts days BEFORE due (3 = three days before, 0 = on the due date). Positive days (after due) become `reminderDaysAfterDue`. */
 export function applyRateToDunning(base: DunningTimelineConfig, p: RateParams): DunningTimelineConfig {
   const reminders = p.reminderDays ? p.reminderDays.filter((d) => d <= 0).map((d) => (d === 0 ? 0 : -d)).sort((a, b) => b - a) : null;
+  const after = p.reminderDays ? [...new Set(p.reminderDays.filter((d) => d > 0))].sort((a, b) => a - b) : null;
   const graceEndDay = p.graceDays ?? base.graceEndDay;
   return {
     ...base,
     reminderDaysBeforeDue: reminders && reminders.length > 0 ? reminders : base.reminderDaysBeforeDue,
+    reminderDaysAfterDue: after && after.length > 0 ? after : base.reminderDaysAfterDue,
     graceEndDay,
     readOnlyFromDay: Math.max(base.readOnlyFromDay, graceEndDay + 1),
     suspendedFromDay: Math.max(base.suspendedFromDay, graceEndDay + 2, base.readOnlyFromDay),

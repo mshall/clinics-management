@@ -3,14 +3,52 @@ import { describe, it } from "node:test";
 import { SubscriptionStatus, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { DEFAULT_DUNNING_TIMELINE, dunningTimelineFromFeatureDefaults } from "./dunning-config";
-import { daysAfterDue, subscriptionStatusForDaysOverdue } from "./dunning-timeline";
+import { daysAfterDue, dueReminderOffsets, subscriptionStatusForDaysOverdue } from "./dunning-timeline";
+import { commercialConfigToFeatureDefaultsPatch, commercialConfigFromFeatureDefaults } from "../markets/commercial-config.bridge";
+import { DEFAULT_COMMERCIAL_CONFIG } from "../markets/commercial-config.schema";
+import { DEFAULT_SUBSCRIPTION_POLICY } from "./subscription-policy";
 import {
   subscriptionAllowsAction,
   SubscriptionAccessAction,
 } from "./subscription-access-policy";
 
 describe("SB-03 dunning timeline", () => {
-  const config = { ...DEFAULT_DUNNING_TIMELINE, reminderDaysBeforeDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue] };
+  const config = { ...DEFAULT_DUNNING_TIMELINE, reminderDaysBeforeDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue], reminderDaysAfterDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysAfterDue] };
+
+  it("defaults are unchanged: reminders 3 and 0 days before due, none after", () => {
+    const d = dunningTimelineFromFeatureDefaults(null);
+    assert.deepEqual(d.reminderDaysBeforeDue, [3, 0]);
+    assert.deepEqual(d.reminderDaysAfterDue, []);
+    assert.deepEqual(DEFAULT_SUBSCRIPTION_POLICY.renewalReminderDaysBefore, [7, 3, 1]);
+    const patch = commercialConfigToFeatureDefaultsPatch(DEFAULT_COMMERCIAL_CONFIG) as { kiorlyBilling: { dunning: Record<string, unknown> } };
+    assert.deepEqual(patch.kiorlyBilling.dunning.reminderDaysBeforeDue, [3, 0]);
+    assert.deepEqual(patch.kiorlyBilling.dunning.reminderDaysAfterDue, []);
+    assert.equal(patch.kiorlyBilling.dunning.pastDueFromDay, 1);
+  });
+
+  it("reminders come from the market pack (before and after the due date) and round trip through the bridge", () => {
+    const cfg = structuredClone(DEFAULT_COMMERCIAL_CONFIG);
+    cfg.dunning.reminderDaysBeforeDue = [5, 1];
+    cfg.dunning.reminderDaysAfterDue = [2, 7];
+    const patch = commercialConfigToFeatureDefaultsPatch(cfg);
+    const t = dunningTimelineFromFeatureDefaults(patch);
+    assert.deepEqual(t.reminderDaysBeforeDue, [5, 1]);
+    assert.deepEqual(t.reminderDaysAfterDue, [2, 7]);
+    const back = commercialConfigFromFeatureDefaults(patch);
+    assert.deepEqual(back.dunning.reminderDaysAfterDue, [2, 7]);
+    // after-due offsets below 1 are rejected
+    assert.deepEqual(dunningTimelineFromFeatureDefaults({ kiorlyBilling: { dunning: { reminderDaysAfterDue: [0, -1, 3] } } }).reminderDaysAfterDue, [3]);
+  });
+
+  it("dueReminderOffsets fires before-due and after-due reminders on the right day only", () => {
+    const due = new Date("2027-04-10T12:00:00Z");
+    const cfg = { reminderDaysBeforeDue: [3, 0], reminderDaysAfterDue: [2] };
+    assert.deepEqual(dueReminderOffsets(cfg, due, new Date("2027-04-07T08:00:00Z")).map((r) => r.key), ["dunning_reminder_d3"]);
+    assert.deepEqual(dueReminderOffsets(cfg, due, new Date("2027-04-10T08:00:00Z")).map((r) => r.key), ["dunning_reminder_d0"]);
+    assert.deepEqual(dueReminderOffsets(cfg, due, new Date("2027-04-12T08:00:00Z")).map((r) => r.key), ["dunning_reminder_after_d2"]);
+    assert.deepEqual(dueReminderOffsets(cfg, due, new Date("2027-04-11T08:00:00Z")), []);
+    assert.deepEqual(dueReminderOffsets({ reminderDaysBeforeDue: [3, 0], reminderDaysAfterDue: [] }, due, new Date("2027-04-12T08:00:00Z")), []);
+  });
 
   it("maps days overdue to subscription statuses from market config", () => {
     assert.equal(subscriptionStatusForDaysOverdue(0, config), SubscriptionStatus.ACTIVE);

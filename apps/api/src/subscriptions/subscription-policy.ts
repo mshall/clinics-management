@@ -4,6 +4,7 @@
  * No price, VAT or legal wording lives in this file: amounts come from PlanPrice, tax from `kiorlyBilling.taxRatePercent`.
  */
 import { PlanKey, SubscriptionStatus } from "@prisma/client";
+import { SUBSCRIPTION_POLICY_DEFAULTS } from "../markets/commercial-config.schema";
 
 export type LapseAction = "DOWNGRADE_TO_LITE" | "READ_ONLY_SUSPEND";
 export type ProrationTiming = "IMMEDIATE" | "PERIOD_END";
@@ -31,15 +32,12 @@ export type SubscriptionPolicy = {
   reminderQuietHours: { start: number; end: number };
 };
 
+/** One source of truth: the market-pack schema defaults (`SUBSCRIPTION_POLICY_DEFAULTS`); values unchanged. */
 export const DEFAULT_SUBSCRIPTION_POLICY: SubscriptionPolicy = {
-  autoRenewDefault: true,
-  orgMayDisableAutoRenew: true,
-  renewalReminderDaysBefore: [7, 3, 1],
-  lapseAction: "DOWNGRADE_TO_LITE",
-  downgradeAfterDays: 15,
-  liteReadOnlyGraceDays: 30,
-  proration: { upgradeTiming: "IMMEDIATE", downgradeTiming: "PERIOD_END", creditUnusedOnDowngrade: false },
-  reminderQuietHours: { start: 21, end: 8 },
+  ...SUBSCRIPTION_POLICY_DEFAULTS,
+  renewalReminderDaysBefore: [...SUBSCRIPTION_POLICY_DEFAULTS.renewalReminderDaysBefore],
+  proration: { ...SUBSCRIPTION_POLICY_DEFAULTS.proration },
+  reminderQuietHours: { ...SUBSCRIPTION_POLICY_DEFAULTS.reminderQuietHours },
 };
 
 function rec(v: unknown): Record<string, unknown> {

@@ -1,4 +1,5 @@
 import type { CommercialConfig } from "./commercial-config.schema";
+import { DEFAULT_DUNNING_TIMELINE } from "../subscriptions/dunning-config";
 import { CREDIT_CONFIG_DEFAULTS, DEFAULT_COMMERCIAL_CONFIG, type CreditConfig, type SubscriptionPolicyConfig } from "./commercial-config.schema";
 
 export function commercialConfigToFeatureDefaultsPatch(config: CommercialConfig): Record<string, unknown> {
@@ -30,11 +31,12 @@ export function commercialConfigToFeatureDefaultsPatch(config: CommercialConfig)
     kiorlyBilling: {
       liteMinInvoice: config.lite.minInvoice,
       dunning: {
-        pastDueFromDay: 1,
+        pastDueFromDay: DEFAULT_DUNNING_TIMELINE.pastDueFromDay,
         graceEndDay: config.dunning.graceDays,
         readOnlyFromDay: config.dunning.readOnlyAfterDays,
         suspendedFromDay: config.dunning.suspendAfterDays,
-        reminderDaysBeforeDue: [3, 0],
+        reminderDaysBeforeDue: [...(config.dunning.reminderDaysBeforeDue ?? DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue)],
+        reminderDaysAfterDue: [...(config.dunning.reminderDaysAfterDue ?? DEFAULT_DUNNING_TIMELINE.reminderDaysAfterDue)],
       },
       ...(config.subscription ? { subscription: { ...config.subscription, renewalReminderDaysBefore: [...config.subscription.renewalReminderDaysBefore] } } : {}),
     },
@@ -116,6 +118,12 @@ export function commercialConfigFromFeatureDefaults(featureDefaults: unknown): C
   base.dunning.graceDays = readNumber(dunning, "graceEndDay") ?? base.dunning.graceDays;
   base.dunning.readOnlyAfterDays = readNumber(dunning, "readOnlyFromDay") ?? base.dunning.readOnlyAfterDays;
   base.dunning.suspendAfterDays = readNumber(dunning, "suspendedFromDay") ?? base.dunning.suspendAfterDays;
+  const dayList = (v: unknown, min: number): number[] | undefined =>
+    Array.isArray(v) ? v.filter((x): x is number => typeof x === "number" && Number.isInteger(x) && x >= min && x <= 90).slice(0, 6) : undefined;
+  const before = dayList(dunning.reminderDaysBeforeDue, 0);
+  const after = dayList(dunning.reminderDaysAfterDue, 1);
+  if (before) base.dunning.reminderDaysBeforeDue = before;
+  if (after) base.dunning.reminderDaysAfterDue = after;
 
   if (billing.subscription && typeof billing.subscription === "object" && !Array.isArray(billing.subscription)) {
     // Parsed leniently by the runtime reader; here we only surface what is stored so the platform UI can show it.

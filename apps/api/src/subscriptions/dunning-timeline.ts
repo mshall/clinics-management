@@ -44,3 +44,21 @@ export function subscriptionStatusForDaysOverdue(
   if (daysOverdue < config.suspendedFromDay) return SubscriptionStatus.READ_ONLY;
   return SubscriptionStatus.SUSPENDED;
 }
+
+/** Reminders due today: `before` offset n fires when the due date is n days away; `after` offset m fires m days after the due date. */
+export function dueReminderOffsets(
+  config: Pick<DunningTimelineConfig, "reminderDaysBeforeDue" | "reminderDaysAfterDue">,
+  dueAt: Date,
+  now: Date,
+): Array<{ direction: "BEFORE" | "AFTER"; offset: number; key: string }> {
+  const out: Array<{ direction: "BEFORE" | "AFTER"; offset: number; key: string }> = [];
+  const until = daysBeforeDue(dueAt, now);
+  for (const offset of config.reminderDaysBeforeDue) {
+    if (until === offset) out.push({ direction: "BEFORE", offset, key: `dunning_reminder_d${offset}` });
+  }
+  const after = daysAfterDue(dueAt, now);
+  for (const offset of config.reminderDaysAfterDue) {
+    if (offset >= 1 && after === offset) out.push({ direction: "AFTER", offset, key: `dunning_reminder_after_d${offset}` });
+  }
+  return out;
+}
