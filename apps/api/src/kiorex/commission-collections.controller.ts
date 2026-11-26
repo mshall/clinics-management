@@ -31,6 +31,13 @@ export class CommissionCollectionsController {
   disputes(@CurrentUser() user: JwtUser) { return this.svc.disputes(user, requireTenantId(user)); }
   @Get("rate") @ApiOperation({ summary: "COM-2: the organization's effective commission rate, the default, any override and the history (read only; set by Kiorex)" })
   rate(@CurrentUser() user: JwtUser) { return this.svc.rate(user, requireTenantId(user)); }
+  @Get("statement") @ApiOperation({ summary: "COM-3: settlement statement of one period (online collections, cash-visit commission accrued and netted, deductions, net payable, bank reference, reconciliation); finance / owner / admin" })
+  statement(@CurrentUser() user: JwtUser, @Query("period") period?: string) { return this.svc.statement(user, requireTenantId(user), period); }
+  @Get("statement/:period/export.csv") @Header("content-type", "text/csv; charset=utf-8") @ApiOperation({ summary: "COM-3: settlement statement CSV of one period (audited)" })
+  async statementCsv(@CurrentUser() user: JwtUser, @Param("period") period: string) {
+    const r = await this.svc.statementExport(user, requireTenantId(user), period);
+    return new StreamableFile(Buffer.from(r.body, "utf8"), { type: "text/csv; charset=utf-8", disposition: `attachment; filename="${r.filename}"` });
+  }
   @Get("charges/:id/timeline") @ApiOperation({ summary: "Status timeline of one charge" })
   timeline(@CurrentUser() user: JwtUser, @Param("id") id: string) { return this.svc.chargeTimeline(user, requireTenantId(user), id); }
 

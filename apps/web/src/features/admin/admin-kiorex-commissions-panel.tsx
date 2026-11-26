@@ -9,18 +9,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { apiDownload, apiGet } from "@/lib/http";
+import { CounselBadge, DisclosureBlocks, RateParamsList, ScrollTable, SettlementStatement, type CounselChip, type Disclosure, type RateParams } from "./kiorex-commission-parts";
 
 type Summary = { collection: { claims: string; collected: string; deductedFromPayouts: string; invoiced: string; invoicePaid: string; invoiceOpen: string }; openDisputes: number };
-type LedgerRow = { id: string; attendedAt: string; clinician: string; amount: string; currency: string; status: string; decision: { kind: string; policyVersion: string; feeBasis: string | null; sponsoredDiscount: string | null; basisPolicyVersion: string | null } | null; collection: { id: string; periodKey: string; claimStatus?: string } | null };
+type LedgerRow = { id: string; attendedAt: string; clinician: string; amount: string; currency: string; status: string; decision: { kind: string; policyVersion: string; feeBasis: string | null; sponsoredDiscount: string | null; basisPolicyVersion: string | null } | null; collection: { id: string; periodKey: string; claimStatus?: string } | null; tender?: "CASH" | "ONLINE" | null; disputeStatus?: string | null; disputeDeadline?: string | null; rateSource?: string | null; rateSnapshot?: { version?: number; source?: string } | null };
 type Run = { id: string; periodKey: string; status: string; mode: string; modeRequested: string | null; fallbackReason: string | null; provider: string | null; currency: string; claims: string; collected: string; deducted: string; invoiced: string; paid: string; open: string; invoiceNo: string | null };
 type RunDetail = Run & { balanced: boolean; timeline: Array<{ at: string; event: string }> };
 type Ded = { payoutRef: string; paidAt: string; gross: string; cash: string; commissionDeducted: string; currency: string };
 type Disp = { id: string; appointmentId: string; reason: string; status: string; resolution: string | null; amount: string; currency: string; createdAt: string };
-const TABS = ["summary", "ledger", "collections", "deductions", "disputes", "rate"] as const;
+const TABS = ["summary", "ledger", "collections", "deductions", "disputes", "rate", "settlement"] as const;
 type RateSpec = { feeType: "PERCENT" | "FLAT"; percentBps: number | null; flatMinor: number | null; minMinor: number | null; maxMinor: number | null; mode: string | null };
 type RateEff = { state: "SET" | "NOT_SET"; source: "OVERRIDE" | "DEFAULT" | null; version: number | null; effectiveFrom: string | null; reason: string | null; spec: RateSpec | null };
 type RateHist = { version: number; scope: "DEFAULT" | "ORG"; kind: "RATE" | "INHERIT"; effectiveFrom: string; reason: string | null; spec: RateSpec | null };
-type RateView = { known: boolean; state: "SET" | "NOT_SET"; effective: RateEff; default: RateEff; override: RateEff | null; inheriting: boolean; upcoming: RateHist | null; history: RateHist[]; receivedAt: string | null };
+type RateView = { known: boolean; state: "SET" | "NOT_SET"; effective: RateEff; default: RateEff; override: RateEff | null; inheriting: boolean; upcoming: RateHist | null; history: RateHist[]; receivedAt: string | null; disclosure?: Disclosure; counsel?: CounselChip; params?: RateParams };
 const B = "/api/v1/billing/kiorex-commissions";
 const month = () => new Date().toISOString().slice(0, 7);
 
@@ -40,6 +41,7 @@ export function AdminKiorexCommissionsPanel({ standalone = false }: { standalone
   const [tab, setTab] = useState<(typeof TABS)[number]>("summary");
   const [period, setPeriod] = useState(month());
   const [run, setRun] = useState<string | null>(null);
+  const [chargeId, setChargeId] = useState<string | null>(null);
   const access = useQuery({ queryKey: ["billing", "kiorex-com", "access"], queryFn: () => apiGet<{ canView: boolean }>(`${B}/access`) });
   const enabled = access.data?.canView === true;
   const useCom = <T,>(key: string, path: string) => useQuery({ queryKey: ["billing", "kiorex-com", key, period], queryFn: () => apiGet<T>(path), enabled: enabled && tab === (key as string) });
@@ -50,6 +52,7 @@ export function AdminKiorexCommissionsPanel({ standalone = false }: { standalone
   const disp = useCom<{ items: Disp[] }>("disputes", `${B}/disputes`);
   const rate = useCom<RateView>("rate", `${B}/rate`);
   const detail = useQuery({ queryKey: ["billing", "kiorex-com", "run", run], queryFn: () => apiGet<RunDetail>(`${B}/collections/${run}`), enabled: enabled && !!run });
+  const chargeTl = useQuery({ queryKey: ["billing", "kiorex-com", "charge-tl", chargeId], queryFn: () => apiGet<{ status: string; events: Array<{ at: string; source: string; event: string }> }>(`${B}/charges/${chargeId}/timeline`), enabled: enabled && !!chargeId });
   if (!enabled) return standalone && access.isFetched ? <p role="alert" className="text-sm text-muted-foreground" data-testid="kxc-no-access">{t("kiorexCom.noAccess")}</p> : null;
   const st = (s: string) => <Badge variant={["CONFIRMED", "COLLECTED", "SETTLED", "PAID", "APPROVED"].includes(s) ? "default" : "secondary"}>{t(`kiorexCom.status.${s}`, { defaultValue: s })}</Badge>;
   const fail = () => toast.error(t("common.error", { defaultValue: "Something went wrong" }));
@@ -62,7 +65,7 @@ export function AdminKiorexCommissionsPanel({ standalone = false }: { standalone
         <div className="flex flex-wrap items-end gap-3 pt-2">
           <div><Label htmlFor="kxc-period">{t("kiorexCom.period")}</Label><Input id="kxc-period" type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="w-44" /></div>
           <Button variant="outline" onClick={() => void apiDownload(`${B}/statement/${period}.pdf`, `kiorex-commissions-${period}.pdf`).catch(fail)} data-testid="kxc-pdf">{t("kiorexCom.statement")}</Button>
-          {tab !== "summary" && tab !== "rate" && <Button variant="outline" onClick={() => csv(tab === "collections" ? "collections" : tab === "deductions" ? "deductions" : tab === "disputes" ? "disputes" : "ledger")} data-testid="kxc-csv">{t("kiorexCom.export")}</Button>}
+          {tab !== "summary" && tab !== "rate" && tab !== "settlement" && <Button variant="outline" onClick={() => csv(tab === "collections" ? "collections" : tab === "deductions" ? "deductions" : tab === "disputes" ? "disputes" : "ledger")} data-testid="kxc-csv">{t("kiorexCom.export")}</Button>}
         </div>
         <div role="tablist" aria-label={t("kiorexCom.title")} className="flex flex-wrap gap-1.5 pt-2">
           {TABS.map((x) => <button key={x} role="tab" aria-selected={tab === x} data-testid={`kxc-tab-${x}`} onClick={() => { setTab(x); setRun(null); }} className={`min-h-11 rounded-md border px-3 text-sm ${tab === x ? "bg-primary text-primary-foreground" : "bg-background"}`}>{t(`kiorexCom.tabs.${x}`)}</button>)}
@@ -75,9 +78,18 @@ export function AdminKiorexCommissionsPanel({ standalone = false }: { standalone
           </dl>
         )}
         {tab === "ledger" && (ledger.data?.items.length ? (
-          <Table><TableHeader><TableRow><TableHead>{t("kiorexCom.col.date")}</TableHead><TableHead>{t("kiorexCom.col.doctor")}</TableHead><TableHead>{t("kiorexCom.col.amount")}</TableHead><TableHead>{t("kiorexCom.col.status")}</TableHead><TableHead>{t("kiorexCom.col.basis")}</TableHead><TableHead>{t("kiorexCom.col.sponsored")}</TableHead><TableHead>{t("kiorexCom.col.policy")}</TableHead><TableHead>{t("kiorexCom.col.collection")}</TableHead></TableRow></TableHeader>
-            <TableBody>{ledger.data.items.map((r) => <TableRow key={r.id}><TableCell>{r.attendedAt.slice(0, 10)}</TableCell><TableCell>{r.clinician}</TableCell><TableCell className="tabular-nums" dir="ltr">{r.amount} {r.currency}</TableCell><TableCell>{st(r.status)}</TableCell><TableCell dir="ltr">{r.decision?.feeBasis ?? "-"}</TableCell><TableCell dir="ltr">{r.decision?.sponsoredDiscount ?? "-"}</TableCell><TableCell dir="ltr" className="text-xs">{r.decision?.policyVersion ?? "-"}</TableCell><TableCell>{r.collection ? <button className="underline" onClick={() => { setTab("collections"); setRun(r.collection!.id); }}>{r.collection.periodKey} {r.collection.claimStatus ? t(`kiorexCom.status.${r.collection.claimStatus}`, { defaultValue: r.collection.claimStatus }) : ""}</button> : "-"}</TableCell></TableRow>)}</TableBody></Table>
+          <ScrollTable label={t("kiorexCom.tabs.ledger")} minWidth="64rem"><TableHeader><TableRow><TableHead>{t("kiorexCom.col.date")}</TableHead><TableHead>{t("kiorexCom.col.doctor")}</TableHead><TableHead>{t("kiorexCom.col.amount")}</TableHead><TableHead>{t("kiorexCom.col.status")}</TableHead><TableHead>{t("kiorexCom.col.basis")}</TableHead><TableHead>{t("kiorexCom.col.sponsored")}</TableHead><TableHead>{t("kiorexCom.col.policy")}</TableHead><TableHead>{t("kiorexCom.col.collection")}</TableHead><TableHead>{t("kiorexCom.col.tender")}</TableHead><TableHead>{t("kiorexCom.col.dispute")}</TableHead><TableHead>{t("kiorexCom.col.rateUsed")}</TableHead><TableHead><span className="sr-only">{t("kiorexCom.timeline")}</span></TableHead></TableRow></TableHeader>
+            <TableBody>{ledger.data.items.map((r) => <TableRow key={r.id}><TableCell>{r.attendedAt.slice(0, 10)}</TableCell><TableCell>{r.clinician}</TableCell><TableCell className="tabular-nums" dir="ltr">{r.amount} {r.currency}</TableCell><TableCell>{st(r.status)}</TableCell><TableCell dir="ltr">{r.decision?.feeBasis ?? "-"}</TableCell><TableCell dir="ltr">{r.decision?.sponsoredDiscount ?? "-"}</TableCell><TableCell dir="ltr" className="text-xs">{r.decision?.policyVersion ?? "-"}</TableCell><TableCell>{r.collection ? <button className="underline" onClick={() => { setTab("collections"); setRun(r.collection!.id); }}>{r.collection.periodKey} {r.collection.claimStatus ? t(`kiorexCom.status.${r.collection.claimStatus}`, { defaultValue: r.collection.claimStatus }) : ""}</button> : "-"}</TableCell>
+              <TableCell data-testid="kxc-ledger-tender">{r.tender ? t(`kiorexCom.tender.${r.tender}`) : t("kiorexCom.tender.NONE")}</TableCell>
+              <TableCell data-testid="kxc-ledger-dispute">{r.disputeStatus ? <>{t(`kiorexCom.status.${r.disputeStatus}`, { defaultValue: r.disputeStatus })}{r.disputeDeadline ? <span className="block text-xs text-muted-foreground" dir="ltr">{t("kiorexCom.dispute.until", { date: r.disputeDeadline.slice(0, 10) })}</span> : null}</> : r.disputeDeadline ? <span className="text-xs text-muted-foreground" dir="ltr">{t("kiorexCom.dispute.until", { date: r.disputeDeadline.slice(0, 10) })}</span> : "-"}</TableCell>
+              <TableCell data-testid="kxc-ledger-rate" className="text-xs">{r.rateSource ? t(`kiorexCom.rate.sourceCode.${r.rateSource}`, { defaultValue: r.rateSource }) : "-"}{r.rateSnapshot?.version != null ? <span dir="ltr"> v{r.rateSnapshot.version}</span> : null}</TableCell><TableCell><Button size="sm" variant="outline" onClick={() => setChargeId(chargeId === r.id ? null : r.id)} aria-expanded={chargeId === r.id} data-testid="kxc-charge-timeline-btn">{t("kiorexCom.timeline")}</Button></TableCell></TableRow>)}</TableBody></ScrollTable>
         ) : <p className="text-sm text-muted-foreground">{t("kiorexCom.empty")}</p>)}
+        {tab === "ledger" && chargeId && chargeTl.data && (
+          <section className="rounded-lg border p-4" data-testid="kxc-charge-timeline" aria-label={t("kiorexCom.timeline")}>
+            <h3 className="font-semibold">{t("kiorexCom.timeline")} {st(chargeTl.data.status)}</h3>
+            {chargeTl.data.events.length ? <ol className="mt-2 text-sm">{chargeTl.data.events.map((e, i) => <li key={`${e.at}${i}`}><span className="text-muted-foreground" dir="ltr">{e.at.slice(0, 16).replace("T", " ")}</span> {e.event}</li>)}</ol> : <p className="mt-2 text-sm text-muted-foreground">{t("kiorexCom.empty")}</p>}
+          </section>
+        )}
         {tab === "collections" && (<>
           {cols.data?.items.length ? <Table><TableHeader><TableRow><TableHead>{t("kiorexCom.col.period")}</TableHead><TableHead>{t("kiorexCom.col.status")}</TableHead><TableHead>{t("kiorexCom.col.mode")}</TableHead><TableHead>{t("kiorexCom.col.provider")}</TableHead><TableHead>{t("kiorexCom.cards.claims")}</TableHead><TableHead>{t("kiorexCom.cards.collected")}</TableHead><TableHead>{t("kiorexCom.cards.deducted")}</TableHead><TableHead>{t("kiorexCom.cards.open")}</TableHead><TableHead /></TableRow></TableHeader>
             <TableBody>{cols.data.items.map((r) => <TableRow key={r.id}><TableCell dir="ltr">{r.periodKey}</TableCell><TableCell>{st(r.status)}</TableCell><TableCell>{t(`kiorexCom.modes.${r.mode}`, { defaultValue: r.mode })}</TableCell><TableCell>{r.provider ?? "-"}</TableCell><TableCell dir="ltr">{r.claims}</TableCell><TableCell dir="ltr">{r.collected}</TableCell><TableCell dir="ltr">{r.deducted}</TableCell><TableCell dir="ltr">{r.open}</TableCell><TableCell><Button size="sm" variant="outline" onClick={() => setRun(r.id)}>{t("kiorexCom.detail")}</Button></TableCell></TableRow>)}</TableBody></Table> : <p className="text-sm text-muted-foreground">{t("kiorexCom.empty")}</p>}
@@ -95,6 +107,8 @@ export function AdminKiorexCommissionsPanel({ standalone = false }: { standalone
         {tab === "rate" && rate.data && (
           <section className="space-y-4" data-testid="kxc-rate" aria-label={t("kiorexCom.rate.title")}>
             <p className="text-sm text-muted-foreground">{t("kiorexCom.rate.hint")}</p>
+            <CounselBadge counsel={rate.data.counsel ?? null} />
+            <DisclosureBlocks disclosure={rate.data.disclosure ?? null} />
             <div className="grid gap-3 md:grid-cols-3">
               <div className="min-w-0 rounded-lg border p-3" data-testid="kxc-rate-effective"><div className="text-xs text-muted-foreground">{t("kiorexCom.rate.effective")}</div>
                 <div className="mt-1 text-lg font-semibold"><RateText spec={rate.data.effective.spec} /></div>
@@ -103,6 +117,7 @@ export function AdminKiorexCommissionsPanel({ standalone = false }: { standalone
               <div className="min-w-0 rounded-lg border p-3" data-testid="kxc-rate-override"><div className="text-xs text-muted-foreground">{t("kiorexCom.rate.override")}</div><div className="mt-1 text-sm font-semibold">{rate.data.override ? <RateText spec={rate.data.override.spec} /> : t("kiorexCom.rate.inheriting")}</div></div>
             </div>
             {rate.data.upcoming && <p className="text-sm" data-testid="kxc-rate-upcoming">{t("kiorexCom.rate.upcoming")}: {rate.data.upcoming.kind === "INHERIT" ? t("kiorexCom.rate.backToDefault") : <RateText spec={rate.data.upcoming.spec} />} · <span dir="ltr">{rate.data.upcoming.effectiveFrom.slice(0, 10)}</span></p>}
+            <RateParamsList params={rate.data.params} />
             <h3 className="text-sm font-semibold">{t("kiorexCom.rate.history")}</h3>
             {rate.data.history.length ? (
               <div className="max-w-full overflow-x-auto" tabIndex={0} role="region" aria-label={t("kiorexCom.rate.history")}>
@@ -112,6 +127,7 @@ export function AdminKiorexCommissionsPanel({ standalone = false }: { standalone
             ) : <p className="text-sm text-muted-foreground">{t("kiorexCom.empty")}</p>}
           </section>
         )}
+        {tab === "settlement" && <SettlementStatement base={B} period={period} />}
         {tab === "disputes" && (disp.data?.items.length ? <Table><TableHeader><TableRow><TableHead>{t("kiorexCom.col.date")}</TableHead><TableHead>{t("kiorexCom.col.reason")}</TableHead><TableHead>{t("kiorexCom.col.status")}</TableHead><TableHead>{t("kiorexCom.col.amount")}</TableHead><TableHead>{t("kiorexCom.col.resolution")}</TableHead></TableRow></TableHeader><TableBody>{disp.data.items.map((r) => <TableRow key={r.id}><TableCell>{r.createdAt.slice(0, 10)}</TableCell><TableCell>{r.reason}</TableCell><TableCell>{st(r.status)}</TableCell><TableCell dir="ltr">{r.amount} {r.currency}</TableCell><TableCell>{r.resolution ?? "-"}</TableCell></TableRow>)}</TableBody></Table> : <p className="text-sm text-muted-foreground">{t("kiorexCom.empty")}</p>)}
       </CardContent>
     </Card>

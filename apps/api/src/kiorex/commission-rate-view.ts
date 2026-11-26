@@ -3,7 +3,15 @@
  * The history rows arrive with their start time, so the effective rate is computed here at read time: a change that was future-dated takes effect by itself, and an old instant keeps the old rate.
  * Nothing here is a rate of its own: with no active row the answer is NOT_SET (no commission is charged, "rate not set").
  */
-export type RateSpecView = { feeType: "PERCENT" | "FLAT"; percentBps: number | null; flatMinor: number | null; minMinor: number | null; maxMinor: number | null; mode: string | null };
+/**
+ * COM-3 (all optional, tolerant: an absent or malformed value reads as null = "Kiorex sets nothing here", the product's own default applies): currency, rounding of a percent charge, minimum to collect,
+ * the collection timeline (grace, dunning retries, invoice due, reminders relative to the due date, negative = before), the dispute window and whether a saved-method charge is permitted.
+ */
+export type RateSpecView = {
+  feeType: "PERCENT" | "FLAT"; percentBps: number | null; flatMinor: number | null; minMinor: number | null; maxMinor: number | null; mode: string | null;
+  currency?: string | null; rounding?: "HALF_UP" | "DOWN" | "UP" | null; minCollectMinor?: number | null; graceDays?: number | null; retryDays?: number[] | null; invoiceDueDays?: number | null;
+  reminderDays?: number[] | null; disputeWindowDays?: number | null; savedMethodChargeAllowed?: boolean | null;
+};
 export type RateHistoryRow = { version: number; scope: "DEFAULT" | "ORG"; kind: "RATE" | "INHERIT"; effectiveFrom: string; reason: string | null; spec: RateSpecView | null };
 export type EffectiveRateView = { state: "SET" | "NOT_SET"; source: "OVERRIDE" | "DEFAULT" | null; version: number | null; effectiveFrom: string | null; reason: string | null; spec: RateSpecView | null };
 export const NOT_SET_VIEW: EffectiveRateView = { state: "NOT_SET", source: null, version: null, effectiveFrom: null, reason: null, spec: null };
@@ -42,10 +50,46 @@ export function rateViewProblems(b: unknown): string[] {
   return out;
 }
 
-/** Commission of one charge in minor units under an effective rate: percent of the fee basis (round half up on exact integers) or the flat amount, then the floor and the cap. Same arithmetic as the Kiorex side and the contract vectors. */
+/** Commission of one charge in minor units under an effective rate: percent of the fee basis (rounded per `rounding`, half up when unset: what always shipped) or the flat amount, then the floor and the cap. Same arithmetic as the Kiorex side and the contract vectors. */
 export function commissionAmountMinor(basisMinor: number, spec: RateSpecView): number {
-  let v = spec.feeType === "FLAT" ? (spec.flatMinor ?? 0) : Math.floor((basisMinor * (spec.percentBps ?? 0) * 2 + 10_000) / 20_000);
+  const exact = basisMinor * (spec.percentBps ?? 0);
+  const pct = spec.rounding === "DOWN" ? Math.floor(exact / 10_000) : spec.rounding === "UP" ? Math.ceil(exact / 10_000) : Math.floor((exact * 2 + 10_000) / 20_000);
+  let v = spec.feeType === "FLAT" ? (spec.flatMinor ?? 0) : pct;
   if (spec.minMinor != null) v = Math.max(v, spec.minMinor);
   if (spec.maxMinor != null) v = Math.min(v, spec.maxMinor);
   return v;
+}
+
+const wholeDays = (v: unknown, min: number, max: number): number | null => (typeof v === "number" && Number.isInteger(v) && v >= min && v <= max ? v : null);
+const dayList = (v: unknown, min: number, max: number, maxLen: number): number[] | null => (Array.isArray(v) && v.length > 0 && v.length <= maxLen && v.every((n, i, a) => wholeDays(n, min, max) !== null && (i === 0 || n > (a[i - 1] as number))) ? [...(v as number[])] : null);
+
+/** The configurable collection parameters of the rate in force; every one is null when Kiorex does not set it (then the Clinic default applies). Never throws on a malformed value. */
+export type RateParams = { graceDays: number | null; retryDays: number[] | null; invoiceDueDays: number | null; reminderDays: number[] | null; disputeWindowDays: number | null; savedMethodChargeAllowed: boolean | null };
+export const NO_RATE_PARAMS: RateParams = { graceDays: null, retryDays: null, invoiceDueDays: null, reminderDays: null, disputeWindowDays: null, savedMethodChargeAllowed: null };
+export function rateParamsOf(spec: RateSpecView | null | undefined): RateParams {
+  if (!spec || typeof spec !== "object") return NO_RATE_PARAMS;
+  return {
+    graceDays: wholeDays(spec.graceDays, 0, 30), retryDays: dayList(spec.retryDays, 1, 60, 6), invoiceDueDays: wholeDays(spec.invoiceDueDays, 1, 90),
+    reminderDays: dayList(spec.reminderDays, -30, 90, 8), disputeWindowDays: wholeDays(spec.disputeWindowDays, 0, 365), savedMethodChargeAllowed: typeof spec.savedMethodChargeAllowed === "boolean" ? spec.savedMethodChargeAllowed : null,
+  };
+}
+
+/** COM-3 disclosure / counsel as pushed with the view (additive, optional). Only the counsel STATUS is kept: never the reviewer, the document or the conditions. Wording that is not set is a hidden block. */
+export type DisclosureView = { rateDisclosure: { en: string; ar: string }; termsSummary: { en: string; ar: string }; showOverrideReason: boolean; wordingSet: boolean };
+export type CounselStatusView = "NOT_REVIEWED" | "APPROVED_WITH_CONDITIONS" | "APPROVED" | "REJECTED";
+const COUNSEL_STATUSES: readonly string[] = ["NOT_REVIEWED", "APPROVED_WITH_CONDITIONS", "APPROVED", "REJECTED"];
+const text = (v: unknown): string => (typeof v === "string" ? v.slice(0, 4000) : "");
+const bi = (v: unknown): { en: string; ar: string } => { const o = v && typeof v === "object" ? (v as Record<string, unknown>) : {}; return { en: text(o.en), ar: text(o.ar) }; };
+export function parseDisclosure(raw: unknown): DisclosureView | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const rateDisclosure = bi(o.rateDisclosure); const termsSummary = bi(o.termsSummary);
+  const wordingSet = [rateDisclosure.en, rateDisclosure.ar, termsSummary.en, termsSummary.ar].some((x) => x.trim().length > 0);
+  return { rateDisclosure, termsSummary, showOverrideReason: o.showOverrideReason === true, wordingSet };
+}
+export function parseCounselStatus(raw: unknown): { status: CounselStatusView; reviewedOn: string | null } | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.status !== "string" || !COUNSEL_STATUSES.includes(o.status)) return null;
+  return { status: o.status as CounselStatusView, reviewedOn: typeof o.reviewedOn === "string" && !Number.isNaN(Date.parse(o.reviewedOn)) ? o.reviewedOn.slice(0, 10) : null };
 }

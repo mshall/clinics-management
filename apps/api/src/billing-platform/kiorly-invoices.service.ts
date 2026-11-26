@@ -21,6 +21,7 @@ import { kiorlyInvoiceDueDaysFromMarket } from "./kiorly-invoice.config";
 import { buildKiorlyInvoicePdf } from "./kiorly-invoice-pdf";
 import { nextKiorlyInvoiceNumber } from "./kiorly-invoice-numbering";
 import { KiorlyPaymentService } from "./kiorly-payment.service";
+import { invoiceDueDaysWith, loadRateParams } from "../kiorex/commission-rate-params";
 import { STATEMENT_READY_TOPIC } from "./monthly-statement";
 
 type Tx = Prisma.TransactionClient;
@@ -234,7 +235,9 @@ export class KiorlyInvoicesService {
       throw new BadRequestException("Only draft invoices can be issued");
     }
 
-    const dueDays = kiorlyInvoiceDueDaysFromMarket(tenant.market?.featureDefaults);
+    // COM-3: an invoice that collects Kiorex commission follows the invoice-due days Kiorex set on the organisation's rate, when present
+    const hasCommission = (await this.prisma.kiorexCommissionCharge.count({ where: { kiorlyInvoiceId: invoiceId } })) > 0;
+    const dueDays = hasCommission ? invoiceDueDaysWith(kiorlyInvoiceDueDaysFromMarket(tenant.market?.featureDefaults), await loadRateParams(this.prisma, tenantId)) : kiorlyInvoiceDueDaysFromMarket(tenant.market?.featureDefaults);
     const issuedAt = new Date();
     const dueAt = new Date(issuedAt.getTime() + dueDays * 86_400_000);
 

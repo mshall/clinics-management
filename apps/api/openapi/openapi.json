@@ -7341,6 +7341,64 @@
         ]
       }
     },
+    "/billing/kiorex-commissions/statement": {
+      "get": {
+        "operationId": "CommissionCollectionsController_statement",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "COM-3: settlement statement of one period (online collections, cash-visit commission accrued and netted, deductions, net payable, bank reference, reconciliation); finance / owner / admin",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/statement/{period}/export.csv": {
+      "get": {
+        "operationId": "CommissionCollectionsController_statementCsv",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "COM-3: settlement statement CSV of one period (audited)",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/billing/kiorex-commissions/charges/{id}/timeline": {
       "get": {
         "operationId": "CommissionCollectionsController_timeline",

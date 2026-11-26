@@ -23,7 +23,7 @@ export type Fixtures = Awaited<ReturnType<typeof provisionOrg>>;
 const day = 86_400_000;
 const PASSWORD = "demo";
 
-export async function provisionOrg(opts: { credit?: boolean; bookableVisitType?: boolean; commission?: boolean }) {
+export async function provisionOrg(opts: { credit?: boolean; bookableVisitType?: boolean; commission?: boolean; /** COM-3: "set" = Kiorex wording, counsel status, parameters, a cash charge, a dispute and a payout; "unset" = wording not set. Default none. */ com3?: "set" | "unset" }) {
   assertPrivateDatabase();
   const prisma = createPrismaClient();
   await prisma.$connect();
@@ -70,16 +70,22 @@ export async function provisionOrg(opts: { credit?: boolean; bookableVisitType?:
     const charge = await prisma.kiorexCommissionCharge.create({ data: { tenantId: tenant.id, clinicId: clinic.id, appointmentId: apt.id, patientId: patient.id, clinicianId: doctor.id, rateId: rate.id, amount: 120, currency: "EGP", status: "CONFIRMED", attendedAt: attended, confirmedAt: new Date(attended.getTime() + 2 * 3_600_000), disputeDeadline: new Date(attended.getTime() + 7 * day) } });
     chargeId = charge.id;
     await prisma.kiorexCommissionDecision.create({ data: { tenantId: tenant.id, clinicId: clinic.id, appointmentId: apt.id, policyVersion: "CP1@base", origin: "MARKETPLACE", bookingSource: "KIOREX_MARKETPLACE", isNewPatient: true, decision: "CHARGE", reasonCodes: ["NEW_PATIENT"], rateId: rate.id, amount: 120, currency: "EGP", inputsHash: "a".repeat(64), feeBasisMinor: 30000, sponsoredDiscountMinor: 5000, basisPolicyVersion: "BP1" } });
-    await prisma.kiorexCommissionCollection.create({ data: { tenantId: tenant.id, runRef: `crn_fx_${sfx}`, periodKey: new Date().toISOString().slice(0, 7) + "-05", status: "COLLECTED", mode: "AUTO_CHARGE_SAVED_METHOD", modeRequested: "AUTO_CHARGE_SAVED_METHOD", provider: "paymob", currency: "EGP", claimsCount: 1, claimsMinor: 12000, collectedMinor: 12000, version: BigInt(100), claims: [{ chargeId: charge.id, amountMinor: 12000, collectedMinor: 12000, collectionStatus: "COLLECTED" }], attempts: [{ attemptNo: 1, kind: "CHARGE", status: "SUCCEEDED", amountMinor: 12000 }], timeline: [{ at: new Date().toISOString(), event: "CHARGE_SUCCEEDED", by: "system" }] } });
+    await prisma.kiorexCommissionCollection.create({ data: { tenantId: tenant.id, runRef: `crn_fx_${sfx}`, periodKey: new Date().toISOString().slice(0, 7) + "-05", status: "COLLECTED", mode: "AUTO_CHARGE_SAVED_METHOD", modeRequested: "AUTO_CHARGE_SAVED_METHOD", provider: "paymob", currency: "EGP", claimsCount: 1, claimsMinor: 12000, collectedMinor: 12000, version: BigInt(100), claims: [{ chargeId: charge.id, amountMinor: 12000, collectedMinor: 12000, collectionStatus: "COLLECTED", ...(opts.com3 ? { disputeStatus: "OPEN", disputeDeadline: new Date(Date.now() + 9 * day).toISOString(), tender: "CASH", rateSource: "DEFAULT", rateSnapshot: { source: "DEFAULT", version: 3, spec: { feeType: "FLAT", flatMinor: 12000 } } } : {}) }], attempts: [{ attemptNo: 1, kind: "CHARGE", status: "SUCCEEDED", amountMinor: 12000 }], timeline: [{ at: new Date().toISOString(), event: "CHARGE_SUCCEEDED", by: "system" }] } });
   }
 
   if (opts.commission) {
     // COM-2: what Kiorex reports for this organisation (a default and, from last month, its own rate agreed with Kiorex)
+    const params = opts.com3 === "set" ? { disputeWindowDays: 9, invoiceDueDays: 11, graceDays: 6, retryDays: [2, 6], reminderDays: [-4, 0], savedMethodChargeAllowed: false } : {};
     const spec = (o: object) => ({ feeType: "PERCENT", percentBps: 1250, flatMinor: null, minMinor: 500, maxMinor: 9000, mode: null, ...o });
     await prisma.kiorexCommissionRateView.create({ data: { tenantId: tenant.id, product: "CLINIC", version: BigInt(Date.now()), view: { mode: null, history: [
-      { version: 1, scope: "DEFAULT", kind: "RATE", effectiveFrom: "2026-01-01T00:00:00.000Z", reason: null, spec: spec({}) },
-      { version: 1, scope: "ORG", kind: "RATE", effectiveFrom: "2026-02-01T00:00:00.000Z", reason: "volume agreement", spec: spec({ feeType: "FLAT", percentBps: null, flatMinor: 4000, minMinor: null, maxMinor: null, mode: "NET_FROM_PAYOUT" }) },
-    ] } } });
+      { version: 1, scope: "DEFAULT", kind: "RATE", effectiveFrom: "2026-01-01T00:00:00.000Z", reason: null, spec: spec(params) },
+      { version: 1, scope: "ORG", kind: "RATE", effectiveFrom: "2026-02-01T00:00:00.000Z", reason: "volume agreement", spec: spec({ feeType: "FLAT", percentBps: null, flatMinor: 4000, minMinor: null, maxMinor: null, mode: "NET_FROM_PAYOUT", ...params }) },
+    ], ...(opts.com3 === "set" ? {
+      disclosure: { rateDisclosure: { en: "TEST rate disclosure written by Kiorex", ar: "نص تجريبي للإفصاح عن النسبة كتبته كيوركس" }, termsSummary: { en: "TEST terms summary", ar: "" }, showOverrideReason: true, wordingSet: true },
+      counsel: { status: "APPROVED_WITH_CONDITIONS" },
+    } : opts.com3 === "unset" ? { disclosure: { rateDisclosure: { en: "", ar: "" }, termsSummary: { en: "", ar: "" }, showOverrideReason: false, wordingSet: false }, counsel: { status: "NOT_REVIEWED" } } : {}) } } });
+    if (opts.com3) await prisma.kiorexPayout.create({ data: { tenantId: tenant.id, clinicId: clinic.id, payoutRef: `po-fx-${sfx}`, amount: 80, currency: "EGP", paidAt: new Date(), commissionDeducted: 40 } });
+    if (opts.com3) await prisma.kiorexCommissionCharge.update({ where: { id: chargeId! }, data: { tender: "CASH" } });
   }
 
   const org: Org = { tenantId: tenant.id, clinicId: clinic.id, admin: admin.email, finance: finance.email, reception: reception.email, password: PASSWORD, ids: { marketId: market.id } };

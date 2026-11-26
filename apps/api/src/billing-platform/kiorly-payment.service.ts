@@ -17,6 +17,7 @@ import { notifyOnCall } from "../observability/notify-on-call";
 import { isPlatformSuperAdmin } from "../common/platform-super-admin";
 import type { JwtUser } from "../auth/jwt-user";
 import { KIORLY_AUTO_CHARGE_RETRY_DAYS } from "./kiorly-dunning";
+import { autoChargeRetryDaysWith, loadRateParams, savedMethodChargeAllowedWith } from "../kiorex/commission-rate-params";
 import { PaymentGatewayRegistry } from "./payment-gateways/payment-gateway.registry";
 import { KiorlyPaymentMethodsService } from "./kiorly-payment-methods.service";
 import { assertNoPanOrCvvInBody } from "./kiorly-payment-no-pan";
@@ -540,6 +541,9 @@ export class KiorlyPaymentService {
     const amountDue = invoice.total.sub(invoice.amountPaid);
     if (amountDue.lte(0)) return false;
 
+    // COM-3: when Kiorex says a saved-method charge is not permitted for this organisation, an invoice that collects Kiorex commission stays an invoice (the patient-visible listing is never touched: SB-05)
+    if (!savedMethodChargeAllowedWith(await loadRateParams(this.prisma, invoice.tenantId)) && (await this.prisma.kiorexCommissionCharge.count({ where: { kiorlyInvoiceId: invoiceId } })) > 0) return false;
+
     const token = await this.paymentMethods.getDefaultCardToken(invoice.tenantId);
     if (!token) return false;
 
@@ -580,7 +584,9 @@ export class KiorlyPaymentService {
         continue;
       }
       const attempt = inv.autoChargeAttempts + 1;
-      const retryDay = KIORLY_AUTO_CHARGE_RETRY_DAYS[attempt - 1];
+      // COM-3: retry days Kiorex set on the organisation's rate (commission invoices only), else the built-in 1 / 3 / 7
+      const isCommission = (await this.prisma.kiorexCommissionCharge.count({ where: { kiorlyInvoiceId: inv.id } })) > 0;
+      const retryDay = (isCommission ? autoChargeRetryDaysWith(KIORLY_AUTO_CHARGE_RETRY_DAYS, await loadRateParams(this.prisma, inv.tenantId)) : KIORLY_AUTO_CHARGE_RETRY_DAYS)[attempt - 1];
       if (retryDay == null) {
         await this.prisma.kiorlyInvoice.update({
           where: { id: inv.id },
