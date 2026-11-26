@@ -81,6 +81,23 @@ describe("COM-2 Kiorex organisation rate prices the Clinic commission charge", (
     assert.deepEqual([(await of(late)).amount.toFixed(2), (await of(late)).rateSource], ["30.00", "KIOREX_DEFAULT"]);
   });
 
+  it("LG-COM-20: the treatment of the visit's tender kind prices the charge; an unset kind and an older view inherit the base; the claim says which kind (and the transfer is cash-type on the wire)", async () => {
+    const tenders = { CASH_TRANSFER: { feeType: "FLAT", flatMinor: 1500 }, ONLINE: { maxMinor: 1000 } };
+    const withT = [row(1, "DEFAULT", "2026-01-01T00:00:00.000Z", spec({ percentBps: 1000, minMinor: 500, maxMinor: 9000, tenders }))];
+    const at = (t: { appointmentId: string }, data: object) => prisma.appointment.update({ where: { id: t.appointmentId }, data });
+    const run = async (tag: string, history: object[], apt: object) => { const t = await org(tag, history); await at(t, apt); await checkIn(t, new Date("2026-06-01T10:00:00Z")); return { t, c: await prisma.kiorexCommissionCharge.findFirstOrThrow({ where: { appointmentId: t.appointmentId } }) }; };
+    const transfer = await run("tt", withT, { checkInCollectionMode: "MONEY_TRANSFER", checkInTransferChannel: "INSTAPAY" });
+    assert.deepEqual([transfer.c.amount.toFixed(2), transfer.c.tender, transfer.c.tenderMethod, transfer.c.tenderDetail, transfer.c.rateTreatment], ["15.00", "CASH", "CASH_TRANSFER", "INSTAPAY", "TENDER"]);
+    const ev = await prisma.outboxEvent.findFirstOrThrow({ where: { tenantId: transfer.t.tenantId, type: "COMMISSION_CHARGE_CREATED" } });
+    assert.deepEqual([(ev.payload as Record<string, unknown>).tender, (ev.payload as Record<string, unknown>).tenderMethod, (ev.payload as Record<string, unknown>).tenderDetail, (ev.payload as Record<string, unknown>).amount], ["CASH", "CASH_TRANSFER", "INSTAPAY", "15.00"]);
+    const cash = await run("tc", withT, { checkInCollectionMode: "CASH_ON_VISIT" }); // CASH has no entry: base 10 % = 30.00
+    assert.deepEqual([cash.c.amount.toFixed(2), cash.c.tenderMethod, cash.c.rateTreatment], ["30.00", "CASH", "BASE"]);
+    const unknown = await run("tu", withT, { checkInCollectionMode: "MONEY_TRANSFER", checkInTransferChannel: "ORG_WALLET" }); // not one of the three: unknown stays unknown, base rate
+    assert.deepEqual([unknown.c.amount.toFixed(2), unknown.c.tender, unknown.c.tenderMethod, unknown.c.rateTreatment], ["30.00", null, null, "BASE"]);
+    const older = await run("to", [row(1, "DEFAULT", "2026-01-01T00:00:00.000Z", spec({ percentBps: 1000, minMinor: 500, maxMinor: 9000 }))], { checkInCollectionMode: "MONEY_TRANSFER", checkInTransferChannel: "INSTAPAY" });
+    assert.deepEqual([older.c.amount.toFixed(2), older.c.tenderMethod, older.c.rateTreatment], ["30.00", "CASH_TRANSFER", "BASE"]); // a view without tenders: same price as cash
+  });
+
   it("a charge keeps its price when Kiorex later changes the rate (frozen at check-in); the event still carries the amount", async () => {
     const t = await org("freeze", [row(1, "DEFAULT", "2026-01-01T00:00:00.000Z", spec({ percentBps: 1000 }))]);
     await checkIn(t, new Date("2026-06-01T10:00:00Z"));

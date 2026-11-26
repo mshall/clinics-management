@@ -8,7 +8,7 @@ import { adminViewEnabled, canViewKiorexCommissions } from "./kiorex-commission-
 import { effectiveRateAt, parseCounselStatus, parseDisclosure, rateParamsOf, rateViewProblems, type RateHistoryRow } from "./commission-rate-view";
 import { normalizeClaims, type ClaimView } from "./commission-claim-view";
 import { localStatement, normalizeStatement, periodRange, statementCsv, type StatementView } from "./commission-statement";
-import { asTender } from "./commission-tender";
+import { asTender, asTenderDetail, asTenderMethod } from "./commission-tender";
 import { kiorexApiBase } from "../marketplace/kiorex-connect.service";
 import { signEvidenceRequest } from "./attribution-evidence.service";
 
@@ -159,7 +159,7 @@ export class CommissionCollectionsService {
         const d = decisions.find((x) => x.appointmentId === r.appointmentId);
         return { id: r.id, appointmentId: r.appointmentId, attendedAt: r.attendedAt.toISOString(), clinician: r.clinician.displayName, amount: r.amount.toFixed(2), currency: r.currency, status: r.status, dispute: r.commissionDispute, decision: d ? { id: d.id, kind: d.decision, amount: d.amount?.toFixed(2) ?? null, policyVersion: d.policyVersion, origin: d.origin, reasonCodes: d.reasonCodes, feeBasis: d.feeBasisMinor != null ? m2(d.feeBasisMinor) : null, sponsoredDiscount: d.sponsoredDiscountMinor != null ? m2(d.sponsoredDiscountMinor) : null, basisPolicyVersion: d.basisPolicyVersion } : null, collection: runOf.get(r.id) ?? null, kiorlyInvoiceId: r.kiorlyInvoiceId,
           // COM-3 parity with what Kiorex ops sees for the same charge: how it was paid, the dispute state and deadline, the rate source and the rate snapshot that priced it
-          tender: claimOf.get(r.id)?.tender ?? asTender(r.tender), disputeStatus: claimOf.get(r.id)?.disputeStatus ?? r.commissionDispute?.status ?? null, disputeDeadline: claimOf.get(r.id)?.disputeDeadline ?? r.disputeDeadline.toISOString(),
+          tender: claimOf.get(r.id)?.tender ?? asTender(r.tender), tenderMethod: claimOf.get(r.id)?.tender ? claimOf.get(r.id)!.tenderMethod : asTenderMethod(r.tenderMethod), tenderDetail: claimOf.get(r.id)?.tender ? claimOf.get(r.id)!.tenderDetail : asTenderDetail(r.tenderDetail), rateTreatment: r.rateTreatment ?? null, disputeStatus: claimOf.get(r.id)?.disputeStatus ?? r.commissionDispute?.status ?? null, disputeDeadline: claimOf.get(r.id)?.disputeDeadline ?? r.disputeDeadline.toISOString(),
           rateSource: claimOf.get(r.id)?.rateSource ?? r.rateSource ?? null, rateSnapshot: claimOf.get(r.id)?.rateSnapshot ?? null };
       }),
     };
@@ -215,7 +215,7 @@ export class CommissionCollectionsService {
     await this.need(user, tenantId);
     if (!EXPORT_VIEWS.includes(view)) throw new BadRequestException("Unknown export view");
     let header: string[]; let rows: unknown[][];
-    if (view === "ledger") { const l = await this.ledger(user, tenantId, { period, pageSize: 200 }); header = ["appointment", "attendedAt", "clinician", "amount", "currency", "status", "decisionKind", "decisionAmount", "policyVersion", "feeBasis", "sponsoredDiscount", "basisPolicyVersion", "collectionPeriod", "collectionStatus", "dispute", "tender", "disputeDeadline", "rateSource"]; rows = l.items.map((r) => [r.appointmentId, r.attendedAt, r.clinician, r.amount, r.currency, r.status, r.decision?.kind, r.decision?.amount, r.decision?.policyVersion, r.decision?.feeBasis, r.decision?.sponsoredDiscount, r.decision?.basisPolicyVersion, r.collection?.periodKey, r.collection?.claimStatus, r.dispute?.status, r.tender, r.disputeDeadline, r.rateSource]); }
+    if (view === "ledger") { const l = await this.ledger(user, tenantId, { period, pageSize: 200 }); header = ["appointment", "attendedAt", "clinician", "amount", "currency", "status", "decisionKind", "decisionAmount", "policyVersion", "feeBasis", "sponsoredDiscount", "basisPolicyVersion", "collectionPeriod", "collectionStatus", "dispute", "tender", "disputeDeadline", "rateSource", "tenderMethod", "tenderDetail", "rateTreatment"]; rows = l.items.map((r) => [r.appointmentId, r.attendedAt, r.clinician, r.amount, r.currency, r.status, r.decision?.kind, r.decision?.amount, r.decision?.policyVersion, r.decision?.feeBasis, r.decision?.sponsoredDiscount, r.decision?.basisPolicyVersion, r.collection?.periodKey, r.collection?.claimStatus, r.dispute?.status, r.tender, r.disputeDeadline, r.rateSource, r.tenderMethod, r.tenderDetail, r.rateTreatment]); }
     else if (view === "collections") { const c = await this.collections(user, tenantId); header = ["period", "status", "mode", "fallbackReason", "provider", "currency", "claims", "collected", "deducted", "invoiced", "paid", "open", "invoiceNo", "invoiceDueAt"]; rows = c.items.map((r) => [r.periodKey, r.status, r.mode, r.fallbackReason, r.provider, r.currency, r.claims, r.collected, r.deducted, r.invoiced, r.paid, r.open, r.invoiceNo, r.invoiceDueAt]); }
     else if (view === "deductions") { const d = await this.deductions(user, tenantId); header = ["payoutRef", "paidAt", "gross", "cash", "commissionDeducted", "currency"]; rows = d.items.map((r) => [r.payoutRef, r.paidAt, r.gross, r.cash, r.commissionDeducted, r.currency]); }
     else if (view === "disputes") { const d = await this.disputes(user, tenantId); header = ["appointment", "reason", "status", "resolution", "amount", "currency", "createdAt", "resolvedAt"]; rows = d.items.map((r) => [r.appointmentId, r.reason, r.status, r.resolution, r.amount, r.currency, r.createdAt, r.resolvedAt]); }
@@ -284,7 +284,7 @@ export class CommissionCollectionsService {
       return { ...v, orgRef: tenantId };
     }
     const [charges, runs, payouts, tenant] = await Promise.all([
-      this.prisma.kiorexCommissionCharge.findMany({ where: { tenantId, createdAt: { gte: r.from, lt: r.to } }, select: { id: true, amount: true, status: true, tender: true, currency: true } }),
+      this.prisma.kiorexCommissionCharge.findMany({ where: { tenantId, createdAt: { gte: r.from, lt: r.to } }, select: { id: true, amount: true, status: true, tender: true, tenderMethod: true, tenderDetail: true, currency: true } }),
       this.prisma.kiorexCommissionCollection.findMany({ where: { tenantId }, select: { claims: true } }),
       this.prisma.kiorexPayout.findMany({ where: { tenantId, paidAt: { gte: r.from, lt: r.to } }, orderBy: { paidAt: "asc" } }),
       this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { baseCurrency: true } }),
@@ -294,8 +294,8 @@ export class CommissionCollectionsService {
     const toMinor = (d: Prisma.Decimal) => Math.round(Number(d) * 100);
     return localStatement({
       orgRef: tenantId, from: r.from, to: r.to, currency: charges[0]?.currency ?? payouts[0]?.currency ?? tenant?.baseCurrency ?? "EGP",
-      charges: charges.map((c) => ({ amountMinor: toMinor(c.amount), status: c.status, tender: c.tender })),
-      claims: claims.map((c) => ({ collectedMinor: c.collectedMinor ?? 0, disputeStatus: c.disputeStatus, tender: c.tender, chargeStatus: c.chargeStatus })),
+      charges: charges.map((c) => ({ amountMinor: toMinor(c.amount), status: c.status, tender: c.tender, tenderMethod: c.tenderMethod, tenderDetail: c.tenderDetail })),
+      claims: claims.map((c) => ({ collectedMinor: c.collectedMinor ?? 0, disputeStatus: c.disputeStatus, tender: c.tender, tenderMethod: c.tenderMethod, chargeStatus: c.chargeStatus })),
       payouts: payouts.map((p) => ({ payoutRef: p.payoutRef, paidAt: p.paidAt, cashMinor: toMinor(p.amount), commissionDeductedMinor: toMinor(p.commissionDeducted) })),
     });
   }

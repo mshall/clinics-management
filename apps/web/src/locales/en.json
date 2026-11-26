@@ -5912,6 +5912,7 @@
         "DEFAULT": "Default for clinics"
       },
       "percentOf": "{{pct}} of the fee",
+      "sameAsBase": "Same as base",
       "flatPer": "{{amount}} per charge",
       "min": "min",
       "max": "max",
@@ -5938,7 +5939,9 @@
     "tender": {
       "CASH": "Cash at the visit",
       "ONLINE": "Online (Kiorex Pay)",
-      "NONE": "Not reported"
+      "NONE": "Not reported",
+      "CASH_TRANSFER": "Cash transfer",
+      "detail": { "BANK_TRANSFER": "Bank transfer", "INSTAPAY": "InstaPay", "CARD_TERMINAL": "Card terminal" }
     },
     "dispute": {
       "until": "Dispute until {{date}}"
@@ -5990,6 +5993,10 @@
         "cashAccrued": "Cash-visit commission accrued",
         "cashNetted": "Cash-visit commission netted",
         "cashOpen": "Cash-visit commission still open",
+        "cashOnlyAccrued": "Of which cash at the visit: accrued",
+        "cashTransferAccrued": "Of which cash transfer: accrued",
+        "cashTransferNetted": "Of which cash transfer: netted",
+        "unknownTender": "Visits with payment method not reported (exception)",
         "dedCommission": "Deduction: commission",
         "dedFees": "Deduction: fees",
         "dedRefunds": "Deduction: refunds",
