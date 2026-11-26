@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +19,6 @@ type Market = { id: string; code: string };
 
 /** SUB-01 platform ops: subscriptions list, MRR / churn-lite / downgrade counts, forced actions (audited, reason mandatory) and the maker-checker policy. English only (ops console). */
 export function PlatformSubscriptionsTab() {
-  const { t } = useTranslation();
   const qc = useQueryClient();
   const [planKey, setPlanKey] = useState("");
   const [autoRenew, setAutoRenew] = useState("");

@@ -226,17 +226,12 @@ describe("SB-05 Lite commission invoicing (integration)", () => {
     assert.equal(t.kiorlySettlementCarry, null);
   });
 
-  it("unpaid Lite commission > 30 days pauses the Kiorex listing; Kiorly stays ACTIVE; payment resumes", async () => {
-    const listing = await prisma.marketplaceListing.create({
-      data: { tenantId, clinicId, clinicianId: ownerId, status: ListingStatus.LIVE, profileJson: {} },
-    });
-    const dueAt = new Date();
-    dueAt.setUTCDate(dueAt.getUTCDate() - 31);
-    await prisma.kiorlyInvoice.create({
+  async function unpaidCommissionInvoice(tag: string, dueAt: Date) {
+    return prisma.kiorlyInvoice.create({
       data: {
         tenantId,
-        number: `INV-${suffix}`,
-        periodKey: `p-${suffix}`,
+        number: `INV-${tag}-${suffix}`,
+        periodKey: `p-${tag}-${suffix}`,
         periodStart: new Date(dueAt.getTime() - 30 * 86_400_000),
         periodEnd: new Date(dueAt.getTime() - 86_400_000),
         currency: "EGP",
@@ -259,30 +254,75 @@ describe("SB-05 Lite commission invoicing (integration)", () => {
         },
       },
     });
+  }
 
-    await dunning.runForTenant(tenantId, new Date());
-    const sub = await prisma.subscription.findUniqueOrThrow({ where: { tenantId } });
-    assert.equal(sub.status, SubscriptionStatus.ACTIVE, "Lite never goes read-only for unpaid commission");
-    const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
-    assert.ok(tenant.kiorexBillingPausedAt);
-    const paused = await prisma.marketplaceListing.findUniqueOrThrow({ where: { id: listing.id } });
-    assert.equal(paused.status, ListingStatus.PAUSED);
-    assert.equal(paused.pausedReason, "billing");
-    const state = await dunning.getAccessState(tenantId, { isTenantOwner: true });
-    assert.equal(state.marketplacePaused, true);
+  it("SB-05 decision (26 Nov 2026): unpaid Lite commission never pauses or hides the Kiorex listing at any age; Kiorly stays ACTIVE", async () => {
+    const listing = await prisma.marketplaceListing.create({
+      data: { tenantId, clinicId, clinicianId: ownerId, status: ListingStatus.LIVE, profileJson: {} },
+    });
+    const dueAt = new Date();
+    dueAt.setUTCDate(dueAt.getUTCDate() - 31);
+    await unpaidCommissionInvoice("old", dueAt);
 
+    // D+31 (the old pause point), then D+60 and D+120: the listing is never paused by the commission
+    for (const extraDays of [0, 29, 89]) {
+      const now = new Date(Date.now() + extraDays * 86_400_000);
+      await dunning.runForTenant(tenantId, now);
+      const sub = await prisma.subscription.findUniqueOrThrow({ where: { tenantId } });
+      assert.equal(sub.status, SubscriptionStatus.ACTIVE, "Lite never goes read-only for unpaid commission");
+      const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+      assert.equal(tenant.kiorexBillingPausedAt, null, `no billing pause at D+${31 + extraDays}`);
+      const row = await prisma.marketplaceListing.findUniqueOrThrow({ where: { id: listing.id } });
+      assert.notEqual(row.status, ListingStatus.PAUSED, `listing not paused at D+${31 + extraDays}`);
+      assert.notEqual(row.pausedReason, "billing");
+      const state = await dunning.getAccessState(tenantId, { isTenantOwner: true });
+      assert.equal(state.marketplacePaused, false);
+      assert.equal(state.status, SubscriptionStatus.ACTIVE);
+      assert.equal(state.daysOverdue >= 31, true, "aging is still tracked");
+    }
+    const pauseAudits = await prisma.auditLog.count({ where: { tenantId, action: "kiorex.listing.billing_paused" } });
+    assert.equal(pauseAudits, 0);
+
+    // The fees card carries no pause state any more
+    const card = await liteFees.getLiteFees(owner);
+    assert.equal("marketplacePaused" in card, false);
+
+    // payment still reconciles (no flag to clear, nothing breaks)
     await prisma.kiorlyInvoice.updateMany({
       where: { tenantId, status: KiorlyInvoiceStatus.ISSUED },
       data: { status: KiorlyInvoiceStatus.PAID, amountPaid: 150, paidAt: new Date() },
     });
     await dunning.reconcileAfterPayment(tenantId);
-    const resumed = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
-    assert.equal(resumed.kiorexBillingPausedAt, null);
+    const after = await prisma.marketplaceListing.findUniqueOrThrow({ where: { id: listing.id } });
+    assert.notEqual(after.pausedReason, "billing");
+  });
+
+  it("an unpaid commission still gets its reminder timeline record (reminders and aging are kept)", async () => {
+    const dueAt = new Date(Date.now() + 3 * 86_400_000 + 3_600_000);
+    await unpaidCommissionInvoice("rem", dueAt);
+    await dunning.runForTenant(tenantId, new Date());
+    const sub = await prisma.subscription.findUniqueOrThrow({ where: { tenantId } });
+    const events = await prisma.subscriptionEvent.findMany({ where: { subscriptionId: sub.id, type: "dunning_reminder_d3" } });
+    assert.ok(events.length >= 1, "reminder D-3 recorded");
+    await prisma.kiorlyInvoice.deleteMany({ where: { tenantId, number: `INV-rem-${suffix}` } });
+  });
+
+  it("a pause flag left by an earlier version is cleared once (audited) and the listing is released", async () => {
+    const dueAt = new Date();
+    dueAt.setUTCDate(dueAt.getUTCDate() - 45);
+    await unpaidCommissionInvoice("stale", dueAt);
+    const listing = await prisma.marketplaceListing.findFirstOrThrow({ where: { tenantId, clinicianId: ownerId } });
+    await prisma.tenant.update({ where: { id: tenantId }, data: { kiorexBillingPausedAt: new Date() } });
+    await prisma.marketplaceListing.update({ where: { id: listing.id }, data: { status: ListingStatus.PAUSED, pausedReason: "billing" } });
+
+    await dunning.runForTenant(tenantId, new Date());
+    const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    assert.equal(tenant.kiorexBillingPausedAt, null);
     const relisted = await prisma.marketplaceListing.findUniqueOrThrow({ where: { id: listing.id } });
     assert.notEqual(relisted.pausedReason, "billing");
-    const audits = await prisma.auditLog.count({
-      where: { tenantId, action: { in: ["kiorex.listing.billing_paused", "kiorex.listing.billing_resumed"] } },
-    });
-    assert.equal(audits, 2);
+    const resumed = await prisma.auditLog.count({ where: { tenantId, action: "kiorex.listing.billing_resumed" } });
+    assert.equal(resumed, 1);
+    await dunning.runForTenant(tenantId, new Date());
+    assert.equal(await prisma.auditLog.count({ where: { tenantId, action: "kiorex.listing.billing_resumed" } }), 1, "idempotent");
   });
 });

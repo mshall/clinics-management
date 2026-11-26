@@ -24,8 +24,6 @@ export type MarketplaceListingEligibilityInput = {
   hasAvailability: boolean;
   profileCompletenessPercent: number;
   ownerPaused?: boolean;
-  /** SB-05: Lite commission invoice unpaid past the market pause window. */
-  kiorexBillingPaused?: boolean;
   /**
    * Set only for SOLO nurse organizations (Nurse edition, ADR-032). `flagEffective` is the nurse.individual_kiorex_listing flag
    * (launch-locked behind gate GKN2, a human gate never recorded by code); `prver04Checked` = the verification was submitted as solo,
@@ -55,10 +53,8 @@ export function evaluateMarketplaceListingEligibility(
   if (input.ownerPaused) {
     blockers.push(MARKETPLACE_BLOCKER.OWNER);
   }
-  if (
-    input.kiorexBillingPaused ||
-    (input.subscriptionStatus && BILLING_BLOCK_STATUSES.has(input.subscriptionStatus))
-  ) {
+  // Subscription state only. An unpaid Kiorex commission never blocks the listing (SB-05, decided 26 Nov 2026).
+  if (input.subscriptionStatus && BILLING_BLOCK_STATUSES.has(input.subscriptionStatus)) {
     blockers.push(MARKETPLACE_BLOCKER.BILLING);
   }
   if (input.verificationStatus !== VerificationStatus.VERIFIED) {

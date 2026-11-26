@@ -15,8 +15,6 @@ export type LiteKiorexFeesSummary = {
   willInvoice: boolean;
   /** Balance that rolls into next month when below the minimum. */
   carryToNextMonth: string;
-  marketplacePaused: boolean;
-  marketplacePausedAt: string | null;
 };
 
 export function liteKiorexFeesFromSettlement(opts: {
@@ -24,7 +22,6 @@ export function liteKiorexFeesFromSettlement(opts: {
   currency: string;
   isLite: boolean;
   calculation: SettlementCalculatorResult;
-  marketplacePausedAt: Date | null;
 }): LiteKiorexFeesSummary {
   const s = opts.calculation.summary;
   const fees = roundMoney(Number(s.commissionGross));
@@ -43,7 +40,5 @@ export function liteKiorexFeesFromSettlement(opts: {
     minInvoice: min.toFixed(2),
     willInvoice,
     carryToNextMonth: (willInvoice ? 0 : projected).toFixed(2),
-    marketplacePaused: opts.marketplacePausedAt != null,
-    marketplacePausedAt: opts.marketplacePausedAt?.toISOString() ?? null,
   };
 }

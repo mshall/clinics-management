@@ -34,7 +34,6 @@ export function commercialConfigToFeatureDefaultsPatch(config: CommercialConfig)
         graceEndDay: config.dunning.graceDays,
         readOnlyFromDay: config.dunning.readOnlyAfterDays,
         suspendedFromDay: config.dunning.suspendAfterDays,
-        liteCommissionMarketplacePauseDays: 30,
         reminderDaysBeforeDue: [3, 0],
       },
       ...(config.subscription ? { subscription: { ...config.subscription, renewalReminderDaysBefore: [...config.subscription.renewalReminderDaysBefore] } } : {}),

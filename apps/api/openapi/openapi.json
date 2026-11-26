@@ -7130,6 +7130,312 @@
         ]
       }
     },
+    "/billing/kiorex-commissions/access": {
+      "get": {
+        "operationId": "CommissionCollectionsController_access",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "May the signed-in user see Kiorex commission figures",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/summary": {
+      "get": {
+        "operationId": "CommissionCollectionsController_summary",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Totals: charges by status, collected, kept from payouts, invoiced, paid, open",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/ledger": {
+      "get": {
+        "operationId": "CommissionCollectionsController_ledger",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Commission charges with the decision, fee basis and collection status that explain each",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/collections": {
+      "get": {
+        "operationId": "CommissionCollectionsController_collections",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Kiorex collection runs for the organization",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/collections/{id}": {
+      "get": {
+        "operationId": "CommissionCollectionsController_collection",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One collection run: claims, attempts, status timeline, balance check",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/deductions": {
+      "get": {
+        "operationId": "CommissionCollectionsController_deductions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Payouts that carry a commission deduction",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/disputes": {
+      "get": {
+        "operationId": "CommissionCollectionsController_disputes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Commission disputes (CR-08) with status",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/rate": {
+      "get": {
+        "operationId": "CommissionCollectionsController_rate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "COM-2: the organization's effective commission rate, the default, any override and the history (read only; set by Kiorex)",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/charges/{id}/timeline": {
+      "get": {
+        "operationId": "CommissionCollectionsController_timeline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Status timeline of one charge",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/export/{view}.csv": {
+      "get": {
+        "operationId": "CommissionCollectionsController_csv",
+        "parameters": [
+          {
+            "name": "view",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "CSV export (audited)",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/kiorex-commissions/statement/{period}.pdf": {
+      "get": {
+        "operationId": "CommissionCollectionsController_pdf",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Bilingual statement PDF for a month (audited)",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/kiorex/commission-decisions": {
       "get": {
         "operationId": "CommissionDecisionsController_explain",
@@ -11546,6 +11852,284 @@
         "summary": "Import a remittance and auto-match claim lines",
         "tags": [
           "claims"
+        ]
+      }
+    },
+    "/billing/pay/matching/ipn": {
+      "post": {
+        "operationId": "PayCollectionsController_ipn",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayIpnUploadBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/matching/queue": {
+      "get": {
+        "operationId": "PayCollectionsController_queue",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/matching/{id}/confirm": {
+      "post": {
+        "operationId": "PayCollectionsController_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayMatchConfirmBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/matching/{id}/reject": {
+      "post": {
+        "operationId": "PayCollectionsController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayMatchRejectBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/collections/prepare": {
+      "post": {
+        "operationId": "PayCollectionsController_prepare",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayPrepareBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/links": {
+      "post": {
+        "operationId": "PayCollectionsController_link",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayLinkCreateBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/links/{id}/cancel": {
+      "post": {
+        "operationId": "PayCollectionsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/reports/rollup": {
+      "get": {
+        "operationId": "PayCollectionsController_rollup",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/public/pay/l/{token}": {
+      "get": {
+        "operationId": "PayLinkPublicController_view",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "billing"
         ]
       }
     },
@@ -24817,6 +25401,118 @@
         ]
       }
     },
+    "/marketplace/v1/commission-collections": {
+      "post": {
+        "operationId": "MarketplaceController_recordCommissionCollection",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Nonce",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Kiorex reports a commission collection run (COM-1); idempotent on runId, newest version wins, refused when it names another organization's charge",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
+    "/marketplace/v1/commission-rates": {
+      "post": {
+        "operationId": "MarketplaceController_recordCommissionRate",
+        "parameters": [
+          {
+            "name": "X-Kiorly-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Nonce",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Kiorly-Client-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Kiorex reports the organization's commission rate view (COM-2: default, override, history); idempotent, newest version wins",
+        "tags": [
+          "marketplace"
+        ]
+      }
+    },
     "/marketplace/v1/analytics/profile-views": {
       "post": {
         "operationId": "MarketplaceController_syncProfileViews",
@@ -35049,6 +35745,26 @@
           "reference",
           "lines"
         ]
+      },
+      "PayIpnUploadBodyDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "PayMatchConfirmBodyDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "PayMatchRejectBodyDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "PayPrepareBodyDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "PayLinkCreateBodyDto": {
+        "type": "object",
+        "properties": {}
       },
       "OperationDto": {
         "type": "object",

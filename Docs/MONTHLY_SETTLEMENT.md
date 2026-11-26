@@ -37,7 +37,7 @@ Commission only (SB-05). An invoice is created only when this month's Kiorex fee
 
 Re-runs are idempotent: `Tenant.kiorlySettlementCarryPeriodKey` + `kiorlySettlementCarryIn` record which period wrote the carry and what went into it, so re-settling the same month never double-counts.
 
-Payment uses the same SB-02 rails (card token, Fawry, InstaPay). Unpaid Lite invoices past `kiorlyBilling.dunning.liteCommissionMarketplacePauseDays` (default 30) **pause the Kiorex listing** (`Tenant.kiorexBillingPausedAt`, listing `PAUSED` / `billing`, no new holds or bookings). The Lite subscription itself never escalates to read-only — Kiorly keeps working. Payment clears the pause and re-evaluates listings.
+Payment uses the same SB-02 rails (card token, Fawry, InstaPay). Unpaid Lite invoices are reminded and aged but **never pause or hide the Kiorex listing** (decision of 26 Nov 2026: collection never pauses listing; this replaces the earlier D+30 pause and the `liteCommissionMarketplacePauseDays` setting, which no longer exists; reversible by a code change only, never a flag). The Lite subscription itself never escalates to read-only — Kiorly keeps working. See [DUNNING.md](./DUNNING.md#kiorex-listing-and-unpaid-commission-sb-05-decided-26-nov-2026).
 
 `GET /api/v1/billing/lite-fees?period=YYYY-MM` powers the **Kiorex fees this month** card (fees, carried forward, projected total, minimum invoice, pause notice) shown on Plan & billing instead of the subscription block for Lite.
 

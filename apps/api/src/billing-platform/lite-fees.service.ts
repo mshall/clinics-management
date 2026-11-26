@@ -27,7 +27,6 @@ export class LiteFeesService {
       where: { id: tenantId },
       select: {
         baseCurrency: true,
-        kiorexBillingPausedAt: true,
         subscription: { select: { plan: { select: { key: true } }, planPrice: { select: { currency: true } } } },
       },
     });
@@ -38,7 +37,6 @@ export class LiteFeesService {
       currency,
       isLite: tenant?.subscription?.plan.key === PlanKey.LITE,
       calculation: preview.calculation,
-      marketplacePausedAt: tenant?.kiorexBillingPausedAt ?? null,
     });
   }
 }

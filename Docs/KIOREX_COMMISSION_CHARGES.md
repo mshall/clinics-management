@@ -72,3 +72,7 @@ The commission **rate** is set by Kiorex super admins (default per organisation 
 - `cr03-commission-charge.integration.test.ts` — check-in → revert → check-in (one active row), frozen amount after rate change, confirm
 - `cr08-commission-dispute.node.test.ts` — 3 working-day SLA
 - `cr08-commission-dispute.integration.test.ts` — closed window, auto `EXISTING_PATIENT`, manual reject + owner notify
+
+## Collection never pauses listing (decided 26 Nov 2026)
+
+An unpaid Kiorex commission (the Lite invoice, a commission line on a plan invoice, or a COM-1 collection that failed) never pauses or hides the Kiorex listing and never blocks booking, plan or care. The former SB-05 D+30 listing pause was removed (founder delegated the choice to the recommendation); reminders, aging, escalation, the dispute path and the timeline records stay. It is a code rule, not a flag, so it is reversible only by a code change. Detail and tests: [DUNNING.md](./DUNNING.md#kiorex-listing-and-unpaid-commission-sb-05-decided-26-nov-2026).
