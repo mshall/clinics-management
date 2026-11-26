@@ -53,10 +53,9 @@ export class DunningService {
     const anchor = await this.oldestUnpaidInvoiceDue(tenantId);
     const daysOverdue = anchor ? daysAfterDue(anchor, new Date()) : 0;
     const phase = anchor ? resolveDunningPhase(daysOverdue, pack) : "CURRENT";
-    const litePause = await this.liteCommissionMarketplacePause(sub.plan.key, tenantId, pack.liteCommissionMarketplacePauseDays);
 
     const status = sub.status;
-    const marketplacePaused = kiorexMarketplacePaused(status, litePause);
+    const marketplacePaused = kiorexMarketplacePaused(status);
     const allowedActions = (Object.values(SubscriptionAccessAction) as SubscriptionAccessAction[]).filter((a) =>
       subscriptionAllowsAction(status, a, user as never),
     );
@@ -69,7 +68,6 @@ export class DunningService {
       isOwner: Boolean(user?.isTenantOwner),
       daysOverdue,
       banner: this.bannerKey(status, phase, Boolean(user?.isTenantOwner)),
-      liteCommissionPause: litePause,
     };
   }
 
@@ -141,7 +139,7 @@ export class DunningService {
         await this.subscriptions.transitionStatus(tenantId, SubscriptionStatus.ACTIVE, null, "dunning_cleared");
         await this.listings.recomputeTenantListings(tenantId);
       }
-      await this.syncKiorexBillingPause(tenantId, false);
+      await this.clearLegacyKiorexBillingPause(tenantId);
       return true;
     }
 
@@ -154,7 +152,7 @@ export class DunningService {
       const moved = await this.renewal.downgradeToLite(tenantId, "dunning_exhausted", null, now);
       if (moved) return true;
     }
-    // Lite pays commission only: unpaid fees pause the Kiorex listing, Kiorly itself keeps working.
+    // Lite pays commission only: an unpaid commission is reminded, aged and escalated, but never pauses or hides the Kiorex listing (SB-05, decided 26 Nov 2026).
     let target = isLite ? null : subscriptionStatusForDaysOverdue(daysOverdue, pack);
     if (downgradeMode && (target === SubscriptionStatus.READ_ONLY || target === SubscriptionStatus.SUSPENDED)) {
       target = SubscriptionStatus.GRACE; // full access with the banner until the downgrade day
@@ -167,13 +165,7 @@ export class DunningService {
 
     await this.maybeSendReminders(tenantId, sub.id, anchor, pack, now);
 
-    const litePause = await this.liteCommissionMarketplacePause(
-      sub.plan.key,
-      tenantId,
-      pack.liteCommissionMarketplacePauseDays,
-      now,
-    );
-    await this.syncKiorexBillingPause(tenantId, litePause);
+    await this.clearLegacyKiorexBillingPause(tenantId);
 
     return true;
   }
@@ -219,7 +211,7 @@ export class DunningService {
       await this.subscriptions.transitionStatus(tenantId, SubscriptionStatus.ACTIVE, null, "payment_received");
       await this.listings.recomputeTenantListings(tenantId);
     }
-    await this.syncKiorexBillingPause(tenantId, false);
+    await this.clearLegacyKiorexBillingPause(tenantId);
   }
 
   private readonly DUNNING_ESCALATION: SubscriptionStatus[] = [
@@ -309,27 +301,6 @@ export class DunningService {
     }
   }
 
-  private async liteCommissionMarketplacePause(
-    planKey: PlanKey,
-    tenantId: string,
-    pauseAfterDays: number,
-    now = new Date(),
-  ): Promise<boolean> {
-    if (planKey !== PlanKey.LITE) return false;
-    const row = await this.prisma.kiorlyInvoice.findFirst({
-      where: {
-        tenantId,
-        status: { in: [...UNPAID_INVOICE_STATUSES] },
-        dueAt: { not: null },
-        paymentUnderReview: false,
-      },
-      orderBy: { dueAt: "asc" },
-      select: { dueAt: true, total: true, amountPaid: true },
-    });
-    if (!row?.dueAt || row.total.sub(row.amountPaid).lte(0)) return false;
-    return daysAfterDue(row.dueAt, now) >= pauseAfterDays;
-  }
-
   private async maybeSendReminders(
     tenantId: string,
     subscriptionId: string,
@@ -372,28 +343,26 @@ export class DunningService {
     }
   }
 
-  /** SB-05: set/clear the tenant Kiorex billing pause and re-evaluate listings when it flips. */
-  private async syncKiorexBillingPause(tenantId: string, pause: boolean): Promise<void> {
+  /**
+   * SB-05 (decided 26 Nov 2026): an unpaid commission never pauses or hides the Kiorex listing, so nothing sets
+   * `Tenant.kiorexBillingPausedAt` any more. This clears a flag left by an earlier version (once, audited) and re-evaluates the listings.
+   */
+  private async clearLegacyKiorexBillingPause(tenantId: string): Promise<void> {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { kiorexBillingPausedAt: true },
     });
-    if (!tenant) return;
-    const isPaused = tenant.kiorexBillingPausedAt != null;
-    if (isPaused === pause) return;
+    if (!tenant || tenant.kiorexBillingPausedAt == null) return;
     await this.prisma.$transaction([
-      this.prisma.tenant.update({
-        where: { id: tenantId },
-        data: { kiorexBillingPausedAt: pause ? new Date() : null },
-      }),
+      this.prisma.tenant.update({ where: { id: tenantId }, data: { kiorexBillingPausedAt: null } }),
       this.prisma.auditLog.create({
         data: {
           tenantId,
           actorId: null,
-          action: pause ? "kiorex.listing.billing_paused" : "kiorex.listing.billing_resumed",
+          action: "kiorex.listing.billing_resumed",
           resource: "Tenant",
           resourceId: tenantId,
-          metadata: { reason: "lite_commission_unpaid" } as Prisma.InputJsonValue,
+          metadata: { reason: "commission_never_pauses_listing" } as Prisma.InputJsonValue,
         },
       }),
     ]);

@@ -5,6 +5,8 @@ import { settlePeriod, type SettlementCalculatorInput } from "./settlement-calcu
 import { DEFAULT_LITE_MIN_INVOICE, resolveSettlementMarketPack } from "./settlement-config";
 import { liteKiorexFeesFromSettlement } from "./lite-fees";
 import { resolveCarryForwardIn } from "./settlement.service";
+import { DEFAULT_DUNNING_TIMELINE, dunningTimelineFromFeatureDefaults } from "../subscriptions/dunning-config";
+import { kiorexMarketplacePaused } from "../subscriptions/subscription-access-policy";
 import {
   MARKETPLACE_BLOCKER,
   evaluateMarketplaceListingEligibility,
@@ -91,7 +93,6 @@ describe("SB-05 Lite commission invoicing & minimum invoice", () => {
       currency: "EGP",
       isLite: true,
       calculation: september,
-      marketplacePausedAt: null,
     });
     assert.equal(card.carriedForward, "60.00");
     assert.equal(card.feesThisMonth, "50.00");
@@ -113,13 +114,12 @@ describe("SB-05 Lite commission invoicing & minimum invoice", () => {
       currency: "EGP",
       isLite: true,
       calculation: r,
-      marketplacePausedAt: new Date("2027-08-20T00:00:00Z"),
     });
     assert.equal(card.carriedForward, "40.00");
     assert.equal(card.willInvoice, false);
     assert.equal(card.carryToNextMonth, "70.00");
     assert.equal(card.minInvoice, "100.00");
-    assert.equal(card.marketplacePaused, true);
+    assert.equal("marketplacePaused" in card, false, "the fees card never reports a listing pause (SB-05 decision 26 Nov 2026)");
   });
 
   it("re-settling the period that wrote the carry reuses its carry-in (no double count)", () => {
@@ -140,16 +140,42 @@ describe("SB-05 Lite commission invoicing & minimum invoice", () => {
     );
   });
 
-  it("unpaid Lite commission pauses the Kiorex listing while the subscription stays ACTIVE", () => {
+  it("SB-05 decision (26 Nov 2026): an unpaid Kiorex commission never pauses the listing, even if an old flag value is passed", () => {
     const out = evaluateMarketplaceListingEligibility({
       verificationStatus: VerificationStatus.VERIFIED,
       subscriptionStatus: SubscriptionStatus.ACTIVE,
       marketplaceBookableTypeCount: 1,
       hasAvailability: true,
       profileCompletenessPercent: 100,
+      // a stale caller or an old DB value must not be able to pause the listing any more
       kiorexBillingPaused: true,
-    });
-    assert.equal(out.status, ListingStatus.PAUSED);
-    assert.equal(out.pausedReason, MARKETPLACE_BLOCKER.BILLING);
+    } as never);
+    assert.equal(out.status, ListingStatus.LIVE);
+    assert.deepEqual(out.blockers, []);
+    assert.equal(out.pausedReason, null);
+  });
+
+  it("the subscription state (non-commission dunning) still pauses the listing", () => {
+    for (const subscriptionStatus of [SubscriptionStatus.READ_ONLY, SubscriptionStatus.SUSPENDED]) {
+      const out = evaluateMarketplaceListingEligibility({
+        verificationStatus: VerificationStatus.VERIFIED,
+        subscriptionStatus,
+        marketplaceBookableTypeCount: 1,
+        hasAvailability: true,
+        profileCompletenessPercent: 100,
+      });
+      assert.equal(out.status, ListingStatus.PAUSED);
+      assert.equal(out.pausedReason, MARKETPLACE_BLOCKER.BILLING);
+    }
+  });
+
+  it("there is no commission listing-pause window in the dunning timeline or the market pack bridge", () => {
+    assert.equal("liteCommissionMarketplacePauseDays" in DEFAULT_DUNNING_TIMELINE, false);
+    const fromPack = dunningTimelineFromFeatureDefaults({ kiorlyBilling: { dunning: { liteCommissionMarketplacePauseDays: 30 } } });
+    assert.equal("liteCommissionMarketplacePauseDays" in fromPack, false, "a stale pack value is ignored");
+    assert.equal(kiorexMarketplacePaused(SubscriptionStatus.ACTIVE), false);
+    assert.equal(kiorexMarketplacePaused(SubscriptionStatus.GRACE), false);
+    assert.equal(kiorexMarketplacePaused(SubscriptionStatus.READ_ONLY), true);
+    assert.equal(kiorexMarketplacePaused(SubscriptionStatus.SUSPENDED), true);
   });
 });

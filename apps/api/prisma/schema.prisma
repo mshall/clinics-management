@@ -1400,6 +1400,7 @@ model Tenant {
   kiorlySettlementCarryPeriodKey     String?
   kiorlySettlementCarryIn            Decimal?                            @db.Decimal(14, 2)
   /// SB-05: Lite commission unpaid past the market pause window — Kiorex listings paused (Kiorly keeps working).
+  /// Legacy (SB-05, decided 26 Nov 2026): an unpaid commission never pauses the Kiorex listing, so this is never set; the dunning job clears any old value.
   kiorexBillingPausedAt              DateTime?
   /// ADR-031 — CLINIC | NURSE. Changeable only by the Kiorex super admin (KNED04); never changes DB, API or connector.
   edition                            OrganizationEdition                 @default(CLINIC)

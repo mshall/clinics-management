@@ -59,10 +59,10 @@ export function subscriptionAllowsAction(
   return action === SubscriptionAccessAction.READ;
 }
 
-export function kiorexMarketplacePaused(
-  status: SubscriptionStatus,
-  liteCommissionPause: boolean,
-): boolean {
-  if (liteCommissionPause) return true;
+/**
+ * The Kiorex listing pauses only with the subscription state (READ_ONLY / SUSPENDED). An unpaid Kiorex commission never pauses or hides
+ * the listing (SB-05, decided 26 Nov 2026): collection of commission is separate from visibility.
+ */
+export function kiorexMarketplacePaused(status: SubscriptionStatus): boolean {
   return status === SubscriptionStatus.READ_ONLY || status === SubscriptionStatus.SUSPENDED;
 }

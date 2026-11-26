@@ -14,8 +14,6 @@ export type LiteKiorexFeesDto = {
   minInvoice: string;
   willInvoice: boolean;
   carryToNextMonth: string;
-  marketplacePaused: boolean;
-  marketplacePausedAt: string | null;
 };
 
 function defaultPeriod(): string {
@@ -45,11 +43,6 @@ export function AdminLiteKiorexFeesCard({ period = defaultPeriod() }: { period?:
           <p className="text-destructive">{t("admin.billing.kiorex.liteFees.loadError")}</p>
         ) : data ? (
           <>
-            {data.marketplacePaused ? (
-              <p className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-destructive">
-                {t("admin.billing.kiorex.liteFees.paused")}
-              </p>
-            ) : null}
             <dl className="grid gap-2 sm:grid-cols-3">
               <div>
                 <dt className="text-muted-foreground">{t("admin.billing.kiorex.liteFees.fees")}</dt>

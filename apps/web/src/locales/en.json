@@ -2984,7 +2984,6 @@
           "minInvoice": "We only send an invoice once the total reaches {{amount}} {{currency}}.",
           "willInvoice": "An invoice will be issued at month end.",
           "willCarry": "Below the minimum — {{amount}} {{currency}} carries into next month.",
-          "paused": "Your Kiorex listing is paused because a Kiorex fees invoice is overdue. Kiorly keeps working — pay the invoice to go live again.",
           "loadError": "Could not load Kiorex fees.",
           "noSubscription": "No subscription fee on Lite — Kiorex fees only."
         },

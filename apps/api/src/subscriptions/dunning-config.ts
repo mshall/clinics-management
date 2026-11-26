@@ -8,8 +8,9 @@ export const DEFAULT_DUNNING_TIMELINE = {
   graceEndDay: 14,
   readOnlyFromDay: 15,
   suspendedFromDay: 45,
-  /** Lite plan: pause Kiorex marketplace after this many days with unpaid commission invoice. */
-  liteCommissionMarketplacePauseDays: 30,
+  // SB-05 decision (26 Nov 2026): collecting an unpaid Kiorex commission never pauses or hides the Kiorex listing, so there is no
+  // "pause after N days" setting here (a safety control is a code rule, never a market-pack knob). A stale
+  // `liteCommissionMarketplacePauseDays` in an old market pack is ignored.
 } as const;
 
 export type DunningTimelineConfig = {
@@ -18,7 +19,6 @@ export type DunningTimelineConfig = {
   graceEndDay: number;
   readOnlyFromDay: number;
   suspendedFromDay: number;
-  liteCommissionMarketplacePauseDays: number;
 };
 
 export function dunningTimelineFromFeatureDefaults(featureDefaults: unknown): DunningTimelineConfig {
@@ -49,9 +49,5 @@ export function dunningTimelineFromFeatureDefaults(featureDefaults: unknown): Du
     graceEndDay: readInt("graceEndDay", DEFAULT_DUNNING_TIMELINE.graceEndDay),
     readOnlyFromDay: readInt("readOnlyFromDay", DEFAULT_DUNNING_TIMELINE.readOnlyFromDay),
     suspendedFromDay: readInt("suspendedFromDay", DEFAULT_DUNNING_TIMELINE.suspendedFromDay),
-    liteCommissionMarketplacePauseDays: readInt(
-      "liteCommissionMarketplacePauseDays",
-      DEFAULT_DUNNING_TIMELINE.liteCommissionMarketplacePauseDays,
-    ),
   };
 }

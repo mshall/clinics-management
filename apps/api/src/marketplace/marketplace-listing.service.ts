@@ -178,7 +178,7 @@ export class MarketplaceListingService implements OnModuleInit {
       }),
       this.prisma.subscription.findUnique({
         where: { tenantId: row.tenantId },
-        select: { status: true, tenant: { select: { kiorexBillingPausedAt: true } } },
+        select: { status: true },
       }),
       this.prisma.appointmentType.count({
         where: {
@@ -230,7 +230,6 @@ export class MarketplaceListingService implements OnModuleInit {
       hasAvailability: availability ? weekHasBookableSlots(availability.weekJson) : false,
       profileCompletenessPercent: completenessPercent,
       ownerPaused,
-      kiorexBillingPaused: subscription?.tenant.kiorexBillingPausedAt != null,
       soloNurse: soloListing,
       connection: connectionGateFromSettings(tenantMarket?.providerSettings),
     });
