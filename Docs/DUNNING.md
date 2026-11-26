@@ -72,3 +72,6 @@ Tests: `sb05-lite-invoicing.node.test.ts` (eligibility ignores the old flag; no 
 - Email/SMS for D−3 / D0 reminders
 - Kiorex public API copy when `marketplacePaused`
 - Platform admin override / hardship waiver window
+## COM-3: collection parameters set by Kiorex on the rate (26 Nov 2026)
+
+When Kiorex has configured them on the organisation's rate (default per type or its own), the Clinic reads the pushed values and otherwise keeps its defaults: `graceDays` (end of grace, with read-only and suspended days moved after it), `reminderDays` (offsets before the due date), `invoiceDueDays` and `retryDays` and `savedMethodChargeAllowed` (for an invoice that collects Kiorex commission only), `disputeWindowDays` (new charges). See `KIOREX_COMMISSION_CHARGES.md`. An unpaid commission still never pauses or hides the listing (SB-05).

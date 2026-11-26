@@ -5822,7 +5822,8 @@
       "collections": "Collections",
       "deductions": "Payout deductions",
       "disputes": "Disputes",
-      "rate": "Rate"
+      "rate": "Rate",
+      "settlement": "Settlement statement"
     },
     "cards": {
       "claims": "In collection runs",
@@ -5855,7 +5856,10 @@
       "reason": "Reason",
       "resolution": "Resolution",
       "at": "When",
-      "event": "Event"
+      "event": "Event",
+      "tender": "Paid by",
+      "dispute": "Dispute",
+      "rateUsed": "Rate used"
     },
     "status": {
       "PENDING": "Pending",
@@ -5877,7 +5881,9 @@
       "UNCOLLECTED": "Not yet collected",
       "IN_RUN": "In a run",
       "INVOICED": "Invoiced",
-      "PAID": "Paid"
+      "PAID": "Paid",
+      "MATCHED": "Matched",
+      "UNMATCHED": "Unmatched"
     },
     "modes": {
       "NET_FROM_PAYOUT": "Kept from payout",
@@ -5920,7 +5926,82 @@
       "scopeDEFAULT": "All clinics",
       "scopeORG": "Your organization",
       "backToDefault": "Back to the default",
-      "asOf": "Last updated by Kiorex"
+      "asOf": "Last updated by Kiorex",
+      "sourceCode": {
+        "DEFAULT": "Default",
+        "OVERRIDE": "Own rate",
+        "KIOREX_DEFAULT": "Default",
+        "KIOREX_OVERRIDE": "Own rate",
+        "MARKET_ROW": "Market table"
+      }
+    },
+    "tender": {
+      "CASH": "Cash at the visit",
+      "ONLINE": "Online (Kiorex Pay)",
+      "NONE": "Not reported"
+    },
+    "dispute": {
+      "until": "Dispute until {{date}}"
+    },
+    "counsel": {
+      "label": "Funds-flow review by Kiorex",
+      "status": {
+        "NOT_REVIEWED": "Not reviewed yet",
+        "APPROVED_WITH_CONDITIONS": "Approved with conditions",
+        "APPROVED": "Approved",
+        "REJECTED": "Not approved"
+      }
+    },
+    "disclosure": {
+      "rateDisclosure": "Rate disclosure",
+      "termsSummary": "Commission terms summary"
+    },
+    "params": {
+      "title": "Collection timeline set by Kiorex",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days",
+      "yes": "Yes",
+      "no": "No",
+      "disputeWindowDays": "Dispute window",
+      "invoiceDueDays": "Invoice due after",
+      "graceDays": "Grace period",
+      "retryDays": "Retry on days",
+      "reminderDays": "Reminders (days from the due date, negative = before)",
+      "savedMethodChargeAllowed": "Charge a saved payment method"
+    },
+    "stmt": {
+      "title": "Settlement statement",
+      "loading": "Loading the statement",
+      "unavailable": "The Kiorex statement is not available right now. Nothing has changed in your account; try again later.",
+      "source": {
+        "KIOREX": "These are the same figures Kiorex finance sees for your organization.",
+        "LOCAL_MIRROR": "Shown from your own records of what Kiorex reported (the Kiorex statement is not connected in this environment); refunds, chargebacks and the bank match appear once Kiorex reports them."
+      },
+      "bankOnly": "Payouts are made by bank transfer to your bank account only. Kiorex never holds or pays out cash: a commission on a cash visit is accrued and netted in your next settlement.",
+      "reconciliation": "Reconciliation",
+      "recon": {
+        "MATCHED": "Matched",
+        "UNMATCHED": "Unmatched",
+        "DISPUTED": "Disputed",
+        "NO_PAYOUT": "No payout in this month"
+      },
+      "cards": {
+        "online": "Online collections",
+        "cashAccrued": "Cash-visit commission accrued",
+        "cashNetted": "Cash-visit commission netted",
+        "cashOpen": "Cash-visit commission still open",
+        "dedCommission": "Deduction: commission",
+        "dedFees": "Deduction: fees",
+        "dedRefunds": "Deduction: refunds",
+        "dedChargebacks": "Deduction: chargebacks",
+        "net": "Net payable",
+        "paid": "Paid by bank transfer"
+      },
+      "cashNote_one": "{{count}} cash-paid visit in this month.",
+      "cashNote_other": "{{count}} cash-paid visits in this month.",
+      "payouts": "Payouts",
+      "noPayouts": "No payout in this month.",
+      "bankRef": "Bank reference"
     }
   }
 }

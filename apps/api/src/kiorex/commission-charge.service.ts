@@ -36,6 +36,9 @@ import {
 import { isActiveCommissionChargeStatus } from "./commission-charge-status";
 import { KiorexCommissionService } from "./kiorex-commission.service";
 import { resolveDisputeDeadlineDays } from "./kiorex-commission-config";
+import { disputeWindowDaysWith } from "./commission-rate-params";
+import { rateParamsOf } from "./commission-rate-view";
+import { commissionTender } from "./commission-tender";
 import { commissionAmountMinor, effectiveRateAt, type RateHistoryRow } from "./commission-rate-view";
 
 const AUTO_CONFIRM_MS = 24 * 60 * 60 * 1000;
@@ -167,7 +170,8 @@ export class CommissionChargeService {
       extra: { visitFee: visitFee.toFixed(2), ...(resolved.source ? { rateSource: resolved.source, ...(resolved.version != null ? { rateVersion: resolved.version } : {}) } : {}) },
     });
 
-    const disputeDays = resolveDisputeDeadlineDays(apt.clinic.tenant.market?.featureDefaults);
+    // COM-3: the dispute window Kiorex set on the organisation's rate (days) replaces the market-pack / built-in 30 when present
+    const disputeDays = disputeWindowDaysWith(resolveDisputeDeadlineDays(apt.clinic.tenant.market?.featureDefaults), rateParamsOf(orgRate?.spec));
     const disputeDeadline = new Date(attendedAt);
     disputeDeadline.setDate(disputeDeadline.getDate() + disputeDays);
 
@@ -547,7 +551,15 @@ export class CommissionChargeService {
     const d = await tx.kiorexCommissionDecision.findFirst({ where: { appointmentId: charge.appointmentId }, orderBy: { createdAt: "desc" }, select: { id: true, origin: true, policyVersion: true, feeBasisMinor: true, sponsoredDiscountMinor: true, basisPolicyVersion: true } });
     const dec = d ? await tx.kiorexCommissionDecision.findUnique({ where: { id: d.id }, select: { amount: true, decision: true } }) : null;
     const disp = await tx.commissionDispute.findUnique({ where: { chargeId: charge.id }, select: { status: true } });
+    // COM-3: how the visit was paid (CASH accrues and is netted in the next bank-transfer settlement; Kiorex never holds cash). Not reported when unknown: nothing is guessed.
+    const [visit, deposits] = await Promise.all([
+      tx.appointment.findUnique({ where: { id: charge.appointmentId }, select: { checkInCollectionMode: true } }),
+      tx.patientDeposit.findMany({ where: { tenantId: charge.tenantId, appointmentId: charge.appointmentId }, select: { method: true, source: true, status: true } }),
+    ]);
+    const tender = commissionTender({ checkInCollectionMode: visit?.checkInCollectionMode, deposits });
+    if (tender && tender !== charge.tender) await tx.kiorexCommissionCharge.update({ where: { id: charge.id }, data: { tender } });
     return {
+      ...(tender ? { tender } : {}),
       // COM-1 (additive): everything Kiorex needs to mirror the claim and to reconcile it with the decision
       tenantId: charge.tenantId, clinicId: charge.clinicId, disputeDeadline: charge.disputeDeadline.toISOString(), disputeStatus: disp?.status ?? null,
       ...(dec?.decision === CommissionDecisionKind.CHARGE && dec.amount ? { decisionAmount: dec.amount.toFixed(2) } : {}),

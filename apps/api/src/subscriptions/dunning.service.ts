@@ -9,6 +9,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { resolveMarketForTenant } from "../markets/market-resolver";
 import { isKiorlyDunningPaused } from "../billing-platform/kiorly-dunning";
 import { dunningTimelineFromFeatureDefaults } from "./dunning-config";
+import { applyRateToDunning, loadRateParams } from "../kiorex/commission-rate-params";
 import { daysAfterDue, daysBeforeDue, resolveDunningPhase, subscriptionStatusForDaysOverdue } from "./dunning-timeline";
 import {
   kiorexMarketplacePaused,
@@ -295,7 +296,8 @@ export class DunningService {
   private async loadDunningPack(tenantId: string) {
     try {
       const ctx = await resolveMarketForTenant(this.prisma, tenantId);
-      return dunningTimelineFromFeatureDefaults(ctx.market.featureDefaults);
+      // COM-3: the grace and reminder days Kiorex set on the organisation's rate replace the defaults when present
+      return applyRateToDunning(dunningTimelineFromFeatureDefaults(ctx.market.featureDefaults), await loadRateParams(this.prisma, tenantId));
     } catch {
       return dunningTimelineFromFeatureDefaults(null);
     }

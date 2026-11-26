@@ -554,6 +554,8 @@ model KiorexCommissionCharge {
   /// COM-2: "MARKET_ROW" (Clinic market rate table) or "KIOREX_DEFAULT" / "KIOREX_OVERRIDE" (the rate Kiorex reported for this organisation); never rewritten.
   rateSource        String?
   rateVersion       Int?
+  /// COM-3: how the visit was paid, as reported to Kiorex on the claim: CASH (accrued, netted in the next bank-transfer settlement; Kiorex never holds cash), ONLINE (through the Kiorex Pay layer) or null (not reported).
+  tender            String?
   amount            Decimal                @db.Decimal(14, 2)
   currency          String
   status            CommissionChargeStatus @default(PENDING)
