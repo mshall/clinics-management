@@ -3,9 +3,9 @@ import { describe, it } from "node:test";
 import { DEFAULT_DUNNING_TIMELINE, type DunningTimelineConfig } from "../subscriptions/dunning-config";
 import { normalizeClaim, normalizeClaims } from "./commission-claim-view";
 import { applyRateToDunning, autoChargeRetryDaysWith, disputeWindowDaysWith, invoiceDueDaysWith, loadRateParams, savedMethodChargeAllowedWith } from "./commission-rate-params";
-import { commissionAmountMinor, NO_RATE_PARAMS, parseCounselStatus, parseDisclosure, rateParamsOf, rateViewProblems, type RateSpecView } from "./commission-rate-view";
+import { commissionAmountMinor, specForTender, NO_RATE_PARAMS, parseCounselStatus, parseDisclosure, rateParamsOf, rateViewProblems, type RateSpecView } from "./commission-rate-view";
 import { localStatement, normalizeStatement, periodRange, statementCsv } from "./commission-statement";
-import { asTender, commissionTender } from "./commission-tender";
+import { asTender, commissionTender, commissionTenderKind, tenderKindName, transferDetailOf } from "./commission-tender";
 
 const base: DunningTimelineConfig = { ...DEFAULT_DUNNING_TIMELINE, reminderDaysBeforeDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysBeforeDue], reminderDaysAfterDue: [...DEFAULT_DUNNING_TIMELINE.reminderDaysAfterDue] };
 const spec = (o: Partial<RateSpecView> = {}): RateSpecView => ({ feeType: "PERCENT", percentBps: 1000, flatMinor: null, minMinor: null, maxMinor: null, mode: null, ...o });
@@ -17,8 +17,35 @@ describe("COM-3 tender of a claim", () => {
     assert.equal(commissionTender({ deposits: [{ method: "KIOREX_PAY", source: "KIOREX_PAY", status: "CANCELLED" }], checkInCollectionMode: "CASH_ON_VISIT" }), "CASH");
     assert.equal(commissionTender({ checkInCollectionMode: "CASH_ON_VISIT" }), "CASH");
     assert.equal(commissionTender({ allocationMethods: ["CASH"] }), "CASH");
-    assert.equal(commissionTender({ checkInCollectionMode: "MONEY_TRANSFER" }), null);
+    assert.equal(commissionTender({ checkInCollectionMode: "MONEY_TRANSFER" }), null); // a transfer with no known channel is not guessed
+    assert.equal(commissionTender({ checkInCollectionMode: "MONEY_TRANSFER", checkInTransferChannel: "FAWRY" }), null); // an unknown channel stays unknown
     assert.equal(commissionTender({}), null);
+  });
+  it("LG-COM-20: a direct bank / InstaPay transfer or card terminal is CASH on the wire (cash-type) and its own kind CASH_TRANSFER; unknown stays unknown", () => {
+    assert.equal(commissionTender({ checkInCollectionMode: "MONEY_TRANSFER", checkInTransferChannel: "INSTAPAY" }), "CASH");
+    assert.deepEqual(commissionTenderKind({ checkInCollectionMode: "MONEY_TRANSFER", checkInTransferChannel: "instapay" }), { tender: "CASH", tenderMethod: "CASH_TRANSFER", tenderDetail: "INSTAPAY" });
+    assert.deepEqual(commissionTenderKind({ checkInCollectionMode: "MONEY_TRANSFER", checkInTransferChannel: "BANK_TRANSFER" }), { tender: "CASH", tenderMethod: "CASH_TRANSFER", tenderDetail: "BANK_TRANSFER" });
+    assert.deepEqual(commissionTenderKind({ allocationMethods: ["CARD"] }), { tender: "CASH", tenderMethod: "CASH_TRANSFER", tenderDetail: "CARD_TERMINAL" });
+    assert.deepEqual(commissionTenderKind({ allocationMethods: ["TRANSFER"] }), { tender: "CASH", tenderMethod: "CASH_TRANSFER", tenderDetail: "BANK_TRANSFER" });
+    assert.deepEqual(commissionTenderKind({ checkInCollectionMode: "CASH_ON_VISIT" }), { tender: "CASH", tenderMethod: "CASH", tenderDetail: null });
+    assert.deepEqual(commissionTenderKind({ deposits: [{ method: "KIOREX_PAY", source: "KIOREX_PAY", status: "HELD" }], checkInCollectionMode: "MONEY_TRANSFER", checkInTransferChannel: "INSTAPAY" }), { tender: "ONLINE", tenderMethod: null, tenderDetail: null });
+    for (const f of [{}, { checkInCollectionMode: "MONEY_TRANSFER" }, { checkInCollectionMode: "MONEY_TRANSFER", checkInTransferChannel: "ORG_WALLET" }, { allocationMethods: ["WALLET", "OTHER"] }]) assert.equal(commissionTenderKind(f), null);
+    assert.deepEqual([transferDetailOf("POS"), transferDetailOf("moon"), transferDetailOf(null)], ["CARD_TERMINAL", null, null]);
+    assert.deepEqual([tenderKindName({ tender: "CASH", tenderMethod: "CASH_TRANSFER" }), tenderKindName({ tender: "CASH" }), tenderKindName({ tender: "ONLINE" }), tenderKindName({ tender: null })], ["CASH_TRANSFER", "CASH", "ONLINE", null]);
+  });
+  it("LG-COM-20: per-tender treatment: a kind with a setting is priced by it, an unset kind or an unreported tender inherits the base, an older view without tenders is unchanged", () => {
+    const withT = spec({ minMinor: 500, maxMinor: 9000, tenders: { CASH_TRANSFER: { feeType: "PERCENT", percentBps: 500, minMinor: null }, ONLINE: { maxMinor: 2000 }, CASH: {} } });
+    const price = (k: "ONLINE" | "CASH" | "CASH_TRANSFER" | null) => { const u = specForTender(withT, k); return [commissionAmountMinor(100000, u.spec), u.treatment]; };
+    assert.deepEqual(price("CASH_TRANSFER"), [5000, "TENDER"]);
+    assert.deepEqual(price("ONLINE"), [2000, "TENDER"]);
+    assert.deepEqual(price("CASH"), [9000, "BASE"]); // an empty entry is not a setting
+    assert.deepEqual(price(null), [9000, "BASE"]);
+    const old = spec({ minMinor: 500, maxMinor: 9000 });
+    for (const k of ["ONLINE", "CASH", "CASH_TRANSFER", null] as const) assert.deepEqual([commissionAmountMinor(100000, specForTender(old, k).spec), specForTender(old, k).treatment], [9000, "BASE"]);
+    assert.equal(specForTender(withT, "CASH_TRANSFER").spec.tenders, undefined); // never leaks into the priced spec
+    const junk = spec({ tenders: { CASH_TRANSFER: "x" as never, ONLINE: { feeType: "FLAT", flatMinor: -5 } } });
+    assert.equal(specForTender(junk, "CASH_TRANSFER").treatment, "BASE");
+    assert.equal(specForTender(junk, "ONLINE").spec.flatMinor, 0); // malformed amount never becomes a guessed price
   });
   it("a mixed visit counts as ONLINE; asTender is strict", () => {
     assert.equal(commissionTender({ checkInCollectionMode: "CASH_ON_VISIT", deposits: [{ method: "KIOREX_PAY", source: "CLINIC", status: "HELD" }] }), "ONLINE");
@@ -35,6 +62,14 @@ describe("COM-3 run push claims are read tolerantly", () => {
     assert.deepEqual([old?.disputeStatus, old?.disputeDeadline, old?.tender, old?.rateSource, old?.rateSnapshot], [null, null, null, null, null]);
     const bad = normalizeClaim({ chargeId: "c3", amountMinor: 5, tender: "BARTER", disputeDeadline: "not a date", rateSnapshot: [1] });
     assert.deepEqual([bad?.tender, bad?.disputeDeadline, bad?.rateSnapshot], [null, null, null]);
+    // LG-COM-20: the kind rides on a CASH claim only; an older push without it is plain cash; an unknown detail is dropped
+    const kind = normalizeClaim({ chargeId: "c4", amountMinor: 5, tender: "CASH", tenderMethod: "cash_transfer", tenderDetail: "instapay" });
+    assert.deepEqual([kind?.tender, kind?.tenderMethod, kind?.tenderDetail], ["CASH", "CASH_TRANSFER", "INSTAPAY"]);
+    const plain = normalizeClaim({ chargeId: "c5", amountMinor: 5, tender: "CASH" });
+    assert.deepEqual([plain?.tenderMethod, plain?.tenderDetail], [null, null]);
+    const online = normalizeClaim({ chargeId: "c6", amountMinor: 5, tender: "ONLINE", tenderMethod: "CASH_TRANSFER", tenderDetail: "INSTAPAY" });
+    assert.deepEqual([online?.tenderMethod, online?.tenderDetail], [null, null]);
+    assert.equal(normalizeClaim({ chargeId: "c7", amountMinor: 5, tender: "CASH", tenderMethod: "CASH_TRANSFER", tenderDetail: "MOON" })?.tenderDetail, null);
     assert.deepEqual(normalizeClaims([null, 3, {}, { chargeId: "ok", amountMinor: 1 }]).map((x) => x.chargeId), ["ok"]);
     assert.deepEqual(normalizeClaims("nope"), []);
   });
@@ -113,6 +148,22 @@ describe("COM-3 settlement statement", () => {
     assert.deepEqual([sparse.orgRef, sparse.netPayableMinor, sparse.payouts, sparse.reconciliation, sparse.commission.disputedOpen], ["t1", 0, [], "UNMATCHED", 0]);
     assert.equal(normalizeStatement(null, "KIOREX", { orgRef: "t1", from, to }), null);
     assert.equal(normalizeStatement("junk", "KIOREX", { orgRef: "t1", from, to }), null);
+  });
+  it("LG-COM-20 local mirror: cash transfer is cash-type in the totals and its own row; unknown tender is an exception count; a statement from an older Kiorex reads all cash as plain cash", () => {
+    const v = localStatement({
+      orgRef: "t1", from, to, currency: "EGP",
+      charges: [{ amountMinor: 3000, status: "CONFIRMED", tender: "CASH", tenderMethod: "CASH" }, { amountMinor: 2000, status: "CONFIRMED", tender: "CASH", tenderMethod: "CASH_TRANSFER", tenderDetail: "INSTAPAY" }, { amountMinor: 700, status: "CONFIRMED", tender: null }, { amountMinor: 900, status: "REVERSED", tender: null }],
+      claims: [{ collectedMinor: 500, disputeStatus: null, tender: "CASH", tenderMethod: "CASH_TRANSFER" }, { collectedMinor: 100, disputeStatus: null, tender: "CASH" }],
+      payouts: [],
+    });
+    assert.deepEqual([v.cashVisitCommissionAccruedMinor, v.cashVisitCommissionNettedMinor, v.cashVisitCharges], [5000, 600, 2]);
+    assert.deepEqual([v.cashBreakdown.cash.accruedMinor, v.cashBreakdown.cash.nettedMinor, v.cashBreakdown.cashTransfer.accruedMinor, v.cashBreakdown.cashTransfer.nettedMinor, v.cashBreakdown.cashTransfer.byDetail.INSTAPAY, v.unknownTender], [3000, 100, 2000, 500, 1, { charges: 1, commissionMinor: 700 }]);
+    const csv = statementCsv(v).body;
+    assert.match(csv, /cashTransferAccrued,20\.00/); assert.match(csv, /cashOnlyAccrued,30\.00/); assert.match(csv, /unknownTenderCharges,1/); assert.match(csv, /cashVisitCommissionAccrued,50\.00/);
+    const older = normalizeStatement({ onlineCollectionsMinor: 100, cashVisitCommissionAccruedMinor: 4000, cashVisitCommissionNettedMinor: 1000, cashVisitCharges: 2 }, "KIOREX", { orgRef: "t1", from, to })!;
+    assert.deepEqual([older.cashBreakdown.cash.accruedMinor, older.cashBreakdown.cashTransfer.accruedMinor, older.unknownTender.charges], [4000, 0, 0]);
+    const newer = normalizeStatement({ cashVisitCommissionAccruedMinor: 5000, cashBreakdown: { cash: { accruedMinor: 3000, nettedMinor: 0, charges: 1 }, cashTransfer: { accruedMinor: 2000, nettedMinor: 500, charges: 1, byDetail: { INSTAPAY: 1, JUNK: 9 } } }, unknownTender: { charges: 3, commissionMinor: 10 } }, "KIOREX", { orgRef: "t1", from, to })!;
+    assert.deepEqual([newer.cashBreakdown.cashTransfer.openMinor, newer.cashBreakdown.cashTransfer.byDetail, newer.unknownTender.charges], [1500, { BANK_TRANSFER: 0, INSTAPAY: 1, CARD_TERMINAL: 0 }, 3]);
   });
   it("local mirror: cash accrued and netted, deductions, net payable, reconciliation; and the CSV has the Kiorex rows", () => {
     const v = localStatement({

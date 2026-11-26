@@ -11,7 +11,10 @@ export type RateSpecView = {
   feeType: "PERCENT" | "FLAT"; percentBps: number | null; flatMinor: number | null; minMinor: number | null; maxMinor: number | null; mode: string | null;
   currency?: string | null; rounding?: "HALF_UP" | "DOWN" | "UP" | null; minCollectMinor?: number | null; graceDays?: number | null; retryDays?: number[] | null; invoiceDueDays?: number | null;
   reminderDays?: number[] | null; disputeWindowDays?: number | null; savedMethodChargeAllowed?: boolean | null;
+  /** LG-COM-20 (additive, optional): treatment per tender kind; a field or a kind left out inherits the base values above. */
+  tenders?: Partial<Record<"ONLINE" | "CASH" | "CASH_TRANSFER", TenderTreatmentView>>;
 };
+export type TenderTreatmentView = { feeType?: "PERCENT" | "FLAT"; percentBps?: number | null; flatMinor?: number | null; minMinor?: number | null; maxMinor?: number | null; mode?: string | null; graceDays?: number | null };
 export type RateHistoryRow = { version: number; scope: "DEFAULT" | "ORG"; kind: "RATE" | "INHERIT"; effectiveFrom: string; reason: string | null; spec: RateSpecView | null };
 export type EffectiveRateView = { state: "SET" | "NOT_SET"; source: "OVERRIDE" | "DEFAULT" | null; version: number | null; effectiveFrom: string | null; reason: string | null; spec: RateSpecView | null };
 export const NOT_SET_VIEW: EffectiveRateView = { state: "NOT_SET", source: null, version: null, effectiveFrom: null, reason: null, spec: null };
@@ -58,6 +61,26 @@ export function commissionAmountMinor(basisMinor: number, spec: RateSpecView): n
   if (spec.minMinor != null) v = Math.max(v, spec.minMinor);
   if (spec.maxMinor != null) v = Math.min(v, spec.maxMinor);
   return v;
+}
+
+/**
+ * LG-COM-20: the spec that prices one tender kind (same rule as the Kiorex side): the entry replaces only what it sets, everything else inherits the base; no kind or no entry is the base itself.
+ * Tolerant: a malformed entry is ignored (the base applies), it never throws. `treatment` says which one priced the charge.
+ */
+export function specForTender(spec: RateSpecView, kind: "ONLINE" | "CASH" | "CASH_TRANSFER" | null): { spec: RateSpecView; treatment: "BASE" | "TENDER" } {
+  const { tenders, ...base } = spec;
+  const t = kind && tenders && typeof tenders === "object" ? (tenders[kind] as TenderTreatmentView | undefined) : undefined;
+  if (!t || typeof t !== "object" || Array.isArray(t)) return { spec: base, treatment: "BASE" };
+  const n = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null);
+  const r: RateSpecView = { ...base };
+  let used = false;
+  if (t.feeType === "PERCENT") { r.feeType = "PERCENT"; r.percentBps = n(t.percentBps) ?? 0; r.flatMinor = null; used = true; }
+  else if (t.feeType === "FLAT") { r.feeType = "FLAT"; r.flatMinor = n(t.flatMinor) ?? 0; r.percentBps = null; used = true; }
+  if ("minMinor" in t && (t.minMinor === null || n(t.minMinor) !== null)) { r.minMinor = n(t.minMinor); used = true; }
+  if ("maxMinor" in t && (t.maxMinor === null || n(t.maxMinor) !== null)) { r.maxMinor = n(t.maxMinor); used = true; }
+  if ("mode" in t && (t.mode === null || typeof t.mode === "string")) { r.mode = t.mode ?? null; used = true; }
+  if ("graceDays" in t && (t.graceDays === null || n(t.graceDays) !== null)) { r.graceDays = n(t.graceDays); used = true; }
+  return used ? { spec: r, treatment: "TENDER" } : { spec: base, treatment: "BASE" };
 }
 
 const wholeDays = (v: unknown, min: number, max: number): number | null => (typeof v === "number" && Number.isInteger(v) && v >= min && v <= max ? v : null);

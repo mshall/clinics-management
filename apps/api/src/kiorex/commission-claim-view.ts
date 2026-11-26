@@ -1,4 +1,4 @@
-import { asTender, type CommissionTender } from "./commission-tender";
+import { asTender, asTenderDetail, asTenderMethod, type CommissionTender, type TenderDetail, type TenderMethod } from "./commission-tender";
 
 /**
  * COM-3 claim of a collection run as Kiorex pushes it (contracts 1.13.0 run push). The five additive fields (disputeStatus, disputeDeadline, tender, rateSource, rateSnapshot) are kept when valid
@@ -7,7 +7,7 @@ import { asTender, type CommissionTender } from "./commission-tender";
 export type ClaimView = {
   chargeId: string; appointmentId?: string; amountMinor: number; collectedMinor?: number; collectionStatus?: string; chargeStatus?: string; decisionRef?: string | null; feeBasisMinor?: number | null;
   sponsoredDiscountMinor?: number | null; basisPolicyVersion?: string | null;
-  disputeStatus: string | null; disputeDeadline: string | null; tender: CommissionTender | null; rateSource: string | null; rateSnapshot: Record<string, unknown> | null;
+  disputeStatus: string | null; disputeDeadline: string | null; tender: CommissionTender | null; tenderMethod: TenderMethod | null; tenderDetail: TenderDetail | null; rateSource: string | null; rateSnapshot: Record<string, unknown> | null;
 };
 const str = (v: unknown, max = 120): string | undefined => (typeof v === "string" && v.length > 0 ? v.slice(0, max) : undefined);
 const int = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? Math.round(v) : undefined);
@@ -22,7 +22,7 @@ export function normalizeClaim(raw: unknown): ClaimView | null {
   return {
     chargeId, appointmentId: str(c.appointmentId, 64), amountMinor: int(c.amountMinor) ?? 0, collectedMinor: int(c.collectedMinor), collectionStatus: str(c.collectionStatus, 30), chargeStatus: str(c.chargeStatus, 30),
     decisionRef: str(c.decisionRef, 64) ?? null, feeBasisMinor: int(c.feeBasisMinor) ?? null, sponsoredDiscountMinor: int(c.sponsoredDiscountMinor) ?? null, basisPolicyVersion: str(c.basisPolicyVersion) ?? null,
-    disputeStatus: str(c.disputeStatus, 20) ?? null, disputeDeadline: iso(c.disputeDeadline), tender: asTender(c.tender), rateSource: str(c.rateSource, 30) ?? null, rateSnapshot: snapshot(c.rateSnapshot),
+    disputeStatus: str(c.disputeStatus, 20) ?? null, disputeDeadline: iso(c.disputeDeadline), tender: asTender(c.tender), tenderMethod: asTender(c.tender) === "CASH" ? asTenderMethod(c.tenderMethod) : null, tenderDetail: asTender(c.tender) === "CASH" && asTenderMethod(c.tenderMethod) === "CASH_TRANSFER" ? asTenderDetail(c.tenderDetail) : null, rateSource: str(c.rateSource, 30) ?? null, rateSnapshot: snapshot(c.rateSnapshot),
   };
 }
 export const normalizeClaims = (raw: unknown): ClaimView[] => (Array.isArray(raw) ? raw.map(normalizeClaim).filter((c): c is ClaimView => c !== null) : []);

@@ -94,7 +94,7 @@ describe("COM-3 provider side: parity, disclosure, statement, tender, parameters
     const timeline = await svc.chargeTimeline(a.finance, a.tenantId, a.chargeId);
     assert.ok(timeline.events.some((e) => e.event === "DEDUCTED_FROM_PAYOUT"));
     const csv = (await svc.exportCsv(a.finance, a.tenantId, "ledger")).body;
-    assert.match(csv, /tender,disputeDeadline,rateSource/); assert.match(csv, /CASH/);
+    assert.match(csv, /tender,disputeDeadline,rateSource,tenderMethod,tenderDetail,rateTreatment/); assert.match(csv, /CASH/); // new columns are appended, so a reader by position is unaffected
   });
 
   it("rate view: disclosure blocks only when wording is set, counsel STATUS only, parameters surfaced; tolerant of absent and unknown fields", async () => {

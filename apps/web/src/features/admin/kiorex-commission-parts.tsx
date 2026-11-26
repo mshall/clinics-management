@@ -15,6 +15,8 @@ type Payout = { payoutRef: string; paidAt: string | null; cashMinor: number; com
 export type StatementData = {
   source: "KIOREX" | "LOCAL_MIRROR"; currency: string; period: { from: string; to: string; key?: string };
   onlineCollectionsMinor: number; cashVisitCommissionAccruedMinor: number; cashVisitCommissionNettedMinor: number; cashVisitCommissionOpenMinor: number; cashVisitCharges: number;
+  cashBreakdown?: { cash: { accruedMinor: number; nettedMinor: number; charges: number }; cashTransfer: { accruedMinor: number; nettedMinor: number; charges: number } };
+  unknownTender?: { charges: number; commissionMinor: number };
   deductions: { commissionMinor: number; feesMinor: number | null; refundsMinor: number | null; chargebacksMinor: number | null };
   netPayableMinor: number; paidByBankTransferMinor: number; payouts: Payout[]; reconciliation: "MATCHED" | "UNMATCHED" | "DISPUTED" | "NO_PAYOUT";
 };
@@ -89,6 +91,8 @@ export function SettlementStatement({ base, period }: { base: string; period: st
   if (q.isError || !s) return <p role="alert" className="text-sm" data-testid="kxc-stmt-unavailable">{t("kiorexCom.stmt.unavailable")}</p>;
   const cards: [string, string][] = [
     ["online", money(s.onlineCollectionsMinor)], ["cashAccrued", money(s.cashVisitCommissionAccruedMinor)], ["cashNetted", money(s.cashVisitCommissionNettedMinor)], ["cashOpen", money(s.cashVisitCommissionOpenMinor)],
+    ...(s.cashBreakdown ? ([["cashOnlyAccrued", money(s.cashBreakdown.cash.accruedMinor)], ["cashTransferAccrued", money(s.cashBreakdown.cashTransfer.accruedMinor)], ["cashTransferNetted", money(s.cashBreakdown.cashTransfer.nettedMinor)]] as [string, string][]) : []),
+    ...(s.unknownTender ? ([["unknownTender", String(s.unknownTender.charges)]] as [string, string][]) : []),
     ["dedCommission", money(s.deductions.commissionMinor)], ["dedFees", money(s.deductions.feesMinor)], ["dedRefunds", money(s.deductions.refundsMinor)], ["dedChargebacks", money(s.deductions.chargebacksMinor)],
     ["net", money(s.netPayableMinor)], ["paid", money(s.paidByBankTransferMinor)],
   ];

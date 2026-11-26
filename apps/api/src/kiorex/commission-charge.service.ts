@@ -38,8 +38,8 @@ import { KiorexCommissionService } from "./kiorex-commission.service";
 import { resolveDisputeDeadlineDays } from "./kiorex-commission-config";
 import { disputeWindowDaysWith } from "./commission-rate-params";
 import { rateParamsOf } from "./commission-rate-view";
-import { commissionTender } from "./commission-tender";
-import { commissionAmountMinor, effectiveRateAt, type RateHistoryRow } from "./commission-rate-view";
+import { commissionTenderKind, tenderKindName, type TenderKind } from "./commission-tender";
+import { commissionAmountMinor, effectiveRateAt, specForTender, type RateHistoryRow } from "./commission-rate-view";
 
 const AUTO_CONFIRM_MS = 24 * 60 * 60 * 1000;
 
@@ -150,9 +150,13 @@ export class CommissionChargeService {
     // Nothing is invented: no Kiorex rate and no market row = no charge (NO_RATE_CONFIGURED).
     const orgRate = await this.kiorexOrgRateAt(tx, tenantId, attendedAt);
     const marketRate = this.kiorexRates.resolveForBooking(rows, specialty, visitFee, attendedAt, { profession, serviceLocation: apt.serviceLocation });
-    const resolved: { commissionAmount: number; rate: { id: string } | null; source: string | null; version: number | null } = orgRate
-      ? { commissionAmount: commissionAmountMinor(Math.round(visitFee * 100), orgRate.spec!) / 100, rate: null, source: orgRate.source === "OVERRIDE" ? "KIOREX_OVERRIDE" : "KIOREX_DEFAULT", version: orgRate.version }
-      : { commissionAmount: marketRate.commissionAmount, rate: marketRate.rate, source: marketRate.rate ? "MARKET_ROW" : null, version: null };
+    // LG-COM-20: the treatment of the visit's tender kind (ONLINE, CASH, CASH_TRANSFER) from the same rate policy row; a kind with no setting, or a tender not reported, takes the base rate, so nothing changes until Kiorex sets it
+    const tenderNow = await this.tenderKindOf(tx, tenantId, appointmentId);
+    const forTender = orgRate ? specForTender(orgRate.spec!, tenderKindName(tenderNow ?? {})) : null;
+    const resolved: { commissionAmount: number; rate: { id: string } | null; source: string | null; version: number | null; treatment: string | null } = orgRate
+      ? { commissionAmount: commissionAmountMinor(Math.round(visitFee * 100), forTender!.spec) / 100, rate: null, source: orgRate.source === "OVERRIDE" ? "KIOREX_OVERRIDE" : "KIOREX_DEFAULT", version: orgRate.version, treatment: forTender!.treatment }
+      : { commissionAmount: marketRate.commissionAmount, rate: marketRate.rate, source: marketRate.rate ? "MARKET_ROW" : null, version: null, treatment: null };
+    const tenderData = tenderNow ? { tender: tenderNow.tender, tenderMethod: tenderNow.tenderMethod, tenderDetail: tenderNow.tenderDetail } : {};
     if (!orgRate && !resolved.rate) {
       await writeCommissionDecision(tx, { ...base, decision: CommissionDecisionKind.NO_CHARGE, reasonCodes: [DECISION_REASON.NO_RATE_CONFIGURED] });
       return;
@@ -167,7 +171,7 @@ export class CommissionChargeService {
       rateId: resolved.rate?.id ?? null,
       rateSource: orgRate ? resolved.source : null,
       amount: amount.toFixed(2),
-      extra: { visitFee: visitFee.toFixed(2), ...(resolved.source ? { rateSource: resolved.source, ...(resolved.version != null ? { rateVersion: resolved.version } : {}) } : {}) },
+      extra: { visitFee: visitFee.toFixed(2), ...(resolved.source ? { rateSource: resolved.source, ...(resolved.version != null ? { rateVersion: resolved.version } : {}) } : {}), ...(resolved.treatment ? { rateTreatment: resolved.treatment, tenderKind: tenderKindName(tenderNow ?? {}) } : {}) },
     });
 
     // COM-3: the dispute window Kiorex set on the organisation's rate (days) replaces the market-pack / built-in 30 when present
@@ -189,6 +193,8 @@ export class CommissionChargeService {
             rateId: resolved.rate?.id ?? null,
             rateSource: resolved.source,
             rateVersion: resolved.version,
+            rateTreatment: resolved.treatment,
+            ...tenderData,
             amount,
             currency,
             reversalReason: null,
@@ -215,6 +221,8 @@ export class CommissionChargeService {
         rateId: resolved.rate?.id ?? null,
         rateSource: resolved.source,
         rateVersion: resolved.version,
+        rateTreatment: resolved.treatment,
+        ...tenderData,
         amount,
         currency,
         status: CommissionChargeStatus.PENDING,
@@ -224,6 +232,15 @@ export class CommissionChargeService {
     });
     await this.auditCharge(tx, tenantId, "kiorex.commission_charge.created", charge);
     await this.outbox.enqueue(tenantId, COMMISSION_CHARGE_CREATED, await this.outboxPayload(tx, charge), tx);
+  }
+
+  /** LG-COM-20: how the visit was paid, as a kind (see commission-tender.ts); null when unknown. */
+  private async tenderKindOf(tx: Tx, tenantId: string, appointmentId: string): Promise<TenderKind | null> {
+    const [visit, deposits] = await Promise.all([
+      tx.appointment.findUnique({ where: { id: appointmentId }, select: { checkInCollectionMode: true, checkInTransferChannel: true } }),
+      tx.patientDeposit.findMany({ where: { tenantId, appointmentId }, select: { method: true, source: true, status: true } }),
+    ]);
+    return commissionTenderKind({ checkInCollectionMode: visit?.checkInCollectionMode, checkInTransferChannel: visit?.checkInTransferChannel, deposits });
   }
 
   /** COM-2: the effective Kiorex rate of this organisation at `at` (computed from the reported history), or null when none is in force. */
@@ -551,15 +568,13 @@ export class CommissionChargeService {
     const d = await tx.kiorexCommissionDecision.findFirst({ where: { appointmentId: charge.appointmentId }, orderBy: { createdAt: "desc" }, select: { id: true, origin: true, policyVersion: true, feeBasisMinor: true, sponsoredDiscountMinor: true, basisPolicyVersion: true } });
     const dec = d ? await tx.kiorexCommissionDecision.findUnique({ where: { id: d.id }, select: { amount: true, decision: true } }) : null;
     const disp = await tx.commissionDispute.findUnique({ where: { chargeId: charge.id }, select: { status: true } });
-    // COM-3: how the visit was paid (CASH accrues and is netted in the next bank-transfer settlement; Kiorex never holds cash). Not reported when unknown: nothing is guessed.
-    const [visit, deposits] = await Promise.all([
-      tx.appointment.findUnique({ where: { id: charge.appointmentId }, select: { checkInCollectionMode: true } }),
-      tx.patientDeposit.findMany({ where: { tenantId: charge.tenantId, appointmentId: charge.appointmentId }, select: { method: true, source: true, status: true } }),
-    ]);
-    const tender = commissionTender({ checkInCollectionMode: visit?.checkInCollectionMode, deposits });
-    if (tender && tender !== charge.tender) await tx.kiorexCommissionCharge.update({ where: { id: charge.id }, data: { tender } });
+    // COM-3 / LG-COM-20: how the visit was paid (CASH accrues and is netted in the next bank-transfer settlement; Kiorex never holds cash). A direct transfer or card terminal is CASH on the wire with kind CASH_TRANSFER (additive fields). Not reported when unknown: nothing is guessed.
+    const kind = await this.tenderKindOf(tx, charge.tenantId, charge.appointmentId);
+    const tender = kind?.tender ?? null;
+    if (kind && (kind.tender !== charge.tender || kind.tenderMethod !== charge.tenderMethod || kind.tenderDetail !== charge.tenderDetail)) await tx.kiorexCommissionCharge.update({ where: { id: charge.id }, data: { tender: kind.tender, tenderMethod: kind.tenderMethod, tenderDetail: kind.tenderDetail } });
     return {
       ...(tender ? { tender } : {}),
+      ...(kind?.tenderMethod ? { tenderMethod: kind.tenderMethod, ...(kind.tenderDetail ? { tenderDetail: kind.tenderDetail } : {}) } : {}),
       // COM-1 (additive): everything Kiorex needs to mirror the claim and to reconcile it with the decision
       tenantId: charge.tenantId, clinicId: charge.clinicId, disputeDeadline: charge.disputeDeadline.toISOString(), disputeStatus: disp?.status ?? null,
       ...(dec?.decision === CommissionDecisionKind.CHARGE && dec.amount ? { decisionAmount: dec.amount.toFixed(2) } : {}),

@@ -7,11 +7,15 @@
 export type ReconciliationStatus = "MATCHED" | "UNMATCHED" | "DISPUTED";
 export type StatementReconciliation = ReconciliationStatus | "NO_PAYOUT";
 export type StatementPayout = { payoutRef: string; paidAt: string | null; cashMinor: number; commissionDeductedMinor: number; bankReference: string | null; reconciliation: ReconciliationStatus };
+export type TenderKindFigures = { accruedMinor: number; nettedMinor: number; openMinor: number; charges: number };
 export type StatementView = {
   /** KIOREX = the figures Kiorex finance sees, fetched from the platform statement API. LOCAL_MIRROR = derived from this product's own mirror of what Kiorex reported (mock mode, or Kiorex unreachable by design in dev). */
   source: "KIOREX" | "LOCAL_MIRROR";
   orgRef: string; period: { from: string; to: string }; currency: string; payoutMethod: "BANK_TRANSFER";
   onlineCollectionsMinor: number; cashVisitCommissionAccruedMinor: number; cashVisitCommissionNettedMinor: number; cashVisitCommissionOpenMinor: number; cashVisitCharges: number;
+  /** LG-COM-20 (additive): the cash-type totals above split into plain cash and cash transfer (direct bank / InstaPay transfer or card terminal at the clinic), and the visits whose payment method was not reported (an exception shown to both sides, never counted as cash or online). */
+  cashBreakdown: { cash: TenderKindFigures; cashTransfer: TenderKindFigures & { byDetail: Record<string, number> } };
+  unknownTender: { charges: number; commissionMinor: number };
   deductions: { commissionMinor: number; feesMinor: number | null; refundsMinor: number | null; chargebacksMinor: number | null };
   commission: { totalMinor: number; collectedMinor: number; openMinor: number; disputedOpen: number };
   netPayableMinor: number; paidByBankTransferMinor: number;
@@ -33,6 +37,16 @@ export function periodRange(period: string | undefined, now = new Date()): { fro
   return { from: new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1)), to: new Date(Date.UTC(Number(m[1]), Number(m[2]), 1)), key: period };
 }
 
+const kindFigures = (v: unknown): TenderKindFigures => { const k = obj(v); const a = int(k.accruedMinor); const n = int(k.nettedMinor); return { accruedMinor: a, nettedMinor: n, openMinor: int(k.openMinor, Math.max(0, a - n)), charges: int(k.charges) }; };
+/** A Kiorex that does not send the split yet (older platform) reads as: all cash-type is plain cash, nothing is claimed about transfers. */
+function normBreakdown(o: Record<string, unknown>): StatementView["cashBreakdown"] {
+  const b = obj(o.cashBreakdown); const t = obj(b.cashTransfer);
+  const by = obj(t.byDetail);
+  const byDetail = Object.fromEntries(["BANK_TRANSFER", "INSTAPAY", "CARD_TERMINAL"].map((k) => [k, int(by[k])]));
+  if (Object.keys(b).length === 0) return { cash: { accruedMinor: int(o.cashVisitCommissionAccruedMinor), nettedMinor: int(o.cashVisitCommissionNettedMinor), openMinor: int(o.cashVisitCommissionOpenMinor), charges: int(o.cashVisitCharges) }, cashTransfer: { accruedMinor: 0, nettedMinor: 0, openMinor: 0, charges: 0, byDetail } };
+  return { cash: kindFigures(b.cash), cashTransfer: { ...kindFigures(t), byDetail } };
+}
+
 export function normalizeStatement(raw: unknown, source: StatementView["source"], fallback: { orgRef: string; from: Date; to: Date }): StatementView | null {
   const o = obj(raw);
   if (Object.keys(o).length === 0) return null;
@@ -46,6 +60,7 @@ export function normalizeStatement(raw: unknown, source: StatementView["source"]
     source, orgRef: str(o.orgRef, 64) ?? fallback.orgRef, period: { from: isoOrNull(p.from) ?? fallback.from.toISOString(), to: isoOrNull(p.to) ?? fallback.to.toISOString() }, currency: (str(o.currency, 3) ?? "EGP").toUpperCase(), payoutMethod: "BANK_TRANSFER",
     onlineCollectionsMinor: int(o.onlineCollectionsMinor), cashVisitCommissionAccruedMinor: int(o.cashVisitCommissionAccruedMinor), cashVisitCommissionNettedMinor: int(o.cashVisitCommissionNettedMinor),
     cashVisitCommissionOpenMinor: int(o.cashVisitCommissionOpenMinor, Math.max(0, int(o.cashVisitCommissionAccruedMinor) - int(o.cashVisitCommissionNettedMinor))), cashVisitCharges: int(o.cashVisitCharges),
+    cashBreakdown: normBreakdown(o), unknownTender: { charges: int(obj(o.unknownTender).charges), commissionMinor: int(obj(o.unknownTender).commissionMinor) },
     deductions: { commissionMinor: int(d.commissionMinor), feesMinor: intOrNull(d.feesMinor), refundsMinor: intOrNull(d.refundsMinor), chargebacksMinor: intOrNull(d.chargebacksMinor) },
     commission: { totalMinor: int(c.totalMinor), collectedMinor: int(c.collectedMinor), openMinor: int(c.openMinor), disputedOpen: int(c.disputedOpen) },
     netPayableMinor: int(o.netPayableMinor), paidByBankTransferMinor: int(o.paidByBankTransferMinor), payouts,
@@ -55,8 +70,8 @@ export function normalizeStatement(raw: unknown, source: StatementView["source"]
 
 export type LocalFacts = {
   orgRef: string; from: Date; to: Date; currency: string;
-  charges: { amountMinor: number; status: string; tender: string | null }[];
-  claims: { collectedMinor: number; disputeStatus: string | null; tender: string | null; chargeStatus?: string | null }[];
+  charges: { amountMinor: number; status: string; tender: string | null; tenderMethod?: string | null; tenderDetail?: string | null }[];
+  claims: { collectedMinor: number; disputeStatus: string | null; tender: string | null; tenderMethod?: string | null; chargeStatus?: string | null; chargeId?: string }[];
   payouts: { payoutRef: string; paidAt: Date; cashMinor: number; commissionDeductedMinor: number }[];
 };
 const OUT = new Set(["REVERSED", "WAIVED"]);
@@ -68,6 +83,11 @@ export function localStatement(f: LocalFacts): StatementView {
   const cash = f.charges.filter((c) => c.tender === "CASH" && CASH_LIVE.has(c.status));
   const accrued = cash.reduce((s, c) => s + c.amountMinor, 0);
   const cashNetted = f.claims.filter((c) => c.tender === "CASH").reduce((s, c) => s + c.collectedMinor, 0);
+  const isT = (c: { tender: string | null; tenderMethod?: string | null }) => c.tender === "CASH" && c.tenderMethod === "CASH_TRANSFER";
+  const fig = (rows: typeof cash, nettedRows: LocalFacts["claims"]): TenderKindFigures => { const a = rows.reduce((s, c) => s + c.amountMinor, 0); const n = nettedRows.reduce((s, c) => s + c.collectedMinor, 0); return { accruedMinor: a, nettedMinor: n, openMinor: Math.max(0, a - n), charges: rows.length }; };
+  const transfers = cash.filter(isT);
+  const byDetail = Object.fromEntries(["BANK_TRANSFER", "INSTAPAY", "CARD_TERMINAL"].map((k) => [k, transfers.filter((c) => c.tenderDetail === k).length]));
+  const unknown = f.charges.filter((c) => c.tender === null && CASH_LIVE.has(c.status));
   const total = f.charges.filter((c) => !OUT.has(c.status)).reduce((s, c) => s + c.amountMinor, 0);
   const collected = f.claims.reduce((s, c) => s + c.collectedMinor, 0);
   const disputed = f.claims.filter((c) => c.disputeStatus === "OPEN").length;
@@ -75,6 +95,8 @@ export function localStatement(f: LocalFacts): StatementView {
   return {
     source: "LOCAL_MIRROR", orgRef: f.orgRef, period: { from: f.from.toISOString(), to: f.to.toISOString() }, currency: f.currency, payoutMethod: "BANK_TRANSFER",
     onlineCollectionsMinor: online, cashVisitCommissionAccruedMinor: accrued, cashVisitCommissionNettedMinor: cashNetted, cashVisitCommissionOpenMinor: Math.max(0, accrued - cashNetted), cashVisitCharges: cash.length,
+    cashBreakdown: { cash: fig(cash.filter((c) => !isT(c)), f.claims.filter((c) => c.tender === "CASH" && !isT(c))), cashTransfer: { ...fig(transfers, f.claims.filter(isT)), byDetail } },
+    unknownTender: { charges: unknown.length, commissionMinor: unknown.reduce((s, c) => s + c.amountMinor, 0) },
     deductions: { commissionMinor: ded, feesMinor: null, refundsMinor: null, chargebacksMinor: null }, commission: { totalMinor: total, collectedMinor: collected, openMinor: Math.max(0, total - collected), disputedOpen: disputed },
     netPayableMinor: online - ded, paidByBankTransferMinor: f.payouts.reduce((s, p) => s + p.cashMinor, 0), payouts, reconciliation: disputed > 0 ? "DISPUTED" : payouts.length === 0 ? "NO_PAYOUT" : "UNMATCHED",
   };
@@ -85,7 +107,7 @@ const cell = (v: unknown): string => { let s = v == null ? "" : String(v); if (/
 /** Same rows as the Kiorex export (item, amount, deducted, bankReference, status) so both sides open the same file. */
 export function statementCsv(s: StatementView): { filename: string; body: string; rows: number } {
   const rows: unknown[][] = [
-    ["onlineCollections", major(s.onlineCollectionsMinor)], ["cashVisitCommissionAccrued", major(s.cashVisitCommissionAccruedMinor)], ["cashVisitCommissionNetted", major(s.cashVisitCommissionNettedMinor)],
+    ["onlineCollections", major(s.onlineCollectionsMinor)], ["cashVisitCommissionAccrued", major(s.cashVisitCommissionAccruedMinor)], ["cashVisitCommissionNetted", major(s.cashVisitCommissionNettedMinor)], ["cashOnlyAccrued", major(s.cashBreakdown.cash.accruedMinor)], ["cashOnlyNetted", major(s.cashBreakdown.cash.nettedMinor)], ["cashTransferAccrued", major(s.cashBreakdown.cashTransfer.accruedMinor)], ["cashTransferNetted", major(s.cashBreakdown.cashTransfer.nettedMinor)], ["unknownTenderCharges", String(s.unknownTender.charges)],
     ["deductionCommission", major(s.deductions.commissionMinor)], ["deductionFees", major(s.deductions.feesMinor)], ["deductionRefunds", major(s.deductions.refundsMinor)], ["deductionChargebacks", major(s.deductions.chargebacksMinor)],
     ["netPayable", major(s.netPayableMinor)], ["paidByBankTransfer", major(s.paidByBankTransferMinor)], ["reconciliation", s.reconciliation],
     ...s.payouts.map((p) => [`payout:${p.payoutRef}`, major(p.cashMinor), major(p.commissionDeductedMinor), p.bankReference ?? "", p.reconciliation]),
