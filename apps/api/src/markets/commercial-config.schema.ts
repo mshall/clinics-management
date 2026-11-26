@@ -61,6 +61,10 @@ const dunningSchema = z.object({
   graceDays: z.number().int().min(1).max(90),
   readOnlyAfterDays: z.number().int().min(2).max(180),
   suspendAfterDays: z.number().int().min(3).max(365),
+  /** Payment reminder offsets before the due date (0 = on the due date). Absent = built-in default [3, 0]. */
+  reminderDaysBeforeDue: z.array(z.number().int().min(0).max(90)).max(6).optional(),
+  /** Payment reminder offsets after the due date (each >= 1). Absent = none (today's behaviour). */
+  reminderDaysAfterDue: z.array(z.number().int().min(1).max(90)).max(6).optional(),
 });
 
 const referralSchema = z.object({

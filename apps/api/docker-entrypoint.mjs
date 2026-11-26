@@ -10,6 +10,19 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.stderr.write(`[boot] entrypoint pid=${process.pid}\n`);
 
+/**
+ * Boot phase seen by the health probe. `starting` (secret, migration, Nest warming up) answers 200 so a slow but
+ * healthy migration is not killed; `failed` (migration gave up, or Nest kept crashing) answers 503 so App Runner
+ * marks the revision unhealthy and rolls back instead of sending traffic to a container that can never serve.
+ */
+let bootPhase = "starting";
+let bootFailure = null;
+function failBoot(reason) {
+  bootPhase = "failed";
+  bootFailure = reason;
+  process.stderr.write(`[boot] FAILED: ${reason} (health probe now answers 503)\n`);
+}
+
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -38,13 +51,14 @@ function isLiveProbe(req) {
 }
 
 function respondLive(res, req) {
-  res.statusCode = 200;
+  const failed = bootPhase === "failed";
+  res.statusCode = failed ? 503 : 200;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   if (req.method === "HEAD") {
     res.end();
     return;
   }
-  res.end(JSON.stringify({ status: "ok", phase: "starting" }));
+  res.end(JSON.stringify(failed ? { status: "boot_failed", reason: bootFailure } : { status: "ok", phase: "starting" }));
 }
 
 function createProxy(upstreamPort) {
@@ -129,19 +143,24 @@ function resolveNestMainJs(apiRoot) {
   return candidates[0];
 }
 
+/** Prisma applies a migration without a transaction and a failed one blocks every retry (P3009), so retries are bounded. */
 async function runMigrate() {
+  const maxAttempts = Math.max(1, Number(process.env.PRISMA_MIGRATE_MAX_ATTEMPTS ?? "3") || 3);
+  const baseDelayMs = Math.max(0, Number(process.env.PRISMA_MIGRATE_RETRY_DELAY_MS ?? "5000"));
   let attempt = 0;
-  while (true) {
+  while (attempt < maxAttempts) {
     attempt++;
-    console.error(`[boot] prisma migrate deploy (attempt ${attempt}) …`);
+    console.error(`[boot] prisma migrate deploy (attempt ${attempt}/${maxAttempts}) …`);
     const exit = await runChild("npx", ["prisma", "migrate", "deploy"]);
     if (exit === 0) {
       console.error("[boot] prisma migrate deploy completed OK");
-      return;
+      return true;
     }
-    console.error("[boot] migrate failed with status", exit, "— retrying");
-    await sleep(Math.min(30_000, 5000 * Math.min(attempt, 6)));
+    console.error("[boot] migrate failed with status", exit);
+    if (attempt < maxAttempts) await sleep(Math.min(30_000, baseDelayMs * attempt));
   }
+  failBoot(`prisma migrate deploy failed ${maxAttempts} times; resolve the failed migration before redeploying`);
+  return false;
 }
 
 async function loadDbSecretFromArn(dbSecretArn) {
@@ -190,7 +209,10 @@ async function bootWorker(internalPort) {
 
   const dbSecretArn = process.env.DB_SECRET_ARN;
   if (dbSecretArn) await loadDbSecretFromArn(dbSecretArn);
-  if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") await runMigrate();
+  if (process.env.PRISMA_MIGRATE_ON_BOOT === "true") {
+    const migrated = await runMigrate();
+    if (!migrated) return; // never start Nest on a database the migrations could not bring up to date
+  }
 
   const mainJs = resolveNestMainJs(__dirname);
   const nestEnv = { ...process.env, PORT: String(internalPort), LISTEN_HOST: "127.0.0.1" };
@@ -204,6 +226,7 @@ async function bootWorker(internalPort) {
       nestRestarts++;
       console.error("[boot] Nest exited code=", code, "signal=", signal, "restart=", nestRestarts);
       if (nestRestarts <= 5) setTimeout(spawnNest, 2000);
+      else failBoot("Nest exited repeatedly and was not restarted");
     });
   }
 

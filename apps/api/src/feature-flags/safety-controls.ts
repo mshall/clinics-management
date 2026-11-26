@@ -114,6 +114,12 @@ export const SAFETY_CONTROLS: readonly SafetyControl[] = [
     forbiddenKeyTokens: ["mar_allergy", "mar_duplicate", "mar_check", "doctor_order"],
   },
   {
+    id: "sb05_collection_never_pauses_listing",
+    label: "SB-05 (26 Nov 2026): collecting an unpaid Kiorex commission never pauses or hides the Kiorex listing (a code rule, no switch)",
+    paths: ["subscriptions/dunning.service.ts"],
+    forbiddenKeyTokens: ["listing_pause", "pause_listing", "billing_pause", "commission_pause"],
+  },
+  {
     id: "breach_response_tooling",
     label: "Breach-response tooling",
     paths: ["observability/notify-on-call.ts"],
