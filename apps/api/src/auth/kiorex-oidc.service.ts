@@ -9,6 +9,7 @@ import {
 import { passwordHasher } from "./password-hasher";
 import { createHash, randomBytes } from "node:crypto";
 import { jwtVerify } from "jose";
+import { KX_SUBJECT_DELETED_EVENT } from "../config/host-config";
 import { AuditService } from "../audit/audit.service";
 import { FeatureFlagsService } from "../feature-flags/feature-flags-public";
 import { PrismaService } from "../prisma/prisma.service";
@@ -21,7 +22,7 @@ import {
 
 const TXN_TTL_MS = 10 * 60 * 1000;
 const BACKCHANNEL_EVENT = "http://schemas.openid.net/event/backchannel-logout";
-const KX_SUBJECT_DELETED = "https://schemas.kiorex.com/event/subject.deleted";
+const KX_SUBJECT_DELETED = KX_SUBJECT_DELETED_EVENT;
 const SSO_FLAG = "account.provider_sso";
 
 export type KiorexCallbackResult =
@@ -164,8 +165,8 @@ export class KiorexOidcService {
   private endSessionUrlFor(port: KiorexOidcPort, idToken: string | undefined, edition: string | null | undefined): string | undefined {
     if (!idToken || !port.endSessionUrl) return undefined;
     // Clinic edition: the web root is the registered post-logout URI. Nurse edition has no registered local one, so Passport shows its own signed-out page.
-    const web = edition === "NURSE" ? undefined : readKiorexOidcConfig()?.redirectUri;
-    return port.endSessionUrl({ idTokenHint: idToken, postLogoutRedirectUri: web ? `${new URL(web).origin}/` : undefined });
+    const post = edition === "NURSE" ? undefined : readKiorexOidcConfig()?.postLogoutRedirectUri;
+    return port.endSessionUrl({ idTokenHint: idToken, postLogoutRedirectUri: post });
   }
 
   private async completeLink(

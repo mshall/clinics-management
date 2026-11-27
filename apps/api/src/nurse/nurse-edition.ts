@@ -3,6 +3,8 @@
  * The edition changes name, navigation, terminology, plans and visible modules, never the data model or the API.
  * Pure data + functions: shared by the API (`/nurse/edition`), signup and tests; the web mirrors it in `apps/web/src/lib/edition.ts`.
  */
+import { clinicWebHost, nurseParentDomains, nurseWebHost } from "../config/host-config";
+
 export const EDITIONS = ["CLINIC", "NURSE"] as const;
 export type Edition = (typeof EDITIONS)[number];
 export type NurseTenantKind = "SOLO" | "AGENCY";
@@ -21,10 +23,11 @@ export const NURSE_BRAND = Object.freeze({
   accentName: "Nurse Rose",
   /** The Kiorly palette is unchanged; only the accent differs from Kiorly Clinic. */
   palette: "kiorly",
-  host: "nurse.kiorly.com",
+  /** Env-driven (`NURSE_WEB_URL`); the legacy default lives in `config/host-config.ts`. */
+  get host(): string { return nurseWebHost(); },
 });
 
-export const CLINIC_BRAND = Object.freeze({ nameEn: "Kiorly Clinic", nameAr: "كيورلي كلينيك", accent: null, host: "app.kiorly.com" });
+export const CLINIC_BRAND = Object.freeze({ nameEn: "Kiorly Clinic", nameAr: "كيورلي كلينيك", accent: null, get host(): string { return clinicWebHost(); } });
 
 /**
  * KX-23 §03 terminology: "Clinic" -> "Practice" (solo) / "Agency"; "Encounter" -> "Visit record"; "Doctor" -> "Nurse"; plus the
@@ -93,8 +96,9 @@ export const NURSE_HIDDEN_MODULES = ["drug_prescribing", "soap_specialty_templat
 export function editionFromHost(hostHeader: string | undefined | null): Edition | null {
   const host = (hostHeader ?? "").toLowerCase().split(":")[0]!.trim();
   if (!host) return null;
-  if (host === "nurse.kiorly.com" || host.endsWith(".nurse.kiorly.com")) return "NURSE";
-  if (/^nurse\.[a-z0-9-]+\.kiorly\.(com|link)$/.test(host)) return "NURSE"; // nurse.staging.kiorly.com style
+  const nurse = nurseWebHost();
+  if (host === nurse || host.endsWith(`.${nurse}`)) return "NURSE";
+  for (const d of nurseParentDomains()) if (host.startsWith("nurse.") && host.endsWith(`.${d}`) && /^nurse\.[a-z0-9-]+$/.test(host.slice(0, -d.length - 1))) return "NURSE"; // nurse.staging.<domain> / nurse.test.<domain>
   if (host === "nurse.localhost" || host.startsWith("nurse.") && host.endsWith(".localhost")) return "NURSE";
   return null;
 }
@@ -116,4 +120,4 @@ export function canChangeEdition(actor: { isPlatformSuperAdmin: boolean }): bool
 
 /** OIDC (Kiorex Passport): one client for both editions (aud = kiorly-clinic); the edition is a UI default, never a token claim. */
 export const OIDC_AUDIENCE = "kiorly-clinic";
-export const OIDC_NURSE_REDIRECT_HOST = "nurse.kiorly.com";
+export const OIDC_NURSE_REDIRECT_HOST = nurseWebHost();

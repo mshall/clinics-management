@@ -3,6 +3,7 @@
  * (back-channel logout token verification). No custom crypto: both libraries do all signing/verification.
  */
 import type { JWTVerifyGetKey } from "jose";
+import { HOST_DEFAULTS } from "../config/host-config";
 
 export type KiorexOidcConfig = {
   issuer: string;
@@ -11,6 +12,10 @@ export type KiorexOidcConfig = {
   redirectUri: string;
   /** nurse.kiorly.com callback (Kiorly Nurse edition, ADR-031). Same client and audience; only the redirect URI differs. */
   nurseRedirectUri: string;
+  /** Registered post-logout URI (the Clinic web root by default). */
+  postLogoutRedirectUri: string;
+  /** Back-channel logout endpoint Passport calls (registered on the Passport side; informational here). */
+  backchannelLogoutUri: string;
 };
 
 export type KiorexIdentityClaims = {
@@ -38,21 +43,70 @@ export interface KiorexOidcPort {
   readonly clientId: string;
 }
 
+const stripSlash = (v: string): string => v.replace(/\/+$/, "");
+
+/**
+ * Passport (OIDC) client configuration, fully environment-driven (ADR-059, ENVIRONMENT_CONFIGURATION_STANDARD).
+ *
+ *   KIOREX_OIDC_ISSUER                   Passport issuer; unset = Passport sign-in off (button hidden, nothing changes)
+ *   KIOREX_OIDC_CLIENT_ID                default `kiorly-clinic`
+ *   KIOREX_OIDC_CLIENT_SECRET            injected from the secret store by reference (App Runner runtimeEnvironmentSecrets); never in git
+ *   KIOREX_OIDC_REDIRECT_URI             default `<APP_WEB_URL or WEB_PUBLIC_ORIGIN>/auth/kiorex/callback`
+ *   KIOREX_OIDC_REDIRECT_URI_NURSE       default `<NURSE_WEB_URL>/auth/kiorex/callback`
+ *   KIOREX_OIDC_POST_LOGOUT_REDIRECT_URI default the origin of the redirect URI + `/`
+ *   KIOREX_OIDC_BACKCHANNEL_LOGOUT_URI   the URL Passport calls (registered in Passport, informational here); default `<web origin>/api/v1/auth/kiorex/backchannel-logout`
+ *
+ * Outside production the historic localhost defaults stay (local development). In production there is NO localhost default: a missing
+ * web origin or secret makes the config unusable (`null` = Passport off, never a half-configured redirect), and `kiorexOidcProblems` names why.
+ */
 export function readKiorexOidcConfig(env: NodeJS.ProcessEnv = process.env): KiorexOidcConfig | null {
   const issuer = env.KIOREX_OIDC_ISSUER?.trim().replace(/\/+$/, "");
   if (!issuer) return null;
   const prod = env.NODE_ENV === "production";
   const clientSecret = env.KIOREX_OIDC_CLIENT_SECRET?.trim() || (prod ? "" : "dev-kiorly-clinic-secret");
   if (!clientSecret) return null;
-  const web = (env.APP_WEB_URL?.trim() || "http://localhost:5174").replace(/\/+$/, "");
+  const explicitWeb = env.APP_WEB_URL?.trim() || env.WEB_PUBLIC_ORIGIN?.trim() || "";
+  const explicitRedirect = env.KIOREX_OIDC_REDIRECT_URI?.trim() || "";
+  if (prod && !explicitWeb && !explicitRedirect) return null; // no localhost default in production
+  const web = stripSlash(explicitWeb || "http://localhost:5174");
+  const redirectUri = explicitRedirect || `${web}/auth/kiorex/callback`;
+  const webOrigin = (() => { try { return new URL(redirectUri).origin; } catch { return web; } })();
   return {
     issuer,
     clientId: env.KIOREX_OIDC_CLIENT_ID?.trim() || "kiorly-clinic",
     clientSecret,
-    redirectUri: env.KIOREX_OIDC_REDIRECT_URI?.trim() || `${web}/auth/kiorex/callback`,
+    redirectUri,
     nurseRedirectUri:
       env.KIOREX_OIDC_REDIRECT_URI_NURSE?.trim() ||
-      `${(env.NURSE_WEB_URL?.trim() || (prod ? "https://nurse.kiorly.com" : "http://nurse.localhost:5174")).replace(/\/+$/, "")}/auth/kiorex/callback`,
+      `${stripSlash(env.NURSE_WEB_URL?.trim() || (prod ? `https://${HOST_DEFAULTS.nurseWebHost}` : "http://nurse.localhost:5174"))}/auth/kiorex/callback`,
+    postLogoutRedirectUri: env.KIOREX_OIDC_POST_LOGOUT_REDIRECT_URI?.trim() || `${webOrigin}/`,
+    backchannelLogoutUri: env.KIOREX_OIDC_BACKCHANNEL_LOGOUT_URI?.trim() || `${webOrigin}/api/v1/auth/kiorex/backchannel-logout`,
+  };
+}
+
+/** Why Passport is off although `KIOREX_OIDC_ISSUER` is set (variable NAMES only, never values). Empty when usable or deliberately unset. */
+export function kiorexOidcProblems(env: NodeJS.ProcessEnv = process.env): string[] {
+  if (!env.KIOREX_OIDC_ISSUER?.trim() || readKiorexOidcConfig(env)) return [];
+  const out: string[] = [];
+  if (!env.KIOREX_OIDC_CLIENT_SECRET?.trim() && env.NODE_ENV === "production") out.push("KIOREX_OIDC_CLIENT_SECRET");
+  if (!env.APP_WEB_URL?.trim() && !env.WEB_PUBLIC_ORIGIN?.trim() && !env.KIOREX_OIDC_REDIRECT_URI?.trim() && env.NODE_ENV === "production") out.push("APP_WEB_URL (or WEB_PUBLIC_ORIGIN / KIOREX_OIDC_REDIRECT_URI)");
+  return out;
+}
+
+/**
+ * The `KX_CLIENT_OVERRIDES_JSON` entry Passport needs for this Clinic (kiorex-account Docs/DEPLOY_DEV.md): derived from the SAME env the
+ * Clinic reads, so the two cannot drift. The secret is a placeholder: the real value is generated once and injected on both sides by reference.
+ */
+export function passportClientOverride(env: NodeJS.ProcessEnv = process.env): { "kiorly-clinic": { redirectUris: string[]; postLogoutRedirectUris: string[]; backchannelLogoutUri: string; clientSecret: string } } | null {
+  const c = readKiorexOidcConfig(env);
+  if (!c) return null;
+  return {
+    "kiorly-clinic": {
+      redirectUris: [...new Set([c.redirectUri, c.nurseRedirectUri])],
+      postLogoutRedirectUris: [c.postLogoutRedirectUri],
+      backchannelLogoutUri: c.backchannelLogoutUri,
+      clientSecret: "<same value as KIOREX_OIDC_CLIENT_SECRET (32+ random characters, from the secret store)>",
+    },
   };
 }
 

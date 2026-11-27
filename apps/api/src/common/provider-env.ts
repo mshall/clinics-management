@@ -1,3 +1,4 @@
+import { defaultFromAddress } from "../config/host-config";
 import { providerMode, type ProviderKind } from "./provider-mode";
 import { pushProblems } from "./vendors/push";
 
@@ -51,7 +52,7 @@ export const emailTransport = (env: Env = process.env): EmailTransport => (get(e
 export type EmailHttpConfig = HttpProviderConfig & { fromAddress: string };
 export const emailHttpConfig = (env: Env = process.env): EmailHttpConfig => ({
   ...httpConfig(env, "EMAIL", "EMAIL_API_KEY"),
-  fromAddress: get(env, "EMAIL_FROM_ADDRESS") || "noreply@mail.kiorly.com",
+  fromAddress: get(env, "EMAIL_FROM_ADDRESS") || defaultFromAddress(env),
 });
 
 export type WhatsAppBackend = "meta_cloud" | "http";

@@ -1,3 +1,4 @@
+import { pilotEmailDomain } from "../config/host-config";
 import { PlanKey } from "@prisma/client";
 
 export type PilotTier = "lite" | "pro" | "clinic";
@@ -18,7 +19,7 @@ export const PILOT_TENANT_SPECS: Record<PilotTier, PilotTenantSpec> = {
     tier: "lite",
     nameEn: "Sales pilot — Lite",
     nameAr: "تجريبي مبيعات — لايت",
-    adminEmail: "sales-lite@pilot.kiorly.com",
+    adminEmail: `sales-lite@${pilotEmailDomain()}`,
     licenseNumber: "PILOT-SALES-LITE",
     planKey: PlanKey.LITE,
     clinicianSeats: 2,
@@ -28,7 +29,7 @@ export const PILOT_TENANT_SPECS: Record<PilotTier, PilotTenantSpec> = {
     tier: "pro",
     nameEn: "Sales pilot — Pro",
     nameAr: "تجريبي مبيعات — برو",
-    adminEmail: "sales-pro@pilot.kiorly.com",
+    adminEmail: `sales-pro@${pilotEmailDomain()}`,
     licenseNumber: "PILOT-SALES-PRO",
     planKey: PlanKey.PRO,
     clinicianSeats: 5,
@@ -38,7 +39,7 @@ export const PILOT_TENANT_SPECS: Record<PilotTier, PilotTenantSpec> = {
     tier: "clinic",
     nameEn: "Sales pilot — Clinic",
     nameAr: "تجريبي مبيعات — عيادة",
-    adminEmail: "sales-clinic@pilot.kiorly.com",
+    adminEmail: `sales-clinic@${pilotEmailDomain()}`,
     licenseNumber: "PILOT-SALES-CLINIC",
     planKey: PlanKey.CLINIC,
     clinicianSeats: 5,

@@ -1,4 +1,5 @@
 // Copied from kiorex-platform apps/api/src/common/providers/vendors/paymob.ts (repo convention: vendor wire-format code is copied, never imported across repos). Adapted for Kiorly Clinic where marked.
+import { noReplyAddress } from "../../config/host-config";
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /**
@@ -26,7 +27,7 @@ export function paymobIntentionBody(i: { paymentId: string; amountMinor: number;
   return {
     amount: i.amountMinor, currency: i.currency, payment_methods: i.integrationIds, special_reference: i.paymentId,
     items: [{ name: 'Kiorly subscription', amount: i.amountMinor, description: 'Kiorly', quantity: 1 }],
-    billing_data: { first_name: 'Kiorly', last_name: 'Clinic', email: i.customerEmail || 'noreply@kiorly.com', phone_number: 'NA', apartment: 'NA', floor: 'NA', street: 'NA', building: 'NA', shipping_method: 'NA', postal_code: 'NA', city: 'NA', country: 'EG', state: 'NA' }, // no patient data is sent to the PSP
+    billing_data: { first_name: 'Kiorly', last_name: 'Clinic', email: i.customerEmail || noReplyAddress(), phone_number: 'NA', apartment: 'NA', floor: 'NA', street: 'NA', building: 'NA', shipping_method: 'NA', postal_code: 'NA', city: 'NA', country: 'EG', state: 'NA' }, // no patient data is sent to the PSP
     notification_url: i.notificationUrl, redirection_url: i.redirectionUrl,
   };
 }

@@ -1,3 +1,4 @@
+import { opsContactAddress } from "../config/host-config";
 import { DevInboxRecorder } from "../messaging/dev-inbox.recorder";
 import { isMock } from "../common/provider-mode";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
@@ -132,7 +133,7 @@ export class PushService {
       return { queued: 0, skippedReason: "web_push_module_missing" };
     }
     webpush!.setVapidDetails(
-      process.env.WEB_PUSH_VAPID_SUBJECT?.trim() || "mailto:ops@kiorly.com",
+      process.env.WEB_PUSH_VAPID_SUBJECT?.trim() || `mailto:${opsContactAddress()}`,
       publicKey,
       privateKey,
     );
