@@ -124,7 +124,7 @@ function runSeedScript() {
 export async function handler() {
   console.log("[db-seed] loading DATABASE_URL from Secrets Manager …");
   process.env.DATABASE_URL = await buildDatabaseUrl();
-  process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS = process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS ?? "true";
+  process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS = process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS ?? "false";
   const migrate = runMigrateDeploy();
   if (!migrate.ok) {
     console.error("[db-seed] migrate failed:", migrate.detail ?? migrate.exit);

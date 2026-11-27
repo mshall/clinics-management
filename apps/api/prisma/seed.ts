@@ -15,6 +15,7 @@ import {
   RevenueStatus,
   UserRole,
 } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 import * as bcrypt from "bcryptjs";
 import { assertDemoPasswordAllowedInProduction, isDemoSeedBlockedInProduction } from "../src/common/seed-demo-guard";
 import { ensureEgyptDrugCatalog } from "./egypt-drug-catalog-seed";
@@ -81,6 +82,15 @@ type UserSeed = {
   isTenantOwner?: boolean;
 };
 
+/**
+ * Deployed environments with real data set PRISMA_SEED_ENSURE_DEMO_PASSWORDS=false. Then the seed never re-sets the
+ * password of an existing account (the old condition below also fired when NODE_ENV was unset, as in the seed Lambda)
+ * and a missing seeded account is created with a random, unknown password instead of the published demo one.
+ */
+function demoPasswordsDisabled(): boolean {
+  return process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS === "false";
+}
+
 async function ensureUser(passwordHash: string, data: UserSeed) {
   if (isDemoSeedBlockedInProduction()) {
     return null;
@@ -90,8 +100,9 @@ async function ensureUser(passwordHash: string, data: UserSeed) {
   });
   if (existing) {
     const ensureDemoPasswords =
-      process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS === "true" ||
-      (process.env.NODE_ENV !== "production" && process.env.ALLOW_DEMO_SEED !== "false");
+      !demoPasswordsDisabled() &&
+      (process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS === "true" ||
+        (process.env.NODE_ENV !== "production" && process.env.ALLOW_DEMO_SEED !== "false"));
     if (ensureDemoPasswords) {
       let matchesDemo = false;
       try {
@@ -114,8 +125,9 @@ async function ensureUser(passwordHash: string, data: UserSeed) {
     }
     return existing;
   }
+  const createHash = demoPasswordsDisabled() ? bcrypt.hashSync(randomBytes(32).toString("hex"), 10) : passwordHash;
   return prisma.user.create({
-    data: { ...data, passwordHash, isTenantOwner: data.isTenantOwner ?? false },
+    data: { ...data, passwordHash: createHash, isTenantOwner: data.isTenantOwner ?? false },
   });
 }
 

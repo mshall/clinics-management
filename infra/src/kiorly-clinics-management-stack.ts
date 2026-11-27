@@ -278,7 +278,9 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
         DB_SECRET_ARN: db.secret!.secretArn,
         SECRETS_MANAGER_VPCE_HOST: secretsManagerVpceHost,
         KMS_VPCE_HOST: kmsVpceHost,
-        PRISMA_SEED_ENSURE_DEMO_PASSWORDS: "true",
+        // "false": the post-deploy seed never re-sets the password of an existing account (the live organisation's
+        // logins must not fall back to the published demo password on every deploy). See Docs/Test_Data_Users.md.
+        PRISMA_SEED_ENSURE_DEMO_PASSWORDS: "false",
       },
     });
     db.secret!.grantRead(dbSeedFn);
