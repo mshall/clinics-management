@@ -1,6 +1,6 @@
 # Test data — users & access
 
-Reference for QA, demos, and onboarding. Local and CI seeds use a shared demo password (see `apps/api/prisma/seed.ts`); the AWS passwords are in the private demo-accounts register, never in git.
+Reference for QA, demos, and onboarding. The local-dev seed uses a shared demo password (see `apps/api/prisma/seed.ts`) that is valid on a local database only. Deployed environments never accept it: `PRISMA_SEED_ENSURE_DEMO_PASSWORDS=false` on the stack, the live passwords were rotated on 27 Nov 2026 and are kept in the private demo-accounts register, never in git.
 
 **Load data (local):** from the repo root run `npm run db:setup -w api` (migrations + seed).
 

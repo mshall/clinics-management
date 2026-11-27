@@ -121,9 +121,28 @@ function runSeedScript() {
   return { ok: true };
 }
 
-export async function handler() {
+/** Throwaway kx-test e2e organisation (prisma/kx-e2e-org.seed.ts): only on an explicit invocation payload, never on a deploy. */
+function runKxE2eOrg(action, ownerPassword) {
+  const env = {
+    ...process.env,
+    PATH: `${path.join(__dirname, "node_modules", ".bin")}:/usr/local/bin:${process.env.PATH ?? ""}`,
+    KX_E2E_ORG_ACTION: action,
+    KX_E2E_ORG_OWNER_PASSWORD: ownerPassword ?? "",
+  };
+  const result = spawnSync("npx", ["tsx", path.join(__dirname, "prisma", "kx-e2e-org.cli.ts")], { encoding: "utf8", env, cwd: __dirname });
+  if (result.stdout) console.log(result.stdout);
+  if (result.stderr) console.error(result.stderr);
+  if (result.error || (result.status ?? 1) !== 0) return { ok: false, exit: result.status ?? 1, detail: result.error?.message ?? "kx-e2e-org failed" };
+  return { ok: true };
+}
+
+export async function handler(event) {
   console.log("[db-seed] loading DATABASE_URL from Secrets Manager …");
   process.env.DATABASE_URL = await buildDatabaseUrl();
+  if (event && (event.kxE2eOrg === "ensure" || event.kxE2eOrg === "retire")) {
+    // the payload (which carries the generated owner password for "ensure") is never logged
+    return runKxE2eOrg(event.kxE2eOrg, event.ownerPassword);
+  }
   process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS = process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS ?? "false";
   const migrate = runMigrateDeploy();
   if (!migrate.ok) {
