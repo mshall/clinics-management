@@ -100,7 +100,11 @@ describe("mock provider flows: payment success / failure / refund and SMS delive
     });
     const consent = { isSamplePatient: async () => false, assertCanSend: async () => undefined };
     const worker = new OutboundMessageWorker(svc, {} as never, consent as never, {} as never, new SmsService());
-    await worker.processBatch();
+    // The worker takes a bounded batch of the oldest QUEUED rows of the whole database: other tests leave queued rows behind, so drain until this row is picked up.
+    for (let i = 0; i < 50; i += 1) {
+      await worker.processBatch();
+      if ((await prisma.outboundMessage.findUniqueOrThrow({ where: { id: row.id }, select: { status: true } })).status !== "QUEUED") break;
+    }
     const sent = await prisma.outboundMessage.findUniqueOrThrow({ where: { id: row.id } });
     assert.equal(sent.status, "SENT");
     assert.equal(sent.providerMessageId, `dev-sms-${row.id}`);

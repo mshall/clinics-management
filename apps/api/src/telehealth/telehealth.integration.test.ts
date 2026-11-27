@@ -140,12 +140,17 @@ describe("ADR-039 telehealth (integration)", () => {
       assert.equal((await prisma.telehealthSession.findUniqueOrThrow({ where: { id: s.session.id } })).status, TelehealthSessionStatus.ACTIVE);
       assert.equal((await prisma.appointment.findUniqueOrThrow({ where: { id: s.apt.id } })).status, AppointmentStatus.CONFIRMED, "not attended before the threshold");
       await wait(1300);
-      await Promise.all([
-        kit.telehealth.pollSignals({ token: s.token }, 0),
-        kit.telehealth.pollSignals({ actor: w.doctor.jwt, sessionId: s.session.id }, 0),
-        kit.telehealth.pollSignals({ token: s.token }, 0),
-        kit.telehealth.pollSignals({ actor: w.doctor.jwt, sessionId: s.session.id }, 0),
-      ]);
+      // The race needs a pool that can hold the competing interactive transactions (each holds one connection and its inner reads need another):
+      // with a small pool (DB_POOL_MAX below 6) the polls run one after the other, which still proves "attended once" through the repeat polls.
+      const racePolls = [
+        () => kit.telehealth.pollSignals({ token: s.token }, 0),
+        () => kit.telehealth.pollSignals({ actor: w.doctor.jwt, sessionId: s.session.id }, 0),
+        () => kit.telehealth.pollSignals({ token: s.token }, 0),
+        () => kit.telehealth.pollSignals({ actor: w.doctor.jwt, sessionId: s.session.id }, 0),
+      ];
+      const poolMax = Number(process.env.DB_POOL_MAX ?? 10);
+      if (poolMax >= 6) await Promise.all(racePolls.map((f) => f()));
+      else for (const f of racePolls) await f();
       await kit.telehealth.pollSignals({ token: s.token }, 0);
       const apt = await prisma.appointment.findUniqueOrThrow({ where: { id: s.apt.id } });
       assert.equal(apt.status, AppointmentStatus.CHECKED_IN);

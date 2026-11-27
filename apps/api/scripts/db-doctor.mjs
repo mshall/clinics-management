@@ -44,7 +44,7 @@ try {
     process.exit(1);
   }
   console.log("OK  API listening on http://localhost:3000");
-  console.log("\nLogin: http://localhost:5173/login  (admin@drahmedshall.com / demo)");
+  console.log("\nLogin: http://localhost:5173/login  (admin@drahmedshall.com; password in the private demo-accounts register)");
 } catch (err) {
   console.error("FAIL  Database error:", err instanceof Error ? err.message : err);
   console.error("\nFix:");

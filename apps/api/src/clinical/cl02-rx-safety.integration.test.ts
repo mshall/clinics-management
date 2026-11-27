@@ -9,6 +9,7 @@ import { EncountersService } from "../encounters/encounters.service";
 import { createPrismaClient } from "../prisma/create-prisma-client";
 
 const prisma = createPrismaClient();
+const suffix = `cl02-${Date.now()}`;
 
 describe("CL-02 Rx safety on save", () => {
   let tenantId: string;
@@ -19,14 +20,24 @@ describe("CL-02 Rx safety on save", () => {
 
   before(async () => {
     await prisma.$connect();
-    const clinic = await prisma.clinic.findFirstOrThrow({ orderBy: { createdAt: "asc" } });
-    tenantId = clinic.tenantId;
-    clinicId = clinic.id;
-    const clinician = await prisma.user.findFirstOrThrow({
-      where: { tenantId, deletedAt: null },
-      select: { id: true },
-    });
-    clinicianId = clinician.id;
+    // Self-seeding: the test creates its own organisation, clinic and clinician, so it needs only the migrated database
+    // (the EG market comes from the migrations; the drug catalogue is optional: the override case returns early without it).
+    const market = await prisma.market.findFirstOrThrow({ where: { code: "EG" } });
+    tenantId = (await prisma.tenant.create({ data: { name: `CL02 ${suffix}`, marketId: market.id, deploymentCell: "frankfurt", baseCurrency: "EGP" } })).id;
+    clinicId = (
+      await prisma.clinic.create({
+        data: {
+          tenantId, nameEn: "CL02", nameAr: "ا", addressEn: "x", addressAr: "ا", country: "EG", city: "Cairo",
+          locationUrl: "https://maps.example/cl02", timezone: "Africa/Cairo", phone: "201000000202",
+          email: `cl02.${suffix}@example.com`, licenseNumber: `EG-CL02-${suffix}`, defaultCurrency: "EGP",
+        },
+      })
+    ).id;
+    clinicianId = (
+      await prisma.user.create({
+        data: { tenantId, email: `cl02.${suffix}@example.com`, displayName: "CL02 Clinician", role: "PHYSICIAN", passwordHash: "not-a-real-hash" },
+      })
+    ).id;
     const patient = await prisma.patient.create({
       data: {
         tenantId,
@@ -34,7 +45,7 @@ describe("CL-02 Rx safety on save", () => {
         firstNameEn: "Rx",
         lastNameEn: "Safety",
         gender: "UNKNOWN",
-        phone: "+201066655544",
+        phone: "+201000000202",
       },
     });
     patientId = patient.id;
@@ -66,6 +77,10 @@ describe("CL-02 Rx safety on save", () => {
     await prisma.encounter.delete({ where: { id: encounterId } }).catch(() => undefined);
     await prisma.patientAllergy.deleteMany({ where: { patientId } }).catch(() => undefined);
     await prisma.patient.delete({ where: { id: patientId } }).catch(() => undefined);
+    // the organisation is a throw-away one: remove what was created (best effort; the audit rows are append-only and stay)
+    await prisma.user.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.clinic.deleteMany({ where: { tenantId } }).catch(() => undefined);
+    await prisma.tenant.delete({ where: { id: tenantId } }).catch(() => undefined);
     await prisma.$disconnect();
   });
 

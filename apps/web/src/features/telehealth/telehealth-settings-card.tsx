@@ -22,6 +22,7 @@ export function TelehealthSettingsCard({ clinicianId, canManageServices, service
   const [offers, setOffers] = useState(false);
   const [windows, setWindows] = useState<Windows>({});
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- seeds the editable form from the loaded settings (one-shot per load)
     if (q.data) { setOffers(q.data.offersTelehealth); setWindows((q.data.windows as Windows | null) ?? {}); }
   }, [q.data]);
   const save = useMutation({
