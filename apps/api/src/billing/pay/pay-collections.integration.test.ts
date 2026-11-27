@@ -90,4 +90,40 @@ describe("Pay unified collections (clinic)", () => {
     const csv = await pay.report(fin, { level: "branch", from: new Date(Date.now() - 86_400_000), to: new Date(Date.now() + 60_000), lang: "ar", format: "csv" }); assert.ok(String(csv.body).startsWith("﻿")); assert.ok(String(csv.body).includes("المجموعة"));
     const pdf = await pay.report(fin, { level: "organisation", from: new Date(Date.now() - 86_400_000), to: new Date(Date.now() + 60_000), lang: "ar", format: "pdf" }); assert.equal((pdf.body as Buffer).subarray(0, 5).toString(), "%PDF-");
   });
+  it("the screen views: queue with invoice labels and candidates, summary with the safety floors, manual-match invoice search, per-item audit, invoice status and link list", async () => {
+    const a = await invoice(`INV-V1-${stamp}`, 250); const b = await invoice(`INV-V2-${stamp}`, 250);
+    const r = await pay.ingestIpn(fin, { content: file(row("V1", "250.00", a.invoiceNumber), row("V2", "250.00", `${b.invoiceNumber}-note`), row("V3", "77.00", "zzz")), format: "csv" });
+    assert.deepEqual([r.applied, r.queued], [1, 2]);
+    const open = await pay.queueView(fin, "OPEN"); const v2 = open.find((x) => x.bankRef === "V2")!; const v3 = open.find((x) => x.bankRef === "V3")!;
+    assert.ok(open.every((x) => typeof x.amount === "number")); assert.ok(["REVIEW", "UNMATCHED"].includes(v2.decision));
+    assert.ok(v2.candidateInvoices.some((c) => c.invoice?.invoiceNumber === b.invoiceNumber), "a partly matching reference suggests the invoice, labelled with its number");
+    assert.equal(v3.candidateInvoices.length, 0);
+    const applied = (await pay.queueView(fin, "APPLIED")).find((x) => x.bankRef === "V1")!; assert.equal(applied.targetInvoice?.invoiceNumber, a.invoiceNumber);
+    const sum = await pay.matchSummary(fin); assert.ok(sum.byStatus.OPEN! >= 2 && sum.byStatus.APPLIED! >= 1);
+    assert.equal(sum.floors.autoThresholdMin, 0.9); assert.ok(sum.config.autoThreshold >= sum.floors.autoThresholdMin && sum.config.autoMargin >= sum.floors.autoMarginMin);
+    const found = await pay.invoiceCandidates(fin, b.invoiceNumber); assert.deepEqual(found.map((x) => [x.invoiceNumber, x.outstanding]), [[b.invoiceNumber, 250]]);
+    assert.ok(!(await pay.invoiceCandidates(fin, a.invoiceNumber)).length, "a settled invoice is never offered");
+    await assert.rejects(pay.invoiceCandidates(desk, ""), /Finance role required/); await assert.rejects(pay.matchAudit(desk, v2.id), /Finance role required/);
+    await pay.confirm(fin, v2.id, b.id);
+    const audit = await pay.matchAudit(fin, v2.id); assert.deepEqual(audit.events.map((e) => e.action), ["PAY_MATCH_RECEIVED", "PAY_MATCH_CONFIRMED"]); assert.equal(audit.status, "CONFIRMED");
+    const autoAudit = await pay.matchAudit(fin, applied.id); assert.deepEqual(autoAudit.events.map((e) => e.action), ["PAY_MATCH_RECEIVED", "PAY_MATCH_AUTO_APPLIED"]);
+    const l = await pay.createLink(desk, { context: "CLINIC_INVOICE", subjectId: a.id, invoiceId: a.id, clinicId, amount: 1 }).catch((e: Error) => e);
+    assert.match(String((l as Error).message), /already settled/);
+    const st = await pay.invoiceStatus(fin, b.id); assert.equal(st.invoice.state, "CAPTURED"); assert.equal(st.matches.length >= 1, true); assert.equal(st.payments.length, 1);
+    const deskStatus = await pay.invoiceStatus(desk, b.id); assert.equal(deskStatus.matches.length, 0, "bank rows are finance-only");
+    const c = await invoice(`INV-V3-${stamp}`, 90); const link = await pay.createLink(desk, { context: "CLINIC_INVOICE", subjectId: c.id, invoiceId: c.id, clinicId });
+    const list = await pay.listLinks(desk, { invoiceId: c.id }); assert.deepEqual(list.items.map((x) => [x.id, x.state, x.invoice?.invoiceNumber]), [[link.id, "ACTIVE", c.invoiceNumber]]);
+    assert.equal((await pay.listLinks(desk, { invoiceId: c.id, state: "USED" })).items.length, 0);
+    const other = await user(otherTenant, UserRole.FINANCE_OFFICER, "fin3"); assert.equal((await pay.listLinks(other, {})).items.length, 0); await assert.rejects(pay.invoiceStatus(other, b.id), /not found/);
+  });
+
+  it("safety floors hold: the match configuration cannot be made laxer than the contract floors, and a reversal row never auto-applies", async () => {
+    const { clampMatchConfig, MATCH_FLOORS } = await import("@kiorex/pay-contract");
+    const lax = clampMatchConfig({ autoThreshold: 0.1, autoMargin: 0, reviewThreshold: 0 }).config;
+    assert.ok(lax.autoThreshold >= MATCH_FLOORS.autoThresholdMin && lax.autoMargin >= MATCH_FLOORS.autoMarginMin && lax.reviewThreshold >= MATCH_FLOORS.reviewThresholdMin);
+    const inv = await invoice(`INV-R-${stamp}`, 60);
+    const rev = `R1,60.00,EGP,${inv.invoiceNumber},${new Date().toISOString()},Ahmed Hassan,success,reversal`;
+    const r = await pay.ingestIpn(fin, { content: file(rev), format: "csv" }); assert.equal(r.applied, 0); assert.equal(await paid(inv.id), "0");
+    const item = (await pay.queueView(fin, "OPEN")).find((x) => x.bankRef === "R1")!; await assert.rejects(pay.confirm(fin, item.id, inv.id), /Reversals are handled by finance/);
+  });
 });
