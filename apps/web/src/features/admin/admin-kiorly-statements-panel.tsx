@@ -134,7 +134,7 @@ export function AdminKiorlyStatementsPanel() {
                 <TableHead>{t("admin.billing.statements.invoice")}</TableHead>
                 <TableHead>{t("admin.billing.statements.status")}</TableHead>
                 <TableHead className="text-end">{t("admin.billing.statements.total")}</TableHead>
-                <TableHead />
+                <TableHead><span className="sr-only">{t("common.actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

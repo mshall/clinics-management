@@ -165,7 +165,7 @@ export function InstallmentsPage() {
                 <th>{t("installments.dueOn", "Due")}</th>
                 <th>{t("installments.amount", "Amount")}</th>
                 <th>{t("installments.status", "Status")}</th>
-                <th />
+                <th><span className="sr-only">{t("common.actions")}</span></th>
               </tr>
             </thead>
             <tbody>

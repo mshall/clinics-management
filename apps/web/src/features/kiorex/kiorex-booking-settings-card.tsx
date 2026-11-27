@@ -125,7 +125,7 @@ export function KiorexBookingSettingsCard({ clinicId, settings }: { clinicId: st
                     <th className="py-1 text-start font-normal">{t("kiorexTab.booking.statusCol", "Status")}</th>
                     <th className="py-1 text-start font-normal">{t("kiorexTab.booking.verification", "Verification")}</th>
                     <th className="py-1 text-start font-normal">{t("kiorexTab.booking.dailyCap", "Daily cap")}</th>
-                    <th className="py-1" />
+                    <th className="py-1"><span className="sr-only">{t("common.actions")}</span></th>
                   </tr>
                 </thead>
                 <tbody>
