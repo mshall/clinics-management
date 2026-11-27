@@ -8,7 +8,10 @@
  *
  * Nothing here is a secret. Pure functions of an env object (testable, no process state captured at import time).
  */
+import { PILOT_EMAIL_DOMAIN_DEFAULT, pilotEmailDomain } from "../staging/pilot-email-domain";
+
 type Env = Record<string, string | undefined>;
+export { pilotEmailDomain };
 
 export const HOST_DEFAULTS = Object.freeze({
   /** Clinic web host used in links minted by the API when no explicit origin is configured. */
@@ -22,7 +25,7 @@ export const HOST_DEFAULTS = Object.freeze({
   /** Domain of the staff / demo e-mail addresses (`physician@<domain>`), aliased to `@demo.clinic` at sign-in. */
   demoEmailDomain: "kiorly.com",
   /** Pilot (sales) tenant admin e-mail domain, staging seed only. */
-  pilotEmailDomain: "pilot.kiorly.com",
+  pilotEmailDomain: PILOT_EMAIL_DOMAIN_DEFAULT,
   /** SES sending domain for transactional mail. */
   mailSendingDomain: "mail.kiorly.com",
   /** Fallback payer e-mail for a PSP intention that has no customer e-mail. */
@@ -75,10 +78,6 @@ export function widgetBaseUrl(env: Env = process.env): string {
 
 export function demoEmailDomain(env: Env = process.env): string {
   return clean(env.DEMO_EMAIL_DOMAIN).toLowerCase() || HOST_DEFAULTS.demoEmailDomain;
-}
-
-export function pilotEmailDomain(env: Env = process.env): string {
-  return clean(env.PILOT_EMAIL_DOMAIN).toLowerCase() || HOST_DEFAULTS.pilotEmailDomain;
 }
 
 export function mailSendingDomain(env: Env = process.env): string {

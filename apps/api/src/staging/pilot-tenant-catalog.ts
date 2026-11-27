@@ -1,4 +1,4 @@
-import { pilotEmailDomain } from "../config/host-config";
+import { pilotEmailDomain } from "./pilot-email-domain";
 import { PlanKey } from "@prisma/client";
 
 export type PilotTier = "lite" | "pro" | "clinic";
