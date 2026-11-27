@@ -232,4 +232,37 @@ describe("KCV-201 Sign in with Kiorex Passport", () => {
     assert.ok((await prisma.userSession.findUniqueOrThrow({ where: { id: s.sessionId } })).revokedAt);
     assert.equal(await prisma.kiorexIdentityLink.count({ where: { subject: "kx-sub-del" } }), 0);
   });
+
+  describe("verified-phone link (KIOREX_PASSPORT_PHONE_LINK)", () => {
+    let phone: string | null = null;
+    let emp: { id: string; phone: string } | null = null;
+    let phoneUser = "";
+    before(async () => {
+      // a unique phone on the seed staff member (restored afterwards): the match must hit exactly one active staff member
+      const e = await prisma.employee.findFirst({ where: { userId: { not: null }, deletedAt: null, user: { deletedAt: null, deactivatedAt: null } }, select: { id: true, phone: true, userId: true } });
+      if (!e?.userId) return;
+      phoneUser = e.userId; emp = e; phone = `+2011${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`;
+      await prisma.employee.update({ where: { id: e.id }, data: { phone } });
+    });
+    after(async () => { if (emp) await prisma.employee.update({ where: { id: emp.id }, data: { phone: emp.phone } }); if (phoneUser) await prisma.kiorexIdentityLink.deleteMany({ where: { userId: phoneUser } }); });
+    const run = async (claims: KiorexIdentityClaims) => { nextClaims = claims; const state = await startAndState(); return svc.handleCallback({ code: "c", state }, {}); };
+    it("is OFF by default: the same verified phone still needs the explicit link", async (t) => {
+      if (!phone) return t.skip("seed staff member has no phone");
+      delete process.env.KIOREX_PASSPORT_PHONE_LINK;
+      assert.deepEqual(await run({ sub: "kx-sub-phone-off", phone_number: phone, phone_number_verified: true }), { status: "LINK_REQUIRED" });
+    });
+    it("ON: a verified phone that matches exactly one staff member links and signs in; an unverified phone never does", async (t) => {
+      if (!phone) return t.skip("seed staff member has no phone");
+      process.env.KIOREX_PASSPORT_PHONE_LINK = "true";
+      try {
+        assert.deepEqual(await run({ sub: "kx-sub-phone-unverified", phone_number: phone, phone_number_verified: false }), { status: "LINK_REQUIRED" });
+        const r = await run({ sub: "kx-sub-phone-on", phone_number: phone, phone_number_verified: true });
+        assert.equal(r.status, "SESSION");
+        const link = await prisma.kiorexIdentityLink.findUniqueOrThrow({ where: { userId: phoneUser } });
+        assert.equal(link.linkedVia, "VERIFIED_PHONE"); assert.equal(link.subject, "kx-sub-phone-on");
+        // a second Passport identity with the same phone never takes over an already linked user
+        assert.deepEqual(await run({ sub: "kx-sub-phone-second", phone_number: phone, phone_number_verified: true }), { status: "LINK_REQUIRED" });
+      } finally { delete process.env.KIOREX_PASSPORT_PHONE_LINK; }
+    });
+  });
 });
