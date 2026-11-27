@@ -69,7 +69,7 @@ if [[ ! -d node_modules ]]; then
   fi
 fi
 
-npm run build -w web
+VITE_KIORLY_HOME_URL="${VITE_KIORLY_HOME_URL:-$(node scripts/resolve-kiorly-home-url.mjs)}" npm run build -w web
 
 if [[ ! -d apps/web/dist ]]; then
   echo "::error::apps/web/dist missing after build"
