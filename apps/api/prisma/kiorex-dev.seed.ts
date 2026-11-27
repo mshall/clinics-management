@@ -139,6 +139,15 @@ function weekJson() {
 
 async function ensureMarketplaceClient(prisma: PrismaClient): Promise<void> {
   const existing = await prisma.platformIntegrationClient.findUnique({ where: { clientKey: KX_DEV_CLIENT_KEY } });
+  if (process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS === "false") {
+    // Deployed environment with real data: the dev client's secret is published in this repository, so it must not exist as an active
+    // credential. Never create it; deactivate it when an earlier deploy created it. The environment's own marketplace client is separate.
+    if (existing && !existing.deactivatedAt) {
+      await prisma.platformIntegrationClient.update({ where: { id: existing.id }, data: { deactivatedAt: new Date() } });
+      console.log("Kiorex dev seed: published dev marketplace client deactivated (PRISMA_SEED_ENSURE_DEMO_PASSWORDS=false).");
+    }
+    return;
+  }
   if (existing) {
     const same = await bcrypt.compare(KX_DEV_CLIENT_SECRET, existing.secretHash);
     await prisma.platformIntegrationClient.update({
