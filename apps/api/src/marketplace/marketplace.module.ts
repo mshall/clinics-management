@@ -51,12 +51,15 @@ import { KiorexFrontDoorController } from "./kiorex-front-door.controller";
 import { KiorexFrontDoorService } from "./kiorex-front-door.service";
 import { KiorexConnectionController } from "./kiorex-connection.controller";
 import { KiorlyAdminMarketsController } from "./kiorly-admin-markets.controller";
+import { KiorlyAdminPlansController } from "./kiorly-admin-plans.controller";
 import { MarketsModule } from "../markets/markets.module";
+import { PlansModule } from "../plans/plans.module";
 import { PromotionsModule } from "../promotions/promotions.module";
 import { PromotionsMarketplaceController } from "../promotions/promotions-marketplace.controller";
 
 @Module({
   imports: [
+    PlansModule,
     IntegrationsModule,
     SchedulingModule,
     MessagingModule,
@@ -93,6 +96,7 @@ import { PromotionsMarketplaceController } from "../promotions/promotions-market
     KiorexFrontDoorController,
     KiorexConnectionController,
     KiorlyAdminMarketsController,
+    KiorlyAdminPlansController,
     PromotionsMarketplaceController,
   ],
   providers: [

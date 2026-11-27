@@ -157,6 +157,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "marketplace/kiorex-import.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connection.controller.ts": { kind: "webhook" },
   "marketplace/kiorly-admin-markets.controller.ts": { kind: "webhook" },
+  "marketplace/kiorly-admin-plans.controller.ts": { kind: "webhook" }, // signed Kiorly admin route (MARKET_ADMIN scope), same as markets
   "marketplace/kiorex-connect.controller.ts": { kind: "open" },
   "marketplace/kiorex-front-door.controller.ts": { kind: "open" },
   "home-visits/home-visits.controller.ts": { kind: "open" },
