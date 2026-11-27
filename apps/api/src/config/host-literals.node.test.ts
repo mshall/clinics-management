@@ -13,6 +13,7 @@ export const HOST_RE = /\b(kiorex|kiorly)\.(com|link)\b|cloudfront\.net|book\.ki
 /** Paths relative to the repository root. Every entry needs a reason. */
 export const ALLOWED_FILES: Record<string, string> = {
   "apps/api/src/config/host-config.ts": "API config file: legacy defaults, env-overridable",
+  "apps/api/src/staging/pilot-email-domain.ts": "pilot e-mail domain default, kept beside the staging seed because the seed Lambda image copies only src/staging",
   "apps/web/src/lib/host-config.ts": "web config file: legacy defaults, build-time overridable",
   "apps/api/src/auth/dto/login.dto.ts": "OpenAPI example value only (changing it would change the published contract)",
   "apps/web/src/dev/dev-test-users-data.ts": "dev-only quick-pick fixtures (the whole dev/ folder is excluded from production builds)",
