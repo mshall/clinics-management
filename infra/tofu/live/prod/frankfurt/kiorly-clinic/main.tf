@@ -73,21 +73,22 @@ module "kiorly_clinic" {
   uploads  = var.uploads
   env_vars = merge(var.env_vars, module.location.env_vars)
 
-  extra_policy_json    = compact([module.location.policy_json])
-  runtime_secrets      = var.runtime_secrets
-  enable_database      = var.enable_database
-  enable_uploads       = var.enable_uploads
-  enable_cdn           = var.enable_cdn
-  enable_seed_lambda   = var.enable_seed_lambda
-  enable_demo_seed     = var.enable_demo_seed
-  demo_seed_env        = var.demo_seed_env
-  enable_email         = var.enable_email
-  email_domain         = var.email_domain
-  dmarc_report_address = var.dmarc_report_address
-  enable_opensearch    = var.enable_opensearch
-  enable_redis         = var.enable_redis
-  opensearch           = var.opensearch
-  redis                = var.redis
+  extra_policy_json          = compact([module.location.policy_json])
+  runtime_secrets            = var.runtime_secrets
+  enable_database            = var.enable_database
+  enable_uploads             = var.enable_uploads
+  enable_cdn                 = var.enable_cdn
+  enable_seed_lambda         = var.enable_seed_lambda
+  enable_demo_seed           = var.enable_demo_seed
+  seed_ensure_demo_passwords = var.seed_ensure_demo_passwords
+  demo_seed_env              = var.demo_seed_env
+  enable_email               = var.enable_email
+  email_domain               = var.email_domain
+  dmarc_report_address       = var.dmarc_report_address
+  enable_opensearch          = var.enable_opensearch
+  enable_redis               = var.enable_redis
+  opensearch                 = var.opensearch
+  redis                      = var.redis
 
   waf_enabled                = var.waf_enabled
   waf_rules                  = jsondecode(file("${path.root}/../../../../../../platform/waf-rules.json"))

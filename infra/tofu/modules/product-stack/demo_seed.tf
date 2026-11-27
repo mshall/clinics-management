@@ -32,7 +32,7 @@ locals {
       ENV_TAG                           = var.env
       DEMO_SEED_ALLOWED                 = "true"
       ALLOW_DEMO_SEED                   = "true"
-      PRISMA_SEED_ENSURE_DEMO_PASSWORDS = "true"
+      PRISMA_SEED_ENSURE_DEMO_PASSWORDS = tostring(var.seed_ensure_demo_passwords)
       MODE                              = "mock" # staging providers stay mock: seeded flows work without real providers
       DEMO_SEED_RUNTIME_SECRETS         = jsonencode(local.runtime_secrets)
     },
@@ -124,7 +124,7 @@ resource "aws_lambda_function" "demo_seed" {
   }
 
   tags       = merge(local.tags, { Purpose = "demo-seed", Env = var.env })
-  depends_on = [terraform_data.demo_seed_guard, aws_cloudwatch_log_group.demo_seed, aws_iam_role_policy_attachment.demo_seed_vpc, aws_iam_role_policy.demo_seed]
+  depends_on = [terraform_data.demo_seed_guard, terraform_data.demo_password_guard, aws_cloudwatch_log_group.demo_seed, aws_iam_role_policy_attachment.demo_seed_vpc, aws_iam_role_policy.demo_seed]
 }
 
 output "demo_seed_function_name" {

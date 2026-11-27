@@ -40,6 +40,12 @@ variable "seed_image_tag" {
   default     = null
 }
 
+variable "seed_ensure_demo_passwords" {
+  description = "Explicit opt-in (default false): sets PRISMA_SEED_ENSURE_DEMO_PASSWORDS=true on the seed Lambdas, which makes the seed (re)set the published demo password on demo-numbered accounts. Set true ONLY in a demo stack (staging tfvars with demo data). Never in prod: the plan fails when env = prod."
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
   description = "Extra tags (Product, Env, Owner, CostCenter and KiorlyHostCell/DataRegion/StackRole are added automatically)."
   type        = map(string)

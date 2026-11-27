@@ -75,10 +75,20 @@ resource "aws_lambda_function" "seed" {
       DB_SECRET_ARN                     = module.database[0].master_secret_arn
       SECRETS_MANAGER_VPCE_HOST         = module.network[0].vpce_hosts["secretsmanager"]
       KMS_VPCE_HOST                     = module.network[0].vpce_hosts["kms"]
-      PRISMA_SEED_ENSURE_DEMO_PASSWORDS = "true"
+      PRISMA_SEED_ENSURE_DEMO_PASSWORDS = tostring(var.seed_ensure_demo_passwords)
     }
   }
 
   tags       = local.tags
-  depends_on = [aws_cloudwatch_log_group.seed, aws_iam_role_policy_attachment.seed_vpc, aws_iam_role_policy.seed]
+  depends_on = [terraform_data.demo_password_guard, aws_cloudwatch_log_group.seed, aws_iam_role_policy_attachment.seed_vpc, aws_iam_role_policy.seed]
+}
+
+resource "terraform_data" "demo_password_guard" {
+  input = var.seed_ensure_demo_passwords
+  lifecycle {
+    precondition {
+      condition     = !(var.env == "prod" && var.seed_ensure_demo_passwords)
+      error_message = "seed_ensure_demo_passwords must never be true in production (the seed would set a published demo password)."
+    }
+  }
 }

@@ -78,7 +78,8 @@ scheduled_jobs = {
   }
 }
 
-enable_demo_seed = false # Q10: never seed demo data in prod (the plan fails if this is true)
+enable_demo_seed           = false # Q10: never seed demo data in prod (the plan fails if this is true)
+seed_ensure_demo_passwords = false # never in prod (the plan fails if true)
 
 # HVPRV01: 32-byte AES-256-GCM key for home addresses at rest, generated into Secrets Manager (<name>/home-visit-address-key) and injected as
 # HOME_VISIT_ADDRESS_ENCRYPTION_KEY. The API refuses to start in production without it. Do not taint/replace it once visits exist.

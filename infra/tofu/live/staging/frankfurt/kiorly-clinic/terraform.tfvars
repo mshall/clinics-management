@@ -76,7 +76,8 @@ scheduled_jobs = {
   }
 }
 
-enable_demo_seed = true # Q10: staging demo data (non-production only; seeded by hand via scripts/seed-staging.sh)
+enable_demo_seed           = true # Q10: staging demo data (non-production only; seeded by hand via scripts/seed-staging.sh)
+seed_ensure_demo_passwords = true # explicit opt-in: this staging stack IS a demo stack (published demo password on demo accounts); default false everywhere else
 
 # HVPRV01: 32-byte AES-256-GCM key for home addresses at rest, generated into Secrets Manager (<name>/home-visit-address-key) and injected as
 # HOME_VISIT_ADDRESS_ENCRYPTION_KEY. The API refuses to start in production without it. Do not taint/replace it once visits exist.
