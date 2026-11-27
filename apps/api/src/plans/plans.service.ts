@@ -14,6 +14,9 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ACTIVE_PRICE_WHERE, isPlanPriceActive } from "./plans-active-prices";
 import { PriceIndexationService, type PriceImpactPreview } from "./price-indexation.service";
 
+/** Who published a price: a Clinic user, or a Kiorly admin console user that the Kiorex platform authenticated. */
+export type PlanPriceActor = { userId: string | null; source: "CLINIC_PLATFORM" | "KIORLY_ADMIN"; ref: string };
+
 export type PublicPlanDto = {
   key: PlanKey;
   nameEn: string;
@@ -117,6 +120,11 @@ export class PlansService {
 
   async listAllPlans(user: JwtUser) {
     this.assertPlatform(user);
+    return this.listAllPlansUnchecked();
+  }
+
+  /** Same list, for the signed Kiorly admin route (the caller authenticated as the Kiorex platform client; the platform enforces the role). */
+  async listAllPlansUnchecked() {
     const plans = await this.prisma.plan.findMany({
       orderBy: { sortOrder: "asc" },
       include: {
@@ -166,6 +174,10 @@ export class PlansService {
     body: Partial<{ nameEn: string; nameAr: string; isPublic: boolean; sortOrder: number }>,
   ) {
     this.assertPlatform(user);
+    return this.patchPlanUnchecked(planId, body);
+  }
+
+  async patchPlanUnchecked(planId: string, body: Partial<{ nameEn: string; nameAr: string; isPublic: boolean; sortOrder: number }>) {
     const existing = await this.prisma.plan.findUnique({ where: { id: planId } });
     if (!existing) throw new NotFoundException("Plan not found");
     return this.prisma.plan.update({
@@ -212,6 +224,30 @@ export class PlansService {
     },
   ) {
     this.assertPlatform(user);
+    return this.createPlanPriceAs({ userId: user.userId, source: "CLINIC_PLATFORM", ref: user.userId }, planId, body);
+  }
+
+  /**
+   * `actor` is recorded on the audit row. The Clinic web passes the platform super admin's user (a real `User`, so `actorId` is set); the signed Kiorly admin route has no
+   * Clinic user, so `actorId` stays null (it is a foreign key) and the console user is recorded in the metadata as `actorRef` with `actorSource: KIORLY_ADMIN`.
+   */
+  async createPlanPriceAs(
+    actor: PlanPriceActor,
+    planId: string,
+    body: {
+      marketId: string;
+      currency: string;
+      interval: BillingInterval;
+      unit: PriceUnit;
+      amount: number | string;
+      includedClinicians?: number;
+      extraClinicianAmount?: number | string | null;
+      cohortKey?: string | null;
+      validFrom?: string;
+      newVersion?: boolean;
+      preview?: boolean;
+    },
+  ) {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId } });
     if (!plan) throw new NotFoundException("Plan not found");
 
@@ -243,13 +279,14 @@ export class PlansService {
     const priceVersion = body.newVersion !== false && activeRows.length > 0 ? nextVersion + 1 : nextVersion || 1;
     const supersedes = body.newVersion !== false && activeRows.length > 0;
 
-    const amount = new Prisma.Decimal(String(body.amount));
+    if (!/^\d{1,12}(\.\d{1,2})?$/.test(String(body.amount).trim())) throw new BadRequestException("amount invalid");
+    const amount = new Prisma.Decimal(String(body.amount).trim());
     if (amount.isNaN() || amount.lt(0)) throw new BadRequestException("amount invalid");
+    if (!/^[A-Za-z]{3}$/.test(String(body.currency ?? "").trim())) throw new BadRequestException("currency invalid");
     const includedClinicians = Number(body.includedClinicians ?? 1);
-    const extraClinicianAmount =
-      body.extraClinicianAmount != null && body.extraClinicianAmount !== ""
-        ? new Prisma.Decimal(String(body.extraClinicianAmount))
-        : null;
+    const extraRaw = body.extraClinicianAmount != null && body.extraClinicianAmount !== "" ? String(body.extraClinicianAmount).trim() : null;
+    if (extraRaw !== null && !/^\d{1,12}(\.\d{1,2})?$/.test(extraRaw)) throw new BadRequestException("extraClinicianAmount invalid");
+    const extraClinicianAmount = extraRaw !== null ? new Prisma.Decimal(extraRaw) : null;
 
     if (body.preview) {
       const impact = await this.indexation.previewImpact(
@@ -308,7 +345,7 @@ export class PlansService {
         await tx.auditLog.create({
           data: {
             tenantId: auditTenant.id,
-            actorId: user.userId,
+            actorId: actor.userId,
             action: "plan.price.published",
             resource: "PlanPrice",
             resourceId: created.id,
@@ -318,6 +355,8 @@ export class PlansService {
               amount: created.amount.toFixed(2),
               currency: created.currency,
               priceVersion,
+              actorSource: actor.source,
+              actorRef: actor.ref,
               tenantsAffected: impact?.tenantsAffected ?? 0,
               mrrDelta: impact?.mrrDelta ?? "0.00",
             } as Prisma.InputJsonValue,

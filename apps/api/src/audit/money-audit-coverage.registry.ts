@@ -35,7 +35,7 @@ export const MONEY_AUDIT_COVERAGE: MoneyAuditCoverageEntry[] = [
   { file: "kiorex/kiorex-commission.service.ts", method: "patch", action: "kiorex.rate.updated" },
   { file: "kiorex/kiorex-commission.service.ts", method: "remove", action: "kiorex.rate.removed" },
   { file: "kiorex/kiorex-commission.service.ts", method: "patchMarketSettings", action: "kiorex.market_settings.updated" },
-  { file: "plans/plans.service.ts", method: "createPlanPrice", action: "plan.price.published" },
+  { file: "plans/plans.service.ts", method: "createPlanPriceAs", action: "plan.price.published" },
   { file: "admin/platform-admin.service.ts", method: "putTenantEntitlementOverride", action: "entitlement.override_set" },
   { file: "markets/commercial-config.service.ts", method: "update", action: "market.commercial_config_updated" },
 ];

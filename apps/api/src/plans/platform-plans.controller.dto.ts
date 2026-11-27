@@ -88,3 +88,44 @@ export class PlatformPlansCreatePriceBodyDto {
   @IsBoolean()
   preview?: boolean;
 }
+
+/** Signed Kiorly admin route (Ops console, Kiorly edition, over the marketplace API): the actor is the console user the Kiorex platform authenticated. */
+@Lenient()
+export class KiorlyAdminPlanActorDto {
+  @ApiPropertyOptional({ type: Object })
+  @IsOptional()
+  @Allow()
+  actor?: unknown;
+}
+
+@Lenient()
+export class KiorlyAdminPatchPlanBodyDto extends KiorlyAdminPlanActorDto {
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  nameEn?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  nameAr?: string;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  isPublic?: boolean;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  sortOrder?: number;
+}
+
+@Lenient()
+export class KiorlyAdminCreatePriceBodyDto extends PlatformPlansCreatePriceBodyDto {
+  @ApiPropertyOptional({ type: Object })
+  @IsOptional()
+  @Allow()
+  actor?: unknown;
+}
