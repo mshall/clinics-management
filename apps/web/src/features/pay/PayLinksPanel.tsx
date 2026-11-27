@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { apiErrorMessage } from "@/lib/api-error-message";
 import { localeForLanguage } from "@/lib/locale-display";
 import { formatMoneyAmount } from "@/lib/money-display";
-import { type CreatedLink, useCancelLink, useCreateLink, useInvoiceSearch, useInvoiceStatus, useLinks } from "./pay-api";
+import { type CreatedLink, useCancelLink, useCreateLink, useInvoiceSearch, useInvoiceStatus, useLinks, useRequestRefund } from "./pay-api";
 import { stateTone } from "./pay-logic";
 import { Pill, TD, TH, Tbl } from "./pay-ui";
 
@@ -91,7 +91,7 @@ export function PayLinksPanel() {
             </section>
             <section aria-labelledby="pay-pay-h" className="space-y-1">
               <h3 id="pay-pay-h" className="text-sm font-medium">{t("pay.l.payments")}</h3>
-              {st.payments.length === 0 ? <p className="text-sm text-muted-foreground">{t("pay.l.none2")}</p> : <ul className="space-y-1 text-sm" data-testid="pay-invoice-payments">{st.payments.map((p) => <li key={p.id} className="ltr-nums">{money(p.total, p.currency)} · {new Date(p.at).toLocaleDateString(locale)} · {p.methods.join(", ")}</li>)}</ul>}
+              {st.payments.length === 0 ? <p className="text-sm text-muted-foreground">{t("pay.l.none2")}</p> : <ul className="space-y-2 text-sm" data-testid="pay-invoice-payments">{st.payments.map((p) => <li key={p.id}><span className="ltr-nums">{money(p.total, p.currency)} · {new Date(p.at).toLocaleDateString(locale)} · {p.methods.join(", ")}</span> <RefundRequest paymentId={p.id} max={p.total} /></li>)}</ul>}
             </section>
             <section aria-labelledby="pay-ref-h" className="space-y-1">
               <h3 id="pay-ref-h" className="text-sm font-medium">{t("pay.l.refunds")}</h3>
@@ -114,5 +114,23 @@ export function PayLinksPanel() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** A refund request for one payment from the invoice status card. The amount cannot exceed the payment; approval limits are the server's. */
+function RefundRequest({ paymentId, max }: { paymentId: string; max: number }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState(String(max));
+  const [reason, setReason] = useState("");
+  const req = useRequestRefund();
+  if (!open) return <Button size="sm" variant="ghost" className="min-h-11" onClick={() => setOpen(true)} data-testid="pay-refund-open">{t("pay.r.request")}</Button>;
+  return (
+    <form className="mt-2 grid max-w-sm gap-2" onSubmit={(e) => { e.preventDefault(); req.mutate({ paymentId, amount: Number(amount), reason: reason.trim() }, { onSuccess: () => setOpen(false) }); }} data-testid="pay-refund-inline">
+      <label className="grid gap-1"><span>{t("pay.r.amount")}</span><Input inputMode="decimal" dir="ltr" value={amount} onChange={(e) => setAmount(e.target.value)} data-testid="pay-inline-amount" /></label>
+      <label className="grid gap-1"><span>{t("pay.r.reason")}</span><Input value={reason} onChange={(e) => setReason(e.target.value)} data-testid="pay-inline-reason" /></label>
+      <Button type="submit" className="min-h-11" disabled={req.isPending || !(Number(amount) > 0) || Number(amount) > max || !reason.trim()} data-testid="pay-inline-submit">{t("pay.r.submit")}</Button>
+      {req.isError ? <p role="alert" className="text-destructive">{apiErrorMessage(req.error, t)}</p> : null}
+    </form>
   );
 }

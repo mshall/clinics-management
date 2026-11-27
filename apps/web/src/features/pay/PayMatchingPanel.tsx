@@ -49,7 +49,7 @@ export function PayMatchingPanel() {
         <CardContent className="space-y-3">
           {s ? <p className="rounded-lg bg-muted/60 p-3 text-xs" data-testid="pay-floors">{t("pay.m.floors", { auto: s.config.autoThreshold, margin: s.config.autoMargin })}</p> : null}
           <div className="flex flex-wrap items-center gap-2">
-            <input ref={file} type="file" accept=".csv,.json,text/csv,application/json" className="sr-only" id="pay-ipn-file" data-testid="pay-ipn-file" onChange={(e) => void onFile(e.target.files?.[0])} />
+            <input ref={file} type="file" accept=".csv,.json,text/csv,application/json" className="sr-only" id="pay-ipn-file" aria-label={t("pay.m.upload")} data-testid="pay-ipn-file" onChange={(e) => void onFile(e.target.files?.[0])} />
             <Button type="button" size="sm" className="min-h-11" disabled={upload.isPending} onClick={() => file.current?.click()} data-testid="pay-upload">{t("pay.m.upload")}</Button>
             <span className="text-xs text-muted-foreground">{t("pay.m.uploadHint")}</span>
           </div>
