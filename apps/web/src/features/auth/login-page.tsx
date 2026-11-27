@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { KiorexPassportButton, startKiorexPassportSignIn } from "@/features/auth/kiorex-passport";
+import { startKiorexPassportSignIn } from "@/features/auth/kiorex-passport";
 import { rememberSignInMethod } from "@/lib/sign-in-method";
-import { SignInMethodTabs } from "@/components/sign-in-method-tabs";
+import { UnifiedSignIn } from "@/components/unified-sign-in";
 import { useSignInMethod } from "@/components/use-sign-in-method";
 import { SwitchProductLink } from "@/components/switch-product-link";
 import { KiorexLogo } from "@/brand/components/web/KiorexLogo";
@@ -108,7 +108,6 @@ export function LoginPage() {
     return <Navigate to={to} replace />;
   }
 
-  const showPasswordPanel = sim.ready && (!sim.offered || sim.method === "password");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -211,16 +210,13 @@ export function LoginPage() {
           <CardContent>
             {handoffBusy ? <p role="status" data-testid="handoff-busy" className="mb-4 text-sm text-muted-foreground">{t("auth.handoffBusy")}</p> : null}
             {handoff.reason ? <p role="status" data-testid="handoff-reason" className="mb-4 rounded-lg border border-border bg-muted/50 p-3 text-sm">{t(`auth.handoffReason.${handoff.reason}`, { defaultValue: t("auth.handoffReason.other") })}</p> : null}
-            {!sim.ready ? <div role="status" aria-busy="true" aria-label={t("auth.signIn")} data-testid="signin-loading" className="h-40 animate-pulse rounded-xl bg-muted/60" /> : null}
-            {sim.ready && sim.offered ? <SignInMethodTabs className="mb-4" value={sim.method} onChange={sim.choose} labels={{ group: t("auth.method"), passport: t("auth.methodPassport"), password: t("auth.methodPassword") }} /> : null}
-            {sim.ready && sim.offered && sim.method === "passport" ? (
-              <div role="tabpanel" id="signin-panel-passport" className="space-y-3" data-testid="signin-passport-panel">
-                <KiorexPassportButton />
-                <p className="text-center text-xs text-muted-foreground">{t("auth.passportHint")}</p>
-              </div>
-            ) : null}
-            {showPasswordPanel ? (
-              <div role={sim.offered ? "tabpanel" : undefined} id="signin-panel-password" data-testid="signin-password-panel">
+            <UnifiedSignIn
+              lang={i18n.language.startsWith("ar") ? "ar" : "en"}
+              loading={!sim.ready}
+              passport={{ available: sim.offered, onStart: () => { startKiorexPassportSignIn().catch((e: unknown) => toast.error(e instanceof Error ? e.message : t("kiorex.passport.failed"))); } }}
+              local={{ enabled: true, onSubmit: async () => undefined }}
+              localSlot={
+              <div>
                 <div className="mb-4 flex gap-2">
                   <Button type="button" variant={loginMode === "email" ? "default" : "outline"} onClick={() => setLoginMode("email")}>
                     {t("auth.email")}
@@ -307,7 +303,8 @@ export function LoginPage() {
               </form>
             )}
               </div>
-            ) : null}
+              }
+            />
           </CardContent>
         </Card>
         <p className="mt-4 text-center"><SwitchProductLink /></p>
