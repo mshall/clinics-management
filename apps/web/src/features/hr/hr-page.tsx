@@ -906,7 +906,7 @@ export function HrPage() {
                           <p className="text-xs text-muted-foreground">
                             {t(
                               "hr.loginPasswordDefaultHint",
-                              "Default is “demo” — change if needed. A linked user account is created with this password.",
+                              "Change if needed. A linked user account is created with this password.",
                             )}
                           </p>
                         </div>

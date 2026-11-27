@@ -11,6 +11,7 @@ import { localStatement, normalizeStatement, periodRange, statementCsv, type Sta
 import { asTender, asTenderDetail, asTenderMethod } from "./commission-tender";
 import { kiorexApiBase } from "../marketplace/kiorex-connect.service";
 import { signEvidenceRequest } from "./attribution-evidence.service";
+import { QUERY_SIGNATURE_HEADER, signStatementQuery, statementSigningSecret } from "./commission-statement-signing";
 
 export type CollectionBody = {
   runId: string; orgRef: string; periodKey: string; status: string; mode: string; modeRequested?: string | null; fallbackReason?: string | null; provider?: string | null; currency: string;
@@ -251,12 +252,16 @@ export class CommissionCollectionsService {
   private statementMode(): "real" | "mock" { return (process.env.KIOREX_STATEMENT_MODE ?? "mock").toLowerCase() === "real" ? "real" : "mock"; }
 
   private async fetchKiorex(tenantId: string, tail: string, range: { from: Date; to: Date }, accept: string): Promise<Response> {
-    const base = kiorexApiBase(); const secret = process.env.KIOREX_OUTBOX_WEBHOOK_SECRET?.trim();
+    const base = kiorexApiBase(); const shared = process.env.KIOREX_OUTBOX_WEBHOOK_SECRET?.trim();
+    // per-organisation secret (KIOREX_STATEMENT_ORG_SECRET) when set, otherwise the shared secret (platform COMMISSION_STATEMENT_CLINIC_AUTH=either accepts both)
+    const secret = statementSigningSecret(shared ?? "");
     if (!base || !secret) throw new ServiceUnavailableException({ code: "STATEMENT_NOT_CONFIGURED", message: "The Kiorex statement is not connected yet" });
     const url = new URL(`${base}/partner/commissions/settlement-statement${tail}`);
     url.searchParams.set("from", range.from.toISOString()); url.searchParams.set("to", range.to.toISOString());
     // the signature covers the FULL request path (without the query), exactly as the partner endpoints of Kiorex verify it (same scheme as the rate view and the evidence call)
-    const headers = { ...signEvidenceRequest({ secret, clientKey: process.env.KIOREX_EVIDENCE_CLIENT_KEY?.trim() || process.env.KIOREX_MARKETPLACE_CLIENT_KEY?.trim() || "kx_dev_client", method: "GET", path: url.pathname, orgRef: tenantId }), accept };
+    const signed = signEvidenceRequest({ secret, clientKey: process.env.KIOREX_EVIDENCE_CLIENT_KEY?.trim() || process.env.KIOREX_MARKETPLACE_CLIENT_KEY?.trim() || "kx_dev_client", method: "GET", path: url.pathname, orgRef: tenantId });
+    // the query string (from/to) is covered by a second HMAC bound to this request's timestamp and nonce (platform LG-COM-19, X-Kiorly-Query-Signature)
+    const headers = { ...signed, [QUERY_SIGNATURE_HEADER]: signStatementQuery(secret, { timestamp: signed["x-kiorly-timestamp"], nonce: signed["x-kiorly-nonce"], method: "GET", path: url.pathname, query: url.searchParams }), accept };
     try {
       const res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
       if (!res.ok) throw new ServiceUnavailableException({ code: "STATEMENT_UNAVAILABLE", message: `Kiorex answered ${res.status}` });

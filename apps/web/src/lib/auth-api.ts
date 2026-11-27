@@ -38,9 +38,6 @@ function loginHttpErrorMessage(status: number, data: unknown, fallback: string):
       }
       return "Something went wrong on the server. Please try again in a minute.";
     }
-    if (import.meta.env.DEV) {
-      return `Server error (${status}). Try again or use password "demo" for seeded accounts.`;
-    }
     return "Something went wrong on the server. Please try again in a minute.";
   }
 

@@ -294,6 +294,16 @@ export const CLINIC_FLAG_DEFINITIONS: readonly FlagDefinition[] = [
     whenOffAr: "تُخفى عمليات خصم الرسوم وائتمان كسب النزاعات والمنح وكشوف الرصيد؛ تبقى محفظة الرصيد نفسها دون تغيير",
   }),
   clinic({
+    key: "clinic.sponsored_promotions",
+    scopes: GMO,
+    class: "Module",
+    dependsOn: ["clinic.provider_credit_v2"],
+    descriptionEn: "Provider-sponsored promotions: the editor, reserve and review routes (growth Phase 2, contracts 1.13.0; the Clinic mirror of growth.sponsored_promotions)",
+    descriptionAr: "العروض الترويجية التي يموّلها المزوّد: المحرّر ومسارات الحجز والمراجعة (النمو المرحلة 2، العقود 1.13.0؛ نظير growth.sponsored_promotions في العيادة)",
+    whenOffEn: "The provider-sponsored promotion editor, reserve and review routes are hidden and refuse; discounts already reserved are settled normally",
+    whenOffAr: "يُخفى محرّر العروض الترويجية التي يموّلها المزوّد ومسارات الحجز والمراجعة وتُرفض؛ وتُسوّى الخصومات المحجوزة سابقاً بشكل طبيعي",
+  }),
+  clinic({
     key: "clinic.usage_bundles",
     scopes: GMO,
     class: "Commercial",

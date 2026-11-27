@@ -94,7 +94,7 @@ test.describe("layout and accessibility", () => {
       if (w >= 1024) await expect(panel).toContainText(/Kiorly Clinic|Kiorly|كيورلي/i);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await expect(page.getByTestId("switch-product")).toBeVisible();
-      const r = await new AxeBuilder({ page }).exclude("[data-testid=\"dev-test-users\"]").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+      const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
       expect(r.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
       if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: `${SHOTS}/clinic-${w}-en-light.png` }); }
     });
@@ -113,7 +113,7 @@ test.describe("layout and accessibility", () => {
         if (theme === "dark") { await expect(themeBtn).toHaveAttribute("data-theme-mode", "dark"); await page.waitForTimeout(500); } // let the 240 ms theme cross-fade finish before axe measures contrast
         await expect(page.getByTestId("signin-method")).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-        const r = await new AxeBuilder({ page }).exclude("[data-testid=\"dev-test-users\"]").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+        const r = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
         expect(r.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
         if (SHOTS) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: `${SHOTS}/clinic-${w}-${lang}-${theme}.png` }); }
       }

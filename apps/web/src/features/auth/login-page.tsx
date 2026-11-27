@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
@@ -24,10 +24,6 @@ import { apiUrl } from "@/lib/api-url";
 import { handoffExchangeRequest, loginRequest } from "@/lib/auth-api";
 import { resolvePostLoginPath } from "@/lib/nav-policy";
 import { useAuthStore } from "@/stores/auth-store";
-
-// DEV ONLY quick-pick test users. Keep the condition inline: Vite folds `import.meta.env.DEV` to false in production builds, which drops the
-// dynamic import and the whole ../../dev folder (asserted by scripts/check-no-dev-test-users.mjs).
-const DevTestUsers = import.meta.env.DEV && import.meta.env.VITE_DEV_TEST_USERS !== "false" ? lazy(() => import("@/dev/dev-test-users")) : null;
 
 export function LoginPage() {
   const { t, i18n } = useTranslation();
@@ -315,7 +311,6 @@ export function LoginPage() {
           </CardContent>
         </Card>
         <p className="mt-4 text-center"><SwitchProductLink /></p>
-        {DevTestUsers ? <Suspense fallback={null}><DevTestUsers busy={submitting} onPick={(e, p) => { setEmail(e); setPassword(p); void signInWith(e, p, ""); }} /></Suspense> : null}
       </div>
       </main>
     </div>
