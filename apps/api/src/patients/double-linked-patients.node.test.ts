@@ -70,10 +70,10 @@ describe("isSafeAutoMergeCluster", () => {
   it("rejects phone clusters of different people sharing a number", () => {
     const cluster = {
       reason: "phone" as const,
-      matchKey: "+201055581552",
+      matchKey: "+201000009501",
       patients: [
-        row({ id: "a", phone: "+201055581552", firstNameEn: "Adam", lastNameEn: "Ramy" }),
-        row({ id: "b", phone: "01055581552", firstNameEn: "El Amir", lastNameEn: "Ebrahim" }),
+        row({ id: "a", phone: "+201000009501", firstNameEn: "Alpha", lastNameEn: "Testone" }),
+        row({ id: "b", phone: "01000009501", firstNameEn: "Beta", lastNameEn: "Testtwo" }),
       ],
     };
     assert.equal(patientNamesLikelySame(cluster.patients[0]!, cluster.patients[1]!), false);
@@ -83,10 +83,10 @@ describe("isSafeAutoMergeCluster", () => {
   it("allows phone clusters with compatible names", () => {
     const cluster = {
       reason: "phone" as const,
-      matchKey: "+201123796540",
+      matchKey: "+201000009502",
       patients: [
-        row({ id: "a", phone: "+201123796540", firstNameEn: "Mohammed", lastNameEn: "Elnagar" }),
-        row({ id: "b", phone: "01123796540", firstNameEn: "Mohammed", lastNameEn: "Elnagar" }),
+        row({ id: "a", phone: "+201000009502", firstNameEn: "Mohammed", lastNameEn: "Examplename" }),
+        row({ id: "b", phone: "01000009502", firstNameEn: "Mohammed", lastNameEn: "Examplename" }),
       ],
     };
     assert.equal(isSafeAutoMergeCluster(cluster), true);
@@ -95,20 +95,20 @@ describe("isSafeAutoMergeCluster", () => {
   it("rejects phone clusters that only share a common first name", () => {
     const cluster = {
       reason: "phone" as const,
-      matchKey: "+201221545402",
+      matchKey: "+201000009503",
       patients: [
-        row({ id: "a", phone: "01221545402", firstNameEn: "Mohammed", lastNameEn: "Fared" }),
-        row({ id: "b", phone: "01221545402", firstNameEn: "mohammed", lastNameEn: "mohammed" }),
+        row({ id: "a", phone: "01000009503", firstNameEn: "Mohammed", lastNameEn: "Samplefour" }),
+        row({ id: "b", phone: "01000009503", firstNameEn: "mohammed", lastNameEn: "mohammed" }),
       ],
     };
     assert.equal(isSafeAutoMergeCluster(cluster), false);
   });
 
-  it("allows Badry/Badr Elsayed transliteration variants", () => {
+  it("allows Zaydy/Zayd Elsample transliteration variants", () => {
     assert.equal(
       patientNamesLikelySame(
-        row({ id: "a", phone: "01111580074", firstNameEn: "Badry", lastNameEn: "Elsayed" }),
-        row({ id: "b", phone: "01111580074", firstNameEn: "Badr", lastNameEn: "Elsaid" }),
+        row({ id: "a", phone: "01000009504", firstNameEn: "Zaydy", lastNameEn: "Elsample" }),
+        row({ id: "b", phone: "01000009504", firstNameEn: "Zayd", lastNameEn: "Elsampel" }),
       ),
       true,
     );

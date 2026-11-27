@@ -87,7 +87,6 @@ export function SetupContextBar() {
   useEffect(() => {
     if (!session || !step || !session.startedPending || status !== "done" || leaving.current) return;
     leaving.current = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSuccess(true);
     markJustDone({ key: session.key, entity: session.entity });
     const timer = window.setTimeout(() => {

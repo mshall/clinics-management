@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { P2PPeer, type IceServer } from "./peer";
 import { computeQuality, sampleFromReport, type Quality, type StatSample } from "./quality";
 import { startPolling, type PollResult, type SessionStatus, type SignalingClient, type SignalMsg } from "./signaling-client";
@@ -45,7 +45,8 @@ export function useCall(args: { polite: boolean; join: () => Promise<JoinInfo>; 
   const seqRef = useRef(0);
   const restartsRef = useRef(0);
   const argsRef = useRef(args);
-  argsRef.current = args;
+  // Keep the latest args for the long-lived callbacks (updated after commit, before any event can fire).
+  useLayoutEffect(() => { argsRef.current = args; });
   const finished = useRef(false);
 
   const cleanup = useCallback(() => {

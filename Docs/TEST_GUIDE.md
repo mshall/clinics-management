@@ -34,7 +34,7 @@ The login page shows no test-user panel, demo hint or prefilled credential in an
 | Smile & Skin Studio (Lite base, trialing) | `owner.ss@` (also HR + operations tabs), `lamia.ss@` (listing paused by org flag), `adham.ss@` (verification pending) and the same staff roles with `.ss@` |
 | Corner Family Clinic (**Basic**) | `owner.basic@` Ramy Hafez, `doctor.basic@` Dr Heba Lotfy, `nurse.basic@` Mervat Adel |
 | Nurse edition (`@nurse-demo.kiorly.test`) | `mona@` solo nurse, `owner@` agency owner, `dispatch@` dispatcher, `nurse1@` Heba (verified), `nurse2@` (licence expires in 18 days), `nurse3@` (rejected), `nurse4@` (expired), `nurse5@` (unverified), `aide@` (refused by dispatch) |
-| Older accounts, password **`demo`** | `admin@kiorly.com` (Enterprise group admin), `superadmin@kiorly.com` (platform super admin: Platform tab, create orgs), `admin@drahmedshall.com` (42 users) |
+| Older accounts (password: private demo-accounts register) | `admin@kiorly.com` (Enterprise group admin), `superadmin@kiorly.com` (platform super admin: Platform tab, create orgs), `admin@drahmedshall.com` (42 users) |
 | 36 specialties tenant `demo_t_sp` | `<key>.sp@demo.kiorex.test`, owner `owner.sp@` (table in TEST_DATA.md) |
 
 The panel lists 26 of these (every group); all 26 were logged in through the API on 23 Nov 2026. First login of a staff user shows the legal-terms banner.

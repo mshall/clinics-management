@@ -16,7 +16,7 @@ alwaysApply: true
 2. **Duplicate detection** (`double-linked-patients.ts`): ignore placeholder phones; `isSafeAutoMergeCluster` requires compatible names on phone matches; skip intentional `AES-*` seed name+DOB clones across clinics.
 3. **Merge quality** (`patient-merge-fields.ts` + `mergePatients`): default **fill empty demographics** from the duplicate; **richness score** (filled fields + docs/visits) picks the survivor; all clinical rows and **patient documents** move to the survivor; source is soft-deleted.
 4. **Admin API** `POST /api/v1/admin/data-explorer/merge-safe-duplicate-patients` — group-admin one-shot safe merge for the current tenant.
-5. **Live cleanup (AWS Dr Ahmed Shall):** merged **11** safe duplicate charts into survivors (e.g. Mohammed Elnagar ×4, Safaa, Rania, Mostafa Hassan, Hesham, Asmaa, Mohsena Saleh, Badry/Badr) — documents/visits moved. Left alone: placeholder `000…`/`111…` phones, AES seed name+DOB clones, and shared-phone different people (Adam/El Amir, Safua/nagwa). Name matching was tightened so a lone shared first name (e.g. Mohammed) is not enough to auto-merge.
+5. **Live cleanup (AWS Dr Ahmed Shall):** merged **11** safe duplicate charts into survivors (several patients with up to four duplicate charts each) — documents/visits moved. Left alone: placeholder `000…`/`111…` phones, AES seed name+DOB clones, and shared-phone different people (different people sharing one phone number). Name matching was tightened so a lone shared first name (e.g. Mohammed) is not enough to auto-merge.
 
 ## Do not regress
 

@@ -390,20 +390,7 @@ async function ensureDemoPatientsForClinic(
   const firstNamesAr = ["فاطمة", "محمود", "نادية", "كريم", "سلمى"];
   const lastNamesAr = ["مصطفى", "عبد الرحمن", "فؤاد", "جمال", "سالم"];
 
-  // Repair older seeds that stamped every demo patient with the clinic phone (looked like M/F duplicates).
-  const aesRows = await prisma.patient.findMany({
-    where: { tenantId, mrn: { startsWith: `AES-${slug.toUpperCase()}-` }, deletedAt: null },
-    select: { id: true, mrn: true, phone: true },
-  });
-  for (const row of aesRows) {
-    const m = /-(\d+)$/.exec(row.mrn);
-    const idx = m ? Number.parseInt(m[1]!, 10) : 0;
-    if (!idx) continue;
-    const phone = demoPatientPhone(slug, idx);
-    if (row.phone === phone) continue;
-    await prisma.patient.update({ where: { id: row.id }, data: { phone } });
-  }
-
+  // Insert-only: rows that already exist (the real organisation on AWS included) are never rewritten by the seed.
   const existing = await prisma.patient.count({ where: { tenantId, homeBranchId: clinicId } });
   if (existing >= target) return;
 
@@ -464,13 +451,11 @@ async function seedDrAhmedGroup(passwordHash: string) {
       nameAr: "عيادة مصر الجديدة — عمارات العبور",
       country: "EG",
       city: "Heliopolis",
-      addressEn:
-        "35 Obour Buildings, 5th Floor, near Wholesale Market, in front of Metro El-Ma'arad (Land of Exhibitions). Sun–Wed: patients from 4:00 PM, Dr. Ahmed from 5:00 PM. First-come, first-served. Please bring all prior test results.",
-      addressAr:
-        "٣٥ عمارات العبور، الدور الخامس، بجوار جملة ماركت، أمام محطة مترو أرض المعارض. الأحد–الأربعاء: حضور المرضى ٤ مساءً، الدكتور ٥ مساءً. الدخول بأسبقية الحضور. نرجو إحضار كافة الفحوصات.",
-      locationUrl: "https://maps.app.goo.gl/NAaZw15GZHSwWYkM9",
-      phone: "+201019234886",
-      email: "heliopolis@dr-ahmedelshall.com",
+      addressEn: "Synthetic demo address: 1 Example Street, Demo District. Visiting hours are set per clinic; this text is placeholder data.",
+      addressAr: "عنوان تجريبي: ١ شارع المثال، حي تجريبي. مواعيد الزيارة تحدد لكل عيادة؛ هذا النص بيانات وهمية.",
+      locationUrl: "https://maps.example.com/demo",
+      phone: "+201000001001",
+      email: "clinic@example.com",
       licenseNumber: "EG-AES-HEL-001",
       defaultLanguage: Locale.ar,
     },
@@ -481,13 +466,11 @@ async function seedDrAhmedGroup(passwordHash: string) {
       nameAr: "عيادة التجمع الخامس — CMC",
       country: "EG",
       city: "New Cairo",
-      addressEn:
-        "CMC Building, Clinic 309, 3rd Floor, behind Al-Gouna Hospital, N Teseen St, First New Cairo, Cairo Governorate 11835. Mon: patients from 7:00 PM, Dr. Ahmed from 8:00 PM. First-come, first-served.",
-      addressAr:
-        "مبنى CMC، عيادة ٣٠٩، الدور الثالث، خلف مستشفى الجوي، شارع التسعين، التجمع الخامس. يوم الاثنين: حضور المرضى من ٧ مساءً، الدكتور ٨ مساءً. الدخول بأسبقية الحضور.",
-      locationUrl: "https://maps.app.goo.gl/edg1c4Ex6FBR5v6W8",
-      phone: "+201010027404",
-      email: "cmc@dr-ahmedelshall.com",
+      addressEn: "Synthetic demo address: 1 Example Street, Demo District. Visiting hours are set per clinic; this text is placeholder data.",
+      addressAr: "عنوان تجريبي: ١ شارع المثال، حي تجريبي. مواعيد الزيارة تحدد لكل عيادة؛ هذا النص بيانات وهمية.",
+      locationUrl: "https://maps.example.com/demo",
+      phone: "+201000001002",
+      email: "clinic@example.com",
       licenseNumber: "EG-AES-CMC-001",
       defaultLanguage: Locale.ar,
     },
@@ -498,13 +481,11 @@ async function seedDrAhmedGroup(passwordHash: string) {
       nameAr: "عيادة المهندسين",
       country: "EG",
       city: "Mohandessin",
-      addressEn:
-        "42 Syria Street, 4th Floor, above Spinneys, Egyptian Vascular Center. Thu: clinic opens 12:00 PM, Dr. Ahmed from 12:00 PM. First-come, first-served.",
-      addressAr:
-        "٤٢ ش سوريا، الدور الرابع، أعلى سبينيز، المركز المصري للأوعية. الخميس: تفتح العيادة من ١٢ ظهراً، حضور الدكتور ١٢ ظ. الدخول بأسبقية الحضور.",
-      locationUrl: "https://maps.google.com/?q=42+Syria+St,+Mohandessin,+Giza",
-      phone: "+201019234886",
-      email: "mohandessin@dr-ahmedelshall.com",
+      addressEn: "Synthetic demo address: 1 Example Street, Demo District. Visiting hours are set per clinic; this text is placeholder data.",
+      addressAr: "عنوان تجريبي: ١ شارع المثال، حي تجريبي. مواعيد الزيارة تحدد لكل عيادة؛ هذا النص بيانات وهمية.",
+      locationUrl: "https://maps.example.com/demo",
+      phone: "+201000001003",
+      email: "clinic@example.com",
       licenseNumber: "EG-AES-MOH-001",
       defaultLanguage: Locale.ar,
     },
@@ -515,13 +496,11 @@ async function seedDrAhmedGroup(passwordHash: string) {
       nameAr: "مستشفى العاصمة بالدقي — (تعاقدات)",
       country: "EG",
       city: "Dokki",
-      addressEn:
-        "Capital Hospital Dokki, 1st Floor, El Ahrar Street (off Ahmed Abdel Aziz Street). Tue: patients 4:00–6:00 PM. First-come, first-served. Please bring all prior test results.",
-      addressAr:
-        "مستشفى العاصمة بالدقي، الدور الأول، شارع الأحرار المتفرع من شارع البطل أحمد عبد العزيز. يوم الثلاثاء: حضور المرضى ٤–٦ مساءً. الدخول بأسبقية الحضور.",
-      locationUrl: "https://maps.app.goo.gl/ZJ8tXKZdoFrSKn419",
-      phone: "+201010027404",
-      email: "dokki@dr-ahmedelshall.com",
+      addressEn: "Synthetic demo address: 1 Example Street, Demo District. Visiting hours are set per clinic; this text is placeholder data.",
+      addressAr: "عنوان تجريبي: ١ شارع المثال، حي تجريبي. مواعيد الزيارة تحدد لكل عيادة؛ هذا النص بيانات وهمية.",
+      locationUrl: "https://maps.example.com/demo",
+      phone: "+201000001004",
+      email: "clinic@example.com",
       licenseNumber: "EG-AES-DOK-001",
       defaultLanguage: Locale.ar,
     },
@@ -532,13 +511,11 @@ async function seedDrAhmedGroup(passwordHash: string) {
       nameAr: "عيادة أكتوبر والشيخ زايد",
       country: "EG",
       city: "6th of October City",
-      addressEn:
-        "Plot 1 — El Wahat Road, 2nd District, East Extensions, 6th of October City, Giza Governorate. Saturday: patients from 4:30 PM, Dr. Ahmed from 5:00 PM. First-come, first-served. Consultation fees: standard visit 1,000 EGP; urgent visit 2,000 EGP.",
-      addressAr:
-        "ق1 – طريق الواحات – الحي الثاني بالتوسعات الشرقية – مدينة 6 أكتوبر، محافظة الجيزة. السبت: حضور المرضى من ٤:٣٠ مساءً، الدكتور متواجد من ٥ مساءً. الدخول بأسبقية الحضور. الكشف العادي ١٠٠٠ جنيه؛ الكشف المستعجل ٢٠٠٠ جنيه.",
-      locationUrl: "https://maps.app.goo.gl/ZfmUAd7k3W1RwRVJ8",
-      phone: "+201010027404",
-      email: "october@dr-ahmedelshall.com",
+      addressEn: "Synthetic demo address: 1 Example Street, Demo District. Visiting hours are set per clinic; this text is placeholder data.",
+      addressAr: "عنوان تجريبي: ١ شارع المثال، حي تجريبي. مواعيد الزيارة تحدد لكل عيادة؛ هذا النص بيانات وهمية.",
+      locationUrl: "https://maps.example.com/demo",
+      phone: "+201000001005",
+      email: "clinic@example.com",
       licenseNumber: "EG-AES-OCT-001",
       defaultLanguage: Locale.ar,
     },
@@ -549,13 +526,11 @@ async function seedDrAhmedGroup(passwordHash: string) {
       nameAr: "مستشفى ABC — تعاقدات",
       country: "EG",
       city: "Mohandessin",
-      addressEn:
-        "Syria Street, Mohandessin, Giza Governorate. Contract clinic for ABC Hospital. Please bring all prior test results. First-come, first-served when sessions are announced.",
-      addressAr:
-        "شارع سوريا بالمهندسين، محافظة الجيزة. عيادة تعاقدات مستشفى ABC. نرجو إحضار كافة الفحوصات السابقة. الدخول بأسبقية الحضور عند الإعلان عن المواعيد.",
-      locationUrl: "https://maps.app.goo.gl/K7aQ4jGcR3LFyaL86",
-      phone: "+201010027404",
-      email: "abc@dr-ahmedelshall.com",
+      addressEn: "Synthetic demo address: 1 Example Street, Demo District. Visiting hours are set per clinic; this text is placeholder data.",
+      addressAr: "عنوان تجريبي: ١ شارع المثال، حي تجريبي. مواعيد الزيارة تحدد لكل عيادة؛ هذا النص بيانات وهمية.",
+      locationUrl: "https://maps.example.com/demo",
+      phone: "+201000001006",
+      email: "clinic@example.com",
       licenseNumber: "EG-AES-ABC-001",
       defaultLanguage: Locale.ar,
     },

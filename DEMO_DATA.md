@@ -84,9 +84,9 @@ Password for every `@demo.kiorex.test` and `@nurse-demo.kiorly.test` account: **
 
 "Sign in with Kiorex Passport" on the Kiorly login works for the Nurse personas and the physio (identity links are seeded): phone `+2010000030xx`, OTP `000000`.
 
-### 3.5 Pre-existing data (kept, `demo` password)
+### 3.5 Pre-existing data (kept; passwords are in the private demo-accounts register, not in git)
 
-`admin@kiorly.com` / `demo` (Group admin, Kiorly Clinic Group (Demo), ENTERPRISE) · `superadmin@kiorly.com` / `demo` (PLATFORM_SUPER_ADMIN: Platform tab, create orgs) · `admin@drahmedshall.com` / `demo` (Dr Ahmed Shall Group, 42 users) · `finance@kiorly.com`, `receptionist@kiorly.com`, `nurse@kiorly.com`, `callcenter@kiorly.com`, `staff3..11@kiorly.com` (see Docs/Test_Data_Users.md). The KX-DEV doctors `kxdev.*@kiorly.dev` belong to the e2e suite. These three logins (`admin@kiorly.com`, `superadmin@kiorly.com`, `admin@drahmedshall.com`) were verified with `demo` on 21 Nov 2026; `mona@nurse-demo.kiorly.test` with `demo` is **401** (the old Nurse seed password was replaced by `Demo@12345`).
+`admin@kiorly.com` (Group admin, Kiorly Clinic Group (Demo), ENTERPRISE) · `superadmin@kiorly.com` (PLATFORM_SUPER_ADMIN: Platform tab, create orgs) · `admin@drahmedshall.com` (Dr Ahmed Shall Group, 42 users) · `finance@kiorly.com`, `receptionist@kiorly.com`, `nurse@kiorly.com`, `callcenter@kiorly.com`, `staff3..11@kiorly.com` (see Docs/Test_Data_Users.md). The KX-DEV doctors `kxdev.*@kiorly.dev` belong to the e2e suite. These three logins (`admin@kiorly.com`, `superadmin@kiorly.com`, `admin@drahmedshall.com`) were verified on 21 Nov 2026; `mona@nurse-demo.kiorly.test` with `demo` is **401** (the old Nurse seed password was replaced by `Demo@12345`).
 
 ## 4. What data exists and where to click
 

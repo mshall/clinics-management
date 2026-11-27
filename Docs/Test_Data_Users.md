@@ -1,6 +1,6 @@
 # Test data — users & access
 
-Reference for QA, demos, and onboarding. All seeded accounts use password **`demo`** unless noted.
+Reference for QA, demos, and onboarding. Local and CI seeds use a shared demo password (see `apps/api/prisma/seed.ts`); the AWS passwords are in the private demo-accounts register, never in git.
 
 **Load data (local):** from the repo root run `npm run db:setup -w api` (migrations + seed).
 
@@ -8,11 +8,11 @@ Reference for QA, demos, and onboarding. All seeded accounts use password **`dem
 
 1. **`cdk deploy`** — API image (App Runner), web (S3), RDS, CloudFront.
 2. **`cicd-post-deploy-seed.sh`** — **DbSeedFn** Lambda: `migrate deploy`, enum repair, **idempotent** `prisma/seed.ts` (safe on non-empty RDS). Requires bundled `../src/…` imports in `apps/api/Dockerfile.seed`.
-3. **`cicd-post-deploy-smoke.sh`** — `GET /api/v1/health/ready` (`database: ok`), login **`admin@drahmedshall.com`** / **`demo`**, assistant + org user checks.
+3. **`cicd-post-deploy-smoke.sh`** — `GET /api/v1/health/ready` (`database: ok`), login with the smoke account (`SMOKE_LOGIN_EMAIL` / `SMOKE_LOGIN_PASSWORD`; the values are kept in the private demo-accounts register, never in git), assistant + org user checks.
 
 If step 3 fails with login **503** / `"starting"`, the API container may not have booted Nest (see [`AWS_Cloud_Deployment_Guide.md` §16](./AWS_Cloud_Deployment_Guide.md#16-deploy-troubleshooting-common-failures)).
 
-**Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with any account below (password **`demo`**). Uses **CloudFront** for SPA + `/api/*` to **App Runner** (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)). After seed, **Dr Ahmed Shall Group** exposes **42 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 3` (full seed: **≥ 30**).
+**Live demo (AWS):** [https://d92iz83i79c05.cloudfront.net](https://d92iz83i79c05.cloudfront.net) — sign in with an account below (the password is in the private demo-accounts register). Uses **CloudFront** for SPA + `/api/*` to **App Runner** (see [`AWS_Cloud_Deployment_Guide.md`](./AWS_Cloud_Deployment_Guide.md)). After seed, **Dr Ahmed Shall Group** exposes **42 organization users** in **Admin → Organization users** (`GET /api/v1/admin/users`); smoke tests expect `total ≥ 3` (full seed: **≥ 30**).
 
 **Sales pilot tenants (QA-06):** when `KIORLY_ENV=staging` or `SEED_PILOT_TENANTS=true`, seed ensures **Lite / Pro / Clinic** orgs (`sales-*@pilot.kiorly.com`, password **`demo`**). Reset a demo before a sales call: `npm run demo:reset -- --tier=pro` (see [QA_STAGING.md](./QA_STAGING.md)).
 
@@ -36,12 +36,12 @@ Professor / consultant in chronic pain, joints, spine, and neuritis (non-surgica
 
 | Email | Password | Role | Notes |
 |-------|----------|------|-------|
-| `admin@drahmedshall.com` | `demo` | Group admin | Full organization + Admin |
-| `supervisor@drahmedshall.com` | `demo` | Group supervisor | Org-wide patients (edit/delete), appointments, encounters, operations, expenses, revenue, reports (no Admin / HR / Clinics) |
-| `dr.ahmed@drahmedshall.com` | `demo` | Physician | All clinics (no single-clinic HR link) |
-| `callcenter@drahmedshall.com` | `demo` | Call center | Org-wide patients (edit/delete) & appointments; operations **clinical prep only** (cannot create / edit booking stage) |
-| `finance@drahmedshall.com` | `demo` | Finance officer | Revenue, expenses, reports |
-| `hr@drahmedshall.com` | `demo` | HR officer | HR module |
+| `admin@drahmedshall.com` | (private register) | Group admin | Full organization + Admin |
+| `supervisor@drahmedshall.com` | (private register) | Group supervisor | Org-wide patients (edit/delete), appointments, encounters, operations, expenses, revenue, reports (no Admin / HR / Clinics) |
+| `dr.ahmed@drahmedshall.com` | (private register) | Physician | All clinics (no single-clinic HR link) |
+| `callcenter@drahmedshall.com` | (private register) | Call center | Org-wide patients (edit/delete) & appointments; operations **clinical prep only** (cannot create / edit booking stage) |
+| `finance@drahmedshall.com` | (private register) | Finance officer | Revenue, expenses, reports |
+| `hr@drahmedshall.com` | (private register) | HR officer | HR module |
 
 ### Per-clinic accounts
 
@@ -67,18 +67,11 @@ Each clinic has its own staff logins. Replace `{slug}` with **`hel`**, **`cmc`**
 
 Each clinic also gets **5 demo patients** (MRN `AES-{SLUG}-001` … `005`) when missing.
 
-**Booking phones (seed):** +201019234886 · +201010027404
+**Booking phones (seed):** synthetic placeholders (+20 100 000 1001 to 1006), one per clinic. The real organisation keeps its own data; the seed never rewrites existing rows.
 
-| Clinic (EN) | City | Schedule (from clinic address) |
-|-------------|------|--------------------------------|
-| Heliopolis Clinic — Obour Buildings | Heliopolis | Sun–Wed: patients 4 PM, Dr. 5 PM |
-| Fifth Settlement Clinic — CMC | New Cairo | Mon: patients 7 PM, Dr. 8 PM |
-| Mohandessin Clinic | Mohandessin | Thu: from 12 PM |
-| Capital Hospital Dokki — Contract Clinic | Dokki | Tue: patients 4–6 PM |
-| 6th October & Sheikh Zayed Clinic | 6th of October City | Sat: patients 4:30 PM, Dr. 5 PM; standard visit 1,000 EGP / urgent 2,000 EGP |
-| ABC Hospital — Contract Clinic | Mohandessin | Syria Street; contract sessions (first-come when announced) |
+The clinic addresses, visiting hours and map links in the seed are synthetic placeholders (`1 Example Street`); an existing organisation's clinics are never changed by the seed.
 
-All six clinics are **standalone** root locations under the group (flat layout). Maps links are stored in each clinic’s `locationUrl`.
+All six clinics are **standalone** root locations under the group (flat layout). The map link is stored in each clinic’s `locationUrl`.
 
 ---
 
@@ -88,7 +81,7 @@ Dedicated platform operator with **no organization membership** (`tenantId: null
 
 | Email | Password | Role | Organization | UI |
 |-------|----------|------|--------------|-----|
-| `superadmin@kiorly.com` | `demo` | `PLATFORM_SUPER_ADMIN` | **None** | **Platform** tab → create orgs, clinics, users |
+| `superadmin@kiorly.com` | (private register) | `PLATFORM_SUPER_ADMIN` | **None** | **Platform** tab → create orgs, clinics, users |
 
 The demo seed populates **Kiorly Clinic Group (Demo)**. Use **`superadmin@kiorly.com`** to provision **new** organizations with a group admin (email + password) in one step on the **Platform** tab.
 
