@@ -187,7 +187,7 @@ npm run db:ensure
 npm run dev
 ```
 
-1. Sign in as receptionist (`receptionist@drahmedshall.com` / `demo`).
+1. Sign in as receptionist (`receptionist@drahmedshall.com`; local-dev seed password from `apps/api/prisma/seed.ts`, never valid on a deployed environment).
 2. Press **⌘K**, search by MRN or name, open patient.
 3. Open today’s appointment → **Check in** (optional preferred room / payment) → ticket # and **WAITING** on **Visit flow** card.
 4. **Front desk board** → **Call** → **Start visit** (or start encounter from appointment) → patient moves to **In exam** with auto room.

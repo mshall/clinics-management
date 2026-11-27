@@ -672,7 +672,7 @@ async function ensureIncrementalSeed(passwordHash: string) {
     tenant.id,
     `(${clinics.length} clinics, per-clinic staff ensured)`,
     kiorlyTenant ? `| Kiorly demo users ensured for tenant ${kiorlyTenant.id}` : "",
-    "| org logins (password: demo): admin@drahmedshall.com, supervisor@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com",
+    "| org logins (local-dev seed only; deployed environments never use the shared demo password, see PRISMA_SEED_ENSURE_DEMO_PASSWORDS): admin@drahmedshall.com, supervisor@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@drahmedshall.com, finance@drahmedshall.com, hr@drahmedshall.com",
     "| per clinic (hel/cmc/moh/dok/oct/abc): branchmgr.{slug}, clinicadmin.{slug}, assistant.{slug}, nurse.{slug}, receptionist.{slug}, physician.{slug} @drahmedshall.com"
   );
 }
@@ -1305,7 +1305,7 @@ async function seedFreshDatabase(passwordHash: string) {
     drAhmedTenant.id,
     `(${drAhmedClinics.length} clinics, per-clinic staff)`,
     "| org: admin@drahmedshall.com, dr.ahmed@drahmedshall.com, callcenter@, finance@, hr@ @drahmedshall.com",
-    "| per clinic slug hel/cmc/moh/dok/oct/abc: branchmgr, clinicadmin, assistant, nurse, receptionist, physician @drahmedshall.com (password: demo)"
+    "| per clinic slug hel/cmc/moh/dok/oct/abc: branchmgr, clinicadmin, assistant, nurse, receptionist, physician @drahmedshall.com (local-dev seed only)"
   );
 
   await ensureEgyptDrugCatalog(prisma);

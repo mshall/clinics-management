@@ -94,8 +94,8 @@ Steps (summary):
 1. Reusable **CI test** (`ci-test-reusable.yml`) — migrate, typecheck, unit + integration tests (deps via `.github/actions/setup-node-deps`: skip `npm ci` when the lockfile-keyed `node_modules` cache hits). Deploy still runs a fresh host `npm ci` in `cicd-deploy.sh`; container images rebuild with their own `npm ci` and are unaffected by the Actions module cache.
 2. **Web build** — `npm run build -w web` (fail fast before CDK).
 3. **`scripts/cicd-deploy.sh`** — build API image + web assets, `check:apprunner-connector-cfn`, orphan VPC connector cleanup, `cdk deploy`, `cicd-wait-apprunner-deploy.sh`.
-4. **`scripts/cicd-post-deploy-seed.sh`** — invokes **DbSeedFn** (`PRISMA_SEED_ENSURE_DEMO_PASSWORDS=true`) unless seed already ran in the deploy log.
-5. **`scripts/cicd-post-deploy-smoke.sh`** — waits for **`GET /api/v1/health/ready`** (`database: ok`), then demo login + assistant + org users checks.
+4. **`scripts/cicd-post-deploy-seed.sh`** — invokes **DbSeedFn** (`PRISMA_SEED_ENSURE_DEMO_PASSWORDS=false` on the deployed stack: the seed never re-sets the password of an existing account and creates any missing seeded account with a random unknown password) unless seed already ran in the deploy log.
+5. **`scripts/cicd-post-deploy-smoke.sh`** — waits for **`GET /api/v1/health/ready`** (`database: ok`), then signs in with the smoke account and runs the assistant + org users checks. The smoke account comes from the GitHub Actions secrets **`SMOKE_LOGIN_EMAIL`** and **`SMOKE_LOGIN_PASSWORD`** (repository secrets, passed by the deploy workflows); the script fails with a clear message when they are unset and has no published default.
 
 Workflow **`concurrency: cancel-in-progress: true`** — only the latest push to `main` should finish deploy.
 

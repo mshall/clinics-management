@@ -2,6 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 
 /** Prefer localhost so IPv6-only Vite binds still resolve on macOS. Default 5174; main local stack uses 5190 via PLAYWRIGHT_BASE_URL. */
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5174";
+// These specs sign in with the LOCAL-DEV demo seed logins. They must never be pointed at a deployed environment (the live Clinic's
+// accounts use their own passwords); the deployed checks live in the post-deploy smoke (SMOKE_LOGIN_* secrets) and e2e/kx-test of the workspace.
+if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(baseURL).hostname)) {
+  throw new Error(`Refusing to run the local-dev demo-seed Playwright specs against ${baseURL}: PLAYWRIGHT_BASE_URL must be localhost.`);
+}
 /**
  * Wait on a path proxied to Nest so webServer is ready only when Vite + API both answer.
  * (A bare Vite origin can return 200 while Nest is still compiling, which breaks parallel logins.)
