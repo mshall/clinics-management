@@ -15,6 +15,7 @@ import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import type { Construct } from "constructs";
 import { appRunnerPhysicalNames } from "./apprunner-physical-names";
+import { loadClinicEnvConfig, wiringEnvVars, wiringSecretNames } from "./env-wiring";
 
 export interface KiorlyClinicsManagementStackProps extends cdk.StackProps {
   /** AWS region for VPC/RDS/App Runner (Frankfurt = eu-central-1). */
@@ -330,6 +331,17 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     db.secret!.grantRead(instanceRole);
     jwtSecret.grantRead(instanceRole);
     openAiSecret.grantRead(instanceRole);
+
+    // Environment wiring (Passport, CORS, Kiorex URLs, partner registration): values from infra/config/*.json (generated from the URL
+    // registry, no secrets), secrets by reference (Secrets Manager name + JSON key). No config file = nothing added.
+    const wiring = loadClinicEnvConfig(path.join(__dirname, "..", "config"));
+    const wiringSecrets = new Map(
+      wiringSecretNames(wiring).map((name, i) => {
+        const secret = secretsmanager.Secret.fromSecretNameV2(this, `WiringSecret${i}`, name);
+        secret.grantRead(instanceRole);
+        return [name, secret] as const;
+      }),
+    );
     apiUploadsBucket.grantReadWrite(instanceRole);
 
     // App Runner: reference JSON key so JWT_SECRET is a plain string (matches JwtModule + Passport JwtStrategy).
@@ -398,10 +410,14 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
               { name: "S3_UPLOAD_BUCKET", value: apiUploadsBucket.bucketName },
               { name: "OPENAI_MODEL", value: "gpt-4o-mini" },
               ...(webBuildId ? [{ name: "WEB_BUILD_ID", value: webBuildId }] : []),
+              ...wiringEnvVars(wiring),
             ],
             runtimeEnvironmentSecrets: [
               { name: "JWT_SECRET", value: jwtSecretFieldArn },
               { name: "OPENAI_API_KEY", value: openAiApiKeyFieldArn },
+              ...Object.entries(wiring?.secrets ?? {})
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([name, ref]) => ({ name, value: `${wiringSecrets.get(ref.secretName)!.secretArn}:${ref.key}::` })),
             ],
           },
         },
@@ -433,6 +449,8 @@ export class KiorlyClinicsManagementStack extends cdk.Stack {
     appRunnerService.node.addDependency(apiAutoScaling);
     appRunnerService.node.addDependency(vpcConnector);
     appRunnerService.node.addDependency(imageAsset);
+    // the instance role's inline policy (secret read for the wiring secrets) must exist before App Runner resolves the references
+    appRunnerService.node.addDependency(instanceRole);
     appRunnerService.node.addDependency(db);
     appRunnerService.node.addDependency(secretsManagerEndpoint);
     appRunnerService.node.addDependency(kmsEndpoint);
