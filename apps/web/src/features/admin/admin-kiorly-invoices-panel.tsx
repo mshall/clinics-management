@@ -111,7 +111,7 @@ export function AdminKiorlyInvoicesPanel({ canManagePay = false }: { canManagePa
                 <TableHead>{t("admin.billing.invoices.status")}</TableHead>
                 <TableHead className="text-end">{t("admin.billing.invoices.total")}</TableHead>
                 <TableHead className="text-end">{t("admin.billing.invoices.due")}</TableHead>
-                <TableHead />
+                <TableHead><span className="sr-only">{t("common.actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

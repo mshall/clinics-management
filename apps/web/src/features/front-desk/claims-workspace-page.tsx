@@ -270,7 +270,7 @@ export function ClaimsWorkspacePage() {
                   <th className="p-2 text-start">{t("claims.period")}</th>
                   <th className="p-2 text-start">{t("claims.lines")}</th>
                   <th className="p-2 text-start">{t("claims.status")}</th>
-                  <th className="p-2" />
+                  <th className="p-2"><span className="sr-only">{t("common.actions")}</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -328,7 +328,7 @@ export function ClaimsWorkspacePage() {
                     <th className="p-2 text-start">{t("claims.claimed")}</th>
                     <th className="p-2 text-start">{t("claims.copay")}</th>
                     <th className="p-2 text-start">{t("claims.status")}</th>
-                    <th className="p-2" />
+                    <th className="p-2"><span className="sr-only">{t("common.actions")}</span></th>
                   </tr>
                 </thead>
                 <tbody>

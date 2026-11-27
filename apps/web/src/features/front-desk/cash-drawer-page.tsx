@@ -209,7 +209,7 @@ export function CashDrawerPage() {
                   <th className="px-3 py-2 text-start">{t("cashDrawer.expectedCash", "Expected cash")}</th>
                   <th className="px-3 py-2 text-start">{t("cashDrawer.countedCash", "Counted cash")}</th>
                   <th className="px-3 py-2 text-start">{t("cashDrawer.variance", "Variance")}</th>
-                  <th className="px-3 py-2" />
+                  <th className="px-3 py-2"><span className="sr-only">{t("common.actions")}</span></th>
                 </tr>
               </thead>
               <tbody>

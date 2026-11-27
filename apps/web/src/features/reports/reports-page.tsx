@@ -609,7 +609,7 @@ export function ReportsPage() {
                   labelClassName="text-red-700 dark:text-red-400"
                   valueClassName="text-red-700 dark:text-red-400"
                   meta={
-                    <p className="text-xs text-red-700/70 dark:text-red-400/70 ltr-nums">
+                    <p className="text-xs text-red-700 dark:text-red-400 ltr-nums">
                       {operations.data?.noShow.noShows ?? 0}/{operations.data?.noShow.total ?? 0}
                     </p>
                   }
