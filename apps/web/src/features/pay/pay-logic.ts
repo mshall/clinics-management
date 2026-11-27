@@ -1,0 +1,2 @@
+/** Tone of a Pay state pill: green = done, amber = waiting on someone, red = stopped, grey = information. */
+export const stateTone = (s: string): "good" | "warn" | "bad" | "info" => (["CAPTURED", "USED", "CONFIRMED", "APPLIED", "COMPLETED", "AUTO"].includes(s) ? "good" : ["ACTIVE", "PARTIAL", "PENDING", "OPEN", "PENDING_APPROVAL", "REVIEW"].includes(s) ? "warn" : ["EXPIRED", "CANCELLED", "REJECTED", "UNMATCHED"].includes(s) ? "bad" : "info");

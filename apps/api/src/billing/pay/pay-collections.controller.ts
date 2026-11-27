@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { IsIn, IsNumber, IsOptional, IsString, MaxLength } from "class-validator";
 import type { Response } from "express";
 import { JwtAuthGuard } from "../../auth/jwt-auth.guard";
+import { FeatureGuard, RequiresFeature } from "../../feature-flags/feature-flags-public";
 import { CurrentUser } from "../../auth/current-user.decorator";
 import type { JwtUser } from "../../auth/jwt-user";
 import { Lenient } from "../../common/lenient-dto";
@@ -16,12 +17,18 @@ import { PayCollectionsService } from "./pay-collections.service";
 
 @ApiTags("billing")
 @ApiBearerAuth("bearer")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureGuard)
+@RequiresFeature("clinic.pay_collections")
 @Controller("billing/pay")
 export class PayCollectionsController {
   constructor(private readonly svc: PayCollectionsService) {}
   @Post("matching/ipn") @HttpCode(200) ipn(@CurrentUser() u: JwtUser, @Body() b: PayIpnUploadBodyDto) { return this.svc.ingestIpn(u, b); }
-  @Get("matching/queue") queue(@CurrentUser() u: JwtUser, @Query("status") status?: string) { return this.svc.queue(u, status); }
+  @Get("matching/queue") queue(@CurrentUser() u: JwtUser, @Query("status") status?: string) { return this.svc.queueView(u, status); }
+  @Get("matching/summary") summary(@CurrentUser() u: JwtUser) { return this.svc.matchSummary(u); }
+  @Get("matching/invoices") invoices(@CurrentUser() u: JwtUser, @Query("q") q = "") { return this.svc.invoiceCandidates(u, q); }
+  @Get("matching/:id/audit") audit(@CurrentUser() u: JwtUser, @Param("id") id: string) { return this.svc.matchAudit(u, id); }
+  @Get("invoices/:id/status") status(@CurrentUser() u: JwtUser, @Param("id") id: string) { return this.svc.invoiceStatus(u, id); }
+  @Get("links") links(@CurrentUser() u: JwtUser, @Query("invoiceId") invoiceId?: string, @Query("state") state?: string) { return this.svc.listLinks(u, { invoiceId, state }); }
   @Post("matching/:id/confirm") @HttpCode(200) confirm(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: PayMatchConfirmBodyDto) { return this.svc.confirm(u, id, b.invoiceId); }
   @Post("matching/:id/reject") @HttpCode(200) reject(@CurrentUser() u: JwtUser, @Param("id") id: string, @Body() b: PayMatchRejectBodyDto) { return this.svc.reject(u, id, b.note); }
   @Post("collections/prepare") @HttpCode(200) prepare(@CurrentUser() u: JwtUser, @Body() b: PayPrepareBodyDto) { return this.svc.prepareCollection(u, b); }

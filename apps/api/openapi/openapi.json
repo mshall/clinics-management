@@ -11970,6 +11970,163 @@
         ]
       }
     },
+    "/billing/pay/matching/summary": {
+      "get": {
+        "operationId": "PayCollectionsController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/matching/invoices": {
+      "get": {
+        "operationId": "PayCollectionsController_invoices",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/matching/{id}/audit": {
+      "get": {
+        "operationId": "PayCollectionsController_audit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/invoices/{id}/status": {
+      "get": {
+        "operationId": "PayCollectionsController_status",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/pay/links": {
+      "get": {
+        "operationId": "PayCollectionsController_links",
+        "parameters": [
+          {
+            "name": "invoiceId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      },
+      "post": {
+        "operationId": "PayCollectionsController_link",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayLinkCreateBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/billing/pay/matching/{id}/confirm": {
       "post": {
         "operationId": "PayCollectionsController_confirm",
@@ -12056,35 +12213,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PayPrepareBodyDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "billing"
-        ]
-      }
-    },
-    "/billing/pay/links": {
-      "post": {
-        "operationId": "PayCollectionsController_link",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PayLinkCreateBodyDto"
               }
             }
           }

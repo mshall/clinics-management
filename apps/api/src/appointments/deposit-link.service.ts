@@ -31,6 +31,7 @@ import { resolveMarketForTenant } from "../markets/market-resolver";
 import { MessagingService } from "../messaging/messaging.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { AppointmentsService } from "./appointments.service";
+import { routeDeposit } from "./deposit-routing";
 
 export const DEPOSIT_LINK_TEMPLATE_KEY = "deposit_payment_link";
 export const DEPOSIT_LINK_PROVIDERS = ["CLINIC", "KIOREX_PAY"] as const;
@@ -39,7 +40,8 @@ export type DepositLinkProvider = (typeof DEPOSIT_LINK_PROVIDERS)[number];
 const SCAN_MS = 5 * 60_000;
 const BOOKABLE = new Set<AppointmentStatus>([AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED]);
 
-export type CreateDepositLinkBody = { amount?: number; provider?: DepositLinkProvider; send?: boolean };
+/** `AUTO` routes through the Kiorly Pay contract (deposit-routing.ts); omitting `provider` keeps the old default (the clinic page). */
+export type CreateDepositLinkBody = { amount?: number; provider?: DepositLinkProvider | "AUTO"; send?: boolean };
 
 /** Kiorly-hosted page for clinic links; Kiorex Pay hosts its own checkout (base URL from env). */
 export function depositLinkUrl(provider: DepositLinkProvider, token: string): string | null {
@@ -121,6 +123,7 @@ export class DepositLinkService implements OnModuleInit, OnModuleDestroy {
       currency,
       policy,
       kiorexPayAvailable: Boolean(process.env.KIOREX_PAY_LINK_BASE_URL?.trim()),
+      suggestedProvider: routeDeposit({ kiorexPayConfigured: Boolean(process.env.KIOREX_PAY_LINK_BASE_URL?.trim()) }).destination,
       deposit: deposit
         ? { ...deposit, amount: Number(deposit.amount), linkExpiresAt: deposit.linkExpiresAt?.toISOString() ?? null }
         : null,
@@ -130,8 +133,10 @@ export class DepositLinkService implements OnModuleInit, OnModuleDestroy {
   /** POST /appointments/:id/deposit-link — creates (or replaces) the pending deposit and sends the link on WhatsApp. */
   async createLink(tenantId: string, user: JwtUser, appointmentId: string, body: CreateDepositLinkBody) {
     if (!canHandlePatientMoney(user)) throw new ForbiddenException("Front desk or finance role required");
-    const provider: DepositLinkProvider = body.provider ?? "CLINIC";
-    if (!DEPOSIT_LINK_PROVIDERS.includes(provider)) throw new BadRequestException("Unknown payment link provider");
+    const requested = body.provider ?? "CLINIC";
+    if (requested !== "AUTO" && !DEPOSIT_LINK_PROVIDERS.includes(requested)) throw new BadRequestException("Unknown payment link provider");
+    const routing = routeDeposit({ kiorexPayConfigured: Boolean(process.env.KIOREX_PAY_LINK_BASE_URL?.trim()) });
+    const provider: DepositLinkProvider = requested === "AUTO" ? routing.destination : requested;
     const apt = await this.prisma.appointment.findFirst({
       where: { id: appointmentId, tenantId },
       select: {
@@ -198,6 +203,7 @@ export class DepositLinkService implements OnModuleInit, OnModuleDestroy {
       amount,
       currency: req.currency,
       provider,
+      ...(requested === "AUTO" ? { routing: { requested: "AUTO", destination: routing.destination, order: routing.decision.order, excluded: routing.decision.excluded, explain: routing.decision.explain } } : {}),
       url,
       expiresAt: expiresAt.toISOString(),
       reasons,

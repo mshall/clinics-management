@@ -304,6 +304,18 @@ export const CLINIC_FLAG_DEFINITIONS: readonly FlagDefinition[] = [
     whenOffAr: "يُخفى محرّر العروض الترويجية التي يموّلها المزوّد ومسارات الحجز والمراجعة وتُرفض؛ وتُسوّى الخصومات المحجوزة سابقاً بشكل طبيعي",
   }),
   clinic({
+    key: "clinic.pay_collections",
+    scopes: GMO,
+    class: "Launch-locked",
+    dependsOn: [],
+    launchLocked: true,
+    gate: "Finance and counsel review of the Kiorly Pay screens (mock providers only until LG-COM-18 funds-flow sign-off)",
+    descriptionEn: "Kiorly Pay collections screens: invoice matching queue, payment links and status, refund requests, collections rollup",
+    descriptionAr: "شاشات تحصيلات كيورلي باي: قائمة مطابقة الفواتير وروابط الدفع وحالتها وطلبات الاسترداد وملخص التحصيل",
+    whenOffEn: "The Pay screens and the staff Pay routes (matching, links, status) are hidden and refuse; public payment links already issued keep working; invoices and payments are unchanged",
+    whenOffAr: "تُخفى شاشات باي ومسارات الموظفين (المطابقة والروابط والحالة) وتُرفض؛ تبقى روابط الدفع العامة الصادرة سابقاً تعمل؛ لا تتغير الفواتير ولا المدفوعات",
+  }),
+  clinic({
     key: "clinic.usage_bundles",
     scopes: GMO,
     class: "Commercial",

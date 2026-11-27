@@ -58,6 +58,15 @@ Pay modal on Kiorly invoices table: card (hosted add + saved charge), Fawry code
 - `sb02-kiorly-payments.node.test.ts` — no PAN/CVV, dunning pause, webhook HMAC
 - `sb02-kiorly-payments.integration.test.ts` — webhook idempotency, InstaPay UNDER_REVIEW + verify
 
+### Pay screens in the Clinic web (Nov 2026, flag `clinic.pay_collections`, launch-locked: OFF until the gate is recorded)
+
+- **Staff `/pay`** (revenue or admin tab; entry link on the Revenue page only while the flag is on): *Matching* (finance roles: upload a bank file, queue of rows to review with the invoice each one points at, suggested invoices with confidence and plain-language reasons, manual match by invoice number or patient name, reject, per-row audit trail, counts and the contract safety floors), *Links and status* (invoice payment status: owed and paid, links, bank rows, payments, refunds; create an amount-locked link with QR; request a refund for a payment), *Refunds* (list, request, approve or reject for approvers), *Report* (rollup by branch, organisation, payment method or day; CSV and PDF).
+- **Patient `/pay/l/:token`** (public, never flag-gated so issued links keep working): amount, reference to write in the transfer note, the clinic's channels, state (waiting, paid, expired, cancelled), AR/EN with RTL.
+- **Safety floors stay on the server**: auto-apply only for an exact reference and exact remaining amount with a clear margin (`@kiorex/pay-contract` `MATCH_FLOORS`); a reversal row, an amount-only row, an overpayment or another tenant's invoice can never auto-apply or be confirmed; every decision is audited (`PAY_MATCH_AUTO_APPLIED`, `PAY_MATCH_CONFIRMED`, `PAY_MATCH_REJECTED`). Mock providers only; no real PSP is called.
+- **API additions** (all under the flag, finance-only where they show bank rows): `GET /billing/pay/matching/summary`, `GET /billing/pay/matching/invoices?q=`, `GET /billing/pay/matching/:id/audit`, `GET /billing/pay/invoices/:id/status`, `GET /billing/pay/links`; `GET /billing/pay/matching/queue` now returns each row with its invoice and candidate invoices (superset of the old shape).
+- **Deposit checkout routing**: `POST /appointments/:id/deposit-link` accepts `provider: "AUTO"` (Kiorly Pay routing: Kiorex Pay first when `KIOREX_PAY_LINK_BASE_URL` is set and its circuit is closed, the organisation's preference wins, the clinic page is the floor; the answer carries `routing` with the order and why). `deposit-requirement` returns `suggestedProvider`. Omitting `provider` keeps the old default (the clinic page). Gated by the existing `clinic.kiorly_pay_deposits`.
+- **Tests**: `pay-collections.integration.test.ts`, `deposit-routing.node.test.ts`, `pay-collections-flag.node.test.ts`, web `features/pay/pay.node.test.ts`, Playwright `e2e/pay-collections.spec.ts` (private stack: `scripts/pay-e2e-stack.sh`, `playwright.pay.config.ts`).
+
 ## Follow-ups
 
 - Production Paymob/Fawry credentials via Secrets Manager

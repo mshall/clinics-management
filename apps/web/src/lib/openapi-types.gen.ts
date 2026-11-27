@@ -2048,6 +2048,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/encounters/{id}/suggest-care-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Suggest follow-up care at home to the patient (CARE_PLAN_SUGGESTED, consent-gated, idempotent) */
+        post: operations["EncountersController_suggestCarePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/encounters/{id}/documents/{docId}/file": {
         parameters: {
             query?: never;
@@ -2856,6 +2873,227 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/billing/kiorex-commissions/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** May the signed-in user see Kiorex commission figures */
+        get: operations["CommissionCollectionsController_access"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Totals: charges by status, collected, kept from payouts, invoiced, paid, open */
+        get: operations["CommissionCollectionsController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Commission charges with the decision, fee basis and collection status that explain each */
+        get: operations["CommissionCollectionsController_ledger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kiorex collection runs for the organization */
+        get: operations["CommissionCollectionsController_collections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/collections/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One collection run: claims, attempts, status timeline, balance check */
+        get: operations["CommissionCollectionsController_collection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/deductions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Payouts that carry a commission deduction */
+        get: operations["CommissionCollectionsController_deductions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Commission disputes (CR-08) with status */
+        get: operations["CommissionCollectionsController_disputes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** COM-2: the organization's effective commission rate, the default, any override and the history (read only; set by Kiorex) */
+        get: operations["CommissionCollectionsController_rate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** COM-3: settlement statement of one period (online collections, cash-visit commission accrued and netted, deductions, net payable, bank reference, reconciliation); finance / owner / admin */
+        get: operations["CommissionCollectionsController_statement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/statement/{period}/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** COM-3: settlement statement CSV of one period (audited) */
+        get: operations["CommissionCollectionsController_statementCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/charges/{id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status timeline of one charge */
+        get: operations["CommissionCollectionsController_timeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/export/{view}.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** CSV export (audited) */
+        get: operations["CommissionCollectionsController_csv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex-commissions/statement/{period}.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bilingual statement PDF for a month (audited) */
+        get: operations["CommissionCollectionsController_pdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/kiorex/commission-decisions": {
         parameters: {
             query?: never;
@@ -2901,6 +3139,74 @@ export interface paths {
         put?: never;
         /** Platform super admin only: waive an active charge (GOODWILL_WAIVER or POLICY_CORRECTION); removal only, note required, audited, emits CommissionAdjusted */
         post: operations["CommissionDecisionsController_override"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/credits/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Credit wallet: balance, lots by expiry and category, history, what the credit can pay for */
+        get: operations["CreditsController_getWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/credits/statement/{period}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Credit section of the monthly statement (YYYY-MM): opening, grants, use by purpose, expiries, closing */
+        get: operations["CreditsController_statement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/credits/usage-bundles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usage bundle skeleton (flag clinic.usage_bundles, OFF by default) */
+        get: operations["CreditsController_listBundles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/credits/usage-bundles/{key}/purchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Buy a usage bundle from credit (idempotent on Idempotency-Key) */
+        post: operations["CreditsController_purchase"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3544,6 +3850,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/platform/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SUB-01 subscriptions list (platform super admin) */
+        get: operations["PlatformSubscriptionsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/subscriptions/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** MRR, churn-lite, downgrade counts */
+        get: operations["PlatformSubscriptionsController_metrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/subscriptions/{tenantId}/force-auto-renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Force auto-renew ON/OFF (or null to release); reason mandatory, audited */
+        post: operations["PlatformSubscriptionsController_forceAutoRenew"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/subscriptions/{tenantId}/force-downgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move a tenant to Lite; reason mandatory, audited */
+        post: operations["PlatformSubscriptionsController_forceDowngrade"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/subscriptions/policy/{marketId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Market subscription policy + pending maker-checker proposals */
+        get: operations["PlatformSubscriptionsController_getPolicy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/subscriptions/policy/{marketId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlatformSubscriptionsController_policyHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/subscriptions/policy/{marketId}/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Maker: propose a subscription policy change (needs a second admin to approve) */
+        put: operations["PlatformSubscriptionsController_propose"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/platform/subscriptions/policy/proposals/{changeId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Checker: approve or reject (must not be the maker) */
+        post: operations["PlatformSubscriptionsController_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/legal": {
         parameters: {
             query?: never;
@@ -3638,6 +4079,86 @@ export interface paths {
         get: operations["BillingController_getSubscription"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/renewal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_getRenewal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/plans/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_comparePlans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/downgrade-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["BillingController_downgradeImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/auto-renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_setAutoRenew"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/subscription/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["BillingController_reactivate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4334,6 +4855,214 @@ export interface paths {
         put?: never;
         /** Import a remittance and auto-match claim lines */
         post: operations["ClaimsController_importRemittance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/matching/ipn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PayCollectionsController_ipn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/matching/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayCollectionsController_queue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/matching/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayCollectionsController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/matching/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayCollectionsController_invoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/matching/{id}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayCollectionsController_audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/invoices/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayCollectionsController_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayCollectionsController_links"];
+        put?: never;
+        post: operations["PayCollectionsController_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/matching/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PayCollectionsController_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/matching/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PayCollectionsController_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/collections/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PayCollectionsController_prepare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/links/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PayCollectionsController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/pay/reports/rollup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayCollectionsController_rollup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/pay/l/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PayLinkPublicController_view"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6671,6 +7400,59 @@ export interface paths {
         get: operations["GrowthReferralController_referral"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/b2b-referrals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Companies my organisation referred to Kiorex (tracking only, no reward) */
+        get: operations["B2bReferralController_list"];
+        put?: never;
+        /** Refer a company to Kiorex (company name, size bucket, your own opaque contact reference; never a person's details) */
+        post: operations["B2bReferralController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/b2b-referrals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One company referral */
+        get: operations["B2bReferralController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/b2b-referrals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Companies my organisation referred (tracking only) */
+        get: operations["B2bMobileController_list"];
+        put?: never;
+        /** Refer a company to Kiorex */
+        post: operations["B2bMobileController_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9847,6 +10629,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/marketplace/v1/commission-collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorex reports a commission collection run (COM-1); idempotent on runId, newest version wins, refused when it names another organization's charge */
+        post: operations["MarketplaceController_recordCommissionCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/commission-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorex reports the organization's commission rate view (COM-2: default, override, history); idempotent, newest version wins */
+        post: operations["MarketplaceController_recordCommissionRate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/marketplace/v1/analytics/profile-views": {
         parameters: {
             query?: never;
@@ -10069,6 +10885,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/marketplace/v1/growth/staff-phone-match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Does any of these keyed phone hashes belong to staff of the clinic's organisation? (one boolean, never the person) */
+        get: operations["MarketplaceStaffPhoneMatchController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/provider-verification/requests/{requestRef}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Kiorex reads one verification update request: field, requested value and evidence file references */
+        get: operations["MarketplaceProviderVerificationController_read"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/provider-verification/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorex ops decision (APPROVED, REJECTED, NEEDS_INFO) for a verification update request; idempotent */
+        post: operations["MarketplaceProviderVerificationController_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/marketplace/listings": {
         parameters: {
             query?: never;
@@ -10144,7 +11011,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Kiorex performance for a clinic and month: views, bookings, attendance, commission, free progress, rating (KX-10) */
+        /** Kiorex performance for a clinic or the whole organization and month: views, bookings, attendance, commission, free progress, rating (KX-10). Omit clinicId or pass clinicId=all for organization scope. */
         get: operations["KiorexSettingsController_overview"];
         put?: never;
         post?: never;
@@ -10429,6 +11296,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/marketplace/v1/promotions/{promotionId}/reserve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hold budget of a provider-sponsored promotion for one booking (signed, idempotent) */
+        post: operations["PromotionsMarketplaceController_reserve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/promotions/{promotionId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Release a reservation (hold expired, booking cancelled or not confirmed); unknown or released answers 200 */
+        post: operations["PromotionsMarketplaceController_release"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/promotions/{promotionId}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A refund or dispute after completion: reverse the debit once (the clinic gets its credit back) */
+        post: operations["PromotionsMarketplaceController_reverse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/marketplace/v1/promotions/{promotionId}/review-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kiorex review decision (PromotionReviewDecided): the author cannot decide, a high-value promotion needs a second approver */
+        post: operations["PromotionsMarketplaceController_reviewDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/push/subscriptions": {
         parameters: {
             query?: never;
@@ -10443,6 +11378,143 @@ export interface paths {
         post: operations["PushController_upsert"];
         /** Remove a web push subscription by endpoint */
         delete: operations["PushController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My promotions with status and budget */
+        get: operations["PromotionsController_list"];
+        put?: never;
+        /** Create a promotion (DRAFT, version 1) */
+        post: operations["PromotionsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/promotions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One promotion: current version, budget (reserved, debited, remaining), reservations by state, reviews */
+        get: operations["PromotionsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/promotions/{id}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The append-only budget ledger of a promotion (reserve, release, debit, reversal), newest first */
+        get: operations["PromotionsController_ledger"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/promotions/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Edit = a new version and a new review (never edited in place) */
+        post: operations["PromotionsController_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/promotions/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit for review: the content guard runs first; blocked wording is refused with the hits */
+        post: operations["PromotionsController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/promotions/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause at any time (reservations already held keep their discount) */
+        post: operations["PromotionsController_pause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/promotions/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume a paused promotion inside its window */
+        post: operations["PromotionsController_resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/promotions/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive a finished or unused promotion (refused while a reservation is open) */
+        post: operations["PromotionsController_archive"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -10755,6 +11827,382 @@ export interface paths {
         head?: never;
         /** Pause or resume a link */
         patch: operations["GrowthMobileController_update"];
+        trace?: never;
+    };
+    "/growth/social/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Approved social content templates (AR and EN), with 30-day share counts */
+        get: operations["ProviderMarketingController_templates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/social/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Render a share card (SVG, optional PNG) and caption from an approved template; content guard applies to the optional custom line; the footer is protected */
+        post: operations["ProviderMarketingController_render"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/social/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Count one share (template, channel); no content, recipient or slot time is stored */
+        post: operations["ProviderMarketingController_share"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/shareable-slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Up to 5 next free slots of a doctor from the canonical slot engine (no hold is created) */
+        get: operations["ProviderMarketingController_shareableSlots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/shareable-slots/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Render a card for 1 to 5 chosen slots; each is re-checked at render time (409 SLOT_NO_LONGER_AVAILABLE when one is gone); the link is the provider's own so the booking is provider-led */
+        post: operations["ProviderMarketingController_slotCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/recommendations/{id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss, snooze (1 to 90 days), mark done or reopen one recommendation of a clinic */
+        post: operations["ProviderMarketingController_recommendationState"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/verification-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verification update requests of the organisation, with the badge state (VERIFIED or UPDATE_UNDER_REVIEW) */
+        get: operations["ProviderMarketingController_verificationList"];
+        put?: never;
+        /** Ask Kiorex ops to update a verified profile field (licence number, specialty, address, display name, photo, document); the value is encrypted at rest */
+        post: operations["ProviderMarketingController_verificationCreate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/verification-requests/{id}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Withdraw an open verification update request */
+        post: operations["ProviderMarketingController_verificationWithdraw"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/verification-requests/{id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer a NEEDS_INFO decision with more evidence files */
+        post: operations["ProviderMarketingController_verificationEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/growth/links/{id}/poster.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** QR poster as a server PDF (Arabic or English) */
+        post: operations["ProviderMarketingController_posterPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex/statements/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History of statement exports (month, kind, checksum) */
+        get: operations["ProviderMarketingController_exports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex/statements/months": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Months that have Kiorex charges */
+        get: operations["ProviderMarketingController_months"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Commission statement of a month (YYYY-MM): one line per appointment, totals equal the decision log and charge ledger */
+        get: operations["ProviderMarketingController_statement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/kiorex/statements/{file}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Statement export: `<YYYY-MM>.csv` or `<YYYY-MM>.pdf` (AR and EN, RTL) */
+        get: operations["ProviderMarketingController_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Approved share templates (AR and EN) */
+        get: operations["GrowthMarketingMobileController_templates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/share/render": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Render a share card and caption from an approved template */
+        post: operations["GrowthMarketingMobileController_render"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/share/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Count one share (template and channel only) */
+        post: operations["GrowthMarketingMobileController_count"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Next free slots to share (a doctor sees only their own) */
+        get: operations["GrowthMarketingMobileController_slots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/slots/card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Render a slot card (409 SLOT_NO_LONGER_AVAILABLE when a chosen time is gone) */
+        post: operations["GrowthMarketingMobileController_slotCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Months with Kiorex charges (admin only) */
+        get: operations["GrowthMarketingMobileController_months"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/statements/{month}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One month statement (admin only; never for a doctor) */
+        get: operations["GrowthMarketingMobileController_statement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mobile/growth/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verification update requests (admin) */
+        get: operations["GrowthMarketingMobileController_verification"];
+        put?: never;
+        /** Ask Kiorex to update a verified profile field (admin) */
+        post: operations["GrowthMarketingMobileController_verificationCreate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/mobile/bootstrap": {
@@ -11183,6 +12631,45 @@ export interface components {
             /** @enum {string} */
             edition?: "NURSE";
         };
+        AuthRefreshBodyDto: {
+            refreshToken: string;
+        };
+        AuthForgotPasswordBodyDto: {
+            email?: string;
+            phone?: string;
+        };
+        AuthResetPasswordBodyDto: {
+            token?: string;
+            phone?: string;
+            code?: string;
+            newPassword: string;
+        };
+        AuthOtpRequestBodyDto: {
+            phone: string;
+        };
+        AuthOtpVerifyBodyDto: {
+            phone: string;
+            code: string;
+            mfaCode?: string;
+        };
+        AuthConfirmMfaBodyDto: {
+            secret: string;
+            code: string;
+        };
+        AuthDisableMfaBodyDto: {
+            password: string;
+            code: string;
+        };
+        AuthEnableWhatsAppMfaBodyDto: {
+            password: string;
+        };
+        AuthWhatsappMfaChallengeBodyDto: {
+            userId: string;
+        };
+        AuthRegenerateMfaRecoveryBodyDto: {
+            password: string;
+            code: string;
+        };
         ChangePasswordDto: {
             /** @description Your current password */
             currentPassword: string;
@@ -11193,6 +12680,85 @@ export interface components {
         KiorexCompleteDto: Record<string, never>;
         KiorexPasswordDto: Record<string, never>;
         KiorexBackchannelDto: Record<string, never>;
+        MessagingSendBodyDto: {
+            patientId?: string;
+            appointmentId?: string;
+            /** @enum {string} */
+            channel: "SMS" | "WHATSAPP" | "EMAIL";
+            toPhone: string;
+            templateKey?: string;
+            body: string;
+            variables?: Record<string, never>;
+        };
+        PublicAppointmentRescheduleApplyBodyDto: {
+            startsAt?: string;
+        };
+        SchedulingSaveTypeBodyDto: {
+            nameAr?: string;
+            durationMinutes?: Record<string, never>;
+            feeAmount?: Record<string, never>;
+            colorHex?: string;
+            isActive?: boolean;
+            bufferBeforeMin?: Record<string, never>;
+            bufferAfterMin?: Record<string, never>;
+            requiresRoom?: boolean;
+            marketplaceBookable?: boolean;
+            minNoticeMinutes?: Record<string, never>;
+            maxDaysAhead?: Record<string, never>;
+            newPatientOnly?: boolean;
+            /** @description number, numeric string, null or empty string (= no deposit) */
+            depositAmount?: Record<string, never> | null;
+            id?: string;
+            nameEn: string;
+            clinicId?: Record<string, never> | null;
+        };
+        SchedulingPatchTypeBodyDto: {
+            nameAr?: string;
+            durationMinutes?: Record<string, never>;
+            feeAmount?: Record<string, never>;
+            colorHex?: string;
+            isActive?: boolean;
+            bufferBeforeMin?: Record<string, never>;
+            bufferAfterMin?: Record<string, never>;
+            requiresRoom?: boolean;
+            marketplaceBookable?: boolean;
+            minNoticeMinutes?: Record<string, never>;
+            maxDaysAhead?: Record<string, never>;
+            newPatientOnly?: boolean;
+            /** @description number, numeric string, null or empty string (= no deposit) */
+            depositAmount?: Record<string, never> | null;
+            nameEn?: string;
+        };
+        SchedulingPutTypeOverridesBodyDto: {
+            overrides: Record<string, never>[];
+        };
+        SchedulingPutAvailabilityBodyDto: {
+            clinicId: string;
+            clinicianId: string;
+            weekJson: Record<string, never>;
+            blockedJson?: Record<string, never> | null;
+        };
+        SchedulingAddWaitlistBodyDto: {
+            clinicId: string;
+            patientId: string;
+            clinicianId?: string;
+            appointmentTypeId?: string;
+            preferredFrom?: string;
+            preferredTo?: string;
+            notes?: string;
+        };
+        SchedulingSeriesBodyDto: {
+            clinicId: string;
+            patientId: string;
+            clinicianId: string;
+            appointmentTypeId?: string;
+            label: string;
+            /** @description clamped to 1..52 by the service */
+            totalSessions: number;
+            packagePaidAmount?: number;
+            cadenceDays?: number;
+            startsOn: string;
+        };
         SubmitClinicianVerificationDto: Record<string, never>;
         PlatformVerificationDecisionDto: Record<string, never>;
         SetProfessionDto: Record<string, never>;
@@ -11334,6 +12900,25 @@ export interface components {
             /** @description Mark a provisional booking chart as a finished patient profile after required demographics are saved */
             completeProfile?: boolean;
         };
+        PatientActiveProblemBodyDto: {
+            id?: string;
+            icd10Code?: string;
+            labelEn: string;
+            labelAr?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "RESOLVED";
+            /** @description ISO 8601 date */
+            onsetDate?: string;
+        };
+        PatientFamilyLinkBodyDto: {
+            toPatientId: string;
+            /** @enum {string} */
+            relation: "PARENT" | "CHILD" | "SPOUSE" | "GUARDIAN" | "OTHER";
+        };
+        PatientsMergePatientsBodyDto: {
+            sourcePatientId: string;
+            fieldChoices?: Record<string, never>;
+        };
         MessagingConsentItemDto: {
             /** @enum {string} */
             channel: "SMS" | "WHATSAPP" | "EMAIL";
@@ -11345,6 +12930,12 @@ export interface components {
         };
         PutMessagingConsentDto: {
             consents: components["schemas"]["MessagingConsentItemDto"][];
+        };
+        ComplianceRecordConsentBodyDto: {
+            signerName?: string;
+            signedOnTablet?: boolean;
+            locale?: string;
+            ipAddress?: string;
         };
         UserNavTabGrantResponseDto: {
             /** @description Saved tab keys, or null when the user follows role defaults */
@@ -11414,6 +13005,19 @@ export interface components {
         CreateSupportTicketEventDto: {
             eventType: string;
             message?: string;
+        };
+        SupportEscalateEngineeringBodyDto: {
+            note?: string;
+        };
+        SupportRequestAccessBodyDto: {
+            tenantId: string;
+            reason: string;
+            durationMinutes?: number;
+            requestedUnmaskPhi?: boolean;
+        };
+        SupportDecideAccessBodyDto: {
+            approved: boolean;
+            allowUnmaskPhi?: boolean;
         };
         ClinicDto: {
             id: string;
@@ -11623,6 +13227,8 @@ export interface components {
              *     ]
              */
             frontDeskRoomLabels?: string[];
+            /** @description When true, this branch is excluded from the Kiorex marketplace listing (online booking). Stored in clinic providerSettings; can be reversed later in clinic settings. */
+            kiorexExcludedFromMarketplace?: boolean;
         };
         DeactivateClinicDto: {
             /** @description Last operating day (YYYY-MM-DD). Defaults to today. */
@@ -11855,8 +13461,115 @@ export interface components {
             /** @default false */
             isPrimary: boolean;
         };
+        EncountersAmendBodyDto: {
+            reason: string;
+        };
+        ClinicalUpsertTemplateBodyDto: {
+            id?: string;
+            clinicId: string;
+            /** @enum {string} */
+            specialty: "POLYCLINIC" | "GENERAL_MEDICINE" | "PAIN_MANAGEMENT" | "ORTHOPEDICS" | "PEDIATRICS" | "DERMATOLOGY" | "DENTISTRY" | "PHYSIO_THERAPY" | "AESTHETICS" | "CARDIOLOGY" | "OBSTETRICS_GYNECOLOGY" | "ENT" | "OPHTHALMOLOGY" | "PSYCHIATRY" | "RADIOLOGY" | "LABORATORY" | "INTERNAL_MEDICINE" | "FAMILY_MEDICINE" | "UROLOGY" | "CUSTOM";
+            customSpecialtyLabelEn?: string;
+            customSpecialtyLabelAr?: string;
+            name: string;
+            description?: string;
+            sectionsJson: Record<string, never>;
+            isPublished?: boolean;
+        };
+        ClinicalCreateShortcutBodyDto: {
+            /** @enum {string} */
+            type: "TEXT_EXPAND" | "DIAGNOSIS_FAV" | "RX_SET" | "COPY_LAST_VISIT";
+            label: string;
+            trigger?: string;
+            payload: Record<string, never>;
+        };
+        ClinicalFavIcdBodyDto: {
+            icd10Code: string;
+        };
+        ClinicalLetterBodyDto: {
+            /** @enum {string} */
+            type: "SICK_LEAVE" | "MEDICAL_REPORT" | "REFERRAL" | "FITNESS_CERTIFICATE";
+            patientId: string;
+            encounterId?: string;
+            fields?: Record<string, never>;
+        };
+        ClinicalRxCheckBodyDto: {
+            patientId: string;
+            items: Record<string, never>[];
+        };
+        ClinicalSafetyCheckBodyDto: {
+            patientId: string;
+            drugName: string;
+            drugProductId?: string;
+            existingDrugNames?: string[];
+        };
+        ClinicalCreateOrderBodyDto: {
+            clinicId: string;
+            patientId: string;
+            encounterId?: string;
+            /** @enum {string} */
+            kind: "LAB" | "IMAGING";
+            notes?: string;
+            items: Record<string, never>[];
+        };
+        ClinicalPatchOrderBodyDto: {
+            /** @enum {string} */
+            status?: "DRAFT" | "ORDERED" | "IN_PROGRESS" | "RESULTS_READY" | "CANCELLED";
+            resultsJson?: Record<string, never>;
+            notes?: string;
+            items?: Record<string, never>[];
+        };
+        ClinicalUpsertDentalToothBodyDto: {
+            toothFdi: number;
+            status?: string;
+            planNote?: string;
+            feeAmount?: number;
+        };
+        ClinicalPhysioPlanBodyDto: {
+            clinicId: string;
+            patientId: string;
+            clinicianId: string;
+            label: string;
+            sessionCount: number;
+            notes?: string;
+        };
+        PhysioPublicDischargeBodyDto: {
+            summary: string;
+        };
+        PhysioPublicProgrammeBodyDto: {
+            exercises: Record<string, never>;
+        };
+        RecordShareClinicPutRecordShareConsentBodyDto: {
+            consents: Record<string, never>[];
+        };
+        PlatformKiorexRatesCreateBodyDto: {
+            marketId: string;
+            /** @enum {string|null} */
+            specialty?: "POLYCLINIC" | "GENERAL_MEDICINE" | "PAIN_MANAGEMENT" | "ORTHOPEDICS" | "PEDIATRICS" | "DERMATOLOGY" | "DENTISTRY" | "PHYSIO_THERAPY" | "AESTHETICS" | "CARDIOLOGY" | "OBSTETRICS_GYNECOLOGY" | "ENT" | "OPHTHALMOLOGY" | "PSYCHIATRY" | "RADIOLOGY" | "LABORATORY" | "INTERNAL_MEDICINE" | "FAMILY_MEDICINE" | "UROLOGY" | "CUSTOM" | null;
+            /** @enum {string} */
+            feeType: "FLAT" | "PERCENT";
+            amount?: number | null;
+            percent?: number | null;
+            minAmount?: number | null;
+            maxAmount?: number | null;
+            benchmarkFlat?: number | null;
+            benchmarkPercent?: number | null;
+            benchmarkSource?: string | null;
+            benchmarkCheckedAt?: string | null;
+            validFrom?: string;
+            validTo?: string | null;
+        };
+        PlatformKiorexRatesPatchMarketSettingsBodyDto: {
+            benchmarkTargetRatio?: number;
+            liteMonthlyCap?: number | null;
+        };
         ResolveCommissionDisputeDto: Record<string, never>;
         OpenCommissionDisputeDto: Record<string, never>;
+        CommissionDecisionsOverrideBodyDto: {
+            appointmentId?: string;
+            reason?: string;
+            note?: string;
+        };
         ExpenseDto: {
             id: string;
             clinicId: string;
@@ -11931,6 +13644,15 @@ export interface components {
             counterpartyName?: Record<string, never> | null;
             /** @description B2B counterparty tax registration for B2B revenue */
             counterpartyTaxNumber?: Record<string, never> | null;
+        };
+        RevenueShareAddAdjustmentBodyDto: {
+            amount: number;
+            note: string;
+        };
+        RevenueShareMarkPaidBodyDto: {
+            method?: string;
+            reference?: string;
+            amount?: number;
         };
         HrManageContextDto: {
             /** @description Primary clinic for clinic-scoped HR officers */
@@ -12342,6 +14064,173 @@ export interface components {
             /** @description Scheduled fee payment plan (cash vs transfer channel) */
             scheduledFeeCollection?: Record<string, never>;
         };
+        DepositLinksUpdatePolicyBodyDto: {
+            policy?: Record<string, never> | null;
+        };
+        PlatformForceAutoRenewBodyDto: {
+            /** @enum {string|null} */
+            force: "ON" | "OFF" | null;
+            reason: string;
+        };
+        PlatformForceDowngradeBodyDto: {
+            reason: string;
+        };
+        ProposeSubscriptionPolicyBodyDto: {
+            policy: Record<string, never>;
+            reason: string;
+        };
+        DecideSubscriptionPolicyBodyDto: {
+            approve: boolean;
+            note?: string;
+        };
+        LegalAcceptBodyDto: {
+            acceptances: Record<string, never>[];
+        };
+        BillingRecordPaywallEventBodyDto: {
+            type: string;
+            entitlement: string;
+            requiredPlan: string;
+            source?: string | null;
+        };
+        BillingAutoRenewBodyDto: {
+            enabled: boolean;
+            confirmDowngrade?: boolean;
+        };
+        BillingReactivateBodyDto: {
+            /** @enum {string} */
+            planKey?: "PRO" | "CLINIC" | "ENTERPRISE" | "NURSE_PRO" | "NURSE_AGENCY";
+            /** @enum {string} */
+            interval?: "MONTHLY" | "ANNUAL";
+            seats?: number;
+        };
+        BillingPurchaseSpecialtyAddonBodyDto: {
+            entitlementKey: string;
+        };
+        BillingPreviewChangeBodyDto: {
+            /** @enum {string} */
+            planKey: "LITE" | "PRO" | "CLINIC" | "ENTERPRISE" | "NURSE_LITE" | "NURSE_PRO" | "NURSE_AGENCY";
+            /** @enum {string} */
+            interval: "MONTHLY" | "ANNUAL";
+            seats: number;
+            /** @enum {string} */
+            timing?: "IMMEDIATE" | "PERIOD_END";
+        };
+        BillingChangePlanBodyDto: {
+            /** @enum {string} */
+            planKey: "LITE" | "PRO" | "CLINIC" | "ENTERPRISE" | "NURSE_LITE" | "NURSE_PRO" | "NURSE_AGENCY";
+            /** @enum {string} */
+            interval: "MONTHLY" | "ANNUAL";
+            seats: number;
+            confirm?: boolean;
+            /** @enum {string} */
+            timing?: "IMMEDIATE" | "PERIOD_END";
+            activeClinicianUserIds?: string[];
+        };
+        BillingChangeSeatsBodyDto: {
+            seats: number;
+            confirm?: boolean;
+            activeClinicianUserIds?: string[];
+        };
+        BillingPreviewSeatsBodyDto: {
+            seats: number;
+        };
+        BillingCancelSubscriptionBodyDto: {
+            atPeriodEnd?: boolean;
+        };
+        BillingCreateCatalogBodyDto: {
+            code: string;
+            nameEn: string;
+            nameAr?: string;
+            category?: string;
+            amount: number;
+            currency?: string;
+        };
+        BillingRecordPaymentBodyDto: {
+            clinicId: string;
+            patientId: string;
+            invoiceId?: string;
+            currency?: string;
+            allocations: Record<string, never>[];
+            submitEta?: boolean;
+        };
+        BillingCashCloseBodyDto: {
+            clinicId: string;
+            shiftDate: string;
+            countedCash: number;
+            countedCard: number;
+            notes?: string;
+        };
+        PatientMoneyApproveRefundBodyDto: {
+            note?: string;
+        };
+        PatientMoneyRejectRefundBodyDto: {
+            note?: string;
+        };
+        PatientMoneyConsumePackageBodyDto: {
+            appointmentId?: string | null;
+        };
+        PatientMoneyCancelPackageBodyDto: {
+            reason: string;
+            /** @enum {string} */
+            method?: "CASH" | "CARD" | "TRANSFER" | "WALLET" | "OTHER" | "KIOREX_PAY";
+        };
+        PatientMoneyApplyDepositBodyDto: {
+            appointmentId?: string | null;
+        };
+        PatientMoneyReleaseDepositBodyDto: {
+            reason: string;
+            /** @enum {string} */
+            outcome?: "RELEASED" | "FORFEITED";
+        };
+        PatientMoneyMarkDepositPaidBodyDto: {
+            /** @enum {string} */
+            method: "CASH" | "CARD" | "TRANSFER" | "WALLET" | "OTHER" | "KIOREX_PAY";
+            reference?: string;
+        };
+        CashierShiftsOpenBodyDto: {
+            clinicId: string;
+            openingFloat: number;
+        };
+        CashierShiftsCloseBodyDto: {
+            countedCash: number;
+            countedCard?: number;
+            note?: string;
+        };
+        CashierShiftsReviewBodyDto: {
+            note?: string;
+        };
+        SplitPaymentsSetScheduleBodyDto: {
+            rows: Record<string, never>[];
+        };
+        ClaimsUpsertPayerBodyDto: {
+            id?: string;
+            nameEn: string;
+            nameAr?: string;
+            contractRef?: string;
+            active?: boolean;
+        };
+        ClaimsCreateBatchBodyDto: {
+            payerCompanyId: string;
+            periodFrom: string;
+            periodTo: string;
+            currency?: string;
+            invoiceIds?: string[];
+        };
+        ClaimsRejectLineBodyDto: {
+            reason: string;
+        };
+        ClaimsImportRemittanceBodyDto: {
+            payerCompanyId: string;
+            batchId?: string;
+            reference: string;
+            currency?: string;
+            lines: Record<string, never>[];
+        };
+        PayIpnUploadBodyDto: Record<string, never>;
+        PayMatchConfirmBodyDto: Record<string, never>;
+        PayMatchRejectBodyDto: Record<string, never>;
+        PayPrepareBodyDto: Record<string, never>;
+        PayLinkCreateBodyDto: Record<string, never>;
         OperationDto: {
             id: string;
             clinicId: string;
@@ -12471,6 +14360,9 @@ export interface components {
             duration?: string;
             instructions?: string;
         };
+        OperationsResetClinicalBodyDto: {
+            clearPrescription?: boolean;
+        };
         UpdateOperationDto: {
             patientId?: string;
             clinicianId?: string;
@@ -12495,6 +14387,15 @@ export interface components {
             collectionAmount?: number;
             /** @description When true, allows advancing multiple pipeline stages in one update (client must confirm with the user) */
             allowPipelineSkip?: boolean;
+        };
+        OperationsAddSupplyBodyDto: {
+            itemName: string;
+            quantity?: number;
+            unit?: string;
+            catalogCode?: string;
+        };
+        OperationsSetInstallmentsBodyDto: {
+            rows: Record<string, never>[];
         };
         CreateInvoiceLineDto: {
             /** @description Purpose / service description */
@@ -12620,6 +14521,9 @@ export interface components {
             /** @description When true, creating an operation requires How did they find us? (acquisition channel). Default false (optional). */
             operationAcquisitionRequired?: boolean;
         };
+        AdminPutSignInMethodBodyDto: {
+            defaultSignInMethod?: Record<string, never>;
+        };
         CreateTenantPaymentChannelDto: {
             /** @description Display name for staff (e.g. Clinic InstaPay) */
             name: string;
@@ -12702,6 +14606,11 @@ export interface components {
         PatchFeatureFlagDto: {
             enabled: boolean;
         };
+        AdminDataExplorerStartExportJobBodyDto: {
+            /** @enum {string} */
+            format: "SQL" | "DOCUMENTS" | "FULL";
+            tables?: string[];
+        };
         CreateTenantGroupAdminDto: {
             /** @description Sign-in email (username) for the organization group administrator */
             email: string;
@@ -12754,6 +14663,43 @@ export interface components {
             defaultLocale?: string;
             /** @description Default visit fee for new encounters in this organization */
             defaultVisitFee?: number;
+        };
+        PlatformAdminVerifyKiorlyPaymentBodyDto: {
+            approved: boolean;
+        };
+        PlatformAdminGrantCreditsBodyDto: {
+            amount: number;
+            reason: string;
+            expiresAt?: string | null;
+            note?: string;
+            secondApproverUserId?: string;
+        };
+        PlatformAdminRunSettlementBodyDto: {
+            period: string;
+            tenantIds?: string[];
+        };
+        PlatformAdminExtendTrialBodyDto: {
+            days: number;
+            reason: string;
+            trialConfigOverride?: Record<string, never>;
+        };
+        PlatformAdminSetPlanBodyDto: {
+            /** @enum {string} */
+            planKey: "LITE" | "PRO" | "CLINIC" | "ENTERPRISE";
+            reason: string;
+            /** @enum {string} */
+            interval?: "MONTHLY" | "ANNUAL" | "YEARLY";
+            clinicianSeats?: number;
+            /** @enum {string} */
+            status?: "ACTIVE" | "TRIALING";
+        };
+        PlatformAdminPutEntitlementOverrideBodyDto: {
+            valueJson: Record<string, never>;
+            reason: string;
+            expiresAt?: string | null;
+        };
+        PlatformAdminResetSalesDemoBodyDto: {
+            tier?: string;
         };
         IntegrationBookAppointmentDto: {
             /** @description Clinic branch where the visit is booked */
@@ -12839,6 +14785,39 @@ export interface components {
              */
             days: number;
         };
+        KiorlyBillingPaymentsCardSessionBodyDto: {
+            returnUrl: string;
+        };
+        KiorlyBillingPaymentsPayBodyDto: {
+            /** @enum {string} */
+            method: "card" | "saved_card" | "paymob" | "fawry" | "instapay" | "bank";
+            paymentMethodId?: string;
+            proofUploadKey?: string;
+        };
+        B2bReferralBodyDto: Record<string, never>;
+        ReportsPutScheduleBodyDto: {
+            enabled?: boolean;
+            format?: string;
+            reportKeys?: string[];
+            channelEmail?: boolean;
+            channelWhatsApp?: boolean;
+            dayOfWeek?: number;
+            hourLocal?: number;
+        };
+        UserPreferencesPutBodyDto: {
+            keys?: Record<string, never>;
+        };
+        PublicInvitationsCreateBodyDto: {
+            phoneOrEmail: string;
+            roles: Record<string, never>[];
+            displayName?: string;
+            clinicIds?: string[];
+        };
+        PublicInvitationsAcceptBodyDto: {
+            password: string;
+            email?: string;
+            displayName?: string;
+        };
         UserMoneyVisibilityResponseDto: {
             /** @enum {string} */
             operations: "ROLE_DEFAULT" | "SHOW_VISIBILITY_AND_EDIT" | "SHOW_VISIBILITY_ONLY" | "SHOW_EDIT_ONLY" | "HIDE_VISIBILITY_AND_EDIT" | "HIDE_VISIBILITY_ONLY" | "HIDE_EDIT_ONLY" | "SHOW" | "HIDE";
@@ -12895,6 +14874,39 @@ export interface components {
             suggestedPrompts: string[];
             actions?: components["schemas"]["AssistantChatActionDto"][];
         };
+        DevInboxDeliveryBodyDto: {
+            /** @enum {string} */
+            state: "delivered" | "read" | "failed" | "bounced";
+            error?: string;
+        };
+        DevInboxInboundBodyDto: {
+            fromPhone: string;
+            text?: string;
+            buttonPayload?: string;
+            replyToId?: string;
+            toDisplayPhone?: string;
+        };
+        DevInboxPspBodyDto: {
+            provider: string;
+            /** @enum {string} */
+            outcome: "succeeded" | "failed";
+            tenantId: string;
+            invoiceId: string;
+            amount?: string;
+            currency?: string;
+            idempotencyKey?: string;
+        };
+        DevInboxPspRefundBodyDto: {
+            paymentId: string;
+            amount?: string;
+        };
+        DevInboxSendTestBodyDto: {
+            channel: string;
+            to: string;
+            body?: string;
+            templateKey?: string;
+            tenantId?: string;
+        };
         CheckInConsentCaptureDto: {
             /** @description PDPL / data processing consent */
             dataProcessing?: boolean;
@@ -12912,15 +14924,307 @@ export interface components {
             visitCollection?: components["schemas"]["VisitCollectionDto"];
             consentCapture?: components["schemas"]["CheckInConsentCaptureDto"];
         };
+        FrontDeskCallTicketBodyDto: {
+            clinicId: string;
+            ticketNumber: number;
+        };
         CollectVisitBalanceDto: {
             visitCollection: components["schemas"]["VisitCollectionDto"];
+        };
+        FrontDeskPutPrintSettingsBodyDto: {
+            clinicId: string;
+            thermalPrinterProfileId: string;
+        };
+        FrontDeskPrintReceiptBodyDto: {
+            clinicId: string;
+            patientName: string;
+            receiptNumber?: string;
+            lines?: Record<string, never>[];
+            total: string;
+            currency?: string;
+            method?: string;
+            /** @enum {string} */
+            locale?: "en" | "ar";
+        };
+        ExportsRequestPatientBodyDto: {
+            patientId: string;
+        };
+        ExportsStartOffboardingBodyDto: {
+            legalHold?: boolean;
+        };
+        ExportsLegalHoldBodyDto: {
+            legalHold: boolean;
+        };
+        ClinicAiStartScribeBodyDto: {
+            patientConsent?: boolean;
+            retainAudioAfterSignOff?: boolean;
+        };
+        ClinicAiUploadAudioBodyDto: {
+            seq: number;
+            mimeType?: string;
+            payloadB64: string;
+        };
+        ClinicAiStopScribeBodyDto: {
+            audioSeconds?: number;
+        };
+        HomeVisitsPutSafetyContactBodyDto: {
+            name: string;
+            phone: string;
+        };
+        HomeVisitsAssignBodyDto: {
+            clinicianId: string;
+        };
+        HomeVisitsDepartBodyDto: {
+            lat?: number;
+            lng?: number;
+            etaMinutes?: number;
+        };
+        HomeVisitsArriveBodyDto: {
+            lat: number;
+            lng: number;
+        };
+        HomeVisitsFinishBodyDto: {
+            lat?: number;
+            lng?: number;
+        };
+        HomeVisitsAbortBodyDto: {
+            reason: string;
+            reasonCategory?: string;
+            lat?: number;
+            lng?: number;
+        };
+        HomeVisitsSosBodyDto: {
+            lat: number;
+            lng: number;
+        };
+        TelehealthPutSettingsBodyDto: {
+            offersTelehealth?: boolean;
+            windows?: Record<string, never>;
+        };
+        TelehealthConfigureTypeBodyDto: {
+            enabled?: boolean;
+            durationMinutes?: number;
+            feeAmount?: number;
+            depositAmount?: number | null;
+            marketplaceBookable?: boolean;
+        };
+        TelehealthPostSignalBodyDto: {
+            type?: string;
+            payload?: Record<string, never>;
+        };
+        TelehealthModeBodyDto: {
+            mode?: string;
+        };
+        TelehealthPublicPostBodyDto: {
+            type?: string;
+            payload?: Record<string, never>;
+        };
+        TelehealthPublicModeBodyDto: {
+            mode?: string;
+        };
+        NurseEditionCompleteBodyDto: {
+            signupToken: string;
+            /** @enum {string} */
+            kind: "SOLO" | "AGENCY";
+            profile: Record<string, never>;
+            practice: Record<string, never>;
+            planKey: string;
+            legalAcceptances?: Record<string, never>[];
+        };
+        NurseEditionChangeEditionBodyDto: {
+            edition: string;
+            kind?: string | null;
+        };
+        NurseClinicalResumePlanBodyDto: {
+            startDate: string;
+            visitAddress: Record<string, never>;
+        };
+        NurseClinicalExtendPlanBodyDto: {
+            startDate: string;
+            extraDays: number;
+            visitAddress: Record<string, never>;
+        };
+        NurseClinicalEndPlanBodyDto: {
+            /** @enum {string} */
+            reason: "COMPLETED" | "CANCELLED_BY_PATIENT" | "CANCELLED_BY_PROVIDER" | "EXPIRED";
+            dischargeNote: string;
+        };
+        NurseClinicalDeclinePlanRequestBodyDto: {
+            reason?: string;
+        };
+        NurseClinicalEscalationBodyDto: {
+            action: string;
+            note?: string;
+        };
+        NurseClinicalBookShiftBodyDto: {
+            patientId: string;
+            nurseId: string;
+            startsAt: string;
+            durationHours: number;
+        };
+        NurseClinicalCheckInBodyDto: {
+            lat: number;
+            lng: number;
+        };
+        NurseClinicalCheckOutBodyDto: {
+            lat: number;
+            lng: number;
+            handoverNote?: string;
+            handoverToNurseId?: string;
+        };
+        NurseClinicalSetFamilyConsentBodyDto: {
+            granted: boolean;
+        };
+        NurseMarPhotoOrderBodyDto: {
+            patientId: string;
+            prescriberName: string;
+            orderedOn: string;
+            expiresOn: string;
+            controlled?: boolean;
+            lines: Record<string, never>[];
+            documentKey?: string;
+        };
+        PublicSignupRequestOtpBodyDto: {
+            phone: string;
+            market: string;
+        };
+        PublicSignupVerifyBodyDto: {
+            phone: string;
+            code: string;
+            market: string;
+        };
+        PublicSignupCompleteBodyDto: {
+            signupToken: string;
+            profile: Record<string, never>;
+            specialty: string;
+            clinic: Record<string, never>;
+            planKey: string;
+            salesRepCode?: string;
+            referralCode?: string;
+            ref?: string;
+            rep?: string;
+            legalAcceptances?: Record<string, never>[];
+            /** @enum {string} */
+            edition?: "CLINIC" | "NURSE";
+            /** @enum {string} */
+            nurseKind?: "SOLO" | "AGENCY";
+        };
+        PlatformPlansCreateBodyDto: {
+            /** @enum {string} */
+            key: "LITE" | "PRO" | "CLINIC" | "ENTERPRISE" | "NURSE_LITE" | "NURSE_PRO" | "NURSE_AGENCY";
+            nameEn: string;
+            nameAr?: string;
+            isPublic?: boolean;
+            sortOrder?: number;
+        };
+        PlatformPlansCreatePriceBodyDto: {
+            marketId: string;
+            currency: string;
+            /** @enum {string} */
+            interval: "MONTHLY" | "ANNUAL";
+            /** @enum {string} */
+            unit: "PER_TENANT" | "PER_CLINICIAN";
+            amount: Record<string, never>;
+            includedClinicians?: number;
+            extraClinicianAmount?: Record<string, never> | null;
+            cohortKey?: string | null;
+            validFrom?: string;
+            newVersion?: boolean;
+            preview?: boolean;
         };
         PatchOnboardingStepDto: {
             /** @enum {string} */
             action: "complete" | "skip";
             entityId?: string;
         };
+        PlatformSalesRepsRoiBodyDto: {
+            noShowsPreventedPerMonth?: number;
+            feePerVisit?: number;
+            adminHoursSavedPerWeek?: number;
+            adminHourlyCost?: number;
+            kiorexPatientsPerMonth?: number;
+            contributionPerKiorexPatient?: number;
+            planMonthlyAmount?: number;
+        };
+        PlatformSalesRepsConfirmBodyDto: {
+            code?: string;
+            legalAcceptances?: Record<string, never>[];
+        };
+        PlatformSalesRepsUploadBodyDto: {
+            entity?: string;
+            dedupeMode?: string;
+        };
+        PlatformSalesRepsCreateBodyDto: {
+            email?: string;
+            displayName?: string;
+            code?: string;
+            phone?: string;
+            password?: string;
+        };
+        CreateSlotHoldBodyDto: {
+            clinicId: string;
+            clinicianId: string;
+            typeId: string;
+            /** @description ISO 8601 start of the slot */
+            startsAt: string;
+            endsAt?: string;
+            /** @description The caller's reference; one live hold per reference */
+            externalRef: string;
+            /** @description Required for HOME visit types, ignored (never stored) for in-clinic types */
+            visitAddress?: Record<string, never>;
+        };
+        MarketplaceCancelBookingBodyDto: {
+            reason?: string;
+        };
+        MarketplaceRescheduleBookingBodyDto: {
+            startsAt: string;
+            endsAt?: string;
+            holdId?: string;
+        };
+        MarketplaceUpsertRecordShareConsentsBodyDto: {
+            consents: Record<string, never>[];
+        };
+        VerificationDecisionBodyDto: {
+            requestRef?: string;
+            kiorexRef?: string;
+            orgRef?: string;
+            clinicId?: string;
+            /** @enum {string} */
+            decision?: "APPROVED" | "REJECTED" | "NEEDS_INFO";
+            note?: string;
+            /** @description ISO 8601 */
+            decidedAt?: string;
+        };
         PutProviderProfileDto: Record<string, never>;
+        KiorexSettingsReplyBodyDto: {
+            text: string;
+        };
+        KiorexImportRollbackBodyDto: {
+            orgId?: string;
+        };
+        KiorexConnectConsentBodyDto: {
+            clinicId: string;
+            termsVersion: string;
+            feeAcknowledged: boolean;
+        };
+        KiorexConnectRequestBodyDto: {
+            clinicId: string;
+            enrolmentCode?: string;
+        };
+        KiorexConnectRefreshBodyDto: {
+            clinicId: string;
+        };
+        KiorexFrontDoorInterestBodyDto: {
+            clinicId: string;
+        };
+        KiorexFrontDoorStartBodyDto: {
+            clinicId: string;
+        };
+        KiorexConnectionDecideBodyDto: {
+            decision: string;
+            connectionId?: string;
+            reasonCode?: string;
+        };
         UpsertPushSubscriptionDto: {
             /** @description PushService endpoint URL */
             endpoint: string;
@@ -12933,6 +15237,87 @@ export interface components {
              */
             keys: Record<string, never>;
             userAgent?: string;
+        };
+        PausePromotionDto: Record<string, never>;
+        SocialRenderBodyDto: {
+            templateId?: string;
+            clinicId?: string;
+            clinicianId?: string;
+            linkId?: string;
+            /** @enum {string} */
+            locale?: "ar" | "en";
+            /** @description Optional custom line; the content guard applies */
+            customLine?: string;
+            png?: boolean;
+        };
+        SocialShareBodyDto: {
+            templateId?: string;
+            clinicId?: string;
+            channel?: string;
+        };
+        SlotCardBodyDto: {
+            clinicId?: string;
+            clinicianId?: string;
+            /** @description 1 to 5 ISO date-times (the service enforces the range and re-checks each slot) */
+            startsAt?: string[];
+            linkId?: string;
+            /** @enum {string} */
+            locale?: "ar" | "en";
+            png?: boolean;
+        };
+        RecommendationStateBodyDto: {
+            clinicId?: string;
+            /** @enum {string} */
+            status?: "DISMISSED" | "SNOOZED" | "DONE" | "OPEN";
+            /** @description 1 to 90 (the service enforces the range) */
+            snoozeDays?: number;
+        };
+        VerificationCreateBodyDto: {
+            clinicId?: string;
+            /** @description LICENCE_NUMBER, SPECIALTY, ADDRESS, DISPLAY_NAME, PHOTO or DOCUMENT */
+            field?: string;
+            /** @description Encrypted at rest */
+            newValue?: string;
+            oldRef?: string;
+            evidenceFileRefs?: string[];
+        };
+        VerificationEvidenceBodyDto: {
+            evidenceFileRefs?: string[];
+        };
+        MobileRegisterDeviceBodyDto: {
+            deviceId: string;
+            /** @enum {string} */
+            platform: "ios" | "android" | "web";
+            name: string;
+            appVersion?: string;
+            pushToken?: string;
+        };
+        MobilePushTokenBodyDto: {
+            /** @enum {string} */
+            provider: "expo" | "mock";
+            token: string;
+        };
+        MobileAckBodyDto: {
+            note?: string;
+        };
+        MobileUpgradeRequestBodyDto: {
+            featureKey?: Record<string, never>;
+            note?: Record<string, never>;
+        };
+        MobileApproveBodyDto: {
+            note?: string;
+        };
+        MobileRecordVitalsBodyDto: {
+            patientId: string;
+            appointmentId?: string;
+            systolic?: Record<string, never> | null;
+            diastolic?: Record<string, never> | null;
+            pulse?: Record<string, never> | null;
+            temperatureC?: Record<string, never> | null;
+            spo2?: Record<string, never> | null;
+            respiratoryRate?: Record<string, never> | null;
+            glucoseMgDl?: Record<string, never> | null;
+            painScore?: Record<string, never> | null;
         };
     };
     responses: never;
@@ -13017,7 +15402,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthRefreshBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -13034,7 +15423,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthForgotPasswordBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -13051,7 +15444,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthResetPasswordBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -13068,7 +15465,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthOtpRequestBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -13085,7 +15486,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthOtpVerifyBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -13174,7 +15579,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthConfirmMfaBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -13191,7 +15600,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthDisableMfaBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -13208,7 +15621,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthEnableWhatsAppMfaBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -13225,7 +15642,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthWhatsappMfaChallengeBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -13242,7 +15663,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthRegenerateMfaRecoveryBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -13557,7 +15982,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessagingSendBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -13688,7 +16117,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicAppointmentRescheduleApplyBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -13856,7 +16289,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingSaveTypeBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -13875,7 +16312,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingPatchTypeBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -13913,7 +16354,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingPutTypeOverridesBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -13974,7 +16419,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingPutAvailabilityBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -14032,7 +16481,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingAddWaitlistBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -14087,7 +16540,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingSeriesBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -14907,7 +17364,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientActiveProblemBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -14945,7 +17406,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientFamilyLinkBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -14960,6 +17425,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                id: string;
                 linkId: string;
             };
             cookie?: never;
@@ -14983,7 +17449,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientsMergePatientsBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -15107,7 +17577,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplianceRecordConsentBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -15428,7 +17902,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportEscalateEngineeringBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -15508,7 +17986,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportRequestAccessBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -15544,7 +18026,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportDecideAccessBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -16027,6 +18513,25 @@ export interface operations {
             };
         };
     };
+    EncountersController_suggestCarePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     EncountersController_getDocumentFile: {
         parameters: {
             query?: never;
@@ -16268,7 +18773,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EncountersAmendBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -16328,7 +18837,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalUpsertTemplateBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -16381,7 +18894,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalCreateShortcutBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -16436,7 +18953,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalFavIcdBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -16493,7 +19014,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalLetterBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -16530,7 +19055,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalRxCheckBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -16547,7 +19076,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalSafetyCheckBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -16584,7 +19117,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalCreateOrderBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -16603,7 +19140,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalPatchOrderBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -16715,7 +19256,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalUpsertDentalToothBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -16751,7 +19296,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicalPhysioPlanBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -16859,7 +19408,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhysioPublicDischargeBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -16878,7 +19431,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhysioPublicProgrammeBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -16976,7 +19533,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordShareClinicPutRecordShareConsentBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -17012,7 +19573,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformKiorexRatesCreateBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -17031,7 +19596,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformKiorexRatesPatchMarketSettingsBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -17187,6 +19756,248 @@ export interface operations {
             };
         };
     };
+    CommissionCollectionsController_access: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_summary: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_ledger: {
+        parameters: {
+            query: {
+                period: string;
+                status: string;
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_collections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_collection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_deductions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_disputes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_rate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_statement: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_statementCsv: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                period: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_timeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_csv: {
+        parameters: {
+            query: {
+                period: string;
+            };
+            header?: never;
+            path: {
+                view: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CommissionCollectionsController_pdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                period: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CommissionDecisionsController_explain: {
         parameters: {
             query: {
@@ -17231,6 +20042,95 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionDecisionsOverrideBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CreditsController_getWallet: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CreditsController_statement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                period: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The credit section of the statement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description INVALID_PERIOD: the period must be a calendar month written YYYY-MM */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CreditsController_listBundles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CreditsController_purchase: {
+        parameters: {
+            query?: never;
+            header: {
+                "idempotency-key": string;
+            };
+            path: {
+                key: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -17553,7 +20453,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevenueShareAddAdjustmentBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -17591,7 +20495,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevenueShareMarkPaidBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18354,7 +21262,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepositLinksUpdatePolicyBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -18376,6 +21288,179 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSubscriptionsController_list: {
+        parameters: {
+            query: {
+                status: string;
+                planKey: string;
+                autoRenew: string;
+                q: string;
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSubscriptionsController_metrics: {
+        parameters: {
+            query: {
+                windowDays: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSubscriptionsController_forceAutoRenew: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformForceAutoRenewBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSubscriptionsController_forceDowngrade: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformForceDowngradeBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSubscriptionsController_getPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                marketId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSubscriptionsController_policyHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                marketId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSubscriptionsController_propose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                marketId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposeSubscriptionPolicyBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformSubscriptionsController_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                changeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideSubscriptionPolicyBodyDto"];
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18443,7 +21528,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalAcceptBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18460,7 +21549,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingRecordPaywallEventBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18480,6 +21573,101 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_getRenewal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_comparePlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_downgradeImpact: {
+        parameters: {
+            query: {
+                plan: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_setAutoRenew: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingAutoRenewBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BillingController_reactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingReactivateBodyDto"];
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18582,7 +21770,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingPurchaseSpecialtyAddonBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18599,7 +21791,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingPreviewChangeBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18616,7 +21812,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingChangePlanBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18633,7 +21833,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingChangeSeatsBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18650,7 +21854,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingPreviewSeatsBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18667,7 +21875,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingCancelSubscriptionBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18703,7 +21915,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingCreateCatalogBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18720,7 +21936,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingRecordPaymentBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18737,7 +21957,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillingCashCloseBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18793,7 +22017,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientMoneyApproveRefundBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18812,7 +22040,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientMoneyRejectRefundBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18848,7 +22080,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientMoneyConsumePackageBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18867,7 +22103,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientMoneyCancelPackageBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18903,7 +22143,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientMoneyApplyDepositBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18922,7 +22166,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientMoneyReleaseDepositBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -18941,7 +22189,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PatientMoneyMarkDepositPaidBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -19038,7 +22290,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CashierShiftsOpenBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -19057,7 +22313,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CashierShiftsCloseBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -19076,7 +22336,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CashierShiftsReviewBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -19154,7 +22418,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SplitPaymentsSetScheduleBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -19188,7 +22456,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimsUpsertPayerBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -19225,7 +22497,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimsCreateBatchBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -19282,7 +22558,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimsRejectLineBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -19318,9 +22598,291 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimsImportRemittanceBodyDto"];
+            };
+        };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_ipn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayIpnUploadBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_queue: {
+        parameters: {
+            query: {
+                status: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_invoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_audit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_links: {
+        parameters: {
+            query: {
+                invoiceId: string;
+                state: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayLinkCreateBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayMatchConfirmBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayMatchRejectBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_prepare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayPrepareBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayCollectionsController_rollup: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PayLinkPublicController_view: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19601,7 +23163,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationsResetClinicalBodyDto"];
+            };
+        };
         responses: {
             /** @description { ok: true } */
             200: {
@@ -19685,7 +23251,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationsAddSupplyBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -19704,7 +23274,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationsSetInstallmentsBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -20321,7 +23895,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminPutSignInMethodBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -20745,7 +24323,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminDataExplorerStartExportJobBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -21578,7 +25160,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformAdminVerifyKiorlyPaymentBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -21597,7 +25183,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformAdminGrantCreditsBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -21614,7 +25204,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformAdminRunSettlementBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -21633,7 +25227,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformAdminExtendTrialBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -21652,7 +25250,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformAdminSetPlanBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -21672,7 +25274,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformAdminPutEntitlementOverrideBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -21725,7 +25331,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformAdminResetSalesDemoBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -22522,7 +26132,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorlyBillingPaymentsCardSessionBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -22575,7 +26189,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorlyBillingPaymentsPayBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -22729,6 +26347,101 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    B2bReferralController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    B2bReferralController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2bReferralBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    B2bReferralController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    B2bMobileController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    B2bMobileController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["B2bReferralBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23039,7 +26752,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportsPutScheduleBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23118,7 +26835,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserPreferencesPutBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23152,7 +26873,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicInvitationsCreateBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -23228,7 +26953,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicInvitationsAcceptBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23490,7 +27219,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DevInboxDeliveryBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23507,7 +27240,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DevInboxInboundBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23524,7 +27261,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DevInboxPspBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23541,7 +27282,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DevInboxPspRefundBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23558,7 +27303,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DevInboxSendTestBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23655,7 +27404,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FrontDeskCallTicketBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -23761,7 +27514,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FrontDeskPutPrintSettingsBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23800,7 +27557,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FrontDeskPrintReceiptBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -23834,7 +27595,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportsRequestPatientBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -23868,7 +27633,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportsStartOffboardingBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -23885,7 +27654,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportsLegalHoldBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -23980,7 +27753,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicAiStartScribeBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -24018,7 +27795,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicAiUploadAudioBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -24037,7 +27818,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicAiStopScribeBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -24200,7 +27985,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeVisitsPutSafetyContactBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24392,7 +28181,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeVisitsAssignBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24411,7 +28204,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeVisitsDepartBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24430,7 +28227,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeVisitsArriveBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24449,7 +28250,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeVisitsFinishBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24468,7 +28273,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeVisitsAbortBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24487,7 +28296,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeVisitsSosBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24601,7 +28414,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelehealthPutSettingsBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24620,7 +28437,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelehealthConfigureTypeBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24715,7 +28536,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelehealthPostSignalBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24734,7 +28559,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelehealthModeBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24867,7 +28696,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelehealthPublicPostBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24886,7 +28719,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelehealthPublicModeBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -24959,7 +28796,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseEditionCompleteBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25034,7 +28875,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseEditionChangeEditionBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25128,7 +28973,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseClinicalResumePlanBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25147,7 +28996,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseClinicalExtendPlanBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25166,7 +29019,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseClinicalEndPlanBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25242,7 +29099,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseClinicalDeclinePlanRequestBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25356,7 +29217,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseClinicalEscalationBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25392,7 +29257,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseClinicalBookShiftBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -25411,7 +29280,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseClinicalCheckInBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25430,7 +29303,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseClinicalCheckOutBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25488,7 +29365,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseClinicalSetFamilyConsentBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25545,7 +29426,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NurseMarPhotoOrderBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -25824,7 +29709,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicSignupRequestOtpBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25841,7 +29730,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicSignupVerifyBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -25858,7 +29751,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicSignupCompleteBodyDto"];
+            };
+        };
         responses: {
             /** @description Provisioned clinic session (same shape as auth login) */
             200: {
@@ -25931,7 +29828,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformPlansCreateBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -26010,7 +29911,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformPlansCreatePriceBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -26292,7 +30197,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformSalesRepsRoiBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -26347,7 +30256,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformSalesRepsConfirmBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -26421,7 +30334,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformSalesRepsUploadBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -26475,7 +30392,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformSalesRepsCreateBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -26707,7 +30628,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSlotHoldBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -26806,7 +30731,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarketplaceCancelBookingBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -26831,7 +30760,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarketplaceRescheduleBookingBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -26892,6 +30825,52 @@ export interface operations {
         };
     };
     MarketplaceController_recordPayout: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_recordCommissionCollection: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceController_recordCommissionRate: {
         parameters: {
             query?: never;
             header: {
@@ -27209,7 +31188,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarketplaceUpsertRecordShareConsentsBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -27262,6 +31245,81 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceStaffPhoneMatchController_get: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceProviderVerificationController_read: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                requestRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MarketplaceProviderVerificationController_decide: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Nonce": string;
+                "X-Kiorly-Timestamp": string;
+                "X-Kiorly-Client-Secret": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerificationDecisionBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -27457,7 +31515,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexSettingsReplyBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -27562,7 +31624,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexImportRollbackBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -27598,7 +31664,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexConnectConsentBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -27615,7 +31685,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexConnectRequestBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -27632,7 +31706,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexConnectRefreshBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -27668,7 +31746,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexFrontDoorInterestBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -27685,7 +31767,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexFrontDoorStartBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -27737,6 +31823,106 @@ export interface operations {
             header?: never;
             path: {
                 orgRef: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KiorexConnectionDecideBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsMarketplaceController_reserve: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                promotionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reserved: {reservationRef, expiresAt} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The promotion is busy: retry with the same idempotency key after the Retry-After seconds. Nothing was reserved. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsMarketplaceController_release: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                promotionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsMarketplaceController_reverse: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                promotionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsMarketplaceController_reviewDecision: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Kiorly-Signature": string;
+                "X-Kiorly-Client-Key": string;
+            };
+            path: {
+                promotionId: string;
             };
             cookie?: never;
         };
@@ -27795,6 +31981,180 @@ export interface operations {
             };
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsController_ledger: {
+        parameters: {
+            query: {
+                page: string;
+                pageSize: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsController_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsController_pause: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PausePromotionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsController_resume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PromotionsController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -28209,6 +32569,496 @@ export interface operations {
             };
         };
     };
+    ProviderMarketingController_templates: {
+        parameters: {
+            query: {
+                locale: string;
+                kind: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_render: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SocialRenderBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_share: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SocialShareBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_shareableSlots: {
+        parameters: {
+            query: {
+                clinicId: string;
+                clinicianId: string;
+                days: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_slotCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlotCardBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_recommendationState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationStateBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_verificationList: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_verificationCreate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerificationCreateBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_verificationWithdraw: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_verificationEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerificationEvidenceBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_posterPdf: {
+        parameters: {
+            query: {
+                lang: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_exports: {
+        parameters: {
+            query: {
+                month: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_months: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_statement: {
+        parameters: {
+            query: {
+                month: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ProviderMarketingController_file: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path: {
+                file: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMarketingMobileController_templates: {
+        parameters: {
+            query: {
+                locale: string;
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMarketingMobileController_render: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SocialRenderBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMarketingMobileController_count: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SocialShareBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMarketingMobileController_slots: {
+        parameters: {
+            query: {
+                clinicId: string;
+                clinicianId: string;
+                days: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMarketingMobileController_slotCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlotCardBodyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMarketingMobileController_months: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMarketingMobileController_statement: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path: {
+                month: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMarketingMobileController_verification: {
+        parameters: {
+            query: {
+                clinicId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GrowthMarketingMobileController_verificationCreate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerificationCreateBodyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     MobileController_bootstrap: {
         parameters: {
             query?: never;
@@ -28252,7 +33102,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileRegisterDeviceBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
@@ -28290,7 +33144,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobilePushTokenBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -28302,7 +33160,10 @@ export interface operations {
     };
     MobileController_inbox: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: string;
+                cursor?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -28398,7 +33259,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileAckBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -28415,7 +33280,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileUpgradeRequestBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -28444,7 +33313,10 @@ export interface operations {
     };
     MobileController_schedule: {
         parameters: {
-            query?: never;
+            query?: {
+                date?: string;
+                clinicId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -28544,7 +33416,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileApproveBodyDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {
@@ -28563,7 +33439,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileRecordVitalsBodyDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {

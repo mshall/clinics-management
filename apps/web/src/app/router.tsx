@@ -21,6 +21,7 @@ import { PatientJoinPage } from "@/features/telehealth/patient-join-page";
 import { TelehealthCallPage } from "@/features/telehealth/telehealth-call-page";
 import { AppointmentReschedulePage } from "@/features/appointments/appointment-reschedule-page";
 import { DepositPayPage } from "@/features/appointments/deposit-pay-page";
+import { PayLinkPublicPage } from "@/features/pay/PayLinkPublicPage";
 import { PublicBookingPage } from "@/features/kiorex/public-booking-page";
 import { PublicShortLinkPage } from "@/features/growth/public-short-link";
 import { PublicRxVerifyPage } from "@/features/prescriptions/public-rx-verify-page";
@@ -74,6 +75,7 @@ import {
   KiorexConnectPage,
   GrowthPage,
   CreditWalletPage,
+  PayPage,
   KiorexCommissionsPage,
   PlatformSubscriptionsTab,
   UpgradePlanPage,
@@ -121,6 +123,7 @@ export const router = createBrowserRouter([
   { path: "/r/:token", element: <AppointmentReschedulePage /> },
   // ADR-039 — public patient video-visit page (token link, works in a mobile WebView).
   { path: "/v/:token", element: <PatientJoinPage /> },
+  { path: "/pay/l/:token", element: <PayLinkPublicPage /> },
   { path: "/pay/:token", element: <DepositPayPage /> },
   { path: "/b/:slug", element: <PublicBookingPage /> },
   { path: "/q/:code", element: <PublicShortLinkPage /> },
@@ -208,6 +211,7 @@ export const router = createBrowserRouter([
       { path: "kiorex/growth", element: <NavGate tab="clinics" orTab="admin">{defer(GrowthPage)}</NavGate> },
       { path: "plan", element: <NavGate tab="admin">{defer(UpgradePlanPage)}</NavGate> },
       { path: "kiorex-commissions", element: defer(KiorexCommissionsPage) },
+      { path: "pay", element: <NavGate tab="revenue" orTab="admin">{defer(PayPage)}</NavGate> },
       { path: "credit", element: <NavGate tab="admin">{defer(CreditWalletPage)}</NavGate> },
       { path: "promotions", element: <NavGate tab="admin">{defer(PromotionsPage)}</NavGate> },
       { path: "expenses", element: <NavGate tab="expenses">{defer(ExpensesPage)}</NavGate> },

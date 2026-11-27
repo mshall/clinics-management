@@ -21,7 +21,7 @@ const SRC = join(process.cwd(), "src");
  * Docs/contracts/telehealth-contract-change.md (a PR against the sibling repo, which this repo must not edit). Remove the key
  * from this list as soon as flags/catalogue.json carries it; the drift test then checks it like every other flag.
  */
-export const PENDING_CONTRACT_FLAG_KEYS: readonly string[] = ["telehealth.video"];
+export const PENDING_CONTRACT_FLAG_KEYS: readonly string[] = ["telehealth.video", "clinic.pay_collections"];
 
 function listTs(dir: string, out: string[] = []): string[] {
   for (const n of readdirSync(dir)) {

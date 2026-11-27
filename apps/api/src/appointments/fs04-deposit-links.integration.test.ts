@@ -310,4 +310,21 @@ describe("FS-04 deposits & payment links for high-risk bookings", () => {
     assert.equal(paid.method, PaymentMethod.KIOREX_PAY);
     assert.ok(!("linkTokenHash" in paid));
   });
+  it("AUTO routing: the clinic page when Kiorex Pay is not configured, Kiorex Pay when it is; the explanation is returned; no provider keeps the old default", async () => {
+    delete process.env.KIOREX_PAY_LINK_BASE_URL;
+    const a = await booking(flaggedPatientId);
+    const clinicRoute = await links.createLink(tenantId, desk, a.id, { amount: 100, provider: "AUTO", send: false });
+    assert.equal(clinicRoute.provider, "CLINIC"); assert.ok(clinicRoute.url.includes("/pay/"));
+    assert.deepEqual((clinicRoute as { routing: { excluded: unknown[] } }).routing.excluded, [{ psp: "KIOREX_PAY", reason: "DISABLED" }]);
+    assert.equal((await links.requirement(tenantId, a.id)).suggestedProvider, "CLINIC");
+    process.env.KIOREX_PAY_LINK_BASE_URL = "https://pay.kiorex.example";
+    try {
+      const b = await booking(flaggedPatientId);
+      const pay = await links.createLink(tenantId, desk, b.id, { amount: 100, provider: "AUTO", send: false });
+      assert.equal(pay.provider, "KIOREX_PAY"); assert.ok(pay.url.startsWith("https://pay.kiorex.example/deposit/"));
+      assert.equal((await links.requirement(tenantId, b.id)).suggestedProvider, "KIOREX_PAY");
+      const c = await booking(flaggedPatientId);
+      assert.equal((await links.createLink(tenantId, desk, c.id, { amount: 100, send: false })).provider, "CLINIC", "no provider keeps today's default");
+    } finally { delete process.env.KIOREX_PAY_LINK_BASE_URL; }
+  });
 });

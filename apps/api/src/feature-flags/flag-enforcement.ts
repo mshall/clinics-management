@@ -56,6 +56,7 @@ export const FLAG_ENFORCEMENT: Record<string, FlagEnforcement> = {
   "growth.provider_marketing_v2": { kind: "controller", files: ["growth/provider-marketing/provider-marketing.controller.ts", "mobile/growth-marketing-mobile.controller.ts", "growth/b2b/b2b-referral.controller.ts", "growth/b2b/b2b-mobile.controller.ts"] },
   "clinic.provider_credit_v2": { kind: "controller", files: ["credits/credits.controller.ts", "credits/credit-fee-drawdown.service.ts", "credits/credit-grants.service.ts", "credits/credit-promotion-hold.service.ts", "promotions/promotions.controller.ts", "promotions/promotion-budget.service.ts"] },
   "clinic.sponsored_promotions": { kind: "pending", note: "registered per contracts 1.13.0 (default OFF); the promotion routes stay gated by clinic.provider_credit_v2 until the product is switched (backward compatible: no live promotion changes behaviour)" },
+  "clinic.pay_collections": { kind: "controller", files: ["billing/pay/pay-collections.controller.ts"] },
   "clinic.usage_bundles": { kind: "service", files: ["credits/usage-bundles/usage-bundle.service.ts"] },
   "nurse.individual_kiorex_listing": { kind: "service", files: ["marketplace/marketplace-listing-eligibility.ts"] },
 };
