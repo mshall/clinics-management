@@ -51,7 +51,7 @@ restore_web_dist_from_s3() {
     --output text 2>/dev/null || true)"
   if [[ -z "$bucket" || "$bucket" == "None" ]]; then
     echo "WARN  could not resolve WebBucket — building web so synth has a dist/"
-    npm run build -w web
+    VITE_KIORLY_HOME_URL="${VITE_KIORLY_HOME_URL:-$(node scripts/resolve-kiorly-home-url.mjs)}" npm run build -w web
     return 0
   fi
   if [[ "$bucket" == *apiuploads* ]]; then
@@ -67,7 +67,7 @@ restore_web_dist_from_s3() {
 if [[ "$DEPLOY_SCOPE" == "api" ]]; then
   restore_web_dist_from_s3
 else
-  npm run build -w web
+  VITE_KIORLY_HOME_URL="${VITE_KIORLY_HOME_URL:-$(node scripts/resolve-kiorly-home-url.mjs)}" npm run build -w web
 fi
 
 node scripts/check-boot-proxy-order.mjs
