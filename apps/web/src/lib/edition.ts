@@ -4,6 +4,8 @@
  * these static tables let the signed-out surfaces (login, sign-up on nurse.kiorly.com) render before any request).
  * Visibility is presentation only: scope of practice (no prescribing for nurses) is enforced by the server.
  */
+import { nurseParentDomains, nurseWebHost } from "./host-config";
+
 export type Edition = "CLINIC" | "NURSE";
 export type NurseTenantKind = "SOLO" | "AGENCY";
 
@@ -14,8 +16,9 @@ export const NURSE_ACCENT_HSL = "347 83% 51%";
 export function editionFromHost(hostHeader: string | undefined | null): Edition | null {
   const host = (hostHeader ?? "").toLowerCase().split(":")[0]!.trim();
   if (!host) return null;
-  if (host === "nurse.kiorly.com" || host.endsWith(".nurse.kiorly.com")) return "NURSE";
-  if (/^nurse\.[a-z0-9-]+\.kiorly\.(com|link)$/.test(host)) return "NURSE";
+  const nurse = nurseWebHost();
+  if (host === nurse || host.endsWith(`.${nurse}`)) return "NURSE";
+  for (const d of nurseParentDomains()) if (host.startsWith("nurse.") && host.endsWith(`.${d}`) && /^nurse\.[a-z0-9-]+$/.test(host.slice(0, -d.length - 1))) return "NURSE";
   if (host === "nurse.localhost" || (host.startsWith("nurse.") && host.endsWith(".localhost"))) return "NURSE";
   return null;
 }

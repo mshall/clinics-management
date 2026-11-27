@@ -1,3 +1,4 @@
+import { widgetBaseUrl } from "../../config/host-config";
 import { WIDGET_MAX_ORIGINS, isValidWidgetOrigin } from "../acquisition-contract";
 
 /** Widget origin rule, identical to the contract (`isValidWidgetOrigin`): exact https origin, host with a dot, optional port, no path, no wildcard, at most 10. */
@@ -63,7 +64,7 @@ export function validateWidgetSettings(input: unknown): SettingsResult {
 
 /** Embed snippets. The widget host is PROPOSED (`book.kiorex.com`, NEEDS_HUMAN) and comes from KIOREX_WIDGET_BASE_URL. Only public slugs appear in them. */
 export function widgetSnippets(input: { slug: string; locale: "ar" | "en"; doctorSlug?: string | null; baseUrl?: string }) {
-  const base = (input.baseUrl ?? process.env.KIOREX_WIDGET_BASE_URL ?? "https://book.kiorex.com").replace(/\/+$/, "");
+  const base = (input.baseUrl ?? widgetBaseUrl()).replace(/\/+$/, "");
   const slug = encodeURIComponent(input.slug);
   const doctor = input.doctorSlug ? ` data-doctor="${encodeURIComponent(input.doctorSlug)}"` : "";
   return {

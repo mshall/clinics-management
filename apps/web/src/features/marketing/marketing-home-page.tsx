@@ -1,3 +1,4 @@
+import { contactEmail } from "@/lib/host-config";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -109,7 +110,7 @@ export function MarketingHomePage() {
               <a href="#pricing">{t("marketing.ctaPricing", "See pricing")}</a>
             </Button>
             <Button asChild size="lg" variant="ghost">
-              <a href="mailto:hello@kiorly.com?subject=Demo">{t("marketing.ctaDemo", "Book a demo")}</a>
+              <a href={`mailto:${contactEmail()}?subject=Demo`}>{t("marketing.ctaDemo", "Book a demo")}</a>
             </Button>
           </div>
           {cohortQ.data ? (

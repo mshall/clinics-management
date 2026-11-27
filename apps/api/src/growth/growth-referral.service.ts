@@ -1,3 +1,4 @@
+import { clinicWebOrigin } from "../config/host-config";
 import { Injectable, Optional } from "@nestjs/common";
 import { ReferralStatus } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
@@ -20,7 +21,7 @@ export class GrowthReferralService {
     const rewardsOn = await flagOn(this.flags, tenantId, "clinic.referral_rewards");
     const existing = await this.prisma.referralCode.findUnique({ where: { tenantId }, select: { code: true } });
     const code = existing?.code ?? (rewardsOn ? await this.codes.ensureForTenant(tenantId) : null);
-    const base = process.env.WEB_PUBLIC_ORIGIN?.trim() || "https://app.kiorly.com";
+    const base = clinicWebOrigin();
     const link = code ? `${base.replace(/\/$/, "")}/signup?ref=${encodeURIComponent(code)}` : null;
 
     const referrals = await this.prisma.referral.findMany({

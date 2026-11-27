@@ -19,6 +19,8 @@ import compressionMiddleware from "compression";
 import { json, type NextFunction, type Request, type Response } from "express";
 import { assertProviderEnv } from "./common/provider-env";
 import { warnIfLeadSigningMissing } from "./common/lead-signing-status";
+import { corsOptionsDelegate, resolveCorsPolicy } from "./common/cors-policy";
+import { kiorexOidcProblems } from "./auth/kiorex-oidc.port";
 import { applyHttpHardening, assertProductionSecrets, swaggerEnabled } from "./common/http-hardening";
 
 async function bootstrap() {
@@ -27,6 +29,8 @@ async function bootstrap() {
   assertProductionSecrets(); // fail fast: production never signs sessions with a weak or published key (names only)
   assertProviderEnv(); // fail fast: MODE=real but URL/credentials missing
   warnIfLeadSigningMissing(); // production without KIOREX_LEAD_SIGNING_SECRET: a notice only (names, never values)
+  const oidcProblems = kiorexOidcProblems(); // Passport configured but unusable (names only): off, never half-configured
+  if (oidcProblems.length) console.warn(`[passport] KIOREX_OIDC_ISSUER is set but sign-in is OFF; missing: ${oidcProblems.join(", ")}`);
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
   // Amazon SNS (SES bounce / complaint events) posts Content-Type text/plain; the controller needs the body as text
@@ -52,18 +56,10 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(...orderedGlobalFilters(app.get(IntegrationFailureExceptionFilter)));
-  app.enableCors({
-    origin: true, // bearer-token API: no cookies and no ambient credentials, so a reflected Origin cannot ride a victim session
-    credentials: false,
-    exposedHeaders: [
-      "X-Kiorly-Web-Build-Id",
-      "X-Kiorly-Web-Build-Built-At",
-      "X-Kiorly-Web-Min-Built-At",
-      // Org-backup fetch downloads (cross-origin from Vite → API) need these for progress / filename.
-      "Content-Length",
-      "Content-Disposition",
-    ],
-  });
+  // Env-driven allow-list (CORS_ALLOWED_ORIGINS); unset keeps the legacy reflected Origin (bearer-token API: no cookies, credentials false). See common/cors-policy.ts.
+  const corsPolicy = resolveCorsPolicy();
+  for (const n of corsPolicy.notices) console.warn(`[cors] ${n}`);
+  app.enableCors(corsOptionsDelegate(corsPolicy) as never);
   app.use(webBuildIdMiddleware);
   app.setGlobalPrefix("api/v1", {
     exclude: [{ path: "marketplace/v1/(.*)", method: RequestMethod.ALL }],

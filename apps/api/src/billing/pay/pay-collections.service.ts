@@ -1,3 +1,4 @@
+import { payLinkBase } from "../../config/host-config";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PaymentMethod, Prisma } from "@prisma/client";
 import {
@@ -125,7 +126,7 @@ export class PayCollectionsService {
     const row = await this.prisma.clinicPayLink.create({ data: { tenantId, clinicId: i.clinicId, context: i.context, subjectId: i.subjectId, invoiceId: i.invoiceId ?? null, amount: new Prisma.Decimal(fromMinor(amountMinor)), currency, rail: i.rail ?? "bank_transfer", expiresAt: new Date(Date.now() + 60_000), createdBy: user.userId } });
     const { token, claim } = signLink(linkSecret(), { id: row.id, ctx: i.context as PayContext, subject: i.subjectId, amountMinor, currency, org: tenantId, branch: i.clinicId, rail: row.rail, ttlSec: i.ttlSec });
     await this.prisma.clinicPayLink.update({ where: { id: row.id }, data: { expiresAt: new Date(claim.exp * 1000) } });
-    const url = `${process.env.WEB_BASE_URL ?? "https://app.kiorly.com"}/pay/l/${token}`;
+    const url = `${payLinkBase()}/pay/l/${token}`;
     const qr = qrPlan({ capabilities: { rails: [], capture: false, void: false, status: false, partialRefund: false, hostedCheckout: true, cardFacts: false, fileIngest: false, qr: "LINK" } }, { checkoutUrl: url });
     await this.prisma.clinicPayLink.update({ where: { id: row.id }, data: { qrKind: qr.kind } });
     await this.prisma.auditLog.create({ data: { tenantId, actorId: user.userId, action: "PAY_LINK_CREATED", resource: "clinic_pay_link", resourceId: row.id, metadata: { context: i.context, amountMinor } } });

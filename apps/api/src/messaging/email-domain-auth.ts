@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "fs";
 import { dirname, join } from "path";
+import { defaultFromAddress, mailSendingDomain } from "../config/host-config";
 
 /** Platform file + env overrides for SES sending-domain authentication (MS-05). */
 export type EmailDomainAuth = {
@@ -12,8 +13,8 @@ export type EmailDomainAuth = {
 };
 
 const DEFAULT: EmailDomainAuth = {
-  sendingDomain: "mail.kiorly.com",
-  fromAddress: "noreply@mail.kiorly.com",
+  sendingDomain: mailSendingDomain(),
+  fromAddress: defaultFromAddress(),
   region: "eu-central-1",
   dkimVerified: false,
   spfVerified: false,

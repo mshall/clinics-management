@@ -19,6 +19,7 @@ export const COMPOSITION_FOLDERS = new Set(["platform", "main.ts"]);
 
 export const TOP_LEVEL_FOLDER_TO_CONTEXT: Record<string, BoundedContextId> = {
   common: "kernel",
+  config: "kernel", // env-driven host and URL defaults (ADR-059)
   prisma: "kernel",
   health: "kernel",
   auth: "kernel",
