@@ -22,7 +22,7 @@ describe("Passport configuration and per-organisation default sign-in (integrati
   let orgId: string;
   before(async () => {
     await prisma.$connect();
-    orgId = (await prisma.user.findFirstOrThrow({ where: { email: "dr.ahmed@drahmedshall.com", deletedAt: null }, select: { tenantId: true } })).tenantId;
+    orgId = (await prisma.user.findFirstOrThrow({ where: { email: "dr.ahmed@drahmedshall.com", deletedAt: null }, select: { tenantId: true } })).tenantId as string;
   });
   after(async () => {
     for (const k of ["KIOREX_OIDC_ISSUER", "KIOREX_OIDC_CLIENT_SECRET", "APP_WEB_URL", "WEB_PUBLIC_ORIGIN", "SIGNIN_DEFAULT_METHOD", "NODE_ENV"]) {
