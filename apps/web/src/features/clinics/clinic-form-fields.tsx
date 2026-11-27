@@ -154,13 +154,17 @@ export function ClinicFormFields({
       </div>
       <div className="space-y-2 sm:col-span-2">
         <Label>{t("admin.country", "Country")}</Label>
-        <SearchablePickList
-          items={countryPickItems}
-          value={values.country}
-          onValueChange={(v) => onChange({ country: v })}
-          searchPlaceholder={t("admin.filterCountry", "Type country name or code…")}
-          placeholder={t("admin.country")}
-        />
+        {/* Founder decision A (27 Nov 2026): an organisation belongs to its country for life. The country is shown, never chosen or edited. */}
+        <div>
+          <p className="text-sm font-medium" data-testid="clinic-country-readonly">
+            {currentKind ? (countryPickItems.find((o) => o.value === values.country)?.label ?? values.country) : t("admin.countryFromOrg", "The organisation's country")}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {currentKind
+              ? t("admin.countryFixed", "The country is fixed when the organisation is created and cannot be changed.")
+              : t("admin.countryFromOrgHint", "A new clinic is created in the country of its organisation.")}
+          </p>
+        </div>
       </div>
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor={`${idPrefix}-addressEn`}>

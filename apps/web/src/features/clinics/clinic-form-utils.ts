@@ -102,7 +102,7 @@ export function clinicFormToPatchPayload(v: ClinicFormValues, orgBaseCurrency = 
     nameEn: v.nameEn.trim(),
     nameAr: v.nameAr.trim(),
     city: v.city.trim(),
-    country: v.country.trim() || "AE",
+    // country is never sent: it belongs to the organisation (founder decision A); the API assigns it on create and refuses a change
     addressEn: v.addressEn.trim(),
     addressAr: v.addressAr.trim(),
     locationUrl: v.locationUrl.trim(),
@@ -128,7 +128,7 @@ export function clinicFormToCreatePayload(v: ClinicFormValues, opts?: { includeP
     nameEn: v.nameEn.trim(),
     nameAr: v.nameAr.trim(),
     city: v.city.trim(),
-    country: v.country.trim() || "AE",
+    // country is never sent: it belongs to the organisation (founder decision A); the API assigns it on create and refuses a change
     addressEn: v.addressEn.trim(),
     addressAr: v.addressAr.trim(),
     locationUrl: v.locationUrl.trim(),

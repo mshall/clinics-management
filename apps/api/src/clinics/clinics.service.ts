@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { ClinicRecordStatus, EmploymentType, Prisma, UserRole } from "@prisma/client";
 import type { JwtUser } from "../auth/jwt-user";
 import { activeSchedulingPhysicianAndClauses } from "../common/active-scheduling-physician";
@@ -689,7 +689,18 @@ export class ClinicsService {
       throw new BadRequestException("Organization must belong to a country market before adding clinics");
     }
     const clinicTax = clinicInvoiceDefaultsFromTenant(tenantForMarket.market, tenantForMarket);
+    // Founder decision A (27 Nov 2026): an organisation belongs to its country market for life, so every clinic of it is in that country.
+    const marketCode = tenantForMarket.market.code?.trim().toUpperCase() ?? "";
+    const marketIsCountry = /^[A-Z]{2}$/.test(marketCode);
+    const requestedCountry = dto.country?.trim().toUpperCase();
+    if (marketIsCountry && requestedCountry && requestedCountry !== marketCode) {
+      throw new ConflictException({
+        code: "ORG_MARKET_MISMATCH",
+        message: `This organisation belongs to the ${marketCode} market; a clinic cannot be created in ${requestedCountry}`,
+      });
+    }
     const country =
+      (marketIsCountry ? marketCode : undefined) ||
       dto.country?.trim() ||
       tenantForMarket?.market?.defaultPhoneRegion?.trim() ||
       "EG";
@@ -811,7 +822,15 @@ export class ClinicsService {
     }
     if (dto.nameEn !== undefined) data.nameEn = dto.nameEn.trim();
     if (dto.nameAr !== undefined) data.nameAr = dto.nameAr.trim();
-    if (dto.country !== undefined) data.country = dto.country.trim() || "EG";
+    if (dto.country !== undefined) {
+      // The country is fixed at creation (founder decision A): the same value is accepted (forms resend it), any other is refused.
+      if (dto.country.trim().toUpperCase() !== (existing.country ?? "").trim().toUpperCase()) {
+        throw new ConflictException({
+          code: "ORG_COUNTRY_IMMUTABLE",
+          message: "An organisation belongs to its country for life; the country cannot be changed. A correction is a documented super-admin data fix.",
+        });
+      }
+    }
     if (dto.city !== undefined) data.city = dto.city.trim();
     if (dto.addressEn !== undefined) data.addressEn = dto.addressEn.trim();
     if (dto.addressAr !== undefined) data.addressAr = dto.addressAr.trim();

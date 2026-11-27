@@ -720,7 +720,14 @@ export class AdminDataExplorerService {
         if (body.nameEn !== undefined) data.nameEn = str("nameEn")!;
         if (body.nameAr !== undefined) data.nameAr = str("nameAr")!;
         if (body.city !== undefined) data.city = str("city")!;
-        if (body.country !== undefined) data.country = str("country")!;
+        if (body.country !== undefined) {
+          // Founder decision A: the country of an organisation is fixed at creation. The same value is accepted, any other is refused.
+          const current = await this.prisma.clinic.findFirst({ where: { id, tenantId }, select: { country: true } });
+          if (!current) throw new NotFoundException("Clinic not found");
+          if (str("country")!.trim().toUpperCase() !== (current.country ?? "").trim().toUpperCase()) {
+            throw new BadRequestException({ code: "ORG_COUNTRY_IMMUTABLE", message: "An organisation belongs to its country for life; the country cannot be changed" });
+          }
+        }
         if (body.addressEn !== undefined) data.addressEn = str("addressEn")!;
         if (body.addressAr !== undefined) data.addressAr = str("addressAr")!;
         if (body.locationUrl !== undefined) data.locationUrl = str("locationUrl")!;

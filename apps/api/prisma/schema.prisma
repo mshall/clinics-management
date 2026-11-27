@@ -471,6 +471,8 @@ model Market {
   operationalStatus            MarketOperationalStatus       @default(ACTIVE)
   pausedUntil                  DateTime?
   lastProvisionNote            String?
+  /// Founder decision 27 Nov 2026: optional two-person rule for Go live / Pause / Disable / Enable (default off).
+  requireSecondApprover        Boolean                       @default(false)
   createdAt                    DateTime                      @default(now())
   updatedAt                    DateTime                      @updatedAt
   tenants                      Tenant[]
@@ -6223,4 +6225,57 @@ model ClinicPayLink {
 
   @@index([tenantId, clinicId, createdAt])
   @@index([tenantId, subjectId])
+}
+
+
+/// Append-only audit of every market lifecycle decision (Go live, Pause, Disable, Enable, create, legal/tax changes, second-approver setting).
+/// No foreign key on purpose: the trail outlives a deleted draft. A database trigger forbids UPDATE and DELETE.
+model MarketAuditEvent {
+  id               String                   @id @default(cuid())
+  marketId         String
+  marketCode       String
+  action           String
+  fromStatus       MarketLaunchStatus?
+  toStatus         MarketLaunchStatus?
+  fromOperational  MarketOperationalStatus?
+  toOperational    MarketOperationalStatus?
+  actorId          String
+  actorEmail       String?
+  /// CLINIC_PLATFORM (Clinic web, platform super admin) | KIORLY_ADMIN (Kiorly admin edition of the Ops console, over the signed route)
+  actorSource      String
+  reason           String
+  approvalRef      String?
+  approvalLink     String?
+  secondApproverId String?
+  requestId        String?
+  metadata         Json                     @default("{}")
+  createdAt        DateTime                 @default(now())
+
+  @@index([marketId, createdAt])
+  @@index([marketCode, createdAt])
+}
+
+/// Second-approver flow (only when Market.requireSecondApprover): the maker creates a PENDING request, a different person approves and the change is applied.
+model MarketChangeRequest {
+  id              String    @id @default(cuid())
+  marketId        String
+  marketCode      String
+  action          String
+  params          Json      @default("{}")
+  reason          String
+  approvalRef     String?
+  approvalLink    String?
+  requestedBy     String
+  requestedEmail  String?
+  requestedSource String
+  /// PENDING | APPLIED | REJECTED | CANCELLED
+  status          String    @default("PENDING")
+  decidedBy       String?
+  decidedEmail    String?
+  decidedSource   String?
+  decisionNote    String?
+  decidedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([marketId, status, createdAt])
 }

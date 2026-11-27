@@ -63,6 +63,8 @@ export type MarketplaceBookingBody = {
   clinicId: string;
   clinicianId: string;
   typeId: string;
+  /** Founder decision A: the market Kiorex resolved for the provider; a different one than the organisation's own is refused (409 CROSS_MARKET_BOOKING). */
+  market?: string;
   startsAt: string;
   endsAt?: string;
   holdId?: string;
@@ -141,6 +143,7 @@ export class MarketplaceBookingService {
 
     const tenantId = await this.access.resolveTenantForMarketplaceClinic(body.clinicId, body.clinicianId);
     await this.access.assertListingBookable(body.clinicId, body.clinicianId);
+    await this.access.assertSameMarket(tenantId, (body as { market?: unknown }).market);
     // GRW-GC-2 (G-9, contracts 1.12.0): KIOREX_WHATSAPP is accepted; it is commissioned like MARKETPLACE (isCommissionChargeableBooking) unless PROVIDER_LED evidence applies.
     if (body.channel !== undefined && body.channel !== CLINIC_LINK_CHANNEL && body.channel !== "MARKETPLACE" && body.channel !== KIOREX_WHATSAPP_CHANNEL) {
       throw new BadRequestException("Invalid channel");

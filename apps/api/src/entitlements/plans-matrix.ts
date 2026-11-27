@@ -156,6 +156,7 @@ export const CONTROLLER_ENTITLEMENT_POLICIES: Record<string, ControllerPolicy> =
   "marketplace/marketplace-staff-phone-match.controller.ts": { kind: "webhook" }, // HMAC marketplace client (RF_PROVIDER_COLLUSION: keyed phone hashes in, one boolean out)
   "marketplace/kiorex-import.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connection.controller.ts": { kind: "webhook" },
+  "marketplace/kiorly-admin-markets.controller.ts": { kind: "webhook" },
   "marketplace/kiorex-connect.controller.ts": { kind: "open" },
   "marketplace/kiorex-front-door.controller.ts": { kind: "open" },
   "home-visits/home-visits.controller.ts": { kind: "open" },

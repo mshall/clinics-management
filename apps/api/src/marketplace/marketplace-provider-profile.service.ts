@@ -88,6 +88,8 @@ export function modalitiesOf(inClinic: boolean, home: boolean, video: boolean): 
 }
 
 export type PublishedProviderDto = {
+  /** Founder decision A (27 Nov 2026, contracts additive): the ISO country market the organisation belongs to for life. Kiorex lists the provider ONLY in this market and refuses a change. */
+  market?: string;
   /** Rev 2.3 (KX-09 §03, contracts 1.5.0): additive provider-sync fields. */
   profession?: string;
   edition?: "CLINIC" | "NURSE";
@@ -407,7 +409,8 @@ export class MarketplaceProviderProfileService {
     const telehealthOffered = hasVideoTypes && (await telehealthOfferedBy({ prisma: this.prisma as never, flags: this.flags, entitlements: this.entitlements }, tenantId, clinicianId));
     const pack = resolveProfessionPack(tenant?.market);
     const register = profession ? pack.verification[profession]?.registers.find((r) => r.isSyndicate)?.code : undefined;
-    const fields: Pick<PublishedProviderDto, "profession" | "edition" | "serviceLocations" | "modalities" | "coverageDistricts" | "verification" | "assignsClinician"> = {
+    const fields: Pick<PublishedProviderDto, "market" | "profession" | "edition" | "serviceLocations" | "modalities" | "coverageDistricts" | "verification" | "assignsClinician"> = {
+      ...(tenant?.market?.code && /^[A-Z]{2}$/.test(tenant.market.code) ? { market: tenant.market.code } : {}),
       ...(profession ? { profession } : {}),
       edition: tenant?.edition ?? "CLINIC",
       serviceLocations: [...(typeLocations.some((l) => l !== "HOME" && l !== "VIDEO") || typeLocations.length === 0 ? (["IN_CLINIC"] as const) : []), ...(homeOffered ? (["HOME"] as const) : []), ...(telehealthOffered ? (["VIDEO"] as const) : [])],

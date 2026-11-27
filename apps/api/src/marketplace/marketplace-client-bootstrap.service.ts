@@ -22,7 +22,12 @@ export function readMarketplaceClientBootstrap(env: NodeJS.ProcessEnv = process.
   return { clientKey, secret };
 }
 
-export type MarketplaceClientBootstrapResult = "off" | "created" | "rotated" | "unchanged" | "deactivated-left-alone";
+/** Scopes of the configured Kiorex platform client: MARKETPLACE always; MARKET_ADMIN (Kiorly admin market launch, ADR-060) unless KIOREX_MARKET_ADMIN=off. */
+export function platformClientScopes(env: NodeJS.ProcessEnv = process.env): string[] {
+  return env.KIOREX_MARKET_ADMIN?.trim().toLowerCase() === "off" ? ["MARKETPLACE"] : ["MARKETPLACE", "MARKET_ADMIN"];
+}
+
+export type MarketplaceClientBootstrapResult = "off" | "created" | "rotated" | "unchanged" | "scopes-updated" | "deactivated-left-alone";
 
 @Injectable()
 export class MarketplaceClientBootstrapService implements OnApplicationBootstrap {
@@ -43,13 +48,22 @@ export class MarketplaceClientBootstrapService implements OnApplicationBootstrap
     const row = await this.prisma.platformIntegrationClient.findFirst({ where: { clientKey: cfg.clientKey } });
     if (!row) {
       await this.prisma.platformIntegrationClient.create({
-        data: { name: "Kiorex platform (configured)", clientKey: cfg.clientKey, secretHash: await hashIntegrationSecret(cfg.secret), scopes: ["MARKETPLACE"] },
+        data: { name: "Kiorex platform (configured)", clientKey: cfg.clientKey, secretHash: await hashIntegrationSecret(cfg.secret), scopes: platformClientScopes() },
       });
       return "created";
     }
     if (row.deactivatedAt) return "deactivated-left-alone";
-    if (await verifyIntegrationSecret(cfg.secret, row.secretHash)) return "unchanged";
-    await this.prisma.platformIntegrationClient.update({ where: { id: row.id }, data: { secretHash: await hashIntegrationSecret(cfg.secret) } });
+    // scopes follow the configuration: the configured platform client gains MARKET_ADMIN (and loses it when KIOREX_MARKET_ADMIN=off); other clients are never touched
+    const wanted = platformClientScopes();
+    const scopesChanged = wanted.length !== row.scopes.length || wanted.some((s) => !row.scopes.includes(s));
+    if (await verifyIntegrationSecret(cfg.secret, row.secretHash)) {
+      if (scopesChanged) {
+        await this.prisma.platformIntegrationClient.update({ where: { id: row.id }, data: { scopes: wanted } });
+        return "scopes-updated";
+      }
+      return "unchanged";
+    }
+    await this.prisma.platformIntegrationClient.update({ where: { id: row.id }, data: { secretHash: await hashIntegrationSecret(cfg.secret), ...(scopesChanged ? { scopes: wanted } : {}) } });
     return "rotated";
   }
 }
