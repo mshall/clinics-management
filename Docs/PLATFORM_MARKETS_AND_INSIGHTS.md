@@ -8,7 +8,13 @@
 | **LIVE** | Launched; orgs may bind when **operationally active** |
 | **operability** | `active` · `paused` (auto-resume at `pausedUntil`) · `disabled` (until re-enabled) |
 
-**UI:** Platform → **Market launch** — create draft (country, AWS region, currency), **Go live**, pause/disable/enable, feature flags, delete draft only.
+**UI:** Platform → **Market launch** — **Initiate country launch** (pick the country: currency, timezone, locale, phone region, weekend days and languages are filled and validated; AWS region and host cell), **Prerequisites** (tax pack, cross-border approval, optional second approver), **Go live**, Pause (1 to 365 days), Disable, Enable (each asks for a **reason**, an approval reference and an https approval link and shows a clear error in EN/AR), **History** (append-only audit: actor, time, reason, approval, second approver), feature flags, delete draft only.
+
+**Audit and approval (founder decision C, 27 Nov 2026).** Every lifecycle decision writes an append-only `MarketAuditEvent` in the same transaction (a trigger forbids UPDATE and DELETE). A double click or two administrators change the state once and write one row; Enable and Disable are idempotent. `Market.requireSecondApprover` (default off): the change becomes a `MarketChangeRequest` that a different person approves.
+
+**An organisation belongs to its country for life (decision A).** `Tenant.marketId` never changes (API refuses, database trigger); a clinic's country is the organisation's and read-only in the UI; a Kiorex booking naming another market is refused (`409 CROSS_MARKET_BOOKING`). A correction is the documented data fix in ADR-060.
+
+**Kiorly admin.** The same market data is reachable from the Kiorly admin edition of the Ops console over the signed `/marketplace/v1/markets` routes (scope `MARKET_ADMIN`, see ADR-060 and the platform's `Docs/KIORLY_ADMIN.md`); the Market table and the audit trail stay here.
 
 **Go live & AWS:** `POST …/markets/:id/launch` sets status `LIVE` and records a provision note. If `dataRegion` is in `PLATFORM_SHARED_DATA_REGIONS` (default `eu-central-1`), the market shares the existing Frankfurt stack. Otherwise ops runs `scripts/ensure-market-cell.sh` / `KIORLY_HOST_CELL=… bash scripts/deploy-aws.sh`. Optional: `MARKET_LAUNCH_RUN_DEPLOY=1` and `KIORLY_REPO_ROOT` to invoke the shell hook from the API.
 

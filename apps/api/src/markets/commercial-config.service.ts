@@ -45,6 +45,11 @@ export class CommercialConfigService {
 
   async get(user: JwtUser, marketId: string): Promise<CommercialConfigResponse> {
     this.assertPlatform(user);
+    return this.read(marketId);
+  }
+
+  /** Read-only view for the signed Kiorly admin route (the editor stays in the Clinic web). */
+  async read(marketId: string): Promise<CommercialConfigResponse> {
     const row = await this.prisma.market.findFirst({ where: { id: marketId } });
     if (!row) throw new NotFoundException("Market not found");
     return this.readStoredConfig(row);
@@ -119,6 +124,18 @@ export class CommercialConfigService {
         data: {
           commercialConfig: parsed.data as Prisma.InputJsonValue,
           featureDefaults: featureDefaults as Prisma.InputJsonValue,
+        },
+      });
+      await tx.marketAuditEvent.create({
+        data: {
+          marketId,
+          marketCode: row.code,
+          action: "COMMERCIAL_CONFIG_UPDATED",
+          actorId: user.userId,
+          actorEmail: user.email?.trim() || null,
+          actorSource: "CLINIC_PLATFORM",
+          reason: "Commercial configuration updated",
+          metadata: { changedKeys: preview.changedKeys } as Prisma.InputJsonValue,
         },
       });
       if (auditTenant) {

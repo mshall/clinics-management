@@ -50,6 +50,8 @@ import { KiorexConnectService } from "./kiorex-connect.service";
 import { KiorexFrontDoorController } from "./kiorex-front-door.controller";
 import { KiorexFrontDoorService } from "./kiorex-front-door.service";
 import { KiorexConnectionController } from "./kiorex-connection.controller";
+import { KiorlyAdminMarketsController } from "./kiorly-admin-markets.controller";
+import { MarketsModule } from "../markets/markets.module";
 import { PromotionsModule } from "../promotions/promotions.module";
 import { PromotionsMarketplaceController } from "../promotions/promotions-marketplace.controller";
 
@@ -70,6 +72,7 @@ import { PromotionsMarketplaceController } from "../promotions/promotions-market
     BillingModule,
     RecordShareModule,
     KiorexModule,
+    MarketsModule,
     ProviderLinkCoreModule,
     VerificationCoreModule,
     NurseModule,
@@ -89,6 +92,7 @@ import { PromotionsMarketplaceController } from "../promotions/promotions-market
     KiorexConnectController,
     KiorexFrontDoorController,
     KiorexConnectionController,
+    KiorlyAdminMarketsController,
     PromotionsMarketplaceController,
   ],
   providers: [

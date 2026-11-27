@@ -10,6 +10,7 @@ export class CreateSlotHoldBodyDto {
   @ApiProperty() @IsString() typeId!: string;
   @ApiProperty({ description: "ISO 8601 start of the slot" }) @IsString() startsAt!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() endsAt?: string;
+  @ApiPropertyOptional({ description: "Market Kiorex resolved for the provider; a different one than the organisation's own is refused (409 CROSS_MARKET_BOOKING)" }) @IsOptional() @IsString() market?: string;
   @ApiProperty({ description: "The caller's reference; one live hold per reference" }) @IsString() externalRef!: string;
   @ApiPropertyOptional({ description: "Required for HOME visit types, ignored (never stored) for in-clinic types", type: Object }) @IsOptional() @Allow() visitAddress?: unknown;
 }
