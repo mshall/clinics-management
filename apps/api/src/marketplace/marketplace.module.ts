@@ -20,6 +20,7 @@ import { MarketplaceOrgController } from "./marketplace-org.controller";
 import { MarketplaceListingsProfileController } from "./marketplace-listings-profile.controller";
 import { MarketplaceProviderProfileService } from "./marketplace-provider-profile.service";
 import { PlatformIntegrationClientService } from "./platform-integration-client.service";
+import { MarketplaceClientBootstrapService } from "./marketplace-client-bootstrap.service";
 import { SlotHoldService } from "./slot-hold.service";
 import { MarketplaceBookingService } from "./marketplace-booking.service";
 import { MarketplacePatientIntakeService } from "./marketplace-patient-intake.service";
@@ -97,6 +98,7 @@ import { PromotionsMarketplaceController } from "../promotions/promotions-market
     ClinicBookingPageService,
     KiorexOverviewService,
     PlatformIntegrationClientService,
+    MarketplaceClientBootstrapService,
     MarketplaceAuthGuard,
     MarketplaceAccessService,
     MarketplaceListingService,

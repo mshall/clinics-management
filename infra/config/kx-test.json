@@ -1,0 +1,35 @@
+{
+  "_generated": "node _docs/registry/emit-clinic-config.mjs --env test (do not edit by hand; no secret values, references only)",
+  "environment": "kx-test",
+  "env": {
+    "APP_WEB_URL": "https://clinics.test.kiorly.com",
+    "CORS_ALLOWED_ORIGINS": "https://admin.test.kiorly.com,https://app.test.kiorly.com,https://clinics.test.kiorly.com,https://d92iz83i79c05.cloudfront.net,https://labs.test.kiorly.com,https://nurse.test.kiorly.com,https://pharmacies.test.kiorly.com",
+    "KIOREX_API_BASE_URL": "https://api.test.kiorex.com/api/v1",
+    "KIOREX_OIDC_CLIENT_ID": "kiorly-clinic",
+    "KIOREX_OIDC_ISSUER": "https://passport.test.kiorex.com",
+    "KIOREX_OUTBOX_WEBHOOK_URL": "https://webhooks.test.kiorex.com/api/v1/webhooks/kiorly",
+    "KIOREX_PATIENT_WEB_URL": "https://test.kiorex.com",
+    "KIOREX_WIDGET_BASE_URL": "https://book.test.kiorex.com",
+    "KIORLY_HOME_ORIGINS": "https://app.test.kiorly.com",
+    "WEB_BASE_URL": "https://clinics.test.kiorly.com",
+    "WEB_PUBLIC_ORIGIN": "https://clinics.test.kiorly.com"
+  },
+  "secrets": {
+    "KIOREX_OIDC_CLIENT_SECRET": {
+      "secretName": "/kx/test/clinic",
+      "key": "KIOREX_OIDC_CLIENT_SECRET"
+    },
+    "KIOREX_OUTBOX_WEBHOOK_SECRET": {
+      "secretName": "/kx/test/clinic",
+      "key": "KIOREX_OUTBOX_WEBHOOK_SECRET"
+    },
+    "KIOREX_MARKETPLACE_CLIENT_KEY": {
+      "secretName": "/kx/test/clinic",
+      "key": "KIOREX_MARKETPLACE_CLIENT_KEY"
+    },
+    "KIOREX_MARKETPLACE_CLIENT_SECRET": {
+      "secretName": "/kx/test/clinic",
+      "key": "KIOREX_MARKETPLACE_CLIENT_SECRET"
+    }
+  }
+}
