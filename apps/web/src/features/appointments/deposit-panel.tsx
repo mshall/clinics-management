@@ -20,10 +20,12 @@ type Requirement = {
   amount: number;
   currency: string;
   kiorexPayAvailable: boolean;
+  /** Where the Kiorly Pay routing would send this deposit (additive field; older APIs omit it). */
+  suggestedProvider?: "CLINIC" | "KIOREX_PAY";
   deposit: { id: string; status: string; amount: number; linkExpiresAt: string | null; source: string } | null;
 };
 
-type CreatedLink = { depositId: string; url: string; amount: number; currency: string; expiresAt: string; sent: boolean; sendError: string | null };
+type CreatedLink = { depositId: string; provider?: string; routing?: { destination: string; order: string[]; excluded: { psp: string; reason: string }[] }; url: string; amount: number; currency: string; expiresAt: string; sent: boolean; sendError: string | null };
 
 const DESK_METHODS = ["TRANSFER", "WALLET", "CARD", "CASH"] as const;
 
@@ -164,7 +166,7 @@ function DepositLinkDialog({
 }) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState(String(requirement.amount || ""));
-  const [provider, setProvider] = useState<"CLINIC" | "KIOREX_PAY">("CLINIC");
+  const [provider, setProvider] = useState<"CLINIC" | "KIOREX_PAY" | "AUTO">("CLINIC");
   const m = useMutation({
     mutationFn: () =>
       apiPost<CreatedLink>(`/api/v1/appointments/${appointmentId}/deposit-link`, { amount: Number(amount), provider }),
@@ -188,7 +190,7 @@ function DepositLinkDialog({
           </div>
           {requirement.kiorexPayAvailable ? (
             <div className="flex flex-wrap gap-2" role="radiogroup">
-              {(["CLINIC", "KIOREX_PAY"] as const).map((p) => (
+              {(["AUTO", "CLINIC", "KIOREX_PAY"] as const).map((p) => (
                 <Button
                   key={p}
                   type="button"
@@ -198,10 +200,20 @@ function DepositLinkDialog({
                   className="min-h-11"
                   onClick={() => setProvider(p)}
                 >
-                  {p === "CLINIC" ? t("depositPanel.providerClinic", "Pay the clinic (InstaPay / transfer)") : t("payment.kiorexPay", "Kiorex Pay")}
+                  {p === "AUTO"
+                    ? t("depositPanel.providerAuto", "Let Kiorly choose")
+                    : p === "CLINIC"
+                      ? t("depositPanel.providerClinic", "Pay the clinic (InstaPay / transfer)")
+                      : t("payment.kiorexPay", "Kiorex Pay")}
                 </Button>
               ))}
             </div>
+          ) : null}
+          {provider === "AUTO" && requirement.suggestedProvider ? (
+            <p className="text-xs text-muted-foreground" data-testid="deposit-route-hint">
+              {t("depositPanel.routeHint", "Routing through Kiorly Pay: this deposit would go to")}{" "}
+              <span className="font-medium">{requirement.suggestedProvider === "KIOREX_PAY" ? t("payment.kiorexPay", "Kiorex Pay") : t("depositPanel.providerClinic", "Pay the clinic (InstaPay / transfer)")}</span>
+            </p>
           ) : null}
           <p className="text-xs text-muted-foreground">
             {t("depositPanel.dialogHint", "The patient gets the link on WhatsApp. Unpaid links expire per the clinic deposit policy.")}

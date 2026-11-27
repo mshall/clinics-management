@@ -1,4 +1,5 @@
 import { useEntitlement } from "@/hooks/use-entitlement";
+import { PayEntryLink } from "@/features/pay/PayEntryLink";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DoctorStatementsCard } from "./doctor-statements-card";
 import { useMemo, useState } from "react";
@@ -327,6 +328,7 @@ export function RevenuePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("revenue.title")}</h1>
         <p className="text-muted-foreground">{t("revenue.subtitle")}</p>
+        <PayEntryLink />
       </div>
       {isError ? <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("common.error")}</p> : null}
 

@@ -4506,6 +4506,8 @@
     "unpaid": "Not paid out yet"
   },
   "depositPanel": {
+    "providerAuto": "Let Kiorly choose",
+    "routeHint": "Routing through Kiorly Pay: this deposit would go to",
     "ask": "Ask for a deposit",
     "required": "Deposit required",
     "reason": {

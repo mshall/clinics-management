@@ -16,6 +16,7 @@ export const GrowthPage = lazyNamed(() => import("@/features/growth/growth-page"
 export const PlatformSubscriptionsTab = lazyNamed(() => import("@/features/plan-billing/PlatformSubscriptionsTab"), "PlatformSubscriptionsTab");
 export const KiorexCommissionsPage = lazyNamed(() => import("@/features/admin/kiorex-commissions-page"), "KiorexCommissionsPage");
 export const CreditWalletPage = lazyNamed(() => import("@/features/credits/CreditWalletPage"), "CreditWalletPage");
+export const PayPage = lazyNamed(() => import("@/features/pay/PayPage"), "PayPage");
 export const UpgradePlanPage = lazyNamed(() => import("@/features/plan-billing/UpgradePlanPage"), "UpgradePlanPage");
 export const PromotionsPage = lazyNamed(() => import("@/features/promotions/PromotionsPage"), "PromotionsPage");
 export const KiorexConnectPage = lazyNamed(() => import("@/features/kiorex/kiorex-connect-page"), "KiorexConnectPage");
