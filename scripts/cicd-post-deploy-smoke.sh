@@ -4,8 +4,14 @@ set -euo pipefail
 
 STACK_NAME="${STACK_NAME:-kiorly-clinics-management}"
 REGION="${AWS_REGION:-eu-central-1}"
-DEMO_EMAIL="${SMOKE_LOGIN_EMAIL:-admin@drahmedshall.com}"
-DEMO_PASSWORD="${SMOKE_LOGIN_PASSWORD:-demo}"
+# The smoke login is a real account of the deployed organisation: there is NO default. The values come from the
+# GitHub Actions secrets SMOKE_LOGIN_EMAIL / SMOKE_LOGIN_PASSWORD (or your shell for a manual run).
+if [[ -z "${SMOKE_LOGIN_EMAIL:-}" || -z "${SMOKE_LOGIN_PASSWORD:-}" ]]; then
+  echo "::error::SMOKE_LOGIN_EMAIL and SMOKE_LOGIN_PASSWORD are not set. Add them as GitHub Actions secrets (repository secrets) or export them for a manual run. There is no published default."
+  exit 1
+fi
+DEMO_EMAIL="$SMOKE_LOGIN_EMAIL"
+DEMO_PASSWORD="$SMOKE_LOGIN_PASSWORD"
 HEALTH_ATTEMPTS="${SMOKE_HEALTH_ATTEMPTS:-36}"
 HEALTH_SLEEP_SEC="${SMOKE_HEALTH_SLEEP_SEC:-10}"
 

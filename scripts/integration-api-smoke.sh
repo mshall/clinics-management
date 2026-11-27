@@ -6,8 +6,22 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=scripts/local-dev-ports.sh
 source "$ROOT/scripts/local-dev-ports.sh"
 API_BASE="${API_BASE:-http://localhost:${API_PORT}/api/v1}"
-ADMIN_EMAIL="${SMOKE_LOGIN_EMAIL:-admin@drahmedshall.com}"
-ADMIN_PASSWORD="${SMOKE_LOGIN_PASSWORD:-demo}"
+# Credentials: no published default for a deployed target. Only a LOCAL API (localhost / 127.0.0.1, seeded by
+# `npm run db:setup`) falls back to the local-dev seed login; anything else needs SMOKE_LOGIN_EMAIL and SMOKE_LOGIN_PASSWORD.
+case "$API_BASE" in
+  http://localhost:*|http://127.0.0.1:*|http://localhost/*|http://127.0.0.1/*)
+    ADMIN_EMAIL="${SMOKE_LOGIN_EMAIL:-admin@drahmedshall.com}"
+    ADMIN_PASSWORD="${SMOKE_LOGIN_PASSWORD:-demo}" # local-dev seed only
+    ;;
+  *)
+    if [[ -z "${SMOKE_LOGIN_EMAIL:-}" || -z "${SMOKE_LOGIN_PASSWORD:-}" ]]; then
+      echo "integration-api-smoke: SMOKE_LOGIN_EMAIL and SMOKE_LOGIN_PASSWORD must be set for a non-local API_BASE (no published default)." >&2
+      exit 1
+    fi
+    ADMIN_EMAIL="$SMOKE_LOGIN_EMAIL"
+    ADMIN_PASSWORD="$SMOKE_LOGIN_PASSWORD"
+    ;;
+esac
 
 fail() {
   echo "integration-api-smoke: $*" >&2

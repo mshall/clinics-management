@@ -230,6 +230,8 @@ jobs:
       - name: Post-deploy smoke (health + login)
         env:
           CI: true
+          SMOKE_LOGIN_EMAIL: ${{ secrets.SMOKE_LOGIN_EMAIL }}
+          SMOKE_LOGIN_PASSWORD: ${{ secrets.SMOKE_LOGIN_PASSWORD }}
         run: bash scripts/cicd-post-deploy-smoke.sh
 
   # Runs only when deploy fails: pulls CFN + App Runner log context into the job log (no auto-fix).

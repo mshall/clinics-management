@@ -3,6 +3,7 @@
  * and three LIVE verified Kiorex-listed doctors in two clinics (Cairo / Giza) with 14+ days of bookable slots.
  * Idempotent: safe to run on every `db:seed`. Never runs in production (seed main() already blocks that).
  */
+import { randomBytes } from "node:crypto";
 import {
   ClinicalSpecialty,
   ListingStatus,
@@ -169,7 +170,11 @@ export async function ensureKiorexDevIntegration(prisma: PrismaClient): Promise<
     console.log("Kiorex dev seed: EG market missing — skipped dev doctors (marketplace client ensured).");
     return;
   }
-  const passwordHash = bcrypt.hashSync("demo", 10);
+  // Deployed environments with real data set PRISMA_SEED_ENSURE_DEMO_PASSWORDS=false: new accounts get a random password.
+  const passwordHash = bcrypt.hashSync(
+    process.env.PRISMA_SEED_ENSURE_DEMO_PASSWORDS === "false" ? randomBytes(32).toString("hex") : "demo",
+    10,
+  );
 
   let tenant = await prisma.tenant.findFirst({ where: { name: KX_DEV_TENANT_NAME } });
   if (!tenant) {
