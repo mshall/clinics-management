@@ -166,7 +166,7 @@ export function DoctorStatementsCard({ manage }: { manage: boolean }) {
                 <th className="px-3 py-2 text-start">{t("doctorStatements.clinicShare", "Clinic share")}</th>
                 <th className="px-3 py-2 text-start">{t("doctorStatements.netPayable", "Net payable")}</th>
                 <th className="px-3 py-2 text-start">{t("doctorStatements.statusLabel", "Status")}</th>
-                <th className="px-3 py-2" />
+                <th className="px-3 py-2"><span className="sr-only">{t("common.actions")}</span></th>
               </tr>
             </thead>
             <tbody>

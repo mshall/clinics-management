@@ -147,7 +147,7 @@ export function AdminKiorexChargesPanel() {
                 <TableHead>{t("admin.billing.kiorex.colPatient", "Patient")}</TableHead>
                 <TableHead>{t("admin.billing.kiorex.colAmount", "Amount")}</TableHead>
                 <TableHead>{t("admin.billing.kiorex.colStatus", "Status")}</TableHead>
-                <TableHead className="w-[120px]" />
+                <TableHead className="w-[120px]"><span className="sr-only">{t("common.actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

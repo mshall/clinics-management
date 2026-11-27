@@ -115,7 +115,7 @@ export function AdminGovernanceOutbox() {
                 <th className="px-3 py-2 text-start font-medium">{t("admin.governanceOutboxColTarget", "Target")}</th>
                 <th className="px-3 py-2 text-start font-medium">{t("admin.governanceOutboxColStatus", "Status")}</th>
                 <th className="px-3 py-2 text-start font-medium">{t("admin.governanceOutboxColAttempts", "Attempts")}</th>
-                <th className="px-3 py-2 text-start font-medium" />
+                <th className="px-3 py-2 text-start font-medium"><span className="sr-only">{t("common.actions")}</span></th>
               </tr>
             </thead>
             <tbody>
