@@ -1,6 +1,6 @@
 # Kiorly Clinic test guide (DEV ONLY, branch kiorex)
 
-> **DEV ONLY / synthetic.** All names, phones, e-mails, passwords, OTPs and TOTP seeds below are fake values for the local stack; they are refused when `NODE_ENV=production` and the sign-in quick-pick ("Test users (dev only)") is not in production builds. Providers are mocked (dev inbox / logs, PSP `sandbox-fake`, video `mock`). No tax-authority integration.
+> **DEV ONLY / synthetic.** All names, phones, e-mails, passwords, OTPs and TOTP seeds below are fake values for the local stack; they are refused when `NODE_ENV=production` and the sign-in page has no quick-pick or demo hint in any build (sign in by typing the seeded credentials). Providers are mocked (dev inbox / logs, PSP `sandbox-fake`, video `mock`). No tax-authority integration.
 > This guide is the repo's slice of the workspace guide `TEST_GUIDE.md` (parent folder `kiorex-v2/`, not part of this repository). Facts verified against the seeds and dev databases on 23 Nov 2026.
 
 ## Run the stack and seed it
@@ -16,16 +16,14 @@ One service only: `e2e/scripts/up.sh --restart --only=passport|kiorly|kiorex|pha
 cd clinics-management
 npm run dev -w web                       # Kiorly Clinic web :5174 (API :3010 is started by the workspace stack)
 cd apps/api && npm run db:seed:demo      # idempotent; -- --reset ; npm run db:seed:mobile for the staff app
-cd apps/web && npm run check:dev-test-users && node --import tsx --test src/dev/dev-test-users.node.test.ts
+cd apps/web && npm run check:dev-test-users
 ```
 
 URL: http://localhost:5174/login (API http://localhost:3010/api/v1).
 
-## The Test users (dev only) panel
+## Sign-in (no quick-pick panel)
 
-Below the login card (`apps/web/src/dev/`, loaded lazily behind `import.meta.env.DEV`; hide with `VITE_DEV_TEST_USERS=false`). 26 personas grouped by organisation, one click signs in with the e-mail and the dev password. Absent from production builds (asserted by `scripts/check-no-dev-test-users.mjs`). "Sign in with Kiorex Passport" on the same page also works for the Nurse personas (phone `+2010000030xx`, OTP `000000`).
-
-Dev-only secrets: Passport OTP for every seeded phone **`000000`**; staff password **`Demo@12345`** (older Clinic accounts `admin@kiorly.com`, `superadmin@kiorly.com`, `admin@drahmedshall.com`: **`demo`**); Lab dev-login has no password; Postgres `postgres` / `postgres`.
+The login page shows no test-user panel, demo hint or prefilled credential in any build (asserted by `scripts/check-no-dev-test-users.mjs`). Sign in by typing the seeded e-mail and password below, or through the API. "Sign in with Kiorex Passport" also works for the Nurse personas (phone `+2010000030xx`, OTP `000000`).
 
 ## Test users: 3.3 Kiorly Clinic web (:5174, password `Demo@12345`)
 

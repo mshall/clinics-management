@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-// Asserts the DEV ONLY "Test users (dev only)" panel and its synthetic credentials are NOT in a production build,
-// and (sanity) that they ARE in a development-mode build, so the check cannot pass vacuously.
+// Asserts no "Test users" panel, demo hint or synthetic credential is in ANY build (production and development mode).
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const MARKERS = ["Test users (dev only)", "مستخدمو الاختبار (للتطوير فقط)", "Demo@12345", "owner.na@demo.kiorex.test", "dev-test-users"];
+const MARKERS = ["Test users", "use password \"demo\"", "any 6 digits", "Test users (dev only)", "مستخدمو الاختبار (للتطوير فقط)", "Demo@12345", "owner.na@demo.kiorex.test", "dev-test-users"];
 const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
 
 // A production build must not point at a local service: no localhost / loopback / .test URL survives, apart from constants INSIDE bundled libraries (listed with the reason).
@@ -25,6 +24,7 @@ try {
   const leaked = [...hits(prod), ...localHits(prod)];
   if (leaked.length) { console.error("FAIL: dev-only content (test users, local service address) found in the PRODUCTION build:\n" + leaked.join("\n")); process.exit(1); }
   build(dev, "development");
-  if (!hits(dev).length) { console.error("FAIL: sanity check, the development build does not contain the panel (check is vacuous)"); process.exit(1); }
-  console.log("OK: no dev test users and no local address in the production build; panel present in the development build");
+  const devLeaked = hits(dev);
+  if (devLeaked.length) { console.error("FAIL: demo/test-user content found in the DEVELOPMENT build:\n" + devLeaked.join("\n")); process.exit(1); }
+  console.log("OK: no test users or demo hints in any build; no local address in the production build");
 } finally { rmSync(prod, { recursive: true, force: true }); rmSync(dev, { recursive: true, force: true }); }
