@@ -1,3 +1,4 @@
+import { normalizePhoneDigits } from "../patients/patient-phone";
 import {
   BadRequestException,
   ConflictException,
@@ -156,9 +157,32 @@ export class KiorexOidcService {
     const link = await this.prisma.kiorexIdentityLink.findUnique({
       where: { issuer_subject: { issuer: port.issuer, subject: claims.sub } },
     });
-    // Never auto-merge or auto-create: an unlinked subject must link explicitly from a signed-in session.
-    if (!link) return { status: "LINK_REQUIRED" };
+    // Never auto-create. An unlinked subject links explicitly from a signed-in session (password re-auth), OR, when the deployment sets KIOREX_PASSPORT_PHONE_LINK=true,
+    // automatically when Passport proved the same phone (OTP-verified, `phone_number_verified`) that a clinic admin recorded on exactly ONE active staff member (Employee.phone).
+    if (!link) {
+      const linked = await this.linkByVerifiedPhone(port.issuer, claims);
+      if (!linked) return { status: "LINK_REQUIRED" };
+      return this.finishLogin(linked, claims.sid, undefined, meta, state, this.endSessionUrlFor(port, claims.idToken, txn.edition));
+    }
     return this.finishLogin(link.userId, claims.sid, undefined, meta, state, this.endSessionUrlFor(port, claims.idToken, txn.edition));
+  }
+
+  /** Verified-phone link (default OFF). Never from an unverified phone, never when the phone matches zero or several staff, never over an existing link. Returns the user id or null. */
+  private async linkByVerifiedPhone(issuer: string, claims: { sub: string; phone_number?: string; phone_number_verified?: boolean }): Promise<string | null> {
+    if (process.env.KIOREX_PASSPORT_PHONE_LINK !== "true") return null;
+    if (claims.phone_number_verified !== true || !claims.phone_number) return null;
+    const digits = normalizePhoneDigits(claims.phone_number);
+    if (!digits) return null;
+    const employees = await this.prisma.employee.findMany({ where: { deletedAt: null, userId: { not: null } }, select: { userId: true, phone: true }, take: 5000 });
+    const userIds = [...new Set(employees.filter((e) => normalizePhoneDigits(e.phone) === digits).map((e) => e.userId!))];
+    if (userIds.length !== 1) return null;
+    const user = await this.prisma.user.findFirst({ where: { id: userIds[0], deletedAt: null, deactivatedAt: null }, select: { id: true, tenantId: true, kiorexIdentityLink: { select: { id: true } } } });
+    if (!user || user.kiorexIdentityLink) return null;
+    try {
+      await this.prisma.kiorexIdentityLink.create({ data: { userId: user.id, issuer, subject: claims.sub, linkedVia: "VERIFIED_PHONE", phoneVerified: true } });
+    } catch { return null; } // subject already linked elsewhere (unique): never merge
+    await this.auditLink(user.tenantId, user.id, "KIOREX_IDENTITY_LINKED", { subject: claims.sub, linkedVia: "VERIFIED_PHONE", phoneVerified: true });
+    return user.id;
   }
 
   /** Where the web app sends the browser on sign-out. Only the registered post-logout URI (the web root) is ever requested. */
