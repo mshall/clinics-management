@@ -143,7 +143,7 @@ export function SignupPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-muted/40 px-4 py-8 sm:py-12">
+    <main className="min-h-dvh bg-muted/40 px-4 py-8 sm:py-12">
       <div className="mx-auto flex max-w-md flex-col gap-5">
         <div className="flex items-center justify-between">
           <Link to="/login" className="text-sm text-muted-foreground underline">
@@ -157,7 +157,7 @@ export function SignupPage() {
         <div className="flex justify-center" aria-hidden="false"><BrandLockup height={40} /></div>
         <Card className="shadow-kx-2">
           <CardHeader className="space-y-3">
-            <CardTitle className="text-xl">{t("signup.title")}</CardTitle>
+            <CardTitle as="h1" className="text-xl">{t("signup.title")}</CardTitle>
             <div className="space-y-1.5">
               <div role="progressbar" aria-label={t("signup.title")} aria-valuemin={1} aria-valuemax={STEPS} aria-valuenow={step + 1} className="flex gap-1.5">
                 {Array.from({ length: STEPS }, (_, i) => <span key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= step ? "bg-primary" : "bg-muted"}`} />)}
@@ -310,6 +310,6 @@ export function SignupPage() {
           <PatientPrivacyNoticeLink className="text-xs" />
         </p>
       </div>
-    </div>
+    </main>
   );
 }

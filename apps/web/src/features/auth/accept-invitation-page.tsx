@@ -29,10 +29,10 @@ export function AcceptInvitationPage() {
   const errCode = view.error instanceof PublicInvitationError ? view.error.code : null;
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-muted/40 px-4 py-8">
+    <main className="flex min-h-dvh items-center justify-center bg-muted/40 px-4 py-8">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{t("invitations.acceptTitle")}</CardTitle>
+          <CardTitle as="h1">{t("invitations.acceptTitle")}</CardTitle>
           {view.data ? (
             <CardDescription>
               {t("invitations.acceptSubtitle", {
@@ -99,6 +99,6 @@ export function AcceptInvitationPage() {
           ) : null}
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

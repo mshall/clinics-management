@@ -205,7 +205,7 @@ export function LoginPage() {
       <div className="flex flex-1 flex-col items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-lg">
           <CardHeader>
-            <CardTitle>{t("auth.signIn")}</CardTitle>
+            <CardTitle as="h1">{t("auth.signIn")}</CardTitle>
           </CardHeader>
           <CardContent>
             {handoffBusy ? <p role="status" data-testid="handoff-busy" className="mb-4 text-sm text-muted-foreground">{t("auth.handoffBusy")}</p> : null}
