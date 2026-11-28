@@ -128,4 +128,10 @@ export class KiorlyAdminCreatePriceBodyDto extends PlatformPlansCreatePriceBodyD
   @IsOptional()
   @Allow()
   actor?: unknown;
+
+  /** Maker-checker record of the Kiorly admin: `{ proposalId, proposedBy }`. A publish (not a preview) from the Kiorly admin needs it, and the proposer can never be the actor. */
+  @ApiPropertyOptional({ type: Object })
+  @IsOptional()
+  @Allow()
+  approval?: unknown;
 }

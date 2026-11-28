@@ -15,7 +15,7 @@ import { ACTIVE_PRICE_WHERE, isPlanPriceActive } from "./plans-active-prices";
 import { PriceIndexationService, type PriceImpactPreview } from "./price-indexation.service";
 
 /** Who published a price: a Clinic user, or a Kiorly admin console user that the Kiorex platform authenticated. */
-export type PlanPriceActor = { userId: string | null; source: "CLINIC_PLATFORM" | "KIORLY_ADMIN"; ref: string };
+export type PlanPriceActor = { userId: string | null; source: "CLINIC_PLATFORM" | "KIORLY_ADMIN"; ref: string; /** Kiorly admin maker-checker record (proposal and proposer), written to the audit row. */ approval?: { proposalId: string; proposedBy: string } | null };
 
 export type PublicPlanDto = {
   key: PlanKey;
@@ -357,6 +357,7 @@ export class PlansService {
               priceVersion,
               actorSource: actor.source,
               actorRef: actor.ref,
+              ...(actor.approval ? { approvalProposalId: actor.approval.proposalId, proposedBy: actor.approval.proposedBy } : {}),
               tenantsAffected: impact?.tenantsAffected ?? 0,
               mrrDelta: impact?.mrrDelta ?? "0.00",
             } as Prisma.InputJsonValue,
