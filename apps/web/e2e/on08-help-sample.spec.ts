@@ -1,24 +1,17 @@
 import { test, expect, type Page } from "@playwright/test";
-import { showPasswordForm } from "./helpers";
+import { login as signIn } from "./helpers";
 
-async function login(page: Page) {
-  await page.goto("/login");
-  await showPasswordForm(page);
-  await page.getByLabel(/email/i).fill("admin@kiorly.com");
-  await page.getByLabel(/password/i).fill("demo");
-  await page.getByRole("button", { name: /^(sign in|log in)$/i }).click();
-  await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30_000 });
-}
+async function login(page: Page) { await signIn(page, "admin@kiorly.com"); }
 
 test.describe("ON-08 first-run tour, sample patient & help", () => {
-  test("tour runs 5 steps once on the setup checklist", async ({ page }) => {
+  test("tour runs 6 steps once on the setup checklist", async ({ page }) => {
     await login(page);
     await page.goto("/onboarding");
     const tour = page.getByTestId("first-run-tour");
     await expect(tour).toBeVisible();
-    await expect(tour).toContainText("1 of 5");
-    for (let i = 0; i < 4; i += 1) await tour.getByTestId("tour-next").click();
-    await expect(tour).toContainText("5 of 5");
+    await expect(tour).toContainText("1 of 6");
+    for (let i = 0; i < 5; i += 1) await tour.getByTestId("tour-next").click();
+    await expect(tour).toContainText("6 of 6");
     await tour.getByTestId("tour-next").click();
     await expect(tour).toBeHidden();
     await page.reload();

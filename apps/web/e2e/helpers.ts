@@ -23,7 +23,8 @@ export async function login(page: Page, email: string, password = "demo"): Promi
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await showPasswordForm(page);
-  const emailField = page.locator("#email").or(page.getByLabel(/^email|البريد/i));
+  // #email only: the password panel carries an aria-label with the same words ("البريد الإلكتروني وكلمة المرور"), so a label lookup matched two elements in Arabic
+  const emailField = page.locator("#email");
   await emailField.waitFor({ state: "visible", timeout: 60_000 });
   await emailField.fill(email);
   await page.locator("#password").fill(password);
