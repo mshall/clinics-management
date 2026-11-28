@@ -112,7 +112,7 @@ export function TenantPaymentChannelsPanel() {
                   <th className="py-2 pe-2">{t("admin.paymentChannelAccount", "Account")}</th>
                   <th className="py-2 pe-2">{t("admin.paymentChannelMobile", "Mobile")}</th>
                   <th className="py-2 pe-2">{t("admin.paymentChannelFiscalCode", "Receipt code")}</th>
-                  <th className="py-2 text-end" />
+                  <th className="py-2 text-end"><span className="sr-only">{t("common.actions")}</span></th>
                 </tr>
               </thead>
               <tbody>

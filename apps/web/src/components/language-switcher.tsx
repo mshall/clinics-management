@@ -26,7 +26,7 @@ export function LanguageSwitcher({ drawer = false }: { drawer?: boolean }) {
     <>
       <KxLanguageToggle lang={i18n.language} onChange={setLocale} labels={{ language: t("lang.label"), english: t("lang.english"), arabic: t("lang.arabic") }} />
       {ar ? (
-        <button type="button" className={`${KX_CONTROL_CLASS} px-2 text-xs font-semibold ${drawer ? "" : "max-sm:hidden"}`} aria-pressed={numerals === "arab"} aria-label={numerals === "arab" ? t("common.numeralsArabic") : t("common.numeralsWestern")} title={numerals === "arab" ? t("common.numeralsArabic") : t("common.numeralsWestern")} onClick={toggleNumerals}>
+        <button type="button" className={`${KX_CONTROL_CLASS} px-2 text-xs font-semibold ${drawer ? "" : "max-sm:hidden"}`} aria-pressed={numerals === "arab"} aria-label={`${numerals === "arab" ? "١٢٣" : "123"} ${numerals === "arab" ? t("common.numeralsArabic") : t("common.numeralsWestern")}`} title={numerals === "arab" ? t("common.numeralsArabic") : t("common.numeralsWestern")} onClick={toggleNumerals}>
           <span aria-hidden dir="ltr">{numerals === "arab" ? "١٢٣" : "123"}</span>
         </button>
       ) : null}
