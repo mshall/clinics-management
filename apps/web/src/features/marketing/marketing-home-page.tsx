@@ -106,7 +106,7 @@ export function MarketingHomePage() {
             <Button asChild size="lg">
               <Link to="/signup">{t("marketing.ctaSignup", "Create clinic")}</Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
+            <Button asChild size="lg" variant="outline" className="border-kx-ocean-300 bg-white text-kx-ocean-900 hover:bg-kx-ocean-50 hover:text-kx-ocean-950 dark:border-kx-ocean-300 dark:bg-white dark:text-kx-ocean-900 dark:hover:bg-kx-ocean-50">
               <a href="#pricing">{t("marketing.ctaPricing", "See pricing")}</a>
             </Button>
             <Button asChild size="lg" variant="ghost">
@@ -172,7 +172,7 @@ export function MarketingHomePage() {
               <label htmlFor="calc-plan" className="text-xs text-muted-foreground">{t("marketing.calcPlan", "Plan")}</label>
               <select
                 id="calc-plan"
-                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-kx-neutral-950 dark:bg-white dark:text-kx-neutral-950"
                 value={selectedPlan?.key ?? planKey}
                 onChange={(e) => setPlanKey(e.target.value)}
               >
@@ -185,7 +185,7 @@ export function MarketingHomePage() {
             </div>
             <div>
               <label htmlFor="calc-patients" className="text-xs text-muted-foreground">{t("marketing.calcPatients", "Kiorex patients / month")}</label>
-              <Input id="calc-patients" className="mt-1" value={patients} onChange={(e) => setPatients(e.target.value)} inputMode="numeric" />
+              <Input id="calc-patients" className="mt-1 bg-white text-kx-neutral-950 dark:bg-white dark:text-kx-neutral-950" value={patients} onChange={(e) => setPatients(e.target.value)} inputMode="numeric" />
             </div>
             <div className="space-y-1 text-sm">
               <p className="ltr-nums">
