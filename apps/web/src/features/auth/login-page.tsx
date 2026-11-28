@@ -36,6 +36,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mfa, setMfa] = useState("");
+  const [showMfa, setShowMfa] = useState(false); // the code field appears when the server asks for it or the person says they use one
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [apiReady, setApiReady] = useState<boolean | null>(null);
@@ -127,6 +128,7 @@ export function LoginPage() {
       navigate(resolvePostLoginPath(signedIn?.role, signedIn?.navTabKeys, from, signedIn?.roleNavTabKeys), { replace: true });
     } catch (err) {
       if (err instanceof Error && err.message.includes("Multi-factor")) {
+        setShowMfa(true);
         setError(t("auth.mfaRequired", "Enter the 6-digit code from your authenticator app."));
       } else {
         setError(err instanceof Error ? err.message : t("auth.signIn"));
@@ -257,18 +259,27 @@ export function LoginPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="mfa">{t("auth.mfaPlaceholder")}</Label>
-                <Input
-                  id="mfa"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={mfa}
-                  onChange={(e) => setMfa(e.target.value.replace(/\D/g, ""))}
-                  className="ltr-nums"
-                  placeholder="123456"
-                />
-              </div>
+              {showMfa ? (
+                <div className="space-y-2">
+                  <Label htmlFor="mfa">{t("auth.mfaPlaceholder")}</Label>
+                  <Input
+                    id="mfa"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    maxLength={6}
+                    value={mfa}
+                    onChange={(e) => setMfa(e.target.value.replace(/\D/g, ""))}
+                    className="ltr-nums tracking-[0.3em]"
+                    aria-describedby="mfa-hint"
+                  />
+                  <p id="mfa-hint" className="text-xs text-muted-foreground">{t("auth.mfaHint")}</p>
+                </div>
+              ) : (
+                <button type="button" className="text-sm font-medium text-primary underline-offset-4 hover:underline" onClick={() => setShowMfa(true)}>
+                  {t("auth.mfaToggle")}
+                </button>
+              )}
               <Button type="submit" className="w-full" disabled={submitting || apiReady === false}>
                 {submitting ? t("common.loading") : t("auth.signIn")}
               </Button>
