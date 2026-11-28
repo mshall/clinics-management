@@ -16,6 +16,7 @@ const ctl = new KiorlyAdminPlansController(plans, ps);
 const admin = { id: "c1", clientKey: "k", name: "n", scopes: ["MARKET_ADMIN"], ipAllowlist: [] };
 const noScope = { ...admin, scopes: ["BOOKINGS"] };
 const actor = { id: "super_1", email: "founder@example.com" };
+const approval = { proposalId: "kpp_test1", proposedBy: "ops_1" };
 const code = (e: unknown) => (e as { response?: { code?: string } }).response?.code;
 const status = (e: unknown) => (e as { status?: number; getStatus?: () => number }).getStatus?.();
 
@@ -65,7 +66,7 @@ describe("Kiorly admin: Clinic plans over the signed marketplace route", () => {
   });
 
   it("price: preview publishes nothing; publish creates an effective-dated version and writes the audit row with the Kiorly admin actor", async () => {
-    const body = { actor, marketId, currency: "USD", interval: "MONTHLY", unit: "PER_TENANT", amount: "12.50" } as never;
+    const body = { actor, approval, marketId, currency: "USD", interval: "MONTHLY", unit: "PER_TENANT", amount: "12.50" } as never;
     const before = await prisma.planPrice.count({ where: { marketId } });
     const pv = (await ctl.price(admin as never, planId, { ...(body as object), preview: true } as never)) as { preview?: boolean };
     assert.equal(pv.preview, true);
@@ -79,14 +80,27 @@ describe("Kiorly admin: Clinic plans over the signed marketplace route", () => {
     assert.equal((audit.metadata as { actorRef: string }).actorRef, "kiorly-admin:super_1");
     assert.equal((audit.metadata as { actorSource: string }).actorSource, "KIORLY_ADMIN");
     assert.equal((audit.metadata as { amount: string }).amount, "12.50");
+    assert.equal((audit.metadata as { approvalProposalId: string }).approvalProposalId, "kpp_test1");
+    assert.equal((audit.metadata as { proposedBy: string }).proposedBy, "ops_1");
     // a second version supersedes the first one at its validFrom (versioned, never overwritten)
-    const v2 = (await ctl.price(admin as never, planId, { ...(body as object), amount: "13", validFrom: new Date(Date.now() + 14 * 86_400_000).toISOString() } as never)) as { priceVersion: number };
+    const v2 = (await ctl.price(admin as never, planId, { ...(body as object), approval: { proposalId: "kpp_test2", proposedBy: "ops_1" }, amount: "13", validFrom: new Date(Date.now() + 14 * 86_400_000).toISOString() } as never)) as { priceVersion: number };
     assert.equal(v2.priceVersion, 2);
     assert.equal(await prisma.planPrice.count({ where: { marketId } }), 2);
   });
 
+  it("price: a publish needs the maker-checker record and a different person; a preview needs neither; nothing is stored on refusal", async () => {
+    const base = { actor, marketId, currency: "USD", interval: "MONTHLY", unit: "PER_TENANT", amount: "99" };
+    const n = await prisma.planPrice.count({ where: { marketId } });
+    await assert.rejects(async () => ctl.price(admin as never, planId, base as never), (e) => code(e) === "APPROVAL_REQUIRED");
+    await assert.rejects(async () => ctl.price(admin as never, planId, { ...base, approval: { proposalId: "", proposedBy: "ops_1" } } as never), (e) => code(e) === "APPROVAL_REQUIRED");
+    await assert.rejects(async () => ctl.price(admin as never, planId, { ...base, approval: { proposalId: "kpp_x", proposedBy: "super_1" } } as never), (e) => code(e) === "TWO_PERSON_RULE");
+    assert.equal(await prisma.planPrice.count({ where: { marketId } }), n);
+    const pv = (await ctl.price(admin as never, planId, { ...base, preview: true } as never)) as { preview?: boolean };
+    assert.equal(pv.preview, true);
+  });
+
   it("price: bad amounts, currencies and markets are refused, never stored", async () => {
-    const ok = { actor, marketId, currency: "USD", interval: "MONTHLY", unit: "PER_TENANT" };
+    const ok = { actor, approval, marketId, currency: "USD", interval: "MONTHLY", unit: "PER_TENANT" };
     const n = await prisma.planPrice.count({ where: { marketId } });
     for (const amount of ["abc", "-5", "1e3", "1.234", "", "1,5"]) await assert.rejects(async () => ctl.price(admin as never, planId, { ...ok, amount } as never), (e) => status(e) === 400, `amount ${amount}`);
     await assert.rejects(async () => ctl.price(admin as never, planId, { ...ok, amount: "5", currency: "DOLLARS" } as never), (e) => status(e) === 400);

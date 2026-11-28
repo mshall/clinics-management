@@ -5,6 +5,7 @@ import { MarketplaceClient } from "./marketplace-client.decorator";
 import type { PlatformIntegrationPrincipal } from "./platform-integration-client.service";
 import { MARKET_ADMIN_SCOPE } from "./kiorly-admin-markets.controller";
 import { actorFromSignedBody } from "../markets/market-actor";
+import { approvalFromSignedBody } from "../plans/price-approval";
 import { PlansService } from "../plans/plans.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { KiorlyAdminCreatePriceBodyDto, KiorlyAdminPatchPlanBodyDto } from "../plans/platform-plans.controller.dto";
@@ -52,11 +53,13 @@ export class KiorlyAdminPlansController {
 
   @Post(":planId/prices")
   @HttpCode(200)
-  @ApiOperation({ summary: "Publish an effective-dated price version, or `preview: true` for the impact on subscribers without publishing" })
+  @ApiOperation({ summary: "Publish an effective-dated price version (needs the approval record of the Kiorly admin: proposalId and proposedBy, a different person from the actor), or `preview: true` for the impact on subscribers without publishing" })
   price(@MarketplaceClient() c: PlatformIntegrationPrincipal, @Param("planId") planId: string, @Body() body: KiorlyAdminCreatePriceBodyDto) {
     assertAdmin(c);
     const actor = actorFromSignedBody(body.actor);
-    const { actor: _actor, ...rest } = body;
-    return this.plans.createPlanPriceAs({ userId: null, source: "KIORLY_ADMIN", ref: actor.id }, planId, rest);
+    const { actor: _actor, approval: rawApproval, ...rest } = body;
+    // maker-checker: a published price (not a preview) carries the approved proposal, and the person who proposed it is never the one publishing it
+    const approval = rest.preview ? null : approvalFromSignedBody(rawApproval, actor.id);
+    return this.plans.createPlanPriceAs({ userId: null, source: "KIORLY_ADMIN", ref: actor.id, approval }, planId, rest);
   }
 }
