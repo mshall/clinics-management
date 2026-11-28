@@ -199,6 +199,8 @@
     "email": "Email",
     "password": "Password",
     "mfaPlaceholder": "MFA code",
+    "mfaToggle": "I have an authenticator code",
+    "mfaHint": "Open your authenticator app and enter the 6-digit code.",
     "signOut": "Sign out",
     "switchWorkspace": "Switch workspace",
     "startSignup": "Create your clinic account",
