@@ -79,7 +79,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     bodyEn:
       "Appointments → pick doctor and free slot → search or add the patient by phone → confirm type and fee. Marketplace bookings appear with a Kiorex badge; clinic-link bookings are commission-free.",
     bodyAr:
-      "المواعيد ← اختر الطبيب والوقت المتاح ← ابحث أو أضف المريض بالهاتف ← أكّد النوع والرسوم. حجوزات السوق تظهر بشارة كيوركس؛ روابط العيادة بدون عمولة.",
+      "المواعيد ← اختر الطبيب والوقت المتاح ← ابحث أو أضف المريض بالهاتف ← أكّد النوع والرسوم. حجوزات السوق تظهر بشارة كيوريكس؛ روابط العيادة بدون عمولة.",
     videoId: "bookAppointment",
     tagsEn: ["book", "appointment", "schedule"],
     tagsAr: ["حجز", "موعد", "جدول"],
@@ -138,7 +138,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     bodyEn:
       "Pro+ shows a rule-based no-show risk chip. When policy requires a deposit, send a payment link from the appointment; mark paid at the desk or via Kiorex Pay. Unpaid links expire per market pack rules.",
     bodyAr:
-      "برو+ تُظهر شارة خطر عدم الحضور بالقواعد. عند طلب العربون أرسل رابط الدفع من الموعد؛ أكّد الدفع في الاستقبال أو عبر كيوركس باي. الروابط غير المدفوعة تنتهي حسب إعدادات السوق.",
+      "برو+ تُظهر شارة خطر عدم الحضور بالقواعد. عند طلب العربون أرسل رابط الدفع من الموعد؛ أكّد الدفع في الاستقبال أو عبر كيوريكس باي. الروابط غير المدفوعة تنتهي حسب إعدادات السوق.",
     tagsEn: ["deposit", "no-show", "risk"],
     tagsAr: ["عربون", "غياب", "خطر"],
   },
@@ -204,13 +204,13 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tiers: ["LITE", "PRO", "CLINIC", "GROUP"],
     category: "kiorex",
     titleEn: "How do I list on Kiorex and what is the commission?",
-    titleAr: "كيف أنشر على كيوركس وما العمولة؟",
+    titleAr: "كيف أنشر على كيوريكس وما العمولة؟",
     bodyEn:
       "Kiorex tab → complete provider profile and marketplace listing. Commission is market-pack based and appears on the monthly statement; clinic booking links stay commission-free. Use the marketing calculator to see patients needed to offset SaaS.",
     bodyAr:
-      "تبويب كيوركس ← أكمل ملف المزود والقائمة. العمولة من حزمة السوق وتظهر في الكشف الشهري؛ روابط حجز العيادة بدون عمولة. استخدم حاسبة التسويق لمعرفة عدد المرضى لتعويض الاشتراك.",
+      "تبويب كيوريكس ← أكمل ملف المزود والقائمة. العمولة من حزمة السوق وتظهر في الكشف الشهري؛ روابط حجز العيادة بدون عمولة. استخدم حاسبة التسويق لمعرفة عدد المرضى لتعويض الاشتراك.",
     tagsEn: ["kiorex", "commission", "listing"],
-    tagsAr: ["كيوركس", "عمولة", "قائمة"],
+    tagsAr: ["كيوريكس", "عمولة", "قائمة"],
   },
   {
     id: "upgrade-plan",
@@ -274,13 +274,13 @@ export const HELP_ARTICLES: HelpArticle[] = [
     tiers: ["PRO", "CLINIC", "GROUP"],
     category: "billing",
     titleEn: "How do I download operations or Kiorex reports?",
-    titleAr: "كيف أحمّل تقارير التشغيل أو كيوركس؟",
+    titleAr: "كيف أحمّل تقارير التشغيل أو كيوريكس؟",
     bodyEn:
       "Reports → pick Operations or Kiorex period → Export xlsx/PDF. Money columns respect role visibility. Optional weekly schedule digests go to email/WhatsApp for owners who opted in. Hand the export to your accountant: Kiorly never reports to a tax authority, you and your accountant file your own taxes (Docs: NO_TAX_AUTHORITY_REPORTING.md).",
     bodyAr:
-      "التقارير ← اختر التشغيل أو فترة كيوركس ← صدّر xlsx/PDF. أعمدة المال تحترم صلاحية الدور. ملخص الجدول الأسبوعي اختياري للبريد/واتساب للملاك المشتركين. سلّم الملف لمحاسبك: لا تُبلّغ Kiorly أي جهة ضريبية، وأنت ومحاسبك تقدّمان إقراراتكما بأنفسكما (الوثيقة: NO_TAX_AUTHORITY_REPORTING.md).",
+      "التقارير ← اختر التشغيل أو فترة كيوريكس ← صدّر xlsx/PDF. أعمدة المال تحترم صلاحية الدور. ملخص الجدول الأسبوعي اختياري للبريد/واتساب للملاك المشتركين. سلّم الملف لمحاسبك: لا تُبلّغ Kiorly أي جهة ضريبية، وأنت ومحاسبك تقدّمان إقراراتكما بأنفسكما (الوثيقة: NO_TAX_AUTHORITY_REPORTING.md).",
     tagsEn: ["reports", "export", "kiorex", "tax", "accountant"],
-    tagsAr: ["تقارير", "تصدير", "كيوركس", "ضريبة", "محاسب"],
+    tagsAr: ["تقارير", "تصدير", "كيوريكس", "ضريبة", "محاسب"],
   },
   {
     id: "ai-scribe",

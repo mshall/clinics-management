@@ -81,7 +81,7 @@ export async function provisionOrg(opts: { credit?: boolean; bookableVisitType?:
       { version: 1, scope: "DEFAULT", kind: "RATE", effectiveFrom: "2026-01-01T00:00:00.000Z", reason: null, spec: spec(params) },
       { version: 1, scope: "ORG", kind: "RATE", effectiveFrom: "2026-02-01T00:00:00.000Z", reason: "volume agreement", spec: spec({ feeType: "FLAT", percentBps: null, flatMinor: 4000, minMinor: null, maxMinor: null, mode: "NET_FROM_PAYOUT", ...params }) },
     ], ...(opts.com3 === "set" ? {
-      disclosure: { rateDisclosure: { en: "TEST rate disclosure written by Kiorex", ar: "نص تجريبي للإفصاح عن النسبة كتبته كيوركس" }, termsSummary: { en: "TEST terms summary", ar: "" }, showOverrideReason: true, wordingSet: true },
+      disclosure: { rateDisclosure: { en: "TEST rate disclosure written by Kiorex", ar: "نص تجريبي للإفصاح عن النسبة كتبته كيوريكس" }, termsSummary: { en: "TEST terms summary", ar: "" }, showOverrideReason: true, wordingSet: true },
       counsel: { status: "APPROVED_WITH_CONDITIONS" },
     } : opts.com3 === "unset" ? { disclosure: { rateDisclosure: { en: "", ar: "" }, termsSummary: { en: "", ar: "" }, showOverrideReason: false, wordingSet: false }, counsel: { status: "NOT_REVIEWED" } } : {}) } } });
     if (opts.com3) await prisma.kiorexPayout.create({ data: { tenantId: tenant.id, clinicId: clinic.id, payoutRef: `po-fx-${sfx}`, amount: 80, currency: "EGP", paidAt: new Date(), commissionDeducted: 40 } });
