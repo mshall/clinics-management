@@ -143,7 +143,7 @@ export const promotionsAr: typeof promotionsEn = {
   discountValueHint: "على سعر الكشف فقط. لا على تحليل أو دواء أو إجراء.",
   maxPerBooking: "الحد الأقصى للحجز الواحد",
   newPatientsOnly: "المرضى الجدد على عيادتي فقط",
-  firstBookingOnly: "أول حجز للمريض على كيوركس فقط",
+  firstBookingOnly: "أول حجز للمريض على كيوريكس فقط",
   minLeadHours: "الحجز قبل الموعد بهذا العدد من الساعات على الأقل",
   perPatientLimit: "عدد مرات استخدام المريض الواحد",
   perDayLimit: "أقصى عدد حجوزات في اليوم (اختياري)",
@@ -155,7 +155,7 @@ export const promotionsAr: typeof promotionsEn = {
   errors: { names: "اكتب اسم العرض بالعربية والإنجليزية.", copy: "اكتب نص المريض بالعربية والإنجليزية.", careType: "اختر نوع زيارة واحداً على الأقل.", discount: "أدخل خصماً أكبر من صفر (النسبة حتى 100).", percentMax: "النسبة تحتاج حداً أقصى لكل حجز.", budget: "أدخل ميزانية أكبر من صفر.", budgetBelowDiscount: "يجب ألا تقل الميزانية عن خصم واحد.", window: "يجب أن يكون الانتهاء بعد البدء.", limit: "راجع الحدود: أعداد صحيحة من 1." } as typeof promotionsEn.errors,
   sendError: "تعذّر حفظ العرض.",
   created: "حُفظ كمسودة. أرسله للمراجعة عندما يكون جاهزاً.",
-  highValueNote: "العرض الكبير يحتاج مراجعاً ثانياً في كيوركس قبل أن يبدأ.",
+  highValueNote: "العرض الكبير يحتاج مراجعاً ثانياً في كيوريكس قبل أن يبدأ.",
   creditLink: "رصيدك",
   walletNote: "يُدفع من رصيد العروض لديك. ليس نقداً ولا يمكن سحبه.",
 };

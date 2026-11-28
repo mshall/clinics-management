@@ -55,12 +55,12 @@ export const creditsEn = {
 export const creditsAr: typeof creditsEn = {
   title: "الرصيد",
   openDetails: "تفاصيل الرصيد وانتهاؤه وكشف الحساب",
-  intro: "الرصيد يخفّض ما تدفعه لكيورلي. يمكن أن يسدّد رسوم كيوركس والاشتراك والاستخدام، ويمكن أن يموّل خصومات تقرّر أن تقدّمها للمرضى. ليس نقدًا ولا يمكن سحبه أو تحويله إلى عيادة أخرى.",
+  intro: "الرصيد يخفّض ما تدفعه لكيورلي. يمكن أن يسدّد رسوم كيوريكس والاشتراك والاستخدام، ويمكن أن يموّل خصومات تقرّر أن تقدّمها للمرضى. ليس نقدًا ولا يمكن سحبه أو تحويله إلى عيادة أخرى.",
   balance: "الرصيد المتاح",
   reserved: "محجوز لخصومات المرضى",
   reservedHint: "يُحجز لحجوزات تستخدم خصمًا ترعاه. لا يُخصم إلا إذا تمت الزيارة.",
   canPay: "ما يمكن لرصيدك سداده",
-  uses: { KIOREX_FEES: "رسوم كيوركس", SUBSCRIPTION: "الاشتراك", USAGE: "الاستخدام", PROMOTIONS: "خصومات المرضى التي ترعاها", MARKETING: "التسويق" },
+  uses: { KIOREX_FEES: "رسوم كيوريكس", SUBSCRIPTION: "الاشتراك", USAGE: "الاستخدام", PROMOTIONS: "خصومات المرضى التي ترعاها", MARKETING: "التسويق" },
   usable: "يمكن استخدام {{amount}}",
   notUsable: "غير متاح برصيدك الحالي",
   lots: "الرصيد حسب تاريخ الانتهاء",
@@ -76,7 +76,7 @@ export const creditsAr: typeof creditsEn = {
   categories: { SERVICE_RECOVERY: "رسوم مُعادة أو مُعفاة", ONBOARDING: "رصيد ترحيبي", PROMOTIONAL: "عرض ترويجي", REFERRAL: "مكافأة إحالة", ADJUSTMENT: "تسوية" },
   reasons: {
     KIOREX_LATE_REVERSAL: "رسوم مُعادة", REFERRAL: "مكافأة إحالة", PROMO: "عرض ترويجي", NO_SHOW_GUARANTEE: "ضمان عدم التغيّب", GOODWILL: "بادرة حسن نية", DOWNGRADE_PRORATION: "تغيير الباقة", ADJUSTMENT: "تسوية",
-    KIOREX_FEE_OFFSET: "استُخدم لرسوم كيوركس", SUBSCRIPTION_OFFSET: "استُخدم للاشتراك", DISPUTE_WIN: "كسب الاعتراض وأُعيدت الرسوم", ONBOARDING: "رصيد ترحيبي", CONNECT_BONUS: "رصيد للربط مع كيوركس",
+    KIOREX_FEE_OFFSET: "استُخدم لرسوم كيوريكس", SUBSCRIPTION_OFFSET: "استُخدم للاشتراك", DISPUTE_WIN: "كسب الاعتراض وأُعيدت الرسوم", ONBOARDING: "رصيد ترحيبي", CONNECT_BONUS: "رصيد للربط مع كيوريكس",
     USAGE_PURCHASE: "استُخدم لباقة استخدام", MARKETING_SPEND: "استُخدم للتسويق", SPONSORED_PROMOTION: "استُخدم لخصم مريض ترعاه", SPONSORED_PROMOTION_REVERSAL: "أُلغي خصم المريض وعاد الرصيد",
   },
   history: "السجل",

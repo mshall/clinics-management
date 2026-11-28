@@ -67,7 +67,7 @@ for (const lang of ["en", "ar"] as const) {
     await page.goto("/");
     const link = page.getByTestId("nav-kiorex-commissions");
     await expect(link).toBeVisible({ timeout: 45_000 });
-    await expect(link).toContainText(lang === "ar" ? "عمولات كيوركس" : "Kiorex commissions");
+    await expect(link).toContainText(lang === "ar" ? "عمولات كيوريكس" : "Kiorex commissions");
     await link.click();
     await expect(page).toHaveURL(/\/kiorex-commissions$/);
     await expect(page.getByTestId("kiorex-commissions-panel")).toBeVisible({ timeout: 45_000 });
