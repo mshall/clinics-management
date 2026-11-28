@@ -14,8 +14,8 @@ test("unified sign-in copy matches the recorded canonical hash", () => {
 });
 test("EN and AR strings have the same keys and every error code is covered in both", () => {
   const block = (lang: string) => src.slice(src.indexOf(`  ${lang}: {`), src.indexOf("errors: {", src.indexOf(`  ${lang}: {`)));
-  const keys = (b: string) => [...b.matchAll(/^    (\w+):/gm)].map((m) => m[1]).sort();
+  const keys = (b: string) => [...b.matchAll(/^ {4}(\w+):/gm)].map((m) => m[1]).sort();
   assert.deepEqual(keys(block("en")), keys(block("ar")));
-  const codes = (lang: string) => [...src.slice(src.indexOf("errors: {", src.indexOf(`  ${lang}: {`))).split("},")[0]!.matchAll(/^      ([A-Z_]+):/gm)].map((m) => m[1]).sort();
+  const codes = (lang: string) => [...src.slice(src.indexOf("errors: {", src.indexOf(`  ${lang}: {`))).split("},")[0]!.matchAll(/^ {6}([A-Z_]+):/gm)].map((m) => m[1]).sort();
   assert.deepEqual(codes("en"), codes("ar"));
 });
