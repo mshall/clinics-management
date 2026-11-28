@@ -285,3 +285,13 @@ main { padding-bottom: max(env(safe-area-inset-bottom), 4.5rem); }
 
 /* Solid danger surfaces carrying white text need >= 4.5:1 in dark too (the dark --destructive token is tuned for red TEXT on dark surfaces). */
 html.dark .bg-destructive { background-color: hsl(0 72% 46%); }
+
+/* The public marketing / pricing page is a light design (white cards on a pale gradient). In dark mode its semantic colours must not flip, or text and controls
+ * end up dark on dark or pale on pale (UX review 28 Nov 2026: 1.09:1). Re-declares the light values of brand-bridge.css for this subtree only. */
+.kx-force-light {
+  color-scheme: light;
+  --background: 225 57% 97%; --foreground: 244 47% 20%; --card: 0 0% 100%; --card-foreground: 244 47% 20%; --popover: 0 0% 100%; --popover-foreground: 244 47% 20%;
+  --primary: 244 55% 41%; --primary-foreground: 0 0% 100%; --secondary: 226 48% 95%; --secondary-foreground: 244 47% 20%; --muted: 226 48% 95%; --muted-foreground: 230 22% 38%;
+  --accent: 244 64% 96%; --accent-foreground: 244 55% 34%; --border: 225 38% 92%; --input: 226 29% 82%;
+  color: hsl(var(--foreground));
+}
