@@ -43,10 +43,10 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <main className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{t("auth.forgot.title")}</CardTitle>
+          <CardTitle as="h1">{t("auth.forgot.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={(e) => void submit(e)}>
@@ -82,6 +82,6 @@ export function ForgotPasswordPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

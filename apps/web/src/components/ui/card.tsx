@@ -11,9 +11,10 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 ));
 CardHeader.displayName = "CardHeader";
 
-const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn("text-base font-semibold leading-tight tracking-tight", className)} {...props} />
+type CardTitleProps = React.HTMLAttributes<HTMLHeadingElement> & { /** Heading level (default h3). Use "h1" for the single page title of a standalone page (login, sign-up), "h2" directly under a page h1. */ as?: "h1" | "h2" | "h3" | "h4" };
+const CardTitle = React.forwardRef<HTMLParagraphElement, CardTitleProps>(
+  ({ className, as: Tag = "h3", ...props }, ref) => (
+    <Tag ref={ref} className={cn("text-base font-semibold leading-tight tracking-tight", className)} {...props} />
   )
 );
 CardTitle.displayName = "CardTitle";

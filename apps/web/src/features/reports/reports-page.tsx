@@ -537,8 +537,8 @@ export function ReportsPage() {
                     "reports.kiorexCommissionHelp",
                     "Commission owed for Kiorex bookings in the selected month.",
                   )}
-                  labelClassName="text-amber-700 dark:text-amber-400"
-                  valueClassName="text-amber-700 dark:text-amber-400"
+                  labelClassName="text-amber-800 dark:text-amber-400"
+                  valueClassName="text-amber-800 dark:text-amber-400"
                 >
                   {kiorexImpact.data?.commission ?? 0}
                 </OpsKpiTile>
@@ -622,8 +622,8 @@ export function ReportsPage() {
                     "reports.utilisationHelp",
                     "Booked clinic minutes ÷ available doctor minutes (defaults to 8h × clinicians × days when schedules are sparse).",
                   )}
-                  labelClassName="text-amber-700 dark:text-amber-400"
-                  valueClassName="text-amber-700 dark:text-amber-400"
+                  labelClassName="text-amber-800 dark:text-amber-400"
+                  valueClassName="text-amber-800 dark:text-amber-400"
                 >
                   {operations.data?.utilisation.percent ?? 0}%
                 </OpsKpiTile>
@@ -731,8 +731,8 @@ export function ReportsPage() {
                       "reports.currenciesActiveHelp",
                       "Distinct currencies that appear on posted revenue or expenses in this period.",
                     )}
-                    labelClassName="text-amber-700 dark:text-amber-400"
-                    valueClassName="text-amber-700 dark:text-amber-400"
+                    labelClassName="text-amber-800 dark:text-amber-400"
+                    valueClassName="text-amber-800 dark:text-amber-400"
                   >
                     {performanceByCurrency.length}
                   </OpsKpiTile>
@@ -1289,8 +1289,8 @@ export function ReportsPage() {
                         <td className="px-3 py-2 text-end text-sky-700/80 ltr-nums tabular-nums dark:text-sky-400/80">{row.patientShare}%</td>
                         <td className="px-3 py-2 text-end font-semibold text-emerald-700 ltr-nums tabular-nums dark:text-emerald-400">{row.encounterCount}</td>
                         <td className="px-3 py-2 text-end text-emerald-700/80 ltr-nums tabular-nums dark:text-emerald-400/80">{row.encounterShare}%</td>
-                        <td className="px-3 py-2 text-end font-semibold text-amber-700 ltr-nums tabular-nums dark:text-amber-400">{row.operationCount}</td>
-                        <td className="px-3 py-2 text-end text-amber-700/80 ltr-nums tabular-nums dark:text-amber-400/80">{row.operationShare}%</td>
+                        <td className="px-3 py-2 text-end font-semibold text-amber-800 ltr-nums tabular-nums dark:text-amber-400">{row.operationCount}</td>
+                        <td className="px-3 py-2 text-end text-amber-800 ltr-nums tabular-nums dark:text-amber-400/80">{row.operationShare}%</td>
                       </tr>
                     ))}
                   </tbody>

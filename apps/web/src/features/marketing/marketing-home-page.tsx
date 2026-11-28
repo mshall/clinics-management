@@ -82,7 +82,7 @@ export function MarketingHomePage() {
         <div className="text-2xl font-semibold tracking-tight text-kx-ocean-900">Kiorly</div>
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="outline" className="border-kx-ocean-300 bg-white text-kx-ocean-900 hover:bg-kx-ocean-50 hover:text-kx-ocean-950 dark:border-kx-ocean-300 dark:bg-white dark:text-kx-ocean-900 dark:hover:bg-kx-ocean-50">
             <Link to="/login">{t("marketing.login", "Sign in")}</Link>
           </Button>
           <Button asChild size="sm">
@@ -169,8 +169,9 @@ export function MarketingHomePage() {
           </p>
           <div className="grid gap-4 rounded-xl border border-kx-ocean-100 bg-white/90 p-4 md:grid-cols-3">
             <div>
-              <label className="text-xs text-muted-foreground">{t("marketing.calcPlan", "Plan")}</label>
+              <label htmlFor="calc-plan" className="text-xs text-muted-foreground">{t("marketing.calcPlan", "Plan")}</label>
               <select
+                id="calc-plan"
                 className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 value={selectedPlan?.key ?? planKey}
                 onChange={(e) => setPlanKey(e.target.value)}
@@ -183,8 +184,8 @@ export function MarketingHomePage() {
               </select>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">{t("marketing.calcPatients", "Kiorex patients / month")}</label>
-              <Input className="mt-1" value={patients} onChange={(e) => setPatients(e.target.value)} inputMode="numeric" />
+              <label htmlFor="calc-patients" className="text-xs text-muted-foreground">{t("marketing.calcPatients", "Kiorex patients / month")}</label>
+              <Input id="calc-patients" className="mt-1" value={patients} onChange={(e) => setPatients(e.target.value)} inputMode="numeric" />
             </div>
             <div className="space-y-1 text-sm">
               <p className="ltr-nums">
