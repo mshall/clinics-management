@@ -99,7 +99,7 @@ const CHANNEL_META: Record<
   },
   OTHER: {
     icon: ({ className }) => <HelpCircle className={cn("size-4 text-amber-600 dark:text-amber-400", className)} aria-hidden />,
-    textClass: "text-amber-700 dark:text-amber-400",
+    textClass: "text-amber-800 dark:text-amber-400",
     iconWrap: "bg-amber-500/10",
   },
   IMPORT: {
@@ -157,7 +157,7 @@ export function ReportColumnHead({
     sky: "text-sky-700 dark:text-sky-400",
     emerald: "text-emerald-700 dark:text-emerald-400",
     violet: "text-violet-700 dark:text-violet-400",
-    amber: "text-amber-700 dark:text-amber-400",
+    amber: "text-amber-800 dark:text-amber-400",
     rose: "text-rose-700 dark:text-rose-400",
   }[tone];
   return (
