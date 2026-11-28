@@ -1,3 +1,4 @@
+import "@/lib/western-digits"; // Western digits 0-9 by default in Arabic; the numerals toggle (data-numerals="arab") stays a user choice
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

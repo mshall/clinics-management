@@ -1,3 +1,4 @@
+import { usePageTitle } from "@/lib/page-title";
 import { ArrowLeftRight, CircleHelp, LogOut, Menu, Rows3, Rows4 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -49,6 +50,7 @@ function orgPlanLabel(planKey: string, t: (key: string, fallback: string) => str
 
 export function AppShell() {
   const { t, i18n } = useTranslation();
+  usePageTitle(document.documentElement.dataset.edition === "nurse" ? undefined : t("app.docTitle")); // Nurse edition owns its title (edition-boot)
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
